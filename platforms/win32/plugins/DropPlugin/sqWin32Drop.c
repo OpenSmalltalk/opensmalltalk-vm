@@ -26,6 +26,13 @@ sqInt sqFileOpen(void *f, char* fileNameIndex, sqInt fileNameSize, sqInt writeFl
 /* Import from sqWin32Window.c */
 extern HWND stWindow;
 
+// There appears to be a Windows bug (in at least Windows 10) such that
+// if a file is dropped from an Open File Dialog opened by the FileDialogPlugin
+// then the GlobalFree below will corrupt the Windows heap.  I know; no one
+// should do this; but users can be capricious. We would rather risk a storage
+// leak than have users deal with unexpected and hard to debug crashes.
+EXPORT(int) okToFreeSTGMEDIUMHGLOBAL = 1;
+
 #if 0
 #define DPRINTF(x) printf x
 #else
@@ -521,7 +528,8 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     DragFinish(hDrop);
     signalDrop(pt);
     if(medium.pUnkForRelease == NULL) {
-      GlobalFree(hDrop);
+	  if (okToFreeSTGMEDIUMHGLOBAL)
+		  GlobalFree(hDrop);
     } else {
       medium.pUnkForRelease->lpVtbl->Release(medium.pUnkForRelease);
     }

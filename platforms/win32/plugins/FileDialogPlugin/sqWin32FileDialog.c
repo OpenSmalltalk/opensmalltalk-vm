@@ -52,6 +52,13 @@ extern struct VirtualMachine *interpreterProxy;
 static HWND *theSTWindow = NULL; /* a reference to Squeak's main window */
 static sqWin32FileDialog allDialogs[DLG_MAX];
 
+// There appears to be a Windows bug (in at least Windows 10) such that
+// if a file is dropped from an Open File Dialog opened by the FileDialogPlugin
+// then the GlobalFree below will corrupt the Windows heap.  I know; no one
+// should do this; but users can be capricious. We would rather risk a storage
+// leak than have users deal with unexpected and hard to debug crashes.
+IMPORT(int) okToFreeSTGMEDIUMHGLOBAL;
+
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
@@ -84,7 +91,9 @@ runOpenDlg(LPVOID lpParam)
   int ok;
 
   dlg->ofn.Flags |= OFN_HIDEREADONLY;
+  okToFreeSTGMEDIUMHGLOBAL = 0;
   ok = GetOpenFileNameW(&dlg->ofn);
+  okToFreeSTGMEDIUMHGLOBAL = 1;
   if (!ok) {
     /* user canceled or error */
     dlg->errorCode = CommDlgExtendedError();
@@ -105,7 +114,9 @@ static DWORD WINAPI
 runSaveDlg(LPVOID lpParam)
 {
   sqWin32FileDialog *dlg = (sqWin32FileDialog*)lpParam;
+  okToFreeSTGMEDIUMHGLOBAL = 0;
   int ok = GetSaveFileNameW(&dlg->ofn);
+  okToFreeSTGMEDIUMHGLOBAL = 1;
   if (!ok) {
     /* user canceled or error */
     dlg->errorCode = CommDlgExtendedError();
