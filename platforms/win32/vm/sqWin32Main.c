@@ -952,7 +952,7 @@ getVersionInfo(int verbose)
   char processor[32];
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,processor,sizeof(processor));
+  getAttributeIntoLength(1003,(sqInt)processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
