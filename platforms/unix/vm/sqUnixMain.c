@@ -976,7 +976,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			regs[REG_EIP]);
 	return v(regs[REG_EIP]);
 #elif __FreeBSD__ && __i386__
-	struct mcontext *regs = &uap->uc_mcontext;
+	mcontext_t *regs = &uap->uc_mcontext;
 	fprintf(file,
 			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
