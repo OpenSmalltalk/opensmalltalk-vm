@@ -31,7 +31,7 @@ extern HWND stWindow;
 // then the GlobalFree below will corrupt the Windows heap.  I know; no one
 // should do this; but users can be capricious. We would rather risk a storage
 // leak than have users deal with unexpected and hard to debug crashes.
-EXPORT(int) okToFreeSTGMEDIUMHGLOBAL = 1;
+extern int okToFreeSTGMEDIUMHGLOBAL = 1;
 
 #if 0
 #define DPRINTF(x) printf x
