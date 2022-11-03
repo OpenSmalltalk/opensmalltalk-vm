@@ -104,6 +104,7 @@ If building from mingw64, it may be necessary to omit the tool prefix:
 
 MSVC 1. Install the tools:
 - follow step Cygwin 1. Install the tools
+- Make sure that the tools directory (e.g., C:\cygwin\bin) is in your PATH environment variable
 - Install Visual Studio Community from https://visualstudio.microsoft.com/downloads/
 
 MSVC 2. Build
