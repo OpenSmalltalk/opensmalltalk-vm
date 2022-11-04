@@ -151,11 +151,6 @@ sqPasteboardCopyItemFlavorDataformatformatLength(CLIPBOARDTYPE inPasteboard, cha
 	return interpreterProxy->nilObject();
 }
 
-// copied from sqWin32Window.c
-extern int
-reverse_image_words(unsigned int *dst, unsigned int *src,
-					int depth, int width, RECT *rect);
-
 sqInt
 sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 {
