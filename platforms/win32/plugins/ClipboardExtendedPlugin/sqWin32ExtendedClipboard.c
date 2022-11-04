@@ -108,7 +108,30 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 			interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 			return;
 		}
-		memcpy(globalBytes, inData, dataLength);
+		PBITMAPINFOHEADER pdib = (BITMAPINFOHEADER *)inData; // Paul Atreides??
+
+		// If the data is either CF_DIB or CF_DIBV5 and it is a top-down bitmap
+		// (biHeight negative) then turn it into a bottom-up bitmap to suit Windows
+		if ((format == CF_DIB || format == CF_DIBV5)
+		 && pdib->biHeight < 0) {
+			unsigned char *dest = globalBytes;
+			long scanLineLength = pdib->biWidth * pdib->biBitCount / 8;
+			char *source, *start;
+			assert(pdib->biSizeImage + sizeof(*pdib) < dataLength);
+			pdib->biHeight = - pdib->biHeight; // temporary!!
+			memcpy(dest, inData, dataLength - pdib->biSizeImage);
+			pdib->biHeight = - pdib->biHeight; // undo the damage
+			dest += dataLength - pdib->biSizeImage;
+			start = inData + dataLength - pdib->biSizeImage;
+			source = inData + dataLength - scanLineLength;
+			while (source > start) {
+				memcpy(dest, source, scanLineLength);
+				dest += scanLineLength;
+				source -= scanLineLength;
+			}
+		}
+		else
+			memcpy(globalBytes, inData, dataLength);
 		GlobalUnlock(globalMem);
 	}
 	(void)EmptyClipboard();
