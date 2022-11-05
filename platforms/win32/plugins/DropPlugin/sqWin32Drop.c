@@ -84,16 +84,13 @@ WORD DibNumColors (VOID FAR * pv)
 
 WORD PaletteSize (VOID FAR * pv)
 {
-  LPBITMAPINFOHEADER lpbi;
-  WORD               NumColors;
-
-  lpbi      = (LPBITMAPINFOHEADER)pv;
-  NumColors = DibNumColors(lpbi);
+  LPBITMAPINFOHEADER lpbi      = (LPBITMAPINFOHEADER)pv;
+  WORD               numColors = DibNumColors(lpbi);
 
   if (lpbi->biSize == sizeof(BITMAPCOREHEADER))
-    return (WORD)(NumColors * sizeof(RGBTRIPLE));
+    return numColors * sizeof(RGBTRIPLE);
   else
-    return (WORD)(NumColors * sizeof(RGBQUAD));
+    return numColors * sizeof(RGBQUAD);
 }
 
 HANDLE DibFromBitmap (
