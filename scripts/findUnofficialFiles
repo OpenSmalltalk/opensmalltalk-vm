@@ -2,4 +2,4 @@
 # List any files with an un-checked-in package version comment "* VMMaker-..."
 
 find ${@-src/plugins/* src/v3* src/spur*} -type f -a -name '*.[ch]' \
-		-exec egrep -l '\* VMMaker|\* VMConstruction|\* Freetype-Plugin|\* Cog-' {} \;
+		-exec grep -l 'char __buildInfo\[][^*]*\*' {} \;
