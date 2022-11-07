@@ -69,7 +69,7 @@ jobs:
         #   ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'refs/heads/Cog'}}
 
       - name: Restore build cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .thirdparty-cache
           key: ${{ startsWith(matrix.arch.name, 'win') && 'thirdparty-cache-win' || startsWith(matrix.arch.name, 'linux') && 'thirdparty-cache-linux' || 'thirdparty-cache-macos' }}
