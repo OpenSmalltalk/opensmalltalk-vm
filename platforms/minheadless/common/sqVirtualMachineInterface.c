@@ -205,76 +205,52 @@ ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz)
 
 /* OS_TYPE may be set in configure.in and passed via the Makefile */
 
-char *
-GetAttributeString(sqInt id)
+const char *
+getAttributeString(sqInt id)
 {
-    if (id < 0)	/* VM argument */
-    {
+    if (id < 0)	{ // VM argument
         if (-id  < vmArgumentCount)
         	return vmArgumentVector[-id];
-        success(false);
-        return "";
+        return 0;
     }
 
-    switch (id)
-    {
-    case 0:
+    switch (id) {
+    case 0: // VM name
         return vmName[0] ? vmName : vmArgumentVector[0];
-    case 1:
+    case 1: // image name
         return imageName;
-    case 1001:
-        /* OS type: "unix", "win32", "mac", ... */
+    case 1001: // OS type: "unix", "win32", "mac", ...
         return OS_TYPE;
-    case 1002:
-        /* OS name: e.g. "solaris2.5" on unix, "win95" on win32, ... */
+    case 1002: // OS name: e.g. "solaris2.5" on unix, "win95" on win32, ...
         return VM_TARGET_OS;
-    case 1003:
-        /* processor architecture: e.g. "68k", "x86", "PowerPC", ...  */
+    case 1003: // processor architecture: e.g. "68k", "x86", "PowerPC", ...
         return VM_TARGET_CPU;
-    case 1004:
-        /* Interpreter version string */
+    case 1004: // Interpreter version string
         return  (char *)interpreterVersion;
-    case 1005:
-        /* window system name */
+    case 1005: // window system name
         return  (char*)ioWindowSystemName();
-    case 1006:
-        /* vm build string */
+    case 1006: // vm build string
         return VM_BUILD_STRING;
 #if STACKVM
-    case 1007: { /* interpreter build info */
+    case 1007: { // interpreter build info
         extern char *__interpBuildInfo;
-        return __interpBuildInfo;
+        return (const char *)__interpBuildInfo;
     }
 # if COGVM
-    case 1008: { /* cogit build info */
+    case 1008: { // cogit build info
         extern char *__cogitBuildInfo;
-        return __cogitBuildInfo;
+        return (const char *)__cogitBuildInfo;
     }
 # endif
 #endif
 
-    case 1009: /* source tree version info */
-        return sourceVersionString(' ');
+    case 1009: // source tree version info
+        return (const char *)sourceVersionString(' ');
 
     default:
         if ((id - 2) < squeakArgumentCount)
             return squeakArgumentVector[id - 2];
     }
-    success(false);
-    return "";
-}
-
-sqInt
-attributeSize(sqInt id)
-{
-    return strlen(GetAttributeString(id));
-}
-
-sqInt
-getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
-{
-    if (length > 0)
-        strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
     return 0;
 }
 
@@ -293,10 +269,8 @@ char *getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char *revisionAsString();
-  char processor[32];
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -327,14 +301,14 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " [" BuildVariant HBID " %s VM]\n", processor);
+  sprintf(info+strlen(info), " [" BuildVariant HBID " %s VM]\n", getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
 #if COGVM
   if (verbose)
     sprintf(info+strlen(info), "With: ");
-  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+  sprintf(info+strlen(info), "%s\n", getAttributeString(1008)); // 1008 == __cogitBuildInfo
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");
@@ -792,7 +766,7 @@ osvm_parseCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char
     envVec = NULL;
 
     /* Allocate arrays to store copies of pointers to command line
-        arguments.  Used by getAttributeIntoLength(). */
+        arguments.  Used by getAttributeString(). */
     if ((vmArgumentVector = calloc(argc + 1, sizeof(char *))) == 0)
         outOfMemory();
 

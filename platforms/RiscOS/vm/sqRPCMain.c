@@ -592,7 +592,9 @@ char * osVersionString(void) {
 	return versionString;
 }
 
-char * getAttributeString(sqInt id) {
+const char *
+getAttributeString(sqInt id)
+{
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -623,31 +625,7 @@ extern char VMVersion[];
 		tmp = imageOptions[id-1];
 		if (*tmp) return tmp;
 	}
-	/* fail the prim to ensure we return nil instead of an empty string */
-	success(false);
-	return "";
-}
-
-sqInt attributeSize(sqInt id) {
-	return strlen(getAttributeString(id));
-}
-
-sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
-char *srcPtr, *dstPtr, *end;
-int charsToMove;
-
-	srcPtr = getAttributeString(id);
-	charsToMove = strlen(srcPtr);
-	if (charsToMove > length) {
-		charsToMove = length;
-	}
-
-	dstPtr = (char *) byteArrayIndex;
-	end = srcPtr + charsToMove;
-	while (srcPtr < end) {
-		*dstPtr++ = *srcPtr++;
-	}
-	return charsToMove;
+	return 0;
 }
 
 /* Commandline option processing */

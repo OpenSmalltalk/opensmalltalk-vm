@@ -171,7 +171,7 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 	static sqInt printingStack = false;
 
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+	printf("%s\n%s\n\n", getAttributeString(0), getVersionInfo(1));
 
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
@@ -639,7 +639,8 @@ ioSetLogDirectoryOfSize(void *lblIndex, sqInt sz)
 }
 
 
-char * GetAttributeString(sqInt id) {
+const char *getAttributeString(sqInt id)
+{
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -765,30 +766,7 @@ char * GetAttributeString(sqInt id) {
 	}
 
 	/* attribute undefined by this platform */
-	success(false);
-	return "";
-}
-
-sqInt
-attributeSize(sqInt id) { return strlen(GetAttributeString(id)); }
-
-sqInt
-getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
-	char *srcPtr, *dstPtr, *end;
-	int charsToMove;
-
-	srcPtr = GetAttributeString(id);
-	charsToMove = strlen(srcPtr);
-	if (charsToMove > length) {
-		charsToMove = length;
-	}
-
-	dstPtr = (char *) byteArrayIndex;
-	end = srcPtr + charsToMove;
-	while (srcPtr < end) {
-		*dstPtr++ = *srcPtr++;
-	}
-	return charsToMove;
+	return 0;
 }
 
 
@@ -1020,11 +998,9 @@ getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char vmBuildString[];
-  char processor[32];
   CFStringRef versionString;
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -1057,7 +1033,7 @@ getVersionInfo(int verbose)
 #if COGVM
   if (verbose)
     sprintf(info+strlen(info), "With: ");
-  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+  sprintf(info+strlen(info), "%s\n", getAttributeString(1008)); /* __cogitBuildInfo */
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");

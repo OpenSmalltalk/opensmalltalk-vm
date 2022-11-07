@@ -1,9 +1,10 @@
 #include "sqMemoryAccess.h"
 
 #define XFN(export) {"", #export, (void*)export},
+#define XFEN(export,name) {"", name, (void*)export},
 #define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 
-char * GetAttributeString(sqInt id);
+const char *getAttributeString(sqInt id);
 #if !defined(HEADLESS)
 sqInt   primitivePluginBrowserReady(void);
 sqInt   primitivePluginRequestURLStream(void);
@@ -18,7 +19,8 @@ void *ioGetWindow(void);
 
 void *os_exports[][3]=
 {
-  XFN(GetAttributeString) // Used by e.g. UnixOSProcessPlugin
+	XFN(getAttributeString) // Used by e.g. UnixOSProcessPlugin
+	XFEN(getAttributeString,"GetAttributeString") // backwards compatibility for UnixOSProcessPlugin
 #if !defined(HEADLESS)
 	XFNDF(primitivePluginBrowserReady,"\377","\000")
 	XFNDF(primitivePluginRequestURLStream,"\001","\000")
@@ -30,5 +32,5 @@ void *os_exports[][3]=
 	XFN(ioGetDisplay)
 	XFN(ioGetWindow)
 #endif
-  { 0, 0, 0 }
+	{ 0, 0, 0 }
 };

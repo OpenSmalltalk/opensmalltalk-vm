@@ -2,7 +2,7 @@
 #include "interp.h"
 #include "sqMemoryAccess.h"
 
-char * GetAttributeString(sqInt id);
+const char *getAttributeString(sqInt id);
 #ifndef NO_NETWORK
 int win32DebugPrintSocketState(void);
 #endif
@@ -21,11 +21,13 @@ extern void *preMessageHook;
 extern int fUseOpenGL;
 
 #define XFN(export) {"", #export, (void*)export},
+#define XFEN(export,name) {"", name, (void*)export},
 #define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 #define XVAR(export) {"", #export, &export},
 
 void *os_exports[][3] = {
-	XFN(GetAttributeString)
+	XFN(getAttributeString)
+	XFEN(getAttributeString,"GetAttributeString") // backwards compatibility for UnixOSProcessPlugin
 #ifndef NO_NETWORK
 	XFN(win32DebugPrintSocketState)
 #endif

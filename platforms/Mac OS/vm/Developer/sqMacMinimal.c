@@ -135,7 +135,6 @@ char modifierMap[32] = {
 };
 
 /*** Functions ***/
-char * GetAttributeString(sqInt id);
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
@@ -701,7 +700,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 
 /*** System Attributes ***/
 
-char * GetAttributeString(sqInt id) {
+const char *getAttributeString(sqInt id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -721,32 +720,7 @@ char * GetAttributeString(sqInt id) {
 	if (id == 1003) return "PowerPC or 680xx";
 
 	/* attribute undefined by this platform */
-	success(false);
-	return "";
-}
-
-int attributeSize(int id) {
-	/* return the length of the given attribute string. */
-	return strlen(GetAttributeString(id));
-}
-
-int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
-	/* copy the attribute with the given id into a Squeak string. */
-	char *srcPtr, *dstPtr, *end;
-	int charsToMove;
-
-	srcPtr = GetAttributeString(id);
-	charsToMove = strlen(srcPtr);
-	if (charsToMove > length) {
-		charsToMove = length;
-	}
-
-	dstPtr = (char *) byteArrayIndex;
-	end = srcPtr + charsToMove;
-	while (srcPtr < end) {
-		*dstPtr++ = *srcPtr++;
-	}
-	return charsToMove;
+	return 0;
 }
 
 /*** Image File Read/Write ***/

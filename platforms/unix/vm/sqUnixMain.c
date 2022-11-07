@@ -98,7 +98,7 @@ static char   vmLogDirA[PATH_MAX+1];	/* where to write crash.dmp */
        char **argVec=		0;
        char **envVec=		0;
 
-static int    vmArgCnt=		0;	/* for getAttributeIntoLength() */
+static int    vmArgCnt=		0;	/* for getAttributeString() */
 static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
 static char **squeakArgVec=	0;
@@ -491,75 +491,52 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 # endif
 #endif
 
-char *
-GetAttributeString(sqInt id)
+const char *
+getAttributeString(sqInt id)
 {
-  if (id < 0)	/* VM argument */
-    {
-      if (-id  < vmArgCnt)
-	return vmArgVec[-id];
-    }
-  else
-    switch (id)
-      {
-      case 0:
-	return vmName[0] ? vmName : vmArgVec[0];
-      case 1:
-	return imageName;
-      case 1001:
-	/* OS type: "unix", "win32", "mac", ... */
-	return OS_TYPE;
-      case 1002:
-	/* OS name: e.g. "solaris2.5" on unix, "win95" on win32, ... */
-	return VM_TARGET_OS;
-      case 1003:
-	/* processor architecture: e.g. "68k", "x86", "PowerPC", ...  */
-	return VM_TARGET_CPU;
-      case 1004:
-	/* Interpreter version string */
-	return  (char *)interpreterVersion;
-      case 1005:
-	/* window system name */
-	return  dpy->winSystemName();
-      case 1006:
-	/* vm build string */
-	return VM_BUILD_STRING;
+	if (id < 0) { // VM command-line argument
+		if (-id  < vmArgCnt)
+			return vmArgVec[-id];
+		return 0;
+	}
+    switch (id) {
+	case 0: // VM name
+		return vmName[0] ? vmName : vmArgVec[0];
+	case 1: // image name
+		return imageName;
+	case 1001: // OS type: "unix", "win32", "mac", ...
+		return OS_TYPE;
+	case 1002: // OS name: e.g. "solaris2.5" on unix, "win95" on win32, ...
+		return VM_TARGET_OS;
+	case 1003: // processor architecture: e.g. "68k", "x86", "PowerPC", ...
+		return VM_TARGET_CPU;
+	case 1004: // Interpreter version string
+		return  (const char *)interpreterVersion;
+	case 1005: // window system name
+		return  (const char *)dpy->winSystemName();
+	case 1006: // vm build string
+		return VM_BUILD_STRING;
 #if STACKVM
-      case 1007: { /* interpreter build info */
+	case 1007: { // interpreter build info
 		extern char *__interpBuildInfo;
-		return __interpBuildInfo;
-      }
+		return (const char *)__interpBuildInfo;
+	}
 # if COGVM
-      case 1008: { /* cogit build info */
+	case 1008: { // cogit build info
 		extern char *__cogitBuildInfo;
-		return __cogitBuildInfo;
-      }
+		return (const char *)__cogitBuildInfo;
+	}
 # endif
 #endif
+	case 1009: // source tree version info
+		return (const char *)sourceVersionString(' ');
 
-	  case 1009: /* source tree version info */
-		return sourceVersionString(' ');
-
-      default:
-	if ((id - 2) < squeakArgCnt)
-	  return squeakArgVec[id - 2];
-      }
-  success(false);
-  return "";
+	default:
+		if ((id - 2) < squeakArgCnt)
+			return squeakArgVec[id - 2];
+	}
+	return 0;
 }
-
-sqInt attributeSize(sqInt id)
-{
-  return strlen(GetAttributeString(id));
-}
-
-sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
-{
-  if (length > 0)
-    strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
-  return 0;
-}
-
 
 /*** event handling ***/
 
@@ -893,7 +870,7 @@ reportStackState(FILE *file,const char *msg, char *date, int printAll, ucontext_
 #endif
 
 	fprintf(file,"\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	fprintf(file,"%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+	fprintf(file,"%s\n%s\n\n", getAttributeString(0), getVersionInfo(1));
 
 #if COGVM
 	/* Do not attempt to report the stack until the VM is initialized!! */
@@ -1858,10 +1835,8 @@ char *getVersionInfo(int verbose)
 #endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
-  char processor[32];
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -1892,14 +1867,14 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s VM]\n", vm_date, cc_version, processor);
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s VM]\n", vm_date, cc_version, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
 #if COGVM
   if (verbose)
     sprintf(info+strlen(info), "With: ");
-  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+  sprintf(info+strlen(info), "%s\n", getAttributeString(1008)); /* __cogitBuildInfo */
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");
@@ -2081,7 +2056,7 @@ main(int argc, char **argv, char **envp)
 #endif
 
  /* Allocate arrays to store copies of pointers to command line
-     arguments.  Used by getAttributeIntoLength(). */
+     arguments.  Used by getAttributeString(). */
 
   if ((vmArgVec= calloc(argc + 1, sizeof(char *))) == 0)
     outOfMemory();

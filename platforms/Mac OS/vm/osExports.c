@@ -18,12 +18,13 @@
 
 /* duh ... this is ugly */
 #define XFN(export) {"", #export, (void*)export},
+#define XFEN(export,name) {"", name, (void*)export},
 #define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 
 WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);
 void setPostMessageHook(eventMessageHook theHook);
-char * GetAttributeString(sqInt id);
+const char *getAttributeString(sqInt id);
 #if !NewspeakVM
 int serialPortSetControl(int portNum,int control, char *data);
 int serialPortIsOpen(int portNum);
@@ -44,7 +45,8 @@ void *os_exports[][3] = {
 	XFN(getSTWindow)
 	XFN(setMessageHook)
 	XFN(setPostMessageHook)
-	XFN(GetAttributeString)
+	XFN(getAttributeString)
+	XFEN(getAttributeString,"GetAttributeString") // backwards compatibility for UnixOSProcessPlugin
 	XFN(recordDragDropEvent)
 #if !NewspeakVM
 	XFN(serialPortSetControl)

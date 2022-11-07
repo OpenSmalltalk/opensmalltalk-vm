@@ -21,7 +21,7 @@ int    argCnt=		0;	/* global copies for access from plugins */
 char **argVec=		0;
 char **envVec=		0;
 
-static int    vmArgCnt=		0;	/* for getAttributeIntoLength() */
+static int    vmArgCnt=		0;	/* for getAttributeString() */
 static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
 static char **squeakArgVec=	0;
@@ -218,7 +218,7 @@ void threadmain(int argc, char **argv) {
 	envVec = env_vars();
 
 	/* Allocate arrays to store copies of pointers to command line
-		arguments.  Used by getAttributeIntoLength(). */
+		arguments.  Used by getAttributeString(). */
 
 	if ((vmArgVec= calloc(argc + 1, sizeof(char *))) == 0)
 		outOfMemory();
@@ -273,13 +273,14 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
 }
 
 /* Attribute functions */
-static char *getAttribute(sqInt id)
+const char *getAttributeString(sqInt id)
 {
 	if (id < 0) {
 		if (-id  < vmArgCnt)
 			return vmArgVec[-id];
+		return 0;
 	}
-	else switch (id) {
+	switch (id) {
 		case 0:
 			return vmName[0] ? vmName : vmArgVec[0];
 		case 1:
@@ -302,26 +303,27 @@ static char *getAttribute(sqInt id)
 		case 1006:
 			/* vm build string */
 			return VM_BUILD_STRING;
+#if STACKVM
+		case 1007: { /* interpreter build info */
+			extern char *__interpBuildInfo;
+			return __interpBuildInfo;
+		}
+# if COGVM
+		case 1008: { /* cogit build info */
+			extern char *__cogitBuildInfo;
+			return __cogitBuildInfo;
+		}
+# endif
+#endif
+		case 1009: /* source tree version info */
+			return sourceVersionString(' ');
+
 		default:
 			if ((id - 2) < squeakArgCnt)
 				return squeakArgVec[id - 2];
-		}
-
-	success(false);
-	return "";
-}
-
-sqInt attributeSize(sqInt indexNumber) {
-	return strlen(getAttribute(indexNumber));
-}
-
-sqInt getAttributeIntoLength(sqInt indexNumber, sqInt byteArrayIndex, sqInt length) {
-	if (length > 0) {
-		strncpy((char*)pointerForOop(byteArrayIndex), getAttribute(indexNumber), length);
 	}
 	return 0;
 }
-
 
 /* Image functions */
 char *getImageName(void) {

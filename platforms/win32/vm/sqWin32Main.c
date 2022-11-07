@@ -113,7 +113,7 @@ extern void printPhaseTime(int);
 LONG CALLBACK sqExceptionFilter(PEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
-char * GetAttributeString(sqInt id);
+const char *getAttributeString(sqInt id);
 void ShowSplashScreen(void);
 void HideSplashScreen(void);
 
@@ -949,10 +949,8 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
-  char processor[32];
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,(sqInt)processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -971,14 +969,14 @@ getVersionInfo(int verbose)
 # define BuildVariant "Assert" ObjectMemory
 #endif
 
-  sprintf(info+strlen(info), "%s [" BuildVariant " %s VM]\n", vmBuildString, processor);
+  sprintf(info+strlen(info), "%s [" BuildVariant " %s VM]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
 #if COGVM
   if (verbose)
     sprintf(info+strlen(info), "With: ");
-  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+  sprintf(info+strlen(info), "%s\n", getAttributeString(1008)); /* __cogitBuildInfo */
 #endif
   if (verbose)
     sprintf(info+strlen(info), "Revision: ");
@@ -1256,7 +1254,7 @@ error(const char *msg) {
   if (f) {
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
-    fprintf(f,"%s %s\n\n", ctime(&crashTime), GetAttributeString(0));
+    fprintf(f,"%s %s\n\n", ctime(&crashTime), getAttributeString(0));
 
 	fprintf(f,
 			"Error in %s thread\nReason: %s\n\n",

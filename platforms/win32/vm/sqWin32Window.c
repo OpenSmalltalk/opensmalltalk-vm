@@ -2785,8 +2785,8 @@ extern char *osInfoString;
 extern char *gdInfoString;
 extern char *win32VersionName;
 
-char *
-GetAttributeString(sqInt id)
+const char *
+getAttributeString(sqInt id)
 {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
@@ -2812,31 +2812,24 @@ GetAttributeString(sqInt id)
     case 1004:
       return (char*) interpreterVersion;
     case 1005: /* window system name */
-	/* An attempt to eliminate one absurdity.  If this breaks too many things
-	 * we'll have to change it back.  But Win32 is not a good name.
-	 */
-#if 0
-      return "Win32";
-#else
       return "Windows";
-#endif
     case 1006: /* VM build ID */
       return vmBuildString;
 #if STACKVM
 	case 1007: { /* interpreter build info */
 		extern char *__interpBuildInfo;
-		return __interpBuildInfo;
+		return (const char *)__interpBuildInfo;
 	}
 # if COGVM
 	case 1008: { /* cogit build info */
 		extern char *__cogitBuildInfo;
-		return __cogitBuildInfo;
+		return (const char *)__cogitBuildInfo;
 	}
 # endif
 #endif
 
 	  case 1009: /* source tree version info */
-		return sourceVersionString(' ');
+		return (const char *)sourceVersionString(' ');
 
     /* Windows internals */
     case 10001: /* addl. hardware info */
@@ -2848,35 +2841,6 @@ GetAttributeString(sqInt id)
   }
   return NULL;
 }
-
-sqInt
-attributeSize(sqInt id)
-{
-  char *attrValue;
-  attrValue = GetAttributeString(id);
-  if (!attrValue) return primitiveFail();
-  return strlen(attrValue);
-}
-
-sqInt
-getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
-{
-  char *srcPtr, *dstPtr, *end;
-  int charsToMove;
-
-  srcPtr = GetAttributeString(id);
-  if (!srcPtr) return 0;
-  charsToMove = strlen(srcPtr);
-  if (charsToMove > length)
-    charsToMove = length;
-
-  dstPtr = (char *) byteArrayIndex;
-  end = srcPtr + charsToMove;
-  while (srcPtr < end)
-    *dstPtr++ = *srcPtr++;
-  return charsToMove;
-}
-
 
 /****************************************************************************/
 /*                      File Startup                                        */
