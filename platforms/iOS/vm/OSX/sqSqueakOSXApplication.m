@@ -532,7 +532,7 @@ static char *getVersionInfo(int verbose);
 - (void) printUsage {
 	printf("\nCommon <option>s:\n");
 	printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-	printf("  "VMOPTION("memory")" <size>[kmg]  use fixed heap size (added to image size)\n");
+	printf("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
     printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
 	printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
@@ -552,7 +552,11 @@ static char *getVersionInfo(int verbose);
 #if STACKVM || NewspeakVM
 # if COGVM
 	printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
-	printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
+	printf("  "VMOPTION("trace")"[=flags]        enable tracing (optionally to a specific value)\n");
+	extern const char *traceFlagsMeanings[];
+	int i = 0;
+	while (traceFlagsMeanings[i])
+		printf("    %s\n", traceFlagsMeanings[i++]);
 # else
 	printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
 # endif
@@ -588,8 +592,8 @@ static char *getVersionInfo(int verbose);
 
 	printf("  "VMOPTION("version")"              print version information, then exit\n");
 
-	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
-	printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
+	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb/lldb\n");
+	printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb/lldb\n");
 	printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
 #if defined(AIO_DEBUG)
 	printf("  "VMOPTION("aiolog")"               print async io logging info\n");
@@ -629,10 +633,8 @@ getVersionInfo(int verbose)
 #endif
   extern char vmBuildString[];
   CFStringRef versionString;
-  char processor[32];
   char *info = (char *)malloc(4096);
   info[0] = '\0';
-  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -662,7 +664,7 @@ getVersionInfo(int verbose)
 #else
     CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), kCFStringEncodingUTF8);
 #endif
-  sprintf(info+strlen(info), " %s [" BuildVariant " %s VM]\n", vmBuildString, processor);
+  sprintf(info+strlen(info), " %s [" BuildVariant " %s VM]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

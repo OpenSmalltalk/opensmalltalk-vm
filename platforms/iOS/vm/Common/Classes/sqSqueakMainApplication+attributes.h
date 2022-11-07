@@ -40,6 +40,5 @@
 #import "sqSqueakMainApplication.h" 
 
 @interface sqSqueakMainApplication (attributes) 
-- (void) getAttribute:(sqInt) indexNumber into:(char *) byteArray length:(sqInt) length;
 - (const char *) getAttribute:(sqInt) indexNumber;
 @end

@@ -46,18 +46,8 @@
 
 extern sqSqueakAppDelegate *gDelegateApp;
 
-sqInt attributeSize(sqInt indexNumber)  {
-	//API Documented
-    const char *arg = [gDelegateApp.squeakApplication getAttribute: indexNumber];
-    if (arg != NULL) {
-        return  (sqInt) strlen(arg);
-    } else {
-        return 0;
-    }
-}
-
-sqInt getAttributeIntoLength(sqInt indexNumber, sqInt byteArrayIndex, sqInt length)  {
-	//API Documented
-	[gDelegateApp.squeakApplication getAttribute: indexNumber into: pointerForOop((usqInt) byteArrayIndex) length: length];
-	return 0;
+const char *
+getAttributeString(sqInt id)
+{
+    return [gDelegateApp.squeakApplication getAttribute: id];
 }

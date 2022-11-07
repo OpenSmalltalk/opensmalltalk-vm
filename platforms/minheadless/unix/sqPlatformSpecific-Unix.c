@@ -106,7 +106,7 @@ extern char **argVec;
 static int inFault = 0;
 static char crashdump[FILENAME_MAX+1];
 
-extern char *GetAttributeString(sqInt id);
+extern char *getAttributeString(sqInt id);
 extern const char *getVersionInfo(int verbose);
 extern void getCrashDumpFilenameInto(char *buf);
 
@@ -394,7 +394,7 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 #endif
 
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+	printf("%s\n%s\n\n", getAttributeString(0), getVersionInfo(1));
 
 #if COGVM
 	/* Do not attempt to report the stack until the VM is initialized!! */

@@ -42,7 +42,7 @@
 
 extern CFStringEncoding gCurrentVMEncoding;
 extern Boolean gSqueakHeadless;
-static int    vmArgCnt=		0;	/* for getAttributeIntoLength() */
+static int    vmArgCnt=		0;	/* for getAttributeString() */
 static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
 static char **squeakArgVec=	0;

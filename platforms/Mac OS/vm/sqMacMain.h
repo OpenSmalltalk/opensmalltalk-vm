@@ -17,7 +17,7 @@
 
 void SqueakTerminate();
 void ExitCleanup();
-char * GetAttributeString(sqInt id);
+const char *getAttributeString(sqInt id);
 void SqueakTerminate();
 void ExitCleanup();
 void fetchPreferences();  
