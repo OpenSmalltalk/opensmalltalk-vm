@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-win
+          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3

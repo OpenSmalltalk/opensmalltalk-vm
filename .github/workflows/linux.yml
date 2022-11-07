@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-linux
+          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       - name: Prepare environment
         run: ./scripts/ci/actions_prepare_linux_x86.sh

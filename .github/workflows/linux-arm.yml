@@ -85,7 +85,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-linux-${{ env.ARCH_ARM }}
+          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM

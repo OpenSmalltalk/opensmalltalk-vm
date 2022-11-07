@@ -50,11 +50,11 @@ jobs:
         uses: actions/checkout@v2
 
       # TODO: Can we use the same thirdparty cache for armv6, armv7, and aarch64? Are pre-compiled binaries compatible or organized differently?
-      - name: Restore build cache
-        uses: actions/cache@v3
-        with:
-          path: .thirdparty-cache
-          key: thirdparty-cache-linux-${{ env.ARCH_ARM }}
+      # - name: Restore build cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: .thirdparty-cache
+      #     key: thirdparty-cache-linux-${{ env.ARCH_ARM }}
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
