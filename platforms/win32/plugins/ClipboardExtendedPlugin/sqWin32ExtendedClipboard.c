@@ -282,3 +282,17 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 	}
     return outData;
 }
+
+sqInt
+sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength)
+{
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
+}
+
+sqInt
+sqPasteboardhasDataInFormat(CLIPBOARDTYPE inPasteboard, sqInt format)
+{
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
+}
