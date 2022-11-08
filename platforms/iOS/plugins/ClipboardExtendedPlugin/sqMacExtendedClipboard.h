@@ -36,9 +36,12 @@ typedef NSPasteboard * CLIPBOARDTYPE;
 typedef UIPasteboard * CLIPBOARDTYPE;
 #endif
 
-void sqPasteboardClear( CLIPBOARDTYPE inPasteboard );
-sqInt sqPasteboardGetItemCount ( CLIPBOARDTYPE inPasteboard );
-sqInt sqPasteboardCopyItemFlavorsitemNumber (  CLIPBOARDTYPE inPasteboard, sqInt formatNumber );
-void * sqCreateClipboard( void );
-void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
-sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength);
+void sqPasteboardClear(CLIPBOARDTYPE inPasteboard);
+sqInt sqPasteboardGetItemCount(CLIPBOARDTYPE inPasteboard);
+sqInt sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNumber);
+void *sqCreateClipboard(void);
+void sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
+sqInt sqPasteboardCopyItemFlavorDataformatformatLength(CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength);
+sqInt sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format);
+sqInt sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength);
+sqInt sqPasteboardhasDataInFormat(CLIPBOARDTYPE inPasteboard, sqInt format);

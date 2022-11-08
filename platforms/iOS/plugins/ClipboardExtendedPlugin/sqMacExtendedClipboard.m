@@ -33,20 +33,22 @@
 
 extern struct VirtualMachine* interpreterProxy;
 
-void sqPasteboardClear(CLIPBOARDTYPE inPasteboard)
+void
+sqPasteboardClear(CLIPBOARDTYPE inPasteboard)
 {
     NSArray *arrayOfTypes = [NSArray array];
 
     [inPasteboard declareTypes: arrayOfTypes owner: nil];
-
 }
 
-sqInt sqPasteboardGetItemCount(CLIPBOARDTYPE inPasteboard)
+sqInt
+sqPasteboardGetItemCount(CLIPBOARDTYPE inPasteboard)
 {
     return [[inPasteboard types] count];
 }
 
-sqInt sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNumber)
+sqInt
+sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNumber)
 {
 
     sqInt formatTypeLength;
@@ -68,12 +70,14 @@ sqInt sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt fo
     return outData;
 }
 
-void * sqCreateClipboard(void)
+void *
+sqCreateClipboard(void)
 {
     return (__bridge void*) [NSPasteboard generalPasteboard];
 }
 
-void sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteboard, char *inData, sqInt dataLength, char *format, sqInt formatLength)
+void
+sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteboard, char *inData, sqInt dataLength, char *format, sqInt formatLength)
 {
     NSString *formatType = AUTORELEASEOBJ([[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding]);
     NSData* data = AUTORELEASEOBJ([[NSData alloc ] initWithBytes: inData length: dataLength]);
@@ -111,6 +115,20 @@ sqPasteboardCopyItemFlavorDataformatformatLength(CLIPBOARDTYPE inPasteboard, cha
 
 sqInt
 sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
+{
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
+}
+
+sqInt
+sqPasteboardhasDataInFormatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength)
+{
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
+}
+
+sqInt
+sqPasteboardhasDataInFormat ( CLIPBOARDTYPE inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();
