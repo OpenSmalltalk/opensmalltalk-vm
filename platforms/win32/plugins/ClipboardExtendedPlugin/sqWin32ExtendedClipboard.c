@@ -284,7 +284,7 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 }
 
 sqInt
-sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength)
+sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char *format, sqInt formatLength)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();
@@ -293,6 +293,5 @@ sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char* format
 sqInt
 sqPasteboardhasDataInFormat(CLIPBOARDTYPE inPasteboard, sqInt format)
 {
-	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
-	return interpreterProxy->nilObject();
+	return IsClipboardFormatAvailable(format);
 }
