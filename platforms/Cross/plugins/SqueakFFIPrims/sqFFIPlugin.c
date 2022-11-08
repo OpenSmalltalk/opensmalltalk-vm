@@ -19,6 +19,9 @@
 # define alloca _alloca
 #endif
 
+#include "sqVirtualMachine.h"
+extern struct VirtualMachine* interpreterProxy;
+
 /* this is a stub through which floating-point register arguments can be loaded
  * prior to an FFI call proper.  e.g. on the PowerPC this would be declared as
  *	extern void loadFloatRegs(double, double, double, double,
@@ -29,6 +32,9 @@
  */
 void
 loadFloatRegs(void) { return; }
+
+/* this is the call logging interface.
+ */
 
 static FILE *ffiLogFile = NULL;
 
@@ -61,12 +67,15 @@ ffiLogFileNameOfLength(void *nameIndex, int nameLength)
 	return 1;
 }
 
-int
-ffiLogCallOfLength(void *nameIndex, int nameLength)
+void
+doFFILogCallout(sqInt externalFunctionName)
 {
-    if (!ffiLogFile)
-		return 0;
-    fprintf(ffiLogFile, "%.*s\n", nameLength, (char *)nameIndex);
+    if (!ffiLogFile || !interpreterProxy->isBytes(externalFunctionName))
+		return;
+
+    fprintf(ffiLogFile,
+			"%.*s\n",
+			interpreterProxy->byteSizeOf(externalFunctionName),
+			interpreterProxy->firstIndexableField(externalFunctionName));
     fflush(ffiLogFile);
-	return 1;
 }

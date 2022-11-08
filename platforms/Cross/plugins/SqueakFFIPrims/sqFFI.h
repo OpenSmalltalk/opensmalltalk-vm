@@ -42,6 +42,7 @@ int createManualSurface
 	(int width, int height, int rowPitch, int depth, int isMSB);
 int destroyManualSurface(int surfaceID);
 int setManualSurfacePointer(int surfaceID, void* ptr);
+void doFFILogCallout(sqInt externalFunctionName);
 
 
 # ifndef NO_FFI_TEST
