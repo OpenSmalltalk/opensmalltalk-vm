@@ -1794,7 +1794,12 @@ static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
  */
 static double getDpiSystem(void)
 {
-  return (double) GetDeviceCaps(GetWindowDC(stWindow), LOGPIXELSY);
+  double dpi;
+  HDC dc = GetWindowDC(stWindow);
+  if (!dc) return 0.0; /* fail */
+  dpi = (double) GetDeviceCaps(dc, LOGPIXELSY);
+  ReleaseDC(stWindow,dc);
+  return dpi;
 }
 
 
