@@ -7,6 +7,8 @@
 *
 *****************************************************************************/
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h> /* proto for alloca in MINGW */
 #if !_WIN32 && !__FreeBSD__ && !__OpenBSD__
