@@ -125,6 +125,7 @@ int keyBufOverflows = 0;	/* number of characters dropped */
 HWND stWindow = NULL;      /*	the squeak window */
 HINSTANCE hInstance;	     /*	the instance of squeak running */
 HCURSOR currentCursor=0;	 /*	current cursor displayed by squeak */
+BOOL    currentCursorIsIcon = 0;
 HPALETTE palette;	         /*	the palette (might be unused) */
 LOGPALETTE *logPal;	       /*	the logical palette definition */
 BITMAPINFO *bmi1;	         /*	1 bit depth bitmap info */
@@ -1800,6 +1801,7 @@ ioScreenDepth(void)
 sqInt
 ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
+  HCURSOR oldCursor;
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
   int i;
@@ -1816,9 +1818,6 @@ ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX,
       andMask = malloc(cursorSize);
       xorMask = malloc(cursorSize);
   }
-
-  /* free last used cursor */
-  if (currentCursor) DestroyCursor(currentCursor);
 
   memset(andMask,0xff,cursorSize);
   memset(xorMask,0x00,cursorSize);
@@ -1848,14 +1847,22 @@ ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX,
         andMask[i*cx/8+1] = ~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
       }
 
+  oldCursor = currentCursor;
   currentCursor = CreateCursor(hInstance,-offsetX,-offsetY,cx,cy,andMask,xorMask);
   if (currentCursor)
     {
       SetCursor(0);
       SetCursor(currentCursor);
+      /* free last used cursor */
+      if (oldCursor) {
+        if (currentCursorIsIcon) DestroyIcon(oldCursor);
+        else DestroyCursor(oldCursor);
+      }
+      currentCursorIsIcon = FALSE;
     }
   else
     {
+      currentCursor = oldCursor;
       printLastError(TEXT("CreateCursor failed"));
     }
 
@@ -1871,6 +1878,7 @@ ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 sqInt
 ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y)
 {
+  HCURSOR oldCursor;
   ICONINFO info;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
@@ -1896,13 +1904,27 @@ ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y)
   info.hbmMask = hbmMask;
   info.hbmColor = hbmColor;
 
-  DestroyCursor(currentCursor);
+  oldCursor = currentCursor;
   currentCursor = CreateIconIndirect(&info);
   if (hbmColor) DeleteObject(hbmColor);
   if (hbmMask) DeleteObject(hbmMask);
   if (mDC) DeleteDC(mDC);
 
-  SetCursor(currentCursor);
+  if (currentCursor)
+    {
+      SetCursor(currentCursor);
+      /* free last used cursor */
+      if (oldCursor) {
+        if (currentCursorIsIcon) DestroyIcon(oldCursor);
+        else DestroyCursor(oldCursor);
+      }
+      currentCursorIsIcon = TRUE;
+    }
+  else
+    {
+      currentCursor = oldCursor;
+      printLastError(TEXT("CreateIconIndirect failed"));
+    }
 
   return 1;
 }
