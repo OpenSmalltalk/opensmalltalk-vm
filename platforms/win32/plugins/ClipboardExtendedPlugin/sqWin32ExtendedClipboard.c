@@ -242,7 +242,20 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 			interpreterProxy->primitiveFailFor(PrimErrNotFound);
 			return 0;
 		}
-		outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), GlobalSize(data));
+		SIZE_T dataSize = GlobalSize(data);
+		// Text formats are null-terminated, which isn't useful for Smalltalk
+		if (format == CF_TEXT
+		 || format == CF_OEMTEXT) {
+			if (dataSize > 0
+			 && *((char *)dataBytes + dataSize - 1) == 0)
+				dataSize -= 1;
+		}
+		else if (format == CF_UNICODETEXT) {
+			if (dataSize > 1
+			 && *((unsigned short *)dataBytes + (dataSize/2) - 1) == 0)
+				dataSize -= 2;
+		}
+		outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), dataSize);
 		if (outData) {
 			PBITMAPINFOHEADER pdib = (BITMAPINFOHEADER *)dataBytes; // Paul Atreides??
 
@@ -251,15 +264,14 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 			if ((format == CF_DIB || format == CF_DIBV5)
 			 && pdib->biHeight > 0) {
 				unsigned char *dest = interpreterProxy->firstIndexableField(outData);
-				long size = GlobalSize(data);
 				long scanLineLength = pdib->biWidth * pdib->biBitCount / 8;
 				unsigned char *source, *start;
-				assert(pdib->biSizeImage + sizeof(*pdib) < size);
+				assert(pdib->biSizeImage + sizeof(*pdib) < dataSize);
 				pdib->biHeight = - pdib->biHeight;
-				memcpy(dest, dataBytes, size - pdib->biSizeImage);
-				dest += size - pdib->biSizeImage;
-				start = dataBytes + size - pdib->biSizeImage;
-				source = dataBytes + size - scanLineLength;
+				memcpy(dest, dataBytes, dataSize - pdib->biSizeImage);
+				dest += dataSize - pdib->biSizeImage;
+				start = dataBytes + dataSize - pdib->biSizeImage;
+				source = dataBytes + dataSize - scanLineLength;
 				while (source > start) {
 					memcpy(dest, source, scanLineLength);
 					dest += scanLineLength;
@@ -269,7 +281,7 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 			else
 				memcpy(interpreterProxy->firstIndexableField(outData),
 					   dataBytes,
-					   GlobalSize(data));
+					   dataSize);
 		}
 	}
 	if (format != CF_BITMAP)
