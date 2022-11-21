@@ -81,6 +81,7 @@ void
 sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *inData, sqInt dataLength, sqInt format)
 {
 	HANDLE globalMem;
+	int nullTerminationBytes = 0;
 
 	if (dataLength <= 0) {
 		interpreterProxy->primitiveFailFor(PrimErrBadArgument);
@@ -95,7 +96,19 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		return;
 	}
 	else {
-		globalMem = GlobalAlloc(GMEM_MOVEABLE, dataLength);
+		// Text formats must put null-terminated strings, which isn't convenient
+		// for Squeak, so add them if missing.
+		if (format == CF_TEXT
+		 || format == CF_OEMTEXT) {
+			if (inData[dataLength - 1] != 0)
+				nullTerminationBytes = 1;
+		}
+		else if (format == CF_UNICODETEXT) {
+			if (inData[dataLength - 1] != 0
+			 || inData[dataLength - 2] != 0)
+				nullTerminationBytes = 2;
+		}
+		globalMem = GlobalAlloc(GMEM_MOVEABLE, dataLength + nullTerminationBytes);
 		if (!globalMem) {
 			CloseClipboard();
 			interpreterProxy->primitiveFailFor(PrimErrNoCMemory);
@@ -130,8 +143,14 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 				source -= scanLineLength;
 			}
 		}
-		else
+		else {
 			memcpy(globalBytes, inData, dataLength);
+			if (nullTerminationBytes) {
+				((char *)globalBytes)[dataLength] = 0;
+				if (nullTerminationBytes > 1)
+					((char *)globalBytes)[dataLength + 1] = 0;
+			}
+		}
 		GlobalUnlock(globalMem);
 	}
 	(void)EmptyClipboard();
