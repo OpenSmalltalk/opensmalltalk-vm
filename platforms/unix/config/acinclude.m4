@@ -161,7 +161,7 @@ test "$ac_cv_socklen_t" != "yes" && AC_DEFINE(socklen_t, int, [socklen size])])
 
 AC_DEFUN([AC_CHECK_TZSET],
 [AC_CACHE_CHECK([for tzset], ac_cv_tzset,
-  AC_TRY_COMPILE([#include <time.h>],[tzet();],
+  AC_TRY_COMPILE([#include <time.h>],[tzset();],
     ac_cv_tzset="yes", ac_cv_tzset="no"))
 test "$ac_cv_tzset" != "no" && AC_DEFINE(HAVE_TZSET, [], [tzset available])])
 

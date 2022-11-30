@@ -14114,7 +14114,7 @@ else
 int
 main ()
 {
-tzet();
+tzset();
   ;
   return 0;
 }
