@@ -10,6 +10,12 @@
 #include "sqVirtualMachine.h"
 #include "sqAssert.h"
 
+// As a convenience, because UTF16/CF_UNICODETEXT is so tricky, handle
+// CF_PRIVATELAST as a special code implying put/get UTF-8 converted
+// to/from UTF16
+
+#define CF_UTF8TEXT CF_PRIVATELAST
+
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern void *ioGetWindowHandle(void);
 # define myWindow() ioGetWindowHandle()
@@ -95,6 +101,25 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 		return;
 	}
+	// As a convenience, because UTF16/CF_UNICODETEXT is so tricky, handle
+	// CF_UTF8TEXT as a special code implying put UTF-8 converted to UTF16
+	if (format == CF_UTF8TEXT) {
+		int numWchars = MultiByteToWideChar(CP_UTF8, 0, inData, dataLength, 0, 0);
+		if (numWchars < 0) {
+			interpreterProxy->primitiveFailForOSError(GetLastError());
+			return;
+		}
+		globalMem = GlobalAlloc(GMEM_MOVEABLE,(numWchars + 1) * sizeof(wchar_t));
+		if (!globalMem) {
+			CloseClipboard();
+			interpreterProxy->primitiveFailFor(PrimErrNoCMemory);
+			return;
+		}
+		wchar_t *globalWchars = GlobalLock(globalMem);
+		(void)MultiByteToWideChar(CP_UTF8, 0, inData, dataLength, globalWchars, (numWchars + 1) * sizeof(wchar_t));
+		globalWchars[numWchars] = 0;
+		format = CF_UNICODETEXT;
+	}
 	else {
 		// Text formats must put null-terminated strings, which isn't convenient
 		// for Squeak, so add them if missing.
@@ -151,8 +176,8 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 					((char *)globalBytes)[dataLength + 1] = 0;
 			}
 		}
-		GlobalUnlock(globalMem);
 	}
+	GlobalUnlock(globalMem);
 	(void)EmptyClipboard();
 	if (!SetClipboardData((UINT)format, globalMem)) {
 		CloseClipboard();
@@ -178,7 +203,9 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
-	HANDLE data = GetClipboardData((UINT)format);
+	HANDLE data = GetClipboardData((UINT)(format == CF_UTF8TEXT
+											? CF_UNICODETEXT
+											: format));
 	// *%^$!# Microsoft do it again; CF_BITMAP is an exception; the memory
 	// must not be locked.  WTF?!?!
 	if (format == CF_BITMAP) {
@@ -255,6 +282,7 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 	}
 	else {
 		void *dataBytes;
+		int numWchars;
 		if (!data
 		 || !(dataBytes = GlobalLock(data))) {
 			CloseClipboard();
@@ -269,10 +297,28 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 			 && *((char *)dataBytes + dataSize - 1) == 0)
 				dataSize -= 1;
 		}
-		else if (format == CF_UNICODETEXT) {
+		else if (format == CF_UNICODETEXT
+			  || format == CF_UTF8TEXT) {
 			if (dataSize > 1
 			 && *((unsigned short *)dataBytes + (dataSize/2) - 1) == 0)
 				dataSize -= 2;
+		}
+		if (format == CF_UTF8TEXT) {
+			dataSize = WideCharToMultiByte(CP_UTF8,
+											0,
+											(LPCWCH)dataBytes,
+											numWchars = dataSize / 2,
+											0,
+											0,
+											0,
+											0);
+			if (dataSize < 0) {
+				GlobalUnlock(data);
+				CloseClipboard();
+				interpreterProxy->primitiveFailForwithSecondary
+									(PrimErrOSError,GetLastError());
+				return 0;
+			}
 		}
 		outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), dataSize);
 		if (outData) {
@@ -296,6 +342,16 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 					dest += scanLineLength;
 					source -= scanLineLength;
 				}
+			}
+			else if (format == CF_UTF8TEXT) {
+				(void)WideCharToMultiByte(CP_UTF8,
+											0,
+											(LPCWCH)dataBytes,
+											numWchars,
+											interpreterProxy->firstIndexableField(outData),
+											dataSize,
+											0,
+											0);
 			}
 			else
 				memcpy(interpreterProxy->firstIndexableField(outData),
