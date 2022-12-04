@@ -322,4 +322,4 @@ resource.o:	$(VMRES)
 sqNamedPrims.h: plugins.int mkNamedPrims.exe
 	./mkNamedPrims.exe $(INTERNAL_PLUGINS) > sqNamedPrims.h
 
-$(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h
+$(OBJDIR)/sqNamedPrims.o:	$(CROSSDIR)/sqNamedPrims.c sqNamedPrims.h
