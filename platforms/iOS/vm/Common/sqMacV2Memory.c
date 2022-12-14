@@ -6,10 +6,9 @@
  *   AUTHOR:  John McIntosh.
  *   ADDRESS: 
  *   EMAIL:   johnmci@smalltalkconsulting.com
- *   RCSID:   
  *
  *   NOTES: 
- 
+
  *****************************************************************************/
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
@@ -23,10 +22,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -35,7 +34,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -45,7 +44,9 @@
 //
 
 
-#include "sq.h" 
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "sqAssert.h"
 #if !SPURVM
 #include "sqImageFileAccess.h"
 #include "sqMacV2Memory.h"
@@ -64,21 +65,25 @@ __attribute__ ((visibility("default"))) char * sqMemoryBase=0;
 #endif
 
  /* compute the desired memory allocation */
- 
+
 #if !STACKVM
 extern usqInt memory;
 #else
 usqInt	memory;
 #endif 
+#if COGVM
+static void *endOfJITZone;
+#endif
 
-usqInt	sqGetAvailableMemory() {
+usqInt	sqGetAvailableMemory()
+{
 #if COGVM
 	 return gMaxHeapSize - 25*1024*1024;
 #else
 	 return gMaxHeapSize - 4*1024*1024; //Remove "eden bytes"
 #endif
  }
- 
+
 static size_t pageSize, pageMask;
 
 // N.B. we declare f as void * not FILE * so that sqPlatformSpecific.h
@@ -90,10 +95,10 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, void *f, usqInt h
 	 struct stat sb;
 	 pageSize= getpagesize();
 	 pageMask= ~(pageSize - 1);
-	 
-	#define valign(x)	((x) & pageMask)
-	#pragma unused(minHeapSize,desiredHeapSize)
-	 
+
+#define valign(x)	((x) & pageMask)
+#pragma unused(minHeapSize,desiredHeapSize)
+
 	 possibleLocation = (void*) (500*1024*1024);
 	 gHeapSize = gMaxHeapSize;
 	 if (desiredHeapSize > gHeapSize) 
@@ -102,25 +107,25 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, void *f, usqInt h
 	if (gSqueakUseFileMappedMMAP) {
 		/* Lets see about mmap the image file into a chunk of memory at the 500MB boundary rounding up to the page size
 	  Then we on the next page anonymously allocate the required free space for young space*/
-	 
+
 	 /* Thanks to David Pennell for suggesting this */
-	 
+
 	 fstat(fileno((FILE *)f), &sb);
 	 fileSize = sb.st_size;
 	 fileRoundedUpToPageSize = valign(fileSize+pageSize-1);	 
 	 startOfmmapForImageFile = mmap(possibleLocation, fileRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE,fileno((FILE *)f), (off_t)0);
-	 
+
 	 if (startOfmmapForImageFile != possibleLocation) {
 		 /* This isn't a failure case, let's continue and see what happens */
 		 /* Before we would bail, but on 4GB macs with 27 apps running it might not allow 500MB boundary, so let it suggest one and live with it */
-		 
+
 		 possibleLocation = startOfmmapForImageFile;
 	 }
-	 
+
 	 startOfAnonymousMemory = (void *) ((size_t) fileRoundedUpToPageSize + (size_t) possibleLocation);
 	 freeSpaceRoundedUpToPageSize = valign(gMaxHeapSize)-fileRoundedUpToPageSize+pageSize;
 	 startOfmmapForANONMemory = mmap(startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,0,(off_t)0);
-	 
+
 	 if (startOfmmapForANONMemory != startOfAnonymousMemory) {
 		 fprintf(stderr, "errno %d\n", errno);
 		 perror("startOfmmapForANONMemory failed");
@@ -150,7 +155,7 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, void *f, usqInt h
 #endif
 	}
  }
- 
+
 sqInt 
 sqGrowMemoryBy(sqInt memoryLimit, sqInt delta) {
 	if ((usqInt) memoryLimit + (usqInt) delta - (usqInt) memory > gMaxHeapSize)
@@ -159,7 +164,7 @@ sqGrowMemoryBy(sqInt memoryLimit, sqInt delta) {
 	gHeapSize += delta;
 	return memoryLimit + delta;
  }
- 
+
 sqInt 
 sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
 	 return sqGrowMemoryBy(memoryLimit,0-delta);
@@ -213,14 +218,42 @@ sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
+#endif
+
+#if COGVM
+// Allocate memory for the code zone, which must be executable, and is
+// perferably writable.  Since the code zone lies below the heap, allocate at
+// as low an address as possible, to allow maximal space for heap growth.
+void *
+allocateJITMemory(usqInt *desiredSize)
+{
+	void *hint = sbrk(0); // a hint of the lowest possible address for mmap
+	void *result;
+
+	pageSize = getpagesize();
+	pageMask = ~(pageSize - 1);
+
+	*desiredSize = roundUpToPage(*desiredSize);
+	result =   mmap(hint, *desiredSize,
+					PROT_READ | PROT_WRITE | PROT_EXEC,
+					MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (result == MAP_FAILED) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	// Note the address for sqAllocateMemory below
+	endOfJITZone = (char *)result + *desiredSize;
+
+	return result;
+}
 #endif /* COGVM */
 
-/* Allocate a region of memory of al least size bytes, at or above minAddress.
+/* Allocate a region of memory of at least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
  * start of the region and assign its size through allocatedSizePointer.
  */
 void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(usqInt size, void *minAddress, usqInt *allocatedSizePointer)
 {
 	void *alloc;
 	long bytes = roundUpToPage(size);
@@ -265,21 +298,26 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
     char *hint, *address, *alloc;
     unsigned long alignment, allocBytes;
-    
+
     if (pageSize) {
         fprintf(stderr, "sqAllocateMemory: already called\n");
         exit(1);
     }
+
+#if !COGVM
     pageSize = getpagesize();
     pageMask = ~(pageSize - 1);
-    
     hint = sbrk(0);
-    
+#else
+	assert(pageSize != 0 && pageMask != 0);
+	hint = endOfJITZone;
+#endif
+
     alignment = mmax(pageSize,1024*1024);
     address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
-    
+
     alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
-    (roundUpToPage(desiredHeapSize), address, &allocBytes);
+    ((usqInt)roundUpToPage(desiredHeapSize), address, (usqInt *)&allocBytes);
     if (!alloc) {
         fprintf(stderr, "sqAllocateMemory: initial alloc failed!\n");
         exit(errno);

@@ -116,7 +116,7 @@ address_space_used(char *address, usqInt bytes)
 }
 
 void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(usqInt size, void *minAddress, usqInt *allocatedSizePointer)
 {
 	char *address, *alloc;
 	usqInt bytes, delta;

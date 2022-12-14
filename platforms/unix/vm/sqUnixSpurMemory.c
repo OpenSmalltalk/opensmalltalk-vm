@@ -150,10 +150,10 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
  * start of the region and assign its size through allocatedSizePointer.
  */
 void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(usqInt size, void *minAddress, usqInt *allocatedSizePointer)
 {
 	char *address, *alloc;
-	long bytes, delta;
+	unsigned long bytes, delta;
 
 	address = (char *)roundUpToPage((unsigned long)minAddress);
 	bytes = roundUpToPage(size);
