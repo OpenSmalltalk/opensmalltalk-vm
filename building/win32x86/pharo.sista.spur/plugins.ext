@@ -8,4 +8,4 @@ FT2Plugin \
 VectorEnginePlugin \
 # SDL2DisplayPlugin \
 # BochsIA32Plugin \
-# BochsX64Plugin \
+# BochsX64Plugin
