@@ -201,16 +201,16 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
  * start of the region and assign its size through allocatedSizePointer.
  */
 void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
+sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(usqInt size, void *minAddress, usqInt *allocatedSizePointer)
 {
 	void *alloc;
-	long bytes = roundUpToPage(size);
+	unsigned long bytes = roundUpToPage(size);
 
 	if (!pageSize) {
 		pageSize = getpagesize();
 		pageMask = pageSize - 1;
 	}
-	*allocatedSizePointer = bytes;
+	*allocatedSizePointer = (usqInt)bytes;
 	while ((char *)minAddress + bytes > (char *)minAddress) {
 		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
 					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
