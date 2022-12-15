@@ -11,4 +11,4 @@ Win32OSProcessPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
-VectorEnginePlugin \
+VectorEnginePlugin
