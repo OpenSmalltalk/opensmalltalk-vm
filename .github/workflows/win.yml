@@ -67,7 +67,7 @@ jobs:
           #   flavor: pharo.sista.spur
           #   mode: fast
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
@@ -76,11 +76,11 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
@@ -99,7 +99,6 @@ jobs:
         # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
         env:
           MSYS_SYS: ${{ matrix.arch == 'win64x64' && 'mingw64' || 'mingw32' }}
-          MSYS_ENV: ${{ matrix.arch == 'win64x64' && 'x86_64' || 'i686' }}
 
       - name: Sign VM (not implemented)
         if: false
@@ -110,13 +109,13 @@ jobs:
         run: ./deploy/pack-vm.sh
 
       - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-build
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && endsWith(github.ref, 'Cog')
         with:
           prerelease: true
@@ -128,7 +127,7 @@ jobs:
           body: ${{ github.event.head_commit.message }}
 
       - name: Deploy artifact as new release candidate
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'workflow_dispatch'
         with:
           prerelease: true # release candidate

@@ -2,11 +2,15 @@
 # Compilation rules for 32-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
+ifdef MSYSTEM # MSYS2
+TOOLPREFIX:=
+else # Cygwin
 TOOLPREFIX:=i686-w64-mingw32-
+endif
 export TOOLPREFIX
 
 #############################################################################
-# C compiler settings (gcc 4.x)
+# C compiler settings (Use clang for non-default .manifest file)
 #
 ifeq ($(COMPILER_TO_USE),)
 COMPILER_TO_USE:=clang

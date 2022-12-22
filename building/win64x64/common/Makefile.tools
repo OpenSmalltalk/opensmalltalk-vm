@@ -2,7 +2,11 @@
 # Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
+ifdef MSYSTEM # MSYS2
+TOOLPREFIX:=
+else # Cygwin
 TOOLPREFIX:=x86_64-w64-mingw32-
+endif
 export TOOLPREFIX
 
 #############################################################################
