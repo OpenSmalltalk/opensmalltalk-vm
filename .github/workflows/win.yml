@@ -99,6 +99,7 @@ jobs:
         # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
         env:
           MSYS_SYS: ${{ matrix.arch == 'win64x64' && 'mingw64' || 'mingw32' }}
+          MSYS_ENV: ${{ matrix.arch == 'win64x64' && 'x86_64' || 'i686' }}
 
       - name: Sign VM (not implemented)
         if: false
