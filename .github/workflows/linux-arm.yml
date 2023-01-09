@@ -72,11 +72,11 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
@@ -89,7 +89,7 @@ jobs:
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
-        uses: uraimo/run-on-arch-action@v2.1.1
+        uses: uraimo/run-on-arch-action@v2
         id: build-vm
         with: 
           arch: ${{ env.ARCH_ARM }}
@@ -101,23 +101,7 @@ jobs:
             apt update -y
             apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev libxrandr-dev  libtool automake autoconf libltdl-dev
 
-          env: | # Copy the entire environment for the docker container
-            ARCH: ${{ env.ARCH }}
-            ARCH_ARM: ${{ env.ARCH_ARM }}
-            FLAVOR: ${{ env.FLAVOR }}
-            MODE: ${{ env.MODE }}
-            HEARTBEAT: ${{ env.HEARTBEAT }}
-
           run: ./scripts/ci/actions_build.sh
-
-      - name: Post Build VM
-        #TODO: https://github.com/uraimo/run-on-arch-action/issues/52
-        run: |
-          sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
-          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
-          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
-          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
       - name: Sign VM (not implemented)
         if: false
@@ -127,13 +111,13 @@ jobs:
         run: ./deploy/pack-vm.sh
 
       - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-release
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
@@ -145,7 +129,7 @@ jobs:
           body: ${{ github.event.head_commit.message }}
 
       - name: Deploy artifact as new release candidate
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'workflow_dispatch'
         with:
           prerelease: true # release candidate
