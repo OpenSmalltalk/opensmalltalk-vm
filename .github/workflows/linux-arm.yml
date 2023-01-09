@@ -103,6 +103,7 @@ jobs:
             git config --global --add safe.directory $GITHUB_WORKSPACE
 
           env: | # Copy the entire environment for the docker container
+            GITHUB_WORKSPACE: ${{ env.GITHUB_WORKSPACE }}
             ARCH: ${{ env.ARCH }}
             ARCH_ARM: ${{ env.ARCH_ARM }}
             FLAVOR: ${{ env.FLAVOR }}
