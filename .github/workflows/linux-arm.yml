@@ -110,6 +110,15 @@ jobs:
 
           run: ./scripts/ci/actions_build.sh
 
+      - name: Post Build VM
+        #TODO: https://github.com/uraimo/run-on-arch-action/issues/52
+        run: |
+          sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
+
       - name: Sign VM (not implemented)
         if: false
         run: ./deploy/sign-vm.sh

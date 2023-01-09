@@ -17,7 +17,7 @@ if ( $branch eq "Cog" || $branch eq "dev" || $branch eq "master" || $branch eq "
     $myrev = $myrev . '-' . $branch . '';
 }
 
-if ((defined $ENV{'TRAVIS'}) || (defined $ENV{'APPVEYOR'})) {
+if (defined $ENV{'GITHUB_ACTION'}) {
     $url=`git config --get remote.origin.url`;
 } else {
     $url=`whoami` . '@' . `hostname` . ':' . `PWD=\$(pwd) echo \${PWD##\$HOME/}`;
