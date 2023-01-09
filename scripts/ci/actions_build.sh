@@ -56,7 +56,12 @@ skip_BochsPlugins() {
 export_variable() {
     local var_name=$1
     local var_value=$2
-    echo "${var_name}=${var_value}" >> $GITHUB_ENV
+    if [[ ! -z "${ARCH_ARM}" ]]; then
+        # We are in a docker container. See https://github.com/uraimo/run-on-arch-action
+        echo "::set-output name=${var_name}::${var_value}"
+    else
+        echo "${var_name}=${var_value}" >> $GITHUB_ENV
+    fi
 }
 
 # export COGVREV="$(git describe --tags --always)"
