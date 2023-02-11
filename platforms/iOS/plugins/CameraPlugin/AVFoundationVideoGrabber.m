@@ -100,6 +100,7 @@ void printDevices();
   int						 pixelsByteSize;
   void						*bufferAOrNil;
   void						*bufferBOrNil;
+  void						*freshestBuffer;
   sqInt						 bufferSize;
   sqInt						 frameCount;
   int						 deviceID;
@@ -171,6 +172,8 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 				CVPixelBufferGetBaseAddress(imageBuffer),
 				currentWidth * currentHeight * 4);
 		CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+		if (theBuffer != pixels)
+			freshestBuffer = theBuffer;
 	}
 	frameCount++;
 	if (semaphoreIndex > 0 && !alreadyHaveErrorCondition)
@@ -382,7 +385,7 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
     captureSession = NULL;
     captureOutput = NULL;
     captureInput = NULL;
-	bufferAOrNil = bufferBOrNil = 0;
+	bufferAOrNil = bufferBOrNil = freshestBuffer = (void *)0;
 	bufferSize = 0;
     grabbers[cameraNum-1] = NULL;
   }
@@ -428,7 +431,7 @@ CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
 
-  if (grabber && grabber->pixels)
+  if (grabber && (grabber->pixels || grabber->bufferAOrNil))
 	return true;
 
   grabber = [SqueakVideoGrabber alloc];
@@ -569,6 +572,7 @@ CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
   grabber->bufferBOrNil = bufferB
 						? interpreterProxy->firstIndexableField(bufferB)
 						: (void *)0;
+  grabber->freshestBuffer = (void *)0;
   grabber->bufferSize = byteSize;
   sqLowLevelMFence();
   // Need to free pixels carefully since camera may be running.
@@ -580,6 +584,29 @@ CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
 	free(the_pixels);
   }
   return 0;
+}
+
+// If double-buffering is in effect (set via CameraSetFrameBuffers) answer which
+// buffer contains the freshest data, either A (1) or B (2). If no buffer has
+// been filled yet, answer nil.  Otherwise fail with an appropriate error code.
+sqInt
+CameraGetLatestBufferIndex(sqInt cameraNum)
+{
+  SqueakVideoGrabber *grabber;
+
+  if (cameraNum < 1
+   || cameraNum > CAMERA_COUNT
+   || !(grabber = grabbers[cameraNum-1]))
+	return -PrimErrNotFound;
+
+  if (grabber->freshestBuffer == grabber->bufferAOrNil)
+	return 1;
+  if (grabber->freshestBuffer == grabber->bufferBOrNil)
+	return 2;
+  if (grabber->bufferAOrNil)
+	return 0;
+
+  return -PrimErrInappropriate;
 }
 
 sqInt
