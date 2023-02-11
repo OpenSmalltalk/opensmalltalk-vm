@@ -32,6 +32,8 @@ forwardDeclarationHack (struct Camera *aCamera, long lThisBufferSize,
 						char *errorCodep, char *alreadyErrorp);
 static inline void
 setErrorCode(struct Camera *aCamera, char errorCode);
+
+static unsigned int offsetOfFreshestBuffer = 0;
 }
 
 #define FLIP_IN_CAPTURE 1
@@ -126,6 +128,8 @@ public:
 #else
 			memcpy(theBuffer, pThisBuf, lThisBufSize);
 #endif
+			if (theBuffer != pFrameBuf)
+				*(void **)((char *)myCamera + offsetOfFreshestBuffer) = theBuffer;
 		}
 		++frameCount;
 		if (!alreadyHaveErrorCondition && semaphoreIndex > 0)
@@ -153,6 +157,7 @@ typedef struct Camera {
 	CSampleGrabberCB		 mCB;
 	void *					bufferAOrNil;
 	void *					bufferBOrNil;
+	void *					freshestBuffer;
 	sqInt					bufferSize;
 	int width;
 	int height;
@@ -261,6 +266,7 @@ CameraClose(sqInt cameraNum)
 	SAFE_RELEASE(theCamera->pCamera);
 	theCamera->bufferAOrNil = 0;
 	theCamera->bufferBOrNil = 0;
+	theCamera->freshestBuffer = 0;
 	theCamera->bufferSize = 0;
 	theCamera->width = 0;
 	theCamera->height = 0;
@@ -378,7 +384,7 @@ CameraGetSemaphore(sqInt cameraNum)
 sqInt
 CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
 {
-	Camera *camera;
+  Camera *camera;
 
   if (!(camera = ActiveCamera(cameraNum)))
 	return PrimErrNotFound;
@@ -396,6 +402,7 @@ CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
   camera->bufferBOrNil = bufferB
 						? interpreterProxy->firstIndexableField(bufferB)
 						: nullptr;
+  camera->freshestBuffer = 0;
   camera->bufferSize = byteSize;
   sqLowLevelMFence();
   // Need to free pixels carefully since camera may be running.
@@ -407,6 +414,27 @@ CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
 	delete [] camera->mCB.pFrameBuf;
   }
   return 0;
+}
+
+// If double-buffering is in effect (set via CameraSetFrameBuffers) answer which
+// buffer contains the freshest data, either A (1) or B (2). If no buffer has
+// been filled yet, answer nil.  Otherwise fail with an appropriate error code.
+sqInt
+CameraGetLatestBufferIndex(sqInt cameraNum)
+{
+  Camera *camera;
+
+  if (!(camera = ActiveCamera(cameraNum)))
+	return PrimErrNotFound;
+
+  if (camera->freshestBuffer == camera->bufferAOrNil)
+	return 1;
+  if (camera->freshestBuffer == camera->bufferBOrNil)
+	return 2;
+  if (camera->bufferAOrNil)
+	return 0;
+
+  return -PrimErrInappropriate;
 }
 
 sqInt
@@ -789,7 +817,11 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 }
 
 sqInt
-cameraInit(void) { return 1; }
+cameraInit(void)
+{
+	offsetOfFreshestBuffer = (unsigned int)&((Camera *)0)->freshestBuffer;
+	return 1;
+}
 
 sqInt
 cameraShutdown(void)

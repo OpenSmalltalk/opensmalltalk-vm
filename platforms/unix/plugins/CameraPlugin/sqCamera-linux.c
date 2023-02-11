@@ -935,6 +935,17 @@ CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
 	return PrimErrUnsupported;
 }
 
+// If double-buffering is in effect (set via CameraSetFrameBuffers) answer which
+// buffer contains the freshest data, either A (1) or B (2). If no buffer has
+// been filled yet, answer nil.  Otherwise fail with an appropriate error code.
+sqInt
+CameraGetLatestBufferIndex(sqInt camNum)
+{
+	// For now
+	return PrimErrUnsupported;
+}
+
+
 /* Alas, see for example
  * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/async.html
  * "3.5. Asynchronous I/O	This method is not defined yet."

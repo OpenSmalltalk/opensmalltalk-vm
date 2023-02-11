@@ -13,5 +13,6 @@ sqInt CameraGetParam(sqInt cameraNum, sqInt paramNum);
 sqInt CameraGetSemaphore(sqInt cameraNum);
 sqInt CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex);
 sqInt CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferBorNil);
+sqInt CameraGetLatestBufferIndex(sqInt cameraNum);
 
 #endif /* _SQ_CAMERA_PLUGIN_H_ */
