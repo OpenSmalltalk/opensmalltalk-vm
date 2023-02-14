@@ -110,6 +110,7 @@ void printDevices();
   unsigned char				 errorCode;
   unsigned char				 bInitCalled;
   unsigned char				 useBNotA;
+  unsigned char				 mirrorImage;
 }
 @end
 
@@ -168,9 +169,19 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 	}
 	if (!errorCode) {
 		CVPixelBufferLockBaseAddress(imageBuffer, 0);
-		memcpy(	theBuffer,
-				CVPixelBufferGetBaseAddress(imageBuffer),
-				currentWidth * currentHeight * 4);
+		if (mirrorImage) {
+			int *frame = CVPixelBufferGetBaseAddress(imageBuffer);
+			int *mirrored = theBuffer;
+			for (int y = 0; ++y <= currentHeight;) {
+				int *pixelp = frame + (y * currentWidth);
+				for (int x = currentWidth; --x >= 0;) 
+					*mirrored++ = *--pixelp;
+			}
+		}
+		else
+			memcpy(	theBuffer,
+					CVPixelBufferGetBaseAddress(imageBuffer),
+					currentWidth * currentHeight * 4);
 		CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 		if (theBuffer != pixels)
 			freshestBuffer = theBuffer;
@@ -355,6 +366,7 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   bInitCalled = YES;
   frameCount = 0;
   semaphoreIndex = -1;
+  mirrorImage = 0;
   grabbers[deviceID] = self;
   return self;
 }
@@ -612,12 +624,33 @@ CameraGetLatestBufferIndex(sqInt cameraNum)
 sqInt
 CameraGetParam(sqInt cameraNum, sqInt paramNum)
 {
-	if (!CameraIsOpen(cameraNum)) return -1;
-	if (paramNum == 1) return grabbers[cameraNum-1]->frameCount;
-	if (paramNum == 2) return grabbers[cameraNum-1]->width
-							* grabbers[cameraNum-1]->height * 4;
+	if (!CameraIsOpen(cameraNum))
+		return -PrimErrNotFound;
 
-	return -2;
+	SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
+
+	switch (paramNum) {
+	case FrameCount:	return grabber->frameCount;
+	case FrameByteSize:	return grabber->width * grabber->height * 4;
+	case MirrorImage:	return grabber->mirrorImage;
+	}
+	return -PrimErrBadArgument;
+}
+
+sqInt
+CameraSetParam(sqInt cameraNum, sqInt paramNum, sqInt paramValue)
+{
+	if (!CameraIsOpen(cameraNum))
+		return -PrimErrNotFound;
+
+	SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
+
+	if (paramNum == MirrorImage) {
+		sqInt oldValue = grabber->mirrorImage;
+		grabber->mirrorImage = paramValue;
+		return oldValue;
+	}
+	return -PrimErrBadArgument;
 }
 
 sqInt
