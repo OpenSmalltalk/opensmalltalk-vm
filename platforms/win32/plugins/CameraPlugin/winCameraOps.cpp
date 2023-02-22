@@ -31,9 +31,9 @@ typedef struct OurCamera {
 	void *					bufferBOrNil;
 	void *					freshestBuffer;
 	int						bufferSize;
-	int width;
-	int height;
-	int semaphoreIndex;
+	int						width;
+	int						height;
+	int						semaphoreIndex;
 	char					useBNotA;
 	char					errorCode;
 	char					mirrorImage;
@@ -41,9 +41,6 @@ typedef struct OurCamera {
 
 static inline OurCamera *
 forwardDeclarationHack (struct Camera *aCamera);
-static inline void
-setErrorCode(struct Camera *aCamera, char errorCode);
-}
 
 class CSampleGrabberCB : public ISampleGrabberCB {
 public:
@@ -115,7 +112,7 @@ public:
 				lFrameBufSize = pixelBytes;
 				if (!pFrameBuf) {
 					lFrameBufSize = 0;
-					setErrorCode(myCamera,PrimErrNoCMemory);
+					aCamera->errorCode = PrimErrNoCMemory;
 				}
 			}
 			theBuffer = pFrameBuf;
@@ -189,9 +186,9 @@ typedef struct Camera {
 	void *					bufferBOrNil;
 	void *					freshestBuffer;
 	int						bufferSize;
-	int width;
-	int height;
-	int semaphoreIndex;
+	int						width;
+	int						height;
+	int						semaphoreIndex;
 	char					useBNotA;
 	char					errorCode;
 	char					mirrorImage;
@@ -231,9 +228,6 @@ forwardDeclarationHack(struct Camera *aCamera)
 {
 	return (OurCamera *)&(aCamera->bufferAOrNil);
 }
-
-static inline void
-setErrorCode(struct Camera *aCamera, char ec) { aCamera->errorCode = ec; }
 
 //////////////////////////////////////////////
 // Entry Points
