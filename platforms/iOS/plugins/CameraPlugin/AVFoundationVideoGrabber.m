@@ -636,7 +636,6 @@ CameraGetParam(sqInt cameraNum, sqInt paramNum)
 	case FrameCount:	return grabber->frameCount;
 	case FrameByteSize:	return grabber->width * grabber->height * 4;
 	case MirrorImage:	return grabber->mirrorImage;
-	case ErrorCode:		return grabber->errorCode;
 	}
 	return -PrimErrBadArgument;
 }
@@ -654,10 +653,6 @@ CameraSetParam(sqInt cameraNum, sqInt paramNum, sqInt paramValue)
 	case MirrorImage:
 		oldValue = grabber->mirrorImage;
 		grabber->mirrorImage = paramValue;
-		return oldValue;
-	case ErrorCode:
-		oldValue = grabber->errorCode;
-		grabber->errorCode = paramValue;
 		return oldValue;
 	}
 	return -PrimErrBadArgument;
