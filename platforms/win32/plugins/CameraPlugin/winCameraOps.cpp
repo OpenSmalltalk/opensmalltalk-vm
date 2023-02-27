@@ -26,6 +26,11 @@ extern "C" {
 
 extern struct VirtualMachine *interpreterProxy;
 
+// The Microsoft class needs to refer to the plugin's Camera stuff, and vice
+// verse. This struct is (must remain!!) exactly the same as the plugin's
+// data following the Microsoft data. See "typedef struct Camera" below.
+// forwardDeclarationHack answers the address of bufferAOrNil in the full
+// struct Camera, allowing the BufferCB method to access the plugin's data.
 typedef struct OurCamera {
 	void *					bufferAOrNil;
 	void *					bufferBOrNil;
@@ -41,6 +46,7 @@ typedef struct OurCamera {
 
 static inline OurCamera *
 forwardDeclarationHack (struct Camera *aCamera);
+}
 
 class CSampleGrabberCB : public ISampleGrabberCB {
 public:
@@ -94,12 +100,13 @@ public:
 		else
 			theBuffer = aCamera->bufferAOrNil;
 
-		if (lThisBufSize > aCamera->bufferSize) {
-			aCamera->errorCode = PrimErrWritePastObject;
-			theBuffer = 0;
+		if (theBuffer) {
+			// One or two buffers have been installed vua CameraSetFrameBuffers
+			// It may be too small; we must check
+			if (pixelBytes > aCamera->bufferSize)
+				aCamera->errorCode = PrimErrWritePastObject;
 		}
-
-		if (!theBuffer && !aCamera->errorCode) {
+		else if (!aCamera->errorCode) {
 			// No synchronization with CameraSetFrameBuffers et al.
 			// We assume this is in a higher-priority thread than Smalltalk.
 			if (pFrameBuf
@@ -182,6 +189,7 @@ typedef struct Camera {
 	IBaseFilter				*ppf;
 	ISampleGrabber			*pGrabber;
 	CSampleGrabberCB		 mCB;
+	// N.B. This is (and must remain) exactly the same as struct OurCamera above
 	void *					bufferAOrNil;
 	void *					bufferBOrNil;
 	void *					freshestBuffer;
@@ -226,7 +234,7 @@ static void SetFramesPerSecond(int fps);
 static inline OurCamera *
 forwardDeclarationHack(struct Camera *aCamera)
 {
-	return (OurCamera *)&(aCamera->bufferAOrNil);
+	return (OurCamera *)&aCamera->bufferAOrNil;
 }
 
 //////////////////////////////////////////////
@@ -262,15 +270,8 @@ CameraClose(sqInt cameraNum)
 	SAFE_RELEASE(theCamera->pGrabber);
 	SAFE_RELEASE(theCamera->ppf);
 	SAFE_RELEASE(theCamera->pCamera);
-	theCamera->bufferAOrNil = 0;
-	theCamera->bufferBOrNil = 0;
-	theCamera->freshestBuffer = 0;
-	theCamera->bufferSize = 0;
-	theCamera->width = 0;
-	theCamera->height = 0;
-	theCamera->semaphoreIndex = 0;
-	theCamera->useBNotA = 0;
-	theCamera->errorCode = 0;
+	// zero out the plugin's data
+	memset(&theCamera->bufferAOrNil, 0, sizeof(struct OurCamera));
 }
 
 sqInt
