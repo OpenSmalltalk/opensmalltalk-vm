@@ -329,7 +329,7 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 			if ((format == CF_DIB || format == CF_DIBV5)
 			 && pdib->biHeight > 0) {
 				unsigned char *dest = interpreterProxy->firstIndexableField(outData);
-				long scanLineLength = pdib->biWidth * pdib->biBitCount / 8;
+				long scanLineLength = ((pdib->biWidth * pdib->biBitCount + 31) / 32) * 4;
 				unsigned char *source, *start;
 				assert(pdib->biSizeImage + sizeof(*pdib) < dataSize);
 				pdib->biHeight = - pdib->biHeight;
