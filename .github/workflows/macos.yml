@@ -81,7 +81,8 @@ jobs:
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
 
-      - name: Sign VM
+      - name: Sign VM (skip for now)
+        if: false
         continue-on-error: true # Save unsigned build artifacts
         run: ./deploy/sign-vm.sh
         env:
