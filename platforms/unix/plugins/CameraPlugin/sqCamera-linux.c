@@ -778,13 +778,13 @@ initCamera(camPtr cam, int w, int h)
 sqInt
 CameraGetParam(sqInt cameraNum, sqInt paramNum)
 {
-	camPtr cam = camera(camNum);
+	camPtr cam = camera(cameraNum);
 
 	if (!cam)
 		return -PrimErrNotFound;
 	switch (paramNum) {
 	case FrameCount:	return cam->frameCount;
-	case FrameByteSize:	return cam->width * cam->height * 4;
+	case FrameByteSize:	return cam->bmWidth * cam->bmHeight * 4;
 	case MirrorImage:	return cam->mirrorImage;
 	}
 	return -PrimErrBadArgument;
@@ -793,7 +793,7 @@ CameraGetParam(sqInt cameraNum, sqInt paramNum)
 sqInt
 CameraSetParam(sqInt cameraNum, sqInt paramNum, sqInt paramValue)
 {
-	camPtr cam = camera(camNum);
+	camPtr cam = camera(cameraNum);
 
 	if (!cam)
 		return -PrimErrNotFound;
