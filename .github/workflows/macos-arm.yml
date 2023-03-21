@@ -41,7 +41,7 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         arch: 
           - macos64ARMv8
@@ -49,9 +49,6 @@ jobs:
           - squeak.cog.spur
           # - squeak.sista.spur # -Werror bc. decl. missing
           - squeak.stack.spur
-          # - pharo.cog.spur
-          # - pharo.sista.spur # -Werror bc. decl. missing
-          # - pharo.stack.spur
         mode:
           - fast
           - debug
@@ -66,11 +63,11 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
@@ -107,7 +104,7 @@ jobs:
           path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-build
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
@@ -119,7 +116,7 @@ jobs:
           body: ${{ github.event.head_commit.message }}
 
       - name: Deploy artifact as new release candidate
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'workflow_dispatch'
         with:
           prerelease: true # release candidate

@@ -25,9 +25,10 @@ jobs:
           # - { name: macos32x86, os: macos-latest }
 
         flavor:
-          # Only newsqueak.* builds are fully prepared for all platforms
+          # Only newsqueak.* and pharo.cog.spur builds are fully prepared for all platforms
           - newspeak.cog.spur
           - newspeak.stack.spur
+          - pharo.cog.spur
 
         include:
           - arch: { name: win32x86, os: windows-2019 }
@@ -36,6 +37,8 @@ jobs:
             flavor: squeak.stack.v3
           - arch: { name: win32x86, os: windows-2019 }
             flavor: squeak.cog.spur.lowcode
+          # - arch: { name: win64x64, os: windows-2019 }
+          #   flavor: pharo.stack.spur # third-party not yet working
           # - arch: { name: win32x86, os: windows-2019 }
           #   flavor: pharo.cog.spur.lowcode
 
@@ -44,14 +47,26 @@ jobs:
           - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: squeak.stack.v3
           - arch: { name: linux32x86, os: ubuntu-18.04 }
+            flavor: pharo.sista.spur
+          - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: pharo.cog.spur.lowcode
           - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: pharo.stack.spur.lowcode
 
+          # - arch: { name: macos64x64, os: macos-10.15 }
+          #   flavor: pharo.sista.spur # -Werror bc. decl. missing
+          - arch: { name: macos64x64, os: macos-10.15 }
+            flavor: pharo.stack.spur
           # - arch: { name: macos64x64, os: macos-latest }
           #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
           - arch: { name: macos64x64, os: macos-10.15 }
             flavor: pharo.stack.spur.lowcode
+
+        exclude:
+          - arch: { name: win32x86, os: windows-2019 }
+            flavor: pharo.cog.spur # third-party not yet working
+          - arch: { name: win64x64, os: windows-2019 }
+            flavor: pharo.cog.spur # third-party not yet working
 
     runs-on: ${{ matrix.arch.os }}
     name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}
@@ -64,7 +79,7 @@ jobs:
       MSYS_ENV: ${{ matrix.arch.name == 'win64x64' && 'x86_64' || 'i686' }}
     steps:
       - name: Checkout files
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         # with:
         #   ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'refs/heads/Cog'}}
 
@@ -87,13 +102,13 @@ jobs:
         run: ./deploy/pack-vm.sh
 
       - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-build
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'schedule' || (github.event.inputs.should-deploy == 'true' && endsWith( github.ref , 'Cog' ))
         with:
           prerelease: true

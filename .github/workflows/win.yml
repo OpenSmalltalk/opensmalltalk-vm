@@ -44,16 +44,14 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         arch: 
           - win64x64
           - win32x86
-        flavor:
+        flavor: # for selected pharo.* builds, see extra.yml
           - squeak.cog.spur
           - squeak.stack.spur
-          # - pharo.cog.spur # third-party not yet working
-          # - pharo.stack.spur # third-party not yet working
         mode:
           - fast
           - debug
@@ -63,9 +61,6 @@ jobs:
           - arch: win32x86 
             flavor: squeak.sista.spur
             mode: fast
-          # - arch: win32x86 
-          #   flavor: pharo.sista.spur
-          #   mode: fast
 
     runs-on: windows-2019
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
