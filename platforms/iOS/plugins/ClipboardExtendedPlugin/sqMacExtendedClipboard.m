@@ -82,7 +82,15 @@ sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteb
     NSArray *arrayOfTypes = @[formatType];
 
     [inPasteboard declareTypes: arrayOfTypes owner: nil];
-    [inPasteboard setData: data forType: formatType];
+	int ok = true;
+	@try {
+		ok = [inPasteboard setData: data forType: formatType];
+	}
+	@catch (NSException *exception) {
+		ok = false;
+	}
+	if (!ok)
+		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 }
 
 void
@@ -105,7 +113,7 @@ sqPasteboardCopyItemFlavorDataformatformatLength(CLIPBOARDTYPE inPasteboard, cha
     sqInt dataLength = [dataBuffer length];
     sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), dataLength);
     char *outDataPtr = (char *) interpreterProxy->firstIndexableField(outData);
-    [dataBuffer getBytes: outDataPtr];
+    [dataBuffer getBytes: outDataPtr length: dataLength];
 
     return outData;
 }
