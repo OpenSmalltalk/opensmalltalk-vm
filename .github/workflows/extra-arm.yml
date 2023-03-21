@@ -28,8 +28,6 @@ jobs:
             flavor: newspeak.stack.spur
           # Some other flavors for backwards compatibility
           - arch: linux32ARMv6
-            flavor: pharo.cog.spur
-          - arch: linux32ARMv6
             flavor: squeak.cog.v3
           - arch: linux32ARMv6
             flavor: squeak.stack.v3
@@ -47,7 +45,7 @@ jobs:
       HEARTBEAT: threaded # itimer not supported
     steps:
       - name: Checkout files
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # TODO: Can we use the same thirdparty cache for armv6, armv7, and aarch64? Are pre-compiled binaries compatible or organized differently?
       # - name: Restore build cache
@@ -58,7 +56,7 @@ jobs:
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
-        uses: uraimo/run-on-arch-action@v2.1.1
+        uses: uraimo/run-on-arch-action@v2
         id: build-vm
         with: 
           arch: ${{ env.ARCH_ARM }}
@@ -96,13 +94,13 @@ jobs:
         run: ./deploy/pack-vm.sh
 
       - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-release
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'schedule' || (github.event_name == 'push' && endsWith( github.ref , 'Cog' ))
         with:
           prerelease: true
