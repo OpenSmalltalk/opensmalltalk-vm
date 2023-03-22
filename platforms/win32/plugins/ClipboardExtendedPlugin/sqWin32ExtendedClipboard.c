@@ -30,29 +30,30 @@ typedef void *CLIPBOARDTYPE;
 void
 sqPasteboardClear(CLIPBOARDTYPE inPasteboard)
 {
-	(void)OpenClipboard(NULL);
-	(void)EmptyClipboard();
+	if (!OpenClipboard(myWindow())) {
+		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
+		return;
+	}
+	if (!EmptyClipboard()) {
+		CloseClipboard();
+		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
+		return;		
+	}
+	CloseClipboard();
 }
 
 sqInt
 sqPasteboardGetItemCount(CLIPBOARDTYPE inPasteboard)
 {
-#if 0
-	UINT count = 0, format = 0, lastFormat = 0;
+	UINT count = 0;
 
 	if (!OpenClipboard(myWindow())) {
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
-	while ((format = EnumClipboardFormats(lastFormat))) {
-		lastFormat = format;
-		++count;
-	}
-	CloseClipboard(NULL);
-    return count;
-#else
-	return CountClipboardFormats();
-#endif
+	count = CountClipboardFormats();
+	CloseClipboard();
+	return count;
 }
 
 sqInt
@@ -60,7 +61,7 @@ sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNu
 {
 	UINT count = 0, format = 0, lastFormat = 0;
 
-	if (formatNumber < 1
+	if (formatNumber < 0
 	 || !OpenClipboard(myWindow())) {
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
@@ -98,6 +99,7 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		return;
 	}
 	if (format == CF_BITMAP) {
+		CloseClipboard();
 		interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 		return;
 	}
@@ -106,6 +108,7 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 	if (format == CF_UTF8TEXT) {
 		int numWchars = MultiByteToWideChar(CP_UTF8, 0, inData, dataLength, 0, 0);
 		if (numWchars < 0) {
+			CloseClipboard();
 			interpreterProxy->primitiveFailForOSError(GetLastError());
 			return;
 		}
