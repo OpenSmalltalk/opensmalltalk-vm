@@ -36,9 +36,7 @@ extern struct VirtualMachine* interpreterProxy;
 void
 sqPasteboardClear(CLIPBOARDTYPE inPasteboard)
 {
-    NSArray *arrayOfTypes = [NSArray array];
-
-    [inPasteboard declareTypes: arrayOfTypes owner: nil];
+    [inPasteboard clearContents];
 }
 
 sqInt
@@ -81,7 +79,7 @@ sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteb
     NSData* data = AUTORELEASEOBJ([[NSData alloc ] initWithBytes: inData length: dataLength]);
     NSArray *arrayOfTypes = @[formatType];
 
-    [inPasteboard declareTypes: arrayOfTypes owner: nil];
+    [inPasteboard addTypes: arrayOfTypes owner: nil];
 	int ok = true;
 	@try {
 		ok = [inPasteboard setData: data forType: formatType];
