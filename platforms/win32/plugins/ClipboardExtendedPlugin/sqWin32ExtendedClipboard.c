@@ -88,7 +88,7 @@ void
 sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *inData, sqInt dataLength, sqInt format)
 {
 	HANDLE globalMem;
-	int nullTerminationBytes = 0;
+	int nullTerminationBytes = 0, okSet, okClose;
 
 	if (dataLength <= 0) {
 		interpreterProxy->primitiveFailFor(PrimErrBadArgument);
@@ -181,14 +181,12 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		}
 	}
 	GlobalUnlock(globalMem);
-	(void)EmptyClipboard();
-	if (!SetClipboardData((UINT)format, globalMem)) {
-		CloseClipboard();
+	okSet = SetClipboardData((UINT)format, globalMem);
+	okClose = CloseClipboard();
+	iif (!okSet || !okClose) {
 		GlobalFree(globalMem);
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
-		return;
 	}
-	CloseClipboard();
 }
 
 sqInt
