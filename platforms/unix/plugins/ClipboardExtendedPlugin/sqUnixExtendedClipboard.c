@@ -50,7 +50,7 @@ void clipboardWriteWithType(char * data, size_t ndata, char * typeName, size_t n
 // can be done directly. eem. '23/3/25
 
 void
-sqPasteboardClear( sqInt inPasteboard )
+sqPasteboardClear(sqInt inPasteboard)
 {
 // perhaps PrimErrUnsupported is better, but it's inaccurate
 // we don't yet have PrimErrUnimplemented
@@ -124,16 +124,13 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
 	return outData;
 }
 
-/* In X11 clipboard is global in a display, so it just return 1 */
+/* In X11 clipboard is global in a display, so just return 1 */
 sqInt
-sqCreateClipboard( void )
-{
-	return 1;
-}
+sqCreateClipboard(void) { return 1; }
 
 
 void
-sqPasteboardPutItemFlavordatalengthformatTypeformatLength( sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
+sqPasteboardPutItemFlavordatalengthformatTypeformatLength(sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
 {
 	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
 }
@@ -149,7 +146,7 @@ sqPasteboardCopyItemFlavorDataformatformatLength(sqInt inPasteboard, char* forma
 	return outData;
 }
 
-sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
+sqPasteboardCopyItemFlavorDataformat(sqInt inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();
