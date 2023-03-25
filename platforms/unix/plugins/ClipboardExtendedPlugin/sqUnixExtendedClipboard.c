@@ -25,12 +25,6 @@
  *   SOFTWARE.
  */
 
-#include<string.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<X11/Xlib.h>
-#include<X11/Xatom.h>
-
 #ifdef CLIPBOARD_TEST
   #include<stdio.h>
   typedef int sqInt;
@@ -38,6 +32,12 @@
   #include "sqVirtualMachine.h"
   extern struct VirtualMachine* interpreterProxy;
 #endif /* ifdef CLIPBOARD_TEST */
+
+#include<string.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<X11/Xlib.h>
+#include<X11/Xatom.h>
 
 extern Display * stDisplay;
 
