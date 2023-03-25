@@ -25,19 +25,14 @@
  *   SOFTWARE.
  */
 
-#ifdef CLIPBOARD_TEST
-  #include<stdio.h>
-  typedef int sqInt;
-#else
-  #include "sqVirtualMachine.h"
-  extern struct VirtualMachine* interpreterProxy;
-#endif /* ifdef CLIPBOARD_TEST */
+#include "sqVirtualMachine.h"
+extern struct VirtualMachine* interpreterProxy;
 
-#include<string.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<X11/Xlib.h>
-#include<X11/Xatom.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 
 extern Display * stDisplay;
 
@@ -47,129 +42,140 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
 void * firstIndexableField(sqInt oop);
 void clipboardWriteWithType(char * data, size_t ndata, char * typeName, size_t ntypeName, int isDnd, int isClaiming);
 
-#ifndef CLIPBOARD_TEST
+// TODO: clipboardGetTypeNames() is should be cached. And the simplest way to do
+// this is to have display_clipboardGetTypeNames do the cacheing and freeing,
+// it freeing the previous ivocation's data if the clipboard has changed,
+// then all the multiple frees below can disappear. Further, the signature can
+// be changed to include a pointer to the item count and then the indexing
+// can be done directly. eem. '23/3/25
 
-void sqPasteboardClear( sqInt inPasteboard )
+void
+sqPasteboardClear( sqInt inPasteboard )
 {
-  /* NOT IMPLEMENTED YET */
+// perhaps PrimErrUnsupported is better, but it's inaccurate
+// we don't yet have PrimErrUnimplemented
+	interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 }
 
 /* Return a number of types.
  * Update it only if the selection is CLIPBOARD
  */
-int sqPasteboardGetItemCount(sqInt inPasteboard)
+int
+sqPasteboardGetItemCount(sqInt inPasteboard)
 {
-  int i= 0;
-  char ** types;
-  types= clipboardGetTypeNames();
-  if (NULL == types) return 0;
-  for (i= 0; NULL != types[i]; i++) free(types[i]); /* XFree() is better */
-  free(types);
-  return i;
+	int i;
+	char **types = clipboardGetTypeNames();
+	if (!types)
+		return 0;
+	for (i = 0; types[i]; i++)
+		free(types[i]); /* XFree() is better */
+	free(types);
+	return i;
 }
 
 /* Answer a type name at index. */
-int sqPasteboardCopyItemFlavorsitemNumber (sqInt inPasteboard, int formatNumber)
+int
+sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
 {
-  size_t length;
-  int outData;
-  char * dest;
-  char ** types;
-  char * type;
+	size_t length;
+	int outData;
+	char * dest;
+	char ** types;
+	char * type;
 
-  if (formatNumber < 1)
-    return interpreterProxy->nilObject();
-  
-  /* TODO: clipboardGetTypeNames() is should be cached. */
-  /* TODO: types should be free(). */
-  types= clipboardGetTypeNames();
-  if (types == NULL)
-    return interpreterProxy->nilObject();
+	if (formatNumber < 1)
+		return interpreterProxy->nilObject();
 
-  type= types[formatNumber - 1];
-  if (type == NULL)
-    return interpreterProxy->nilObject();
+	/* TODO: types should be free(). */
+	types = clipboardGetTypeNames();
+	if (!types)
+		return interpreterProxy->nilObject();
 
-  length= strlen(type);
-  outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
+	type = types[formatNumber - 1];
+	if (!type)
+		return interpreterProxy->nilObject();
 
-  dest = ((char *) (interpreterProxy->firstIndexableField(outData)));
-  memcpy(dest, type, length);
+	length = strlen(type);
+	outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
 
-  return outData;
+	dest = ((char *) (interpreterProxy->firstIndexableField(outData)));
+	memcpy(dest, type, length);
+
+	return outData;
+
+	int i;
+	sqInt outData = 0;
+	char **types = clipboardGetTypeNames();
+
+	if (!types)
+		return 0;
+	for (i = 0; types[i]; i++) {
+		if (i + 1 == formatNumber) {
+			int length = strlen(type);
+			outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
+
+			memcpy(	interpreterProxy->firstIndexableField(outData),
+					type,
+					length);
+		}
+		free(types[i]); /* XFree() is better */
+	}
+	free(types);
+	return outData;
 }
 
 /* In X11 clipboard is global in a display, so it just return 1 */
-sqInt sqCreateClipboard( void )
+sqInt
+sqCreateClipboard( void )
 {
-  return 1;
+	return 1;
 }
 
 
-void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
+void
+sqPasteboardPutItemFlavordatalengthformatTypeformatLength( sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
 {
-  clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
+	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
 }
 
 
 /* Read the clipboard */
-int sqPasteboardCopyItemFlavorDataformatformatLength (sqInt inPasteboard, char* format, int formatLength)
+int
+sqPasteboardCopyItemFlavorDataformatformatLength(sqInt inPasteboard, char* format, int formatLength)
 {
-  int bytes= 0;
-  sqInt outData;
-
-  bytes= clipboardSizeWithType(format, formatLength);
-  outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), bytes);
-  clipboardReadIntoAt(bytes, (sqInt) firstIndexableField(outData), 0);
-  return outData;
+	int bytes = clipboardSizeWithType(format, formatLength);
+	sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), bytes);
+	clipboardReadIntoAt(bytes, (sqInt) firstIndexableField(outData), 0);
+	return outData;
 }
 
-#endif /* #ifndef CLIPBOARD_TEST */
-
-#ifdef CLIPBOARD_TEST
-
-static Display * display;
-
-Display * ioGetDisplay()
+sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 {
-  return display;
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
 }
 
-char * getSelectionData(Atom selection, Atom target, size_t * bytes, XEvent * event)
+sqInt
+sqPasteboardhasDataInFormatformatLength(sqInt inPasteboard, char *format, sqInt formatLength)
 {
-  char * answer= "Hello world!";
-  *bytes= strlen(answer) + 1;
-  char * result= calloc(*bytes, 1);
-  memcpy(result, answer, *bytes);
-  return result;
+	int i, found = 0;
+	char **types = clipboardGetTypeNames();
+
+	if (!types)
+		return 0;
+	for (i = 0; types[i]; i++) {
+		if (strlen(types[i]) == formatLength
+		 && !strcmp(types[i],format,formatLength))
+			found = 1;
+		free(types[i]); /* XFree() is better */
+	}
+	free(types);
+	return found;
 }
 
-void updateInputTargets(Atom * newTargets, int targetSize)
+sqInt
+sqPasteboardhasDataInFormat(sqInt, sqInt format)
 {
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
+	return interpreterProxy->nilObject();
 }
-
-int main () {
-  Window window;
-  int i;
-  size_t nitems;
-  
-  display= XOpenDisplay(NULL);
-  if(display == NULL) {
-    printf("Cannot open display\n");
-    return 1;
-  }
-  window= XCreateSimpleWindow(display, DefaultRootWindow(display),
-				 10, 10, 100, 100, 1, 0, 0);
-  getItemFravors();
-  getItemFravors();
-
-  printf("\n");
-  char * text= (char *) getSelectionData(
-					 atom("CLIPBOARD"),
-					 atom("STRING"), &nitems);
-  printf("String contents: %s\n", text);
-  return 0;
-}
-
-#endif /* CLIPBOARD_TEST */
-
