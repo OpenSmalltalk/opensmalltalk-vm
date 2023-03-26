@@ -104,8 +104,8 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
 	return outData;
 
 	int i;
-	sqInt outData = 0;
-	char **types = clipboardGetTypeNames();
+	outData = 0;
+	types = clipboardGetTypeNames();
 
 	if (!types)
 		return 0;
@@ -128,11 +128,17 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
 sqInt
 sqCreateClipboard(void) { return 1; }
 
-
 void
 sqPasteboardPutItemFlavordatalengthformatTypeformatLength(sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
 {
 	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
+}
+
+
+void
+sqPasteboardPutItemFlavordatalengthformatType(sqInt inPasteboard, char *inData, sqInt dataLength, sqInt format)
+{
+	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 }
 
 
@@ -162,7 +168,7 @@ sqPasteboardhasDataInFormatformatLength(sqInt inPasteboard, char *format, sqInt 
 		return 0;
 	for (i = 0; types[i]; i++) {
 		if (strlen(types[i]) == formatLength
-		 && !strcmp(types[i],format,formatLength))
+		 && !strncmp(types[i],format,formatLength))
 			found = 1;
 		free(types[i]); /* XFree() is better */
 	}
@@ -171,7 +177,7 @@ sqPasteboardhasDataInFormatformatLength(sqInt inPasteboard, char *format, sqInt 
 }
 
 sqInt
-sqPasteboardhasDataInFormat(sqInt, sqInt format)
+sqPasteboardhasDataInFormat(sqInt inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();
