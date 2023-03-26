@@ -26,7 +26,7 @@
  */
 
 #include "sqVirtualMachine.h"
-extern struct VirtualMachine* interpreterProxy;
+extern struct VirtualMachine *interpreterProxy;
 
 #include <string.h>
 #include <stdio.h>
@@ -34,26 +34,32 @@ extern struct VirtualMachine* interpreterProxy;
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
-extern Display * stDisplay;
+extern Display *stDisplay;
 
-char ** clipboardGetTypeNames();
-sqInt clipboardSizeWithType(char * typeName, int ntypeName);
+char **clipboardGetTypeNames();
+sqInt clipboardSizeWithType(char *typeName, int ntypeName);
 sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
-void * firstIndexableField(sqInt oop);
-void clipboardWriteWithType(char * data, size_t ndata, char * typeName, size_t ntypeName, int isDnd, int isClaiming);
+void *firstIndexableField(sqInt oop);
+void clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming);
 
-// TODO: clipboardGetTypeNames() is should be cached. And the simplest way to do
+// TODO: clipboardGetTypeNames() should be cached. And the simplest way to do
 // this is to have display_clipboardGetTypeNames do the cacheing and freeing,
-// it freeing the previous ivocation's data if the clipboard has changed,
+// it freeing the previous invocation's data if the clipboard has changed,
 // then all the multiple frees below can disappear. Further, the signature can
 // be changed to include a pointer to the item count and then the indexing
-// can be done directly. eem. '23/3/25
+// can safely be done directly. eem. '23/3/25
+
+/* In X11 clipboard is global in a display, so just return 1 */
+sqInt
+sqCreateClipboard(void) { return 1; }
 
 void
 sqPasteboardClear(sqInt inPasteboard)
 {
 // perhaps PrimErrUnsupported is better, but it's inaccurate
 // we don't yet have PrimErrUnimplemented
+
+	// i.e. this still has to be implemented
 	interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 }
 
@@ -75,37 +81,11 @@ sqPasteboardGetItemCount(sqInt inPasteboard)
 
 /* Answer a type name at index. */
 int
-sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
+sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, sqInt formatNumber)
 {
-	size_t length;
-	int outData;
-	char * dest;
-	char ** types;
-	char * type;
-
-	if (formatNumber < 1)
-		return interpreterProxy->nilObject();
-
-	/* TODO: types should be free(). */
-	types = clipboardGetTypeNames();
-	if (!types)
-		return interpreterProxy->nilObject();
-
-	type = types[formatNumber - 1];
-	if (!type)
-		return interpreterProxy->nilObject();
-
-	length = strlen(type);
-	outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
-
-	dest = ((char *) (interpreterProxy->firstIndexableField(outData)));
-	memcpy(dest, type, length);
-
-	return outData;
-
 	int i;
-	outData = 0;
-	types = clipboardGetTypeNames();
+	sqInt outData = 0;
+	char **types = clipboardGetTypeNames();
 
 	if (!types)
 		return 0;
@@ -124,12 +104,8 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, int formatNumber)
 	return outData;
 }
 
-/* In X11 clipboard is global in a display, so just return 1 */
-sqInt
-sqCreateClipboard(void) { return 1; }
-
 void
-sqPasteboardPutItemFlavordatalengthformatTypeformatLength(sqInt inPasteboard, char * data, int ndata, char * typeName, int ntypeName)
+sqPasteboardPutItemFlavordatalengthformatTypeformatLength(sqInt inPasteboard, char *data, sqInt ndata, char *typeName, sqInt ntypeName)
 {
 	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
 }
@@ -144,7 +120,7 @@ sqPasteboardPutItemFlavordatalengthformatType(sqInt inPasteboard, char *inData, 
 
 /* Read the clipboard */
 int
-sqPasteboardCopyItemFlavorDataformatformatLength(sqInt inPasteboard, char* format, int formatLength)
+sqPasteboardCopyItemFlavorDataformatformatLength(sqInt inPasteboard, char *format, sqInt formatLength)
 {
 	int bytes = clipboardSizeWithType(format, formatLength);
 	sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), bytes);
