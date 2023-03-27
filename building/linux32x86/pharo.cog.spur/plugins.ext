@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
 B3DAcceleratorPlugin \
+ClipboardExtendedPlugin \
 FT2Plugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \

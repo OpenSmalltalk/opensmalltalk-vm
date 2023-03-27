@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
 B3DAcceleratorPlugin \
+ClipboardExtendedPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \

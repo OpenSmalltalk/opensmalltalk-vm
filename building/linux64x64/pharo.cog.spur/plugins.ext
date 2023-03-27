@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
 B3DAcceleratorPlugin \
+ClipboardExtendedPlugin \
 FT2Plugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
@@ -17,4 +18,4 @@ BochsX64Plugin \
 GdbARMPlugin \
 GdbARMv8Plugin \
 VectorEnginePlugin \
-#SDL2DisplayPlugin \
+#SDL2DisplayPlugin

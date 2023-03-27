@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
 B3DAcceleratorPlugin \
+ClipboardExtendedPlugin \
 FileAttributesPlugin \
 Squeak3D \
 SqueakFFIPrims \

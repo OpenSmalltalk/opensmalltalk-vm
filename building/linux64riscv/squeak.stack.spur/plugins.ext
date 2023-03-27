@@ -1,6 +1,7 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
+ClipboardExtendedPlugin \
 FileAttributesPlugin \
 Squeak3D \
 SqueakFFIPrims \
@@ -16,5 +17,3 @@ MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin \
 ZipPlugin
-
-#B3DAcceleratorPlugin \

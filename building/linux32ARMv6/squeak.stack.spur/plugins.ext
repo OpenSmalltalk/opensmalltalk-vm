@@ -1,6 +1,7 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
+ClipboardExtendedPlugin \
 FileAttributesPlugin \
 LocalePlugin \
 Squeak3D \
@@ -14,4 +15,4 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
-VectorEnginePlugin \
+VectorEnginePlugin

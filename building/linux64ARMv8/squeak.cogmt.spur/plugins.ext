@@ -3,9 +3,8 @@ EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
-GdbARMPlugin \
-GdbARMv8Plugin \
 CameraPlugin \
+ClipboardExtendedPlugin \
 FileAttributesPlugin \
 MIDIPlugin \
 Squeak3D \
@@ -21,3 +20,5 @@ DESPlugin \
 MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin \
+# GdbARMPlugin # fails to compile
+# GdbARMv8Plugin # ditto
