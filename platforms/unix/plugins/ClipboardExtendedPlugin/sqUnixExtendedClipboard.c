@@ -91,11 +91,11 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, sqInt formatNumber)
 		return 0;
 	for (i = 0; types[i]; i++) {
 		if (i + 1 == formatNumber) {
-			int length = strlen(type);
+			int length = strlen(types[i]);
 			outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
 
 			memcpy(	interpreterProxy->firstIndexableField(outData),
-					type,
+					types[i],
 					length);
 		}
 		free(types[i]); /* XFree() is better */

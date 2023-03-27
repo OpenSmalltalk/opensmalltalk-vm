@@ -1,8 +1,10 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-MIDIPlugin \
 B3DAcceleratorPlugin \
+CameraPlugin \
+ClipboardExtendedPlugin \
 FileAttributesPlugin \
+MIDIPlugin \
 Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
@@ -15,4 +17,4 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
-VectorEnginePlugin \
+VectorEnginePlugin 
