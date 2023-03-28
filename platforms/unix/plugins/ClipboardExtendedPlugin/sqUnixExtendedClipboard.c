@@ -26,6 +26,7 @@
  */
 
 #include "sqVirtualMachine.h"
+#include "ClipboardExtendedPlugin.h"
 extern struct VirtualMachine *interpreterProxy;
 
 #include <string.h>
@@ -49,12 +50,12 @@ void clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nty
 // be changed to include a pointer to the item count and then the indexing
 // can safely be done directly. eem. '23/3/25
 
-/* In X11 clipboard is global in a display, so just return 1 */
-sqInt
-sqCreateClipboard(void) { return 1; }
+/* In X11 clipboard is global in a display, so just return a constant */
+void *
+sqCreateClipboard(void) { return (void *)0xB0A4D; }
 
 void
-sqPasteboardClear(sqInt inPasteboard)
+sqPasteboardClear(void *inPasteboard)
 {
 // perhaps PrimErrUnsupported is better, but it's inaccurate
 // we don't yet have PrimErrUnimplemented
@@ -67,7 +68,7 @@ sqPasteboardClear(sqInt inPasteboard)
  * Update it only if the selection is CLIPBOARD
  */
 int
-sqPasteboardGetItemCount(sqInt inPasteboard)
+sqPasteboardGetItemCount(void *inPasteboard)
 {
 	int i;
 	char **types = clipboardGetTypeNames();
@@ -80,8 +81,8 @@ sqPasteboardGetItemCount(sqInt inPasteboard)
 }
 
 /* Answer a type name at index. */
-int
-sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, sqInt formatNumber)
+sqInt
+sqPasteboardCopyItemFlavorsitemNumber(void *inPasteboard, sqInt formatNumber)
 {
 	int i;
 	sqInt outData = 0;
@@ -93,49 +94,61 @@ sqPasteboardCopyItemFlavorsitemNumber(sqInt inPasteboard, sqInt formatNumber)
 		if (i + 1 == formatNumber) {
 			int length = strlen(types[i]);
 			outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), length);
-
-			memcpy(	interpreterProxy->firstIndexableField(outData),
-					types[i],
-					length);
+			if (!outData)
+				interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+			else
+				memcpy(	interpreterProxy->firstIndexableField(outData),
+						types[i],
+						length);
 		}
 		free(types[i]); /* XFree() is better */
 	}
 	free(types);
-	return outData;
+	return outData
+			? outData
+			: interpreterProxy->nilObject();
 }
 
 void
-sqPasteboardPutItemFlavordatalengthformatTypeformatLength(sqInt inPasteboard, char *data, sqInt ndata, char *typeName, sqInt ntypeName)
+sqPasteboardPutItemFlavordatalengthformatTypeformatLength(void *inPasteboard, char *data, sqInt ndata, char *typeName, sqInt ntypeName)
 {
 	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
 }
 
 
 void
-sqPasteboardPutItemFlavordatalengthformatType(sqInt inPasteboard, char *inData, sqInt dataLength, sqInt format)
+sqPasteboardPutItemFlavordatalengthformatType(void *inPasteboard, char *inData, sqInt dataLength, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 }
 
 
 /* Read the clipboard */
-int
-sqPasteboardCopyItemFlavorDataformatformatLength(sqInt inPasteboard, char *format, sqInt formatLength)
+sqInt
+sqPasteboardCopyItemFlavorDataformatformatLength(void *inPasteboard, char *format, sqInt formatLength)
 {
 	int bytes = clipboardSizeWithType(format, formatLength);
+
+    if (!bytes)
+        return interpreterProxy->nilObject();
+
 	sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), bytes);
+	if (!outData) {
+		interpreterProxy->primitiveFailFor(PrimErrNoMemory);
+		return interpreterProxy->nilObject();
+	}
 	clipboardReadIntoAt(bytes, (sqInt) firstIndexableField(outData), 0);
 	return outData;
 }
 
-sqPasteboardCopyItemFlavorDataformat(sqInt inPasteboard, sqInt format)
+sqPasteboardCopyItemFlavorDataformat(void *inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();
 }
 
 sqInt
-sqPasteboardhasDataInFormatformatLength(sqInt inPasteboard, char *format, sqInt formatLength)
+sqPasteboardhasDataInFormatformatLength(void *inPasteboard, char *format, sqInt formatLength)
 {
 	int i, found = 0;
 	char **types = clipboardGetTypeNames();
@@ -153,7 +166,7 @@ sqPasteboardhasDataInFormatformatLength(sqInt inPasteboard, char *format, sqInt 
 }
 
 sqInt
-sqPasteboardhasDataInFormat(sqInt inPasteboard, sqInt format)
+sqPasteboardhasDataInFormat(void *inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 	return interpreterProxy->nilObject();

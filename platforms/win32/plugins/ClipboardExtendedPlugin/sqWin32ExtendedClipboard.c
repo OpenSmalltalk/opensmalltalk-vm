@@ -8,7 +8,10 @@
 #include <Windows.h>
 #include "sqWin32.h"
 #include "sqVirtualMachine.h"
+#include "ClipboardExtendedPlugin.h"
 #include "sqAssert.h"
+
+extern struct VirtualMachine *interpreterProxy;
 
 // As a convenience, because UTF16/CF_UNICODETEXT is so tricky, handle
 // CF_PRIVATELAST as a special code implying put/get UTF-8 converted
@@ -23,9 +26,6 @@ extern void *ioGetWindowHandle(void);
 __declspec(dllimport) void *getSTWindowHandle(void);
 # define myWindow() getSTWindowHandle()
 #endif
-
-extern struct VirtualMachine* interpreterProxy;
-typedef void *CLIPBOARDTYPE;
 
 void
 sqPasteboardClear(CLIPBOARDTYPE inPasteboard)
