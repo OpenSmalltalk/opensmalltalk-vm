@@ -1835,7 +1835,7 @@ char *getVersionInfo(int verbose)
 #endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
-  char *info = (char *)malloc(4096);
+  char *info = (char *)malloc(8192);
   info[0] = '\0';
 
 #if SPURVM
