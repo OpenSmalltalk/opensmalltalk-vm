@@ -67,7 +67,7 @@ sqPasteboardClear(void *inPasteboard)
 /* Return a number of types.
  * Update it only if the selection is CLIPBOARD
  */
-int
+sqInt
 sqPasteboardGetItemCount(void *inPasteboard)
 {
 	int i;
@@ -141,6 +141,7 @@ sqPasteboardCopyItemFlavorDataformatformatLength(void *inPasteboard, char *forma
 	return outData;
 }
 
+sqInt
 sqPasteboardCopyItemFlavorDataformat(void *inPasteboard, sqInt format)
 {
 	interpreterProxy->primitiveFailFor(PrimErrUnsupported);
