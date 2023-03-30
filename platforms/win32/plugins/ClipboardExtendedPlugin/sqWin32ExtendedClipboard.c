@@ -222,13 +222,12 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
-	if (format == CF_UTF8TEXT) {
-		format = CF_UNICODETEXT;
-	}
 	if (format == CF_HTML) {
 		format = html_format_id;
 	}
-	HANDLE data = GetClipboardData((UINT)format);
+	HANDLE data = GetClipboardData((UINT)(format == CF_UTF8TEXT
+											? CF_UNICODETEXT
+											: format));
 	// *%^$!# Microsoft do it again; CF_BITMAP is an exception; the memory
 	// must not be locked.  WTF?!?!
 	if (format == CF_BITMAP) {
