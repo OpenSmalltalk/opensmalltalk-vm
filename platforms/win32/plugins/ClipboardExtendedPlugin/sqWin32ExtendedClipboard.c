@@ -18,6 +18,9 @@ extern struct VirtualMachine *interpreterProxy;
 // to/from UTF16
 
 #define CF_UTF8TEXT CF_PRIVATELAST
+#define CF_HTML 49358
+
+int html_format_id = 0;
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern void *ioGetWindowHandle(void);
@@ -66,17 +69,29 @@ sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNu
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
+	if (formatNumber == CF_HTML) {
+		formatNumber = html_format_id;
+	}
 	while ((format = EnumClipboardFormats(lastFormat))
 		&& ++count < formatNumber)
 		lastFormat = format;
 	CloseClipboard();
+	if (format == html_format_id) {
+		format = CF_HTML;
+	}
 	return format
 				? interpreterProxy->integerObjectOf(format)
 				: interpreterProxy->nilObject();
 }
 
 void *
-sqCreateClipboard(void) { return (void *)0xB0A4D; }
+sqCreateClipboard(void)
+{
+	if (!html_format_id) {
+		html_format_id = RegisterClipboardFormat("HTML Format");
+	}
+	return (void *)0xB0A4D;
+}
 
 void
 sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteboard, char *inData, sqInt dataLength, char *format, sqInt formatLength)
@@ -102,6 +117,9 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		CloseClipboard();
 		interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 		return;
+	}
+	if (format == CF_HTML) {
+		format = html_format_id;
 	}
 	// As a convenience, because UTF16/CF_UNICODETEXT is so tricky, handle
 	// CF_UTF8TEXT as a special code implying put UTF-8 converted to UTF16
@@ -204,9 +222,13 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
-	HANDLE data = GetClipboardData((UINT)(format == CF_UTF8TEXT
-											? CF_UNICODETEXT
-											: format));
+	if (format == CF_UTF8TEXT) {
+		format = CF_UNICODETEXT;
+	}
+	if (format == CF_HTML) {
+		format = html_format_id;
+	}
+	HANDLE data = GetClipboardData((UINT)format);
 	// *%^$!# Microsoft do it again; CF_BITMAP is an exception; the memory
 	// must not be locked.  WTF?!?!
 	if (format == CF_BITMAP) {
@@ -381,5 +403,11 @@ sqPasteboardhasDataInFormatformatLength(CLIPBOARDTYPE inPasteboard, char *format
 sqInt
 sqPasteboardhasDataInFormat(CLIPBOARDTYPE inPasteboard, sqInt format)
 {
+	if (format == CF_UTF8TEXT) {
+		format = CF_UNICODETEXT;
+	}
+	if (format == CF_HTML) {
+		format = html_format_id;
+	}
 	return IsClipboardFormatAvailable(format);
 }
