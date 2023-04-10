@@ -18,7 +18,6 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 	--with-src=src/spur64.stack --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
-	TARGET_ARCH="-m64" \
 	CC=clang \
 	VM_WORD_SIZE="64" \
 	VM_CFLAGS="-DNDEBUG -DDEBUGVM=0"

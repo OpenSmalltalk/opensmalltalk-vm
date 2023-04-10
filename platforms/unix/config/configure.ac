@@ -229,11 +229,18 @@ then
 			CFLAGS="-g -O2 -msse2"
 		;;
 
-		x86_64) TARGET_ARCH="-m64"
-			CFLAGS="-g -O1 -msse2"
+		x86_64)
+			if [[ "$VM_WORD_SIZE" == "32" ]]
+			then
+				TARGET_ARCH="-m32"
+				CFLAGS="-g -O2 -msse2"
+			else
+				TARGET_ARCH="-m64"
+				CFLAGS="-g -O1 -msse2"
+			fi
 		;;
 
-	        # Omitting -DNO_VM_PROFILE=1 for now
+		# Omitting -DNO_VM_PROFILE=1 for now
 		armhf) TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard"
 			CFLAGS="-g -O3"
 		;;

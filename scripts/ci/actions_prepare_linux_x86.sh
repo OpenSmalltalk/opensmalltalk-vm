@@ -6,7 +6,7 @@ set -e
 # and #64-bit architectures, which means that the host Linux platform
 # has to support the older i386 packages to make 32-bit compile.
 
-if [[ "${ARCH}" = "linux64x64" ]]; then
+if [[ "${ARCH}" = "linux64"* ]]; then
     sudo apt-get update -y
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             debhelper \
@@ -32,7 +32,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libtool \
             curl \
             cmake
-elif [[ "${ARCH}" = "linux32x86" ]]; then
+elif [[ "${ARCH}" = "linux32"* ]]; then
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
     sudo apt-get purge libfreetype6-dev # Might be loaded. Avoid conflict with i386 version below
