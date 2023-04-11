@@ -1,5 +1,4 @@
 # Require X11
-
-AC_CHECK_LIB(X11,XOpenDisplay,
-  [AC_PLUGIN_USE_LIB(X11)],
-  [AC_PLUGIN_DISABLE])
+if test "${have_x}" != "yes"; then
+  AC_PLUGIN_DISABLE
+fi
