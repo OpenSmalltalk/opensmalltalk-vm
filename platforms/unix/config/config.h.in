@@ -152,6 +152,9 @@
 /* Define to 1 if you have the <linux/fb.h> header file. */
 #undef HAVE_LINUX_FB_H
 
+/* linux/input.h */
+#undef HAVE_LINUX_INPUT_H
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 

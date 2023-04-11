@@ -18946,6 +18946,37 @@ if test "${plibs}"; then
   done
   echo ${llibs} > ${plugin}.lib
 fi
+plugin="JoystickTabletPlugin"
+plibs=""
+rm -f JoystickTabletPlugin.sub JoystickTabletPlugin.lib
+# -*- sh -*-
+
+# Currently, the plugin is Linux-specific.
+ac_fn_c_check_header_mongrel "$LINENO" "linux/input.h" "ac_cv_header_linux_input_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_input_h" = xyes; then :
+
+
+$as_echo "#define HAVE_LINUX_INPUT_H 1" >>confdefs.h
+
+
+else
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+
+fi
+
+
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
 plugin="MIDIPlugin"
 plibs=""
 rm -f MIDIPlugin.sub MIDIPlugin.lib
