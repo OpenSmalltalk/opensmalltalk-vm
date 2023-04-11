@@ -1495,7 +1495,8 @@ Optional Features:
   --enable-fast-bitblt    enable fast BitBlt optimizations (default=no)
   --disable-iconv disable iconv support (default=enabled)
 
-  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)
+  --enable-fast-bitblt    enable ARM-specif fast BitBlt optimizations
+                          (default=disabled)
   --enable-mpg-mmx        enable MMX support in Mpeg3Plugin default=no
   --enable-mpg-pthreads   enable pthread support in Mpeg3Plugin default=no
   --disable-dynamicopenssl
@@ -18625,33 +18626,30 @@ fi
 $as_echo "$target_isa" >&6; }
 
 case $target_isa in
-arm*)
-case $target_isa in
-  armv6*) arm_arch="6" ;;
-  armhf*|armv7*) arm_arch="7-A" ;;
-esac
-# Check whether --enable-fast-bitblt was given.
+  armhf*|armv6*|armv7*)
+    case $target_isa in
+      armv6*) arm_arch="6" ;;
+      armhf*|armv7*) arm_arch="7-A" ;;
+    esac
+    # Check whether --enable-fast-bitblt was given.
 if test "${enable_fast_bitblt+set}" = set; then :
-  enableval=$enable_fast_bitblt;  if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdCompare.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
-      bitblt_flags="-DENABLE_FAST_BLT"
-   fi
-
+  enableval=$enable_fast_bitblt; if test "x$enableval" = "xyes"; then :
+  bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdCompare.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
+            bitblt_flags="-DENABLE_FAST_BLT"
+fi
 fi
 
-;;
-aarch64|arm64)
-# Check whether --enable-fast-bitblt was given.
+    ;;
+  aarch64|arm64)
+    # Check whether --enable-fast-bitblt was given.
 if test "${enable_fast_bitblt+set}" = set; then :
-  enableval=$enable_fast_bitblt;  if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltArm64.o BitBltDispatch.o BitBltGeneric.o"
-      bitblt_flags="-DENABLE_FAST_BLT"
-   fi
-
+  enableval=$enable_fast_bitblt; if test "x$enableval" = "xyes"; then :
+  bitblt_objs="BitBltPlugin.o BitBltArm64.o BitBltDispatch.o BitBltGeneric.o"
+             bitblt_flags="-DENABLE_FAST_BLT"
+fi
 fi
 
-;;
-
+    ;;
 esac
 
 BITBLT_OBJS=$bitblt_objs
