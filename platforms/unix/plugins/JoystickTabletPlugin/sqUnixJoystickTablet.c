@@ -26,24 +26,25 @@
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
-/* Author: davidf@afeka.ac.il
+ * Author: davidf@afeka.ac.il
+ * Author: Tobias Pape
  */
 
+#include "sq.h"
+
 #include <assert.h>
-#include <limits.h>
-#include <stdio.h>
-#include <string.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
-#include <linux/input-event-codes.h>
+#if defined(HAVE_LINUX_INPUT_H)
 #include <linux/input.h>
+#else
+#error Not currently supported
+#endif
+
 #include "JoystickTabletPlugin.h"
 
 #define DEVICE_DIR 	"/dev/input/by-id/"
@@ -52,6 +53,14 @@
 #define BITS_IN_WORD 	32
 
 #define EVENT_BUF_SIZE	10
+
+/* Support for very old linuxen */
+#if !defined(BTN_NORTH)
+#define BTN_NORTH BTN_X
+#define BTN_EAST BTN_B
+#define BTN_SOUTH BTN_A
+#define BTN_WEST BTN_Y
+#endif
 
 typedef struct _input_event {
 	    struct timeval time;
