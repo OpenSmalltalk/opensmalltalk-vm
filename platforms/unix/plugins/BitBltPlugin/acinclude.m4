@@ -1,4 +1,4 @@
-# 	-*- sh -*-
+# -*- sh -*-
 
 bitblt_objs="BitBltPlugin.o"
 bitblt_flags=""
@@ -31,7 +31,7 @@ AC_ARG_ENABLE(fast-bitblt,
  ],
  [])
 ;;
-aarch64)
+aarch64|arm64)
 AC_ARG_ENABLE(fast-bitblt,
  [  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)],
  [ if   test "x$enableval" = "xyes" ; then
