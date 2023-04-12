@@ -54,13 +54,22 @@
 
 #define EVENT_BUF_SIZE	10
 
-/* Support for very old linuxen */
-#if !defined(BTN_NORTH)
+/*
+ * For compatibility with olden linuxen <=3.10*
+ */
+#if !defined(BTN_NORTH) && defined(BTN_X)
 #define BTN_NORTH BTN_X
+#endif
+#if !defined(BTN_EAST) && defined(BTN_B)
 #define BTN_EAST BTN_B
+#endif
+#if !defined(BTN_SOUTH) && defined(BTN_A)
 #define BTN_SOUTH BTN_A
+#endif
+#if !defined(BTN_WEST) && defined(BTN_Y)
 #define BTN_WEST BTN_Y
 #endif
+
 
 typedef struct _input_event {
 	    struct timeval time;
