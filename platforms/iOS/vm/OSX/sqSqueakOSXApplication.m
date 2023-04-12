@@ -426,7 +426,6 @@ static char *getVersionInfo(int verbose);
 
 - (void) parseArgs: (NSArray *) args {
 	numVMArgs = 0;
-    commandLineArguments = [args copyWithZone:null];
     argsArguments = [[NSMutableArray alloc] initWithCapacity: [args count]];
 
     if ([args count] < 2)
@@ -474,10 +473,6 @@ static char *getVersionInfo(int verbose);
 			numVMArgs = i + 1;
         }
     }
-#if 0 // debugging
-	printf("self.commandLineArguments count = %d numVMArgs = %d\n",
-			(int)[self.commandLineArguments count], (int)numVMArgs);
-#endif
 }
 
 - (long long) strtobkm: (const char *) str {
