@@ -57,11 +57,14 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     )
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
-    apt-mark showhold
-    head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf.d/*
+    # apt-mark showhold
+    # head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf.d/*
     apt-cache policy libc6 libc6:i386 libc6-dev libc6-dev:amd64 libc6-dev:i386
+    echo ======
+    apt-cache policy libpcre2-8-0:amd64  libpcre2-8-0:i386 
+    
     # make sure no conflicting x86_64 packages remain
-    sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
+    # sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
     sudo apt-get install   -o Debug::pkgProblemResolver=yes --ignore-hold -o Dpkg::Options='--force-confdef --force-confold --force-overwrite' -y --no-install-suggests --no-install-recommends --allow-unauthenticated \
          libpcre2-8-0:amd64  libpcre2-8-0:i386 \
