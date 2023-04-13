@@ -7,68 +7,62 @@ set -ex
 # and #64-bit architectures, which means that the host Linux platform
 # has to support the older i386 packages to make 32-bit compile.
 
+DEV_PKGS=(
+    libasound2-dev
+    libssl-dev
+    libfreetype6-dev
+    libevdev-dev
+    libx11-dev
+    libxext-dev
+    libxrender-dev
+    libxrandr-dev
+    libpango1.0-dev
+    libpulse-dev
+    libaudio-dev
+    libsndio-dev
+    uuid-dev
+    libglu1-mesa-dev
+)    
+
 if [[ "${ARCH}" = "linux64x64" ]]; then
     sudo apt-get update -y
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             debhelper \
             devscripts \
-            libasound2-dev \
-            libc6-dev \
-            libssl-dev \
-            libfreetype6-dev \
-            libevdev-dev \
-            libx11-dev \
-            libxext-dev \
-            libxrender-dev \
-            libxrandr-dev \
-            libpango1.0-dev \
-            libpulse-dev \
-            libaudio-dev \
-            libsndio-dev \
             gcc-multilib \
-            uuid-dev \
-            libglu1-mesa-dev \
             automake \
             autoconf \
             libtool \
             curl \
-            cmake
+            cmake \
+            libc6-dev \
+            "${DEV_PKGS[@]}"
+
 elif [[ "${ARCH}" = "linux32x86" ]]; then
-    PKGS=(
-        libasound2-dev
-        libssl-dev
-        libpng-dev
-        libfreetype6-dev
-        libevdev-dev
-        libx11-dev
-        libsm-dev
-        libice-dev
-        libgl1-mesa-glx
-        libgl1-mesa-dev
-        libxext-dev
-        libxrender-dev
-        libxrandr-dev
-        libglapi-mesa
-        libcairo2-dev
-        libpango1.0-dev
-            libglib2.0-dev
-            libxft-dev
-        libpulse-dev
-        libaudio-dev
-        libsndio-dev
-        uuid-dev
-        libcurl4-openssl-dev
-        libssh2-1-dev
+    # These Packages must go in amd64, because we cannot install the
+    # :i386 package otherwise.
+    POISON_PKGS=(
+        "${DEV_PKGS[@]}"
+        libcairo2
+        libcairo-gobject2
+        libglib2.0-0
+        libmount-dev
+        libselinux1-dev
+        gir1.2-pango
+        libharfbuzz-dev
+        libpango-1.0-0
+        libpangocairo-1.0-0
+        libpangoft2-1.0-0
+        libpangoxft-1.0-0
     )
-    dpkg --get-selections
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
     # make sure no conflicting x86_64 packages remain
-    sudo apt-get purge "${PKGS[@]}" "${PKGS[@]/-dev/}"
+    sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             gcc-multilib \
             libc6-dev:i386 \
-            "${PKGS[@]/%/:i386}"
+            "${DEV_PKGS[@]/%/:i386}"
 fi
