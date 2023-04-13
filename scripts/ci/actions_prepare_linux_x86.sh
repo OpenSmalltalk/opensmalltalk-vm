@@ -56,6 +56,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
         libpangoxft-1.0-0
     )
     sudo dpkg --add-architecture i386
+    sudo add-apt-repository ppa:ondrej/php
     sudo apt-get update -y
     # apt-mark showhold
     # head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf.d/*
