@@ -77,7 +77,7 @@ jobs:
             heartbeat: threaded
             mode: fast
 
-    runs-on: ubuntu-18.04 # better backwards compatibility than ubuntu-20.04
+    runs-on: ubuntu-20.04
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
