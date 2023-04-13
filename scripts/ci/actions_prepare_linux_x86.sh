@@ -64,6 +64,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
     sudo apt-get install   -o Debug::pkgProblemResolver=yes --ignore-hold -o Dpkg::Options='--force-confdef --force-confold --force-overwrite' -y --no-install-suggests --no-install-recommends --allow-unauthenticated \
+         libpcre2-8-0:amd64  libpcre2-8-0:i386 \
             devscripts \
             gcc-multilib \
             libc6-dev:i386 \
