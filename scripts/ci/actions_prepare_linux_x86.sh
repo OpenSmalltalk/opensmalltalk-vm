@@ -55,6 +55,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
         libpangoft2-1.0-0
         libpangoxft-1.0-0
     )
+    sudo dpkg --add-architecture i386
     sudo apt-get update -y
     apt-mark showhold
     head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf.d/*
