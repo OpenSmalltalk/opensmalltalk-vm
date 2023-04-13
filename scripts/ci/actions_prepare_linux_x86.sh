@@ -57,6 +57,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     )
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
+    apt-mark showhold
     # make sure no conflicting x86_64 packages remain
     sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
