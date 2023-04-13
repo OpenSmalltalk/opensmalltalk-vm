@@ -6,6 +6,17 @@ set -ex
 # flavors in an x86-compatible environment. It supports both 32-bit
 # and #64-bit architectures, which means that the host Linux platform
 # has to support the older i386 packages to make 32-bit compile.
+sudo apt-get update -y
+sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
+     debhelper \
+     devscripts \
+     gcc-multilib \
+     automake \
+     autoconf \
+     libtool \
+     curl \
+     cmake
+
 
 DEV_PKGS=(
     libc6-dev
@@ -35,12 +46,4 @@ fi
 
 sudo apt-get update -y
 sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
-     debhelper \
-     devscripts \
-     gcc-multilib \
-     automake \
-     autoconf \
-     libtool \
-     curl \
-     cmake \
      "${DEV_PKGS[@]/%/$ARCHCODE}"
