@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- mode: sh; sh-basic-offset: 4 -*-
-set -e
+set -ex
 
 # This script installs all packages required to build the various VM
 # flavors in an x86-compatible environment. It supports both 32-bit
@@ -35,8 +35,6 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             cmake
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     PKGS=(
-        libc6-dev
-        libasound2
         libasound2-dev
         libssl-dev
         libpng-dev
@@ -55,10 +53,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
         libpango1.0-dev
             libglib2.0-dev
             libxft-dev
-            gir1.2-pango-1.0
-            gir1.2-freedesktop
-            gir1.2-glib-2.0
-            libgirepository-1.0-1
         libpulse-dev
         libaudio-dev
         libsndio-dev
@@ -76,5 +70,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             gcc-multilib \
+            libc6-dev:i386 \
             "${PKGS[@]/%/:i386}"
 fi
