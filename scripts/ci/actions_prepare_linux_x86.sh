@@ -64,7 +64,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
     # make sure no conflicting x86_64 packages remain
-    sudo apt-get purge "${PKGS[@]}"
+    sudo apt-get purge "${PKGS[@]}" "${PKGS[@]/-dev/}"
     # install i386-version of packages
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
