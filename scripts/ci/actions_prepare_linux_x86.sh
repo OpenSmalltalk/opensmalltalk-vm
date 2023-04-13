@@ -63,7 +63,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     # make sure no conflicting x86_64 packages remain
     sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
-    sudo apt-get install -f -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
+    sudo apt-get install   -o Debug::pkgProblemResolver=yes --ignore-hold -y --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             gcc-multilib \
             libc6-dev:i386 \
