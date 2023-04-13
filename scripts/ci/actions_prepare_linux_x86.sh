@@ -60,8 +60,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
         libcurl4-openssl-dev
         libssh2-1-dev
     )
-
-
+    dpkg --get-selections
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
     # make sure no conflicting x86_64 packages remain
