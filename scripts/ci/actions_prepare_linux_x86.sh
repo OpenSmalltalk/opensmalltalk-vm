@@ -22,7 +22,7 @@ DEV_PKGS=(
     libsndio-dev
     uuid-dev
     libglu1-mesa-dev
-)    
+)
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
     sudo apt-get update -y
@@ -55,13 +55,12 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
         libpangoft2-1.0-0
         libpangoxft-1.0-0
     )
-    sudo dpkg --add-architecture i386
     sudo apt-get update -y
     apt-mark showhold
     # make sure no conflicting x86_64 packages remain
     sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
-    sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
+    sudo apt-get install -f -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             gcc-multilib \
             libc6-dev:i386 \
