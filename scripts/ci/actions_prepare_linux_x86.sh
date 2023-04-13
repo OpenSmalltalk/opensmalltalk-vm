@@ -57,7 +57,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     )
     sudo apt-get update -y
     apt-mark showhold
-    head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf /etc/apt/apt.conf.d/*
+    head -n100 /etc/apt/sources.list /etc/apt/sources.list.d/* /etc/apt/apt.conf.d/*
+    apt-cache policy libc6 libc6:i386 libc6-dev libc6-dev:amd64 libc6-dev:i386
     # make sure no conflicting x86_64 packages remain
     sudo apt-get purge "${POISON_PKGS[@]/%/:amd64}"
     # install i386-version of packages
