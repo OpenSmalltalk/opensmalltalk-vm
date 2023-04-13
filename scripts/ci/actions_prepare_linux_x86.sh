@@ -23,6 +23,7 @@ DEV_PKGS=(
     libsndio-dev
     uuid-dev
     libglu1-mesa-dev
+    libpcre2-8-0
 )
 
 # Per default, let apt decide
@@ -33,7 +34,6 @@ if [[ "${ARCH}" = "linux32x86" ]]; then
 fi
 
 sudo apt-get update -y
-sudo apt-get upgrade -yq
 sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
      debhelper \
      devscripts \
