@@ -42,7 +42,10 @@ extern struct VirtualMachine *interpreterProxy;
 #define SQCF_MIME_HTML     0x20010
 #define SQCF_MIME_XML      0x20011
 
-int cfHtml = 0, cfRtf = 0, cfPng = 0, cfGif = 0,
+static sqInt platformFormatToSqueakFormat(sqInt platformFormat);
+static sqInt squeakFormatToPlatformFormat(sqInt squeakFormat);
+
+static sqInt cfHtml = 0, cfRtf = 0, cfPng = 0, cfGif = 0,
     cfMimeText = 0, cfMimeTextUtf8 = 0,
     cfMimeRichText = 0, cfMimeRtf = 0, cfMimeWav = 0, cfMimeGif = 0,
     cfMimeJpeg = 0, cfMimeTiff = 0, cfMimePng = 0, cfMimeSvg = 0,
@@ -104,7 +107,7 @@ sqPasteboardCopyItemFlavorsitemNumber(CLIPBOARDTYPE inPasteboard, sqInt formatNu
 	if (format == CF_UNICODETEXT) {
 		format = CF_UTF8TEXT;
 	}
-	format = platformFormatToSqFormat(format);
+	format = platformFormatToSqueakFormat(format);
 	return format
 				? interpreterProxy->integerObjectOf(format)
 				: interpreterProxy->nilObject();
@@ -167,7 +170,7 @@ sqPasteboardPutItemFlavordatalengthformatType(CLIPBOARDTYPE inPasteboard, char *
 		interpreterProxy->primitiveFailFor(PrimErrUnsupported);
 		return;
 	}
-	format = sqFormatToPlatformFormat(format);
+	format = squeakFormatToPlatformFormat(format);
 	// As a convenience, because UTF16/CF_UNICODETEXT is so tricky, handle
 	// CF_UTF8TEXT as a special code implying put UTF-8 converted to UTF16
 	if (format == CF_UTF8TEXT) {
@@ -269,7 +272,7 @@ sqPasteboardCopyItemFlavorDataformat(CLIPBOARDTYPE inPasteboard, sqInt format)
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 		return 0;
 	}
-	format = sqFormatToPlatformFormat(format);
+	format = squeakFormatToPlatformFormat(format);
 	HANDLE data = GetClipboardData((UINT)(format == CF_UTF8TEXT
 											? CF_UNICODETEXT
 											: format));
@@ -450,39 +453,39 @@ sqPasteboardhasDataInFormat(CLIPBOARDTYPE inPasteboard, sqInt format)
 	if (format == CF_UTF8TEXT) {
 		format = CF_UNICODETEXT;
 	}
-	format = sqFormatToPlatformFormat(format);
+	format = squeakFormatToPlatformFormat(format);
 	return IsClipboardFormatAvailable(format);
 }
 
-int
-sqFormatToPlatformFormat(int sqFormat)
+static sqInt
+squeakFormatToPlatformFormat(sqInt squeakFormat)
 {
-	if (sqFormat == SQCF_HTML) return cfHtml;
-	if (sqFormat == SQCF_RTF) return cfRtf;
-	if (sqFormat == SQCF_PNG) return cfPng;
-	if (sqFormat == SQCF_GIF) return cfGif;
-	if (sqFormat == SQCF_MIME_TEXT) return cfMimeText;
-	if (sqFormat == SQCF_MIME_TEXTUTF8) return cfMimeTextUtf8;
-	if (sqFormat == SQCF_MIME_RICHTEXT) return cfMimeRichText;
-	if (sqFormat == SQCF_MIME_RTF) return cfMimeRtf;
-	if (sqFormat == SQCF_MIME_WAV) return cfMimeWav;
-	if (sqFormat == SQCF_MIME_GIF) return cfMimeGif;
-	if (sqFormat == SQCF_MIME_JPEG) return cfMimeJpeg;
-	if (sqFormat == SQCF_MIME_TIFF) return cfMimeTiff;
-	if (sqFormat == SQCF_MIME_PNG) return cfMimePng;
-	if (sqFormat == SQCF_MIME_SVG) return cfMimeSvg;
-	if (sqFormat == SQCF_MIME_BMP) return cfMimeBmp;
-	if (sqFormat == SQCF_MIME_MPEG) return cfMimeMpeg;
-	if (sqFormat == SQCF_MIME_RAW) return cfMimeRaw;
-	if (sqFormat == SQCF_MIME_PDF) return cfMimePdf;
-	if (sqFormat == SQCF_MIME_XHTML) return cfMimeXhtml;
-	if (sqFormat == SQCF_MIME_HTML) return cfMimeHtml;
-	if (sqFormat == SQCF_MIME_XML) return cfMimeXml;
-	return sqFormat; // default is no mapping
+	if (squeakFormat == SQCF_HTML) return cfHtml;
+	if (squeakFormat == SQCF_RTF) return cfRtf;
+	if (squeakFormat == SQCF_PNG) return cfPng;
+	if (squeakFormat == SQCF_GIF) return cfGif;
+	if (squeakFormat == SQCF_MIME_TEXT) return cfMimeText;
+	if (squeakFormat == SQCF_MIME_TEXTUTF8) return cfMimeTextUtf8;
+	if (squeakFormat == SQCF_MIME_RICHTEXT) return cfMimeRichText;
+	if (squeakFormat == SQCF_MIME_RTF) return cfMimeRtf;
+	if (squeakFormat == SQCF_MIME_WAV) return cfMimeWav;
+	if (squeakFormat == SQCF_MIME_GIF) return cfMimeGif;
+	if (squeakFormat == SQCF_MIME_JPEG) return cfMimeJpeg;
+	if (squeakFormat == SQCF_MIME_TIFF) return cfMimeTiff;
+	if (squeakFormat == SQCF_MIME_PNG) return cfMimePng;
+	if (squeakFormat == SQCF_MIME_SVG) return cfMimeSvg;
+	if (squeakFormat == SQCF_MIME_BMP) return cfMimeBmp;
+	if (squeakFormat == SQCF_MIME_MPEG) return cfMimeMpeg;
+	if (squeakFormat == SQCF_MIME_RAW) return cfMimeRaw;
+	if (squeakFormat == SQCF_MIME_PDF) return cfMimePdf;
+	if (squeakFormat == SQCF_MIME_XHTML) return cfMimeXhtml;
+	if (squeakFormat == SQCF_MIME_HTML) return cfMimeHtml;
+	if (squeakFormat == SQCF_MIME_XML) return cfMimeXml;
+	return squeakFormat; // default is no mapping
 }
 
-int
-platformFormatToSqFormat(int platformFormat)
+static sqInt
+platformFormatToSqueakFormat(sqInt platformFormat)
 {
 	if (platformFormat == cfHtml) return SQCF_HTML;
 	if (platformFormat == cfRtf) return SQCF_RTF;
