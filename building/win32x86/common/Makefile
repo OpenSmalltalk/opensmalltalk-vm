@@ -140,7 +140,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 # Common build rules
 #
 
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs $(APPPOST)
+default: print-tools print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -210,6 +210,21 @@ print-settings:
 print-objects:
 	$(info ---------------- Makefile objects ------------------)
 	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
+
+.PHONY : print-tools
+
+print-tools:
+	$(info ---------------- Build tools ------------------------)
+	$(info CC	$(shell which $(CC))	$(shell $(CC) --version 2> /dev/null | head -n 1))
+	$(info LD	$(shell which $(LD))	$(shell $(LD) --version 2> /dev/null | head -n 1))
+	$(info CP	$(shell which $(CP))		$(shell $(CP) --version 2> /dev/null | head -n 1))
+	$(info RM	$(shell which $(RM))		$(shell $(RM) --version 2> /dev/null | head -n 1))
+	$(info AR	$(shell which $(AR))		$(shell $(AR) --version 2> /dev/null | head -n 1))
+	$(info NM	$(shell which $(NM))		$(shell $(NM) --version 2> /dev/null | head -n 1))
+	$(info DLLTOOL	$(shell which $(DLLTOOL))	$(shell $(DLLTOOL) --version 2> /dev/null | head -n 1))
+	$(info DLLWRAP	$(shell which $(DLLWRAP))	$(shell $(DLLWRAP) --version 2> /dev/null | head -n 1))
+	$(info RC	$(shell which $(RC))	$(shell $(RC) --version 2> /dev/null | head -n 1))
 	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
