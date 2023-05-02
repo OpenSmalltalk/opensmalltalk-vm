@@ -106,7 +106,7 @@ sqFileClose(SQFile *f)
   if (!sqFileValid(f))
     FAIL();
   if (!CloseHandle(FILE_HANDLE(f)))
-    FAIL();
+	return interpreterProxy->primitiveFailForOSError(GetLastError());
   RemoveHandleFromTable(win32Files, FILE_HANDLE(f));
   f->file = NULL;
   f->sessionID = 0;

@@ -32,6 +32,7 @@
 */
 
 #include "sq.h"
+#include "sqAssert.h"
 
 #include <errno.h>
 #if !_MSC_VER
@@ -210,8 +211,10 @@ sqFileClose(SQFile *f) {
 	 * fclose() can fail for the same reasons fflush() or write() can so
 	 * errors must be checked, but it must NEVER be retried
 	 */
-	if (result != 0)
-		return interpreterProxy->success(false);
+	if (result != 0) {
+		assert(result == EOF);
+		return interpreterProxy->primitiveFailForOSError(errno);
+	}
 
 	return 1;
 }
