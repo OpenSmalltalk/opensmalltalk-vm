@@ -19,7 +19,6 @@
 
 #include "sq.h"
 #include "sqAssert.h"
-#include "sqWin32.h" /* for printLastError */
 
 /*
  * A note on thread handles and Ids.  The only globally shared and globally

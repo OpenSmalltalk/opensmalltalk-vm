@@ -44,4 +44,5 @@ int __attribute__((__nothrow__,__returns_twice__)) _setjmp0(jmp_buf);
 # define _setjmp(b) _setjmp0(b)
 # undef longjmp
 # define longjmp _longjmp
+void _longjmp(_JBTYPE *, int); /* setjmp.h only declares __mingw_longjmp via longjmp */
 #endif

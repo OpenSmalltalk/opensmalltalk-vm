@@ -119,172 +119,22 @@ typedef struct B3DPrimitiveLight {
 
 
 #if defined(B3DX_METAL)
-#define b3dxInitialize            b3dMetalInitialize
-#define b3dxShutdown              b3dMetalShutdown
-
-#define b3dxAllocateTexture       b3dMetalAllocateTexture
-#define b3dxDestroyTexture        b3dMetalDestroyTexture
-#define b3dxActualTextureDepth    b3dMetalActualTextureDepth
-#define b3dxTextureColorMasks     b3dMetalTextureColorMasks
-#define b3dxUploadTexture         b3dMetalUploadTexture
-#define b3dxTextureByteSex        b3dMetalTextureByteSex
-#define b3dxTextureSurfaceHandle b3dMetalTextureSurfaceHandle
-#define b3dxCompositeTexture      b3dMetalCompositeTexture
-
-#define b3dxCreateRendererFlags   b3dMetalCreateRendererFlags
-#define b3dxDestroyRenderer        b3dMetalDestroyRenderer
-#define b3dxIsOverlayRenderer     b3dMetalIsOverlayRenderer
-#define b3dxGetRendererSurfaceHandle b3dMetalGetRendererSurfaceHandle
-#define b3dxGetRendererSurfaceWidth b3dMetalGetRendererSurfaceWidth
-#define b3dxGetRendererSurfaceHeight b3dMetalGetRendererSurfaceHeight
-#define b3dxGetRendererSurfaceDepth b3dMetalGetRendererSurfaceDepth
-#define b3dxGetRendererColorMasks b3dMetalGetRendererColorMasks
-#define b3dxSetBufferRect           b3dMetalSetBufferRect
-
-#define b3dxSetViewport          b3dMetalSetViewport
-#define b3dxClearDepthBuffer     b3dMetalClearDepthBuffer
-#define b3dxClearViewport        b3dMetalClearViewport
-#define b3dxRenderVertexBuffer   b3dMetalRenderVertexBuffer
-#define b3dxSetTransform         b3dMetalSetTransform
-#define b3dxDisableLights        b3dMetalDisableLights
-#define b3dxLoadLight            b3dMetalLoadLight
-#define b3dxLoadMaterial         b3dMetalLoadMaterial
-#define b3dxFlushRenderer        b3dMetalFlushRenderer
-#define b3dxFinishRenderer       b3dMetalFinishRenderer
-#define b3dxSwapRendererBuffers  b3dMetalSwapRendererBuffers
-#define b3dxGetIntProperty       b3dMetalGetIntProperty
-#define b3dxSetIntProperty       b3dMetalSetIntProperty
-#define b3dxGetIntPropertyOS     b3dMetalGetIntPropertyOS
-#define b3dxSetIntPropertyOS     b3dMetalSetIntPropertyOS
-#define b3dxSetVerboseLevel      b3dMetalSetVerboseLevel
-#define b3dxSetFog               b3dMetalSetFog
+#include "B3DMetal.h"
+#include "B3Dx.h"
 #endif
 
 #if defined(B3DX_GL)
-#define b3dxInitialize            glInitialize
-#define b3dxShutdown              glShutdown
-
-#define b3dxAllocateTexture       glAllocateTexture
-#define b3dxDestroyTexture        glDestroyTexture
-#define b3dxActualTextureDepth    glActualTextureDepth
-#define b3dxTextureColorMasks     glTextureColorMasks
-#define b3dxUploadTexture         glUploadTexture
-#define b3dxTextureByteSex        glTextureByteSex
-#define b3dxTextureSurfaceHandle glTextureSurfaceHandle
-#define b3dxCompositeTexture      glCompositeTexture
-
-#define b3dxCreateRendererFlags   glCreateRendererFlags
-#define b3dxDestroyRenderer        glDestroyRenderer
-#define b3dxIsOverlayRenderer     glIsOverlayRenderer
-#define b3dxGetRendererSurfaceHandle glGetRendererSurfaceHandle
-#define b3dxGetRendererSurfaceWidth glGetRendererSurfaceWidth
-#define b3dxGetRendererSurfaceHeight glGetRendererSurfaceHeight
-#define b3dxGetRendererSurfaceDepth glGetRendererSurfaceDepth
-#define b3dxGetRendererColorMasks glGetRendererColorMasks
-#define b3dxSetBufferRect           glSetBufferRect
-
-#define b3dxSetViewport          glSetViewport
-#define b3dxClearDepthBuffer     glClearDepthBuffer
-#define b3dxClearViewport        glClearViewport
-#define b3dxRenderVertexBuffer   glRenderVertexBuffer
-#define b3dxSetTransform         glSetTransform
-#define b3dxDisableLights        glDisableLights
-#define b3dxLoadLight            glLoadLight
-#define b3dxLoadMaterial         glLoadMaterial
-#define b3dxFlushRenderer        glFlushRenderer
-#define b3dxFinishRenderer       glFinishRenderer
-#define b3dxSwapRendererBuffers  glSwapRendererBuffers
-#define b3dxGetIntProperty       glGetIntProperty
-#define b3dxSetIntProperty       glSetIntProperty
-#define b3dxGetIntPropertyOS     glGetIntPropertyOS
-#define b3dxSetIntPropertyOS     glSetIntPropertyOS
-#define b3dxSetVerboseLevel      glSetVerboseLevel
-#define b3dxSetFog               glSetFog
+#include "B3DOpenGL.h"
+#include "B3Dx.h"
 #endif
 
 #if defined(B3DX_D3D)
-#define b3dxInitialize            d3dInitialize
-#define b3dxShutdown              d3dShutdown
-
-#define b3dxAllocateTexture       d3dAllocateTexture
-#define b3dxDestroyTexture        d3dDestroyTexture
-#define b3dxActualTextureDepth    d3dActualTextureDepth
-#define b3dxTextureColorMasks     d3dTextureColorMasks
-#define b3dxUploadTexture         d3dUploadTexture
-#define b3dxTextureByteSex        d3dTextureByteSex
-#define b3dxTextureSurfaceHandle d3dTextureSurfaceHandle
-#define b3dxCompositeTexture      d3dCompositeTexture
-
-#define b3dxCreateRendererFlags    d3dCreateRendererFlags
-#define b3dxDestroyRenderer        d3dDestroyRenderer
-#define b3dxGetRendererSurfaceHandle d3dGetRendererSurfaceHandle
-#define b3dxGetRendererSurfaceWidth d3dGetRendererSurfaceWidth
-#define b3dxGetRendererSurfaceHeight d3dGetRendererSurfaceHeight
-#define b3dxGetRendererSurfaceDepth d3dGetRendererSurfaceDepth
-#define b3dxGetRendererColorMasks d3dGetRendererColorMasks
-#define b3dxIsOverlayRenderer    d3dIsOverlayRenderer
-#define b3dxSetBufferRect           d3dSetBufferRect
-
-#define b3dxSetViewport           d3dSetViewport
-#define b3dxClearDepthBuffer      d3dClearDepthBuffer
-#define b3dxClearViewport          d3dClearViewport
-#define b3dxRenderVertexBuffer   d3dRenderVertexBuffer
-#define b3dxSetTransform          d3dSetTransform
-#define b3dxDisableLights          d3dDisableLights
-#define b3dxLoadLight             d3dLoadLight
-#define b3dxLoadMaterial          d3dLoadMaterial
-#define b3dxFlushRenderer        d3dFlushRenderer
-#define b3dxFinishRenderer       d3dFinishRenderer
-#define b3dxSwapRendererBuffers d3dSwapRendererBuffers
-#define b3dxGetIntProperty       d3dGetIntProperty
-#define b3dxSetIntProperty       d3dSetIntProperty
-#define b3dxSetVerboseLevel     d3dSetVerboseLevel
-#define b3dxSetFog               d3dSetFog
+#include "B3DDirect3D.h"
+#include "B3Dx.h"
 #endif
 
 /* module initialization support */
-int b3dxInitialize(void); /* return true on success, false on error */
-int b3dxShutdown(void); /* return true on success, false on error */
 int b3dLoadClientState(int, float *, int, float *, int, float *, int, float *, int);
-
-/* Texture support primitives */
-int b3dxAllocateTexture(int renderer, int w, int h, int d); /* return handle or -1 on error */
-int b3dxDestroyTexture(int renderer, int handle); /* return true on success, false on error */
-int b3dxActualTextureDepth(int renderer, int handle); /* return depth or <0 on error */
-int b3dxTextureColorMasks(int renderer, int handle, unsigned int masks[4]);  /* return true on success, false on error */
-int b3dxUploadTexture(int renderer, int handle, int w, int h, int d, void* bits); /* return true on success, false on error */
-int b3dxTextureByteSex(int renderer, int handle); /* return > 0 for MSB, = 0 for LSB, < 0 for error */
-int b3dxTextureSurfaceHandle(int renderer, int handle); /* return handle or <0 if error */
-int b3dxCompositeTexture(int renderer, int handle, int x, int y, int w, int h, int translucent); /* return true on success; else false */
-
-/* Renderer primitives */
-int b3dxCreateRendererFlags(int x, int y, int w, int h, int flags); /* return handle or -1 on error */
-int b3dxDestroyRenderer(int handle); /* return true on success, else false */
-int b3dxIsOverlayRenderer(int handle); /* return true/false */
-int b3dxSetBufferRect(int handle, int x, int y, int w, int h); /* return true on success, false on error */
-int b3dxGetRendererSurfaceHandle(int handle); /* return handle or <0 if error */
-int b3dxGetRendererSurfaceWidth(int handle); /* return width or <0 if error */
-int b3dxGetRendererSurfaceHeight(int handle); /* return height or <0 if error */
-int b3dxGetRendererSurfaceDepth(int handle); /* return depth or <0 if error */
-int b3dxGetRendererColorMasks(int handle, unsigned int *masks); /* return true on success, false on error */
-
-int b3dxSetViewport(int handle, int x, int y, int w, int h); /* return true on success, false on error */
-int b3dxClearDepthBuffer(int handle); /* return true on success, false on error */
-int b3dxClearViewport(int handle, unsigned int rgba, unsigned int pv); /* return true on success, else false */
-int b3dxSetTransform(int handle, float *modelView, float *projection);
-int b3dxDisableLights(int handle);
-int b3dxLoadLight(int handle, int index, B3DPrimitiveLight *light);
-int b3dxLoadMaterial(int handle, B3DPrimitiveMaterial *material);
-int b3dxRenderVertexBuffer(int handle, int primType, int flags, int texHandle, float *vtxArray, int vtxSize, int *idxArray, int idxSize); /* return true on success, false on error */
-int b3dxFlushRenderer(int handle);
-int b3dxFinishRenderer(int handle);
-int b3dxSwapRendererBuffers(int handle);
-int b3dxGetIntProperty(int handle, int prop);
-int b3dxSetIntProperty(int handle, int prop, int value);
-int b3dxGetIntPropertyOS(int handle, int prop);
-int b3dxSetIntPropertyOS(int handle, int prop, int value);
-int b3dxSetVerboseLevel(int level);
-int b3dxSetFog(int handle, int fogType, double density, double rangeStart, double rangeEnd, int rgba);
 
 /* Qwaq primitives */
 int b3dDrawArrays(int handle, int mode, int minIdx, int maxIdx);
@@ -292,19 +142,31 @@ int b3dDrawElements(int handle, int mode, int nFaces, unsigned int *facePtr);
 int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFaces, unsigned int *facePtr);
 
 #if defined(B3DX_DUAL)
+
+#define B3DX_GL
+#include "B3DOpenGL.h"
+#include "B3Dx.h"
+#include "B3DxUndef.h"
+
+#define B3DX_D3D
+#include "B3DDirect3D.h"
+#include "B3Dx.h"
+#include "B3DxUndef.h"
+
 extern int glMode;
 
 #if 0 /* initializer is special since it decides what to use */
 #define b3dxInitialize() \
   (glMode ? glInitialize() : d3dInitialize())
 #endif
+int b3dxInitialize(void);
 
 #define b3dxShutdown() \
-  (glMode ? glShutdown()   : d3dShutdown())
+  (glMode ? glShutdown() : d3dShutdown())
 #define b3dxAllocateTexture(r,w,h,d) \
   (glMode ? glAllocateTexture(r,w,h,d) : d3dAllocateTexture(r,w,h,d))
 #define b3dxDestroyTexture(r,h) \
-  (glMode ? glDestroyTexture(r,h) : d3dAllocateTexture(r,h))
+  (glMode ? glDestroyTexture(r,h) : d3dDestroyTexture(r,h))
 #define b3dxActualTextureDepth(r,h) \
   (glMode ? glActualTextureDepth(r,h) : d3dActualTextureDepth(r,h))
 #define b3dxTextureColorMasks(r,h,m) \
@@ -367,10 +229,6 @@ extern int glMode;
   (glMode ? glSetVerboseLevel(l) : d3dSetVerboseLevel(l))
 #define b3dxSetFog(h,t,d,s,e,rgba) \
   (glMode ? glSetFog(h,t,d,s,e,rgba) : d3dSetFog(h,t,d,s,e,rgba))
-
-#define B3DX_GL
-#define B3DX_D3D
-
 #endif
 
 #endif /*B3D_ACCELERATOR_PLUGIN_H*/

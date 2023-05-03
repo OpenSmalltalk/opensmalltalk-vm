@@ -39,6 +39,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Import from slice.c */
+void mpeg3_slice_loop(mpeg3_slice_t *slice);
+
 int mpeg3video_get_cbp(mpeg3_slice_t *slice)
 {
   	int code;
@@ -74,23 +77,7 @@ int mpeg3video_get_cbp(mpeg3_slice_t *slice)
 int mpeg3video_clearblock(mpeg3_slice_t *slice, int comp, int size)
 {
 	slice->sparse[comp] = 1;
-
-/* Compiler error */
-/*
- * 	for(i = 0; i < size; i++)
- * 	{
- * 		bzero(slice->block[comp] + sizeof(short) * 64 * i, sizeof(short) * 64);
- * 	}
- */
-
-	if(size == 6)
-	{
-		bzero(slice->block[comp], sizeof(short) * 64 * 6);
-	}
-	else
-	{
-		memset(slice->block[comp], 0, sizeof(short) * 64 * size);
-	}
+	memset(slice->block[comp], 0, sizeof(short) * 64 * size);
 	return 0;
 }
 

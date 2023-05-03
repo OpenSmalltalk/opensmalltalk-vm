@@ -190,6 +190,7 @@ thunkEntry(long long rcx, long long rdx,
 	intargs[3] = r9;
 
 extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, long long xmm3,double *fpargs); /* fake passing long long args */
+extern double fakeReturnDouble(double xmm0); /* see below */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
