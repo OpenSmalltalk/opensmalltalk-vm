@@ -28,6 +28,8 @@
 #if defined(__MINGW32__) || defined(__MINGW64__)
 // vcruntime.h defines size_t for MSVC builds, but not for mingw builds.
 # include <string.h> // for size_t
+// we should maybe use ZeroMemory(pointer,size) like for MSVC builds
+# define bzero(pointer,size) memset(pointer,0,size)
 #endif
 
 /* File positions in the FilePlugin & other plugins */

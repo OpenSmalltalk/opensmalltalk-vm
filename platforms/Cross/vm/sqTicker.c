@@ -31,6 +31,7 @@
 #if !VM_TICKER
 /* stubs for (unsupported) high-priority ticker support */
 # include "sq.h"
+# include "sqAssert.h" // for error
 
 void
 addSynchronousTickee(void (*tickee)(void), unsigned periodms, unsigned roundms)

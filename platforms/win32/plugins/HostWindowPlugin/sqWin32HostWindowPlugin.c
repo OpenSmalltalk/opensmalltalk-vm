@@ -29,6 +29,10 @@ BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+# include <io.h> // for _waccess
+#endif
+
 /* main window procedure(s) */
 static LRESULT CALLBACK HostWndProcA(HWND hwnd,
                               UINT message,

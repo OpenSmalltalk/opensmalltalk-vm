@@ -1,0 +1,39 @@
+#define b3dxInitialize            glInitialize
+#define b3dxShutdown              glShutdown
+
+#define b3dxAllocateTexture       glAllocateTexture
+#define b3dxDestroyTexture        glDestroyTexture
+#define b3dxActualTextureDepth    glActualTextureDepth
+#define b3dxTextureColorMasks     glTextureColorMasks
+#define b3dxUploadTexture         glUploadTexture
+#define b3dxTextureByteSex        glTextureByteSex
+#define b3dxTextureSurfaceHandle glTextureSurfaceHandle
+#define b3dxCompositeTexture      glCompositeTexture
+
+#define b3dxCreateRendererFlags   glCreateRendererFlags
+#define b3dxDestroyRenderer        glDestroyRenderer
+#define b3dxIsOverlayRenderer     glIsOverlayRenderer
+#define b3dxGetRendererSurfaceHandle glGetRendererSurfaceHandle
+#define b3dxGetRendererSurfaceWidth glGetRendererSurfaceWidth
+#define b3dxGetRendererSurfaceHeight glGetRendererSurfaceHeight
+#define b3dxGetRendererSurfaceDepth glGetRendererSurfaceDepth
+#define b3dxGetRendererColorMasks glGetRendererColorMasks
+#define b3dxSetBufferRect           glSetBufferRect
+
+#define b3dxSetViewport          glSetViewport
+#define b3dxClearDepthBuffer     glClearDepthBuffer
+#define b3dxClearViewport        glClearViewport
+#define b3dxRenderVertexBuffer   glRenderVertexBuffer
+#define b3dxSetTransform         glSetTransform
+#define b3dxDisableLights        glDisableLights
+#define b3dxLoadLight            glLoadLight
+#define b3dxLoadMaterial         glLoadMaterial
+#define b3dxFlushRenderer        glFlushRenderer
+#define b3dxFinishRenderer       glFinishRenderer
+#define b3dxSwapRendererBuffers  glSwapRendererBuffers
+#define b3dxGetIntProperty       glGetIntProperty
+#define b3dxSetIntProperty       glSetIntProperty
+#define b3dxGetIntPropertyOS     glGetIntPropertyOS
+#define b3dxSetIntPropertyOS     glSetIntPropertyOS
+#define b3dxSetVerboseLevel      glSetVerboseLevel
+#define b3dxSetFog               glSetFog
