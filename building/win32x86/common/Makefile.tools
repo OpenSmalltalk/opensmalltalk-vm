@@ -79,8 +79,8 @@ STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 #############################################################################
 # Tools to use
 #
-AR:= $(TOOLPREFIX)ar
-ARFLAGS:= rc
+AR:= $(TOOLPREFIX)ar rc
+ARX:= $(TOOLPREFIX)ar # must not change $(AR) bc. implicit usage
 CP:= cp
 RM:= rm
 SED:=sed
