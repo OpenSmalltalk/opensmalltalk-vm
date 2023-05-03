@@ -156,10 +156,10 @@ extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
  * variables, which may allow for a stack backtrace to be generated on an
  * exception.
  */
-extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
 extern void reportMinimumUnusedHeadroom();
 extern void reportMinimumUnusedHeadroomOn(FILE *);
 # endif
+extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
 extern void dumpPrimTraceLog();
 extern void dumpPrimTraceLogOn(FILE *);
 #endif /* STACKVM */
