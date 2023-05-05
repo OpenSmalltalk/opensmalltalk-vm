@@ -52,12 +52,17 @@ jobs:
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
+<<<<<<< HEAD:.github/workflows.ignore/win.yml
           # - pharo.cog.spur # third-party not yet working
           # - pharo.stack.spur # third-party not yet working
+=======
+          - squeak.sista.spur
+>>>>>>> 8dc277b... In CI, also build squeak.sista.spur flavor for win64x64.:.github/workflows/win.yml
         mode:
           - fast
           - debug
           - assert
+<<<<<<< HEAD:.github/workflows.ignore/win.yml
         include:
           # sista build not fully prepared for win64x64, so only your selected configurations for win32x86
           - arch: win32x86 
@@ -66,6 +71,8 @@ jobs:
           # - arch: win32x86 
           #   flavor: pharo.sista.spur
           #   mode: fast
+=======
+>>>>>>> 8dc277b... In CI, also build squeak.sista.spur flavor for win64x64.:.github/workflows/win.yml
 
     runs-on: windows-2019
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
