@@ -52,15 +52,11 @@ jobs:
         flavor: # for selected pharo.* builds, see extra.yml
           - squeak.cog.spur
           - squeak.stack.spur
+          - squeak.sista.spur
         mode:
           - fast
           - debug
           - assert
-        include:
-          # sista build not fully prepared for win64x64, so only your selected configurations for win32x86
-          - arch: win32x86 
-            flavor: squeak.sista.spur
-            mode: fast
 
     runs-on: windows-2019
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
