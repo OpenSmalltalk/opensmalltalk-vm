@@ -47,15 +47,13 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         arch:
           - linux64x64
           - linux32x86
-        flavor:
+        flavor: # for selected pharo.* builds, see extra.yml
           - squeak.cog.spur
-          - pharo.cog.spur
-          # - pharo.stack.spur # build not prepared
         heartbeat:
           - threaded
           - itimer
@@ -69,10 +67,6 @@ jobs:
             flavor: squeak.sista.spur
             heartbeat: threaded
             mode: fast
-          - arch: linux32x86
-            flavor: pharo.sista.spur
-            heartbeat: threaded
-            mode: fast
           # squeak.stack.spur builds are not prepared for itimer
           - arch: linux64x64
             flavor: squeak.stack.spur
@@ -83,7 +77,7 @@ jobs:
             heartbeat: threaded
             mode: fast
 
-    runs-on: ubuntu-18.04 # better backwards compatibility than ubuntu-20.04
+    runs-on: ubuntu-20.04
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
@@ -92,19 +86,19 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
       - name: Restore build cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-linux
+          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       - name: Prepare environment
         run: ./scripts/ci/actions_prepare_linux_x86.sh
@@ -122,13 +116,13 @@ jobs:
         run: ./deploy/pack-vm.sh
 
       - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-build
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
@@ -140,7 +134,7 @@ jobs:
           body: ${{ github.event.head_commit.message }}
 
       - name: Deploy artifact as new release candidate
-        uses: ncipollo/release-action@v1.8.6
+        uses: ncipollo/release-action@v1
         if: github.event_name == 'workflow_dispatch'
         with:
           prerelease: true # release candidate
