@@ -21,7 +21,7 @@ jobs:
           - { name: win32x86, os: windows-2019 }
           - { name: linux64x64, os: ubuntu-20.04 }
           - { name: linux32x86, os: ubuntu-20.04 }
-          - { name: macos64x64, os: macos-10.15 }
+          - { name: macos64x64, os: macos-11 }
           # - { name: macos32x86, os: macos-latest }
 
         flavor:
@@ -53,13 +53,13 @@ jobs:
           - arch: { name: linux32x86, os: ubuntu-20.04 }
             flavor: pharo.stack.spur.lowcode
 
-          # - arch: { name: macos64x64, os: macos-10.15 }
+          # - arch: { name: macos64x64, os: macos-11 }
           #   flavor: pharo.sista.spur # -Werror bc. decl. missing
-          - arch: { name: macos64x64, os: macos-10.15 }
+          - arch: { name: macos64x64, os: macos-11 }
             flavor: pharo.stack.spur
           # - arch: { name: macos64x64, os: macos-latest }
           #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
-          - arch: { name: macos64x64, os: macos-10.15 }
+          - arch: { name: macos64x64, os: macos-11 }
             flavor: pharo.stack.spur.lowcode
 
         exclude:
