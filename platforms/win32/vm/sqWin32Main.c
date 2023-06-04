@@ -38,18 +38,6 @@
 #include "sqAssert.h"
 #include "sqWin32Backtrace.h"
 #include "sqSCCSVersion.h"
-#if COGVM
-# include "cogmethod.h"
-# if COGMTVM
-#	include "cointerpmt.h"
-# else
-#	include "cointerp.h"
-# endif
-#else
-#  if SPURVM
-     extern usqInt maxOldSpaceSize;
-#  endif
-#endif
 
 
 /************************************************************************************************************/
@@ -1945,12 +1933,16 @@ strtobkmg(const char *str)
 static int
 parseVMArgument(int argc, char *argv[])
 {
+#if SPURVM
+	extern usqInt maxOldSpaceSize;
+#endif
+
 	/* flags */
-	if      (!strcmp(argv[0], VMOPTION("help")))		{
+	if      (!strcmp(argv[0], VMOPTION("help"))) {
 		printUsage(1);
 		return 1;
 	}
-	else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 1; }
+	else if (!strcmp(argv[0], VMOPTION("version"))) { versionInfo();	return 1; }
 	else if (!strcmp(argv[0], VMOPTION("headless"))) { fHeadlessImage = true; return 1; }
 	else if (!strcmp(argv[0], VMOPTION("headfull"))) { fHeadlessImage = false; return 1;}
 	else if (!strcmp(argv[0], VMOPTION("timephases"))) {
