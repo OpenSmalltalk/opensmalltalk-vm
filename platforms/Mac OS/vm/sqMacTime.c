@@ -133,7 +133,7 @@ unsigned int ioMSecs() { return ioMicroMSecs(); }
 #define MicrosecondsPerMillisecond 1000ULL
 /* Compute the current VM time basis, the number of microseconds from 1901. */
 
-static unsigned long long
+static usqLong
 currentUTCMicroseconds()
 {
 	struct timeval utcNow;
@@ -143,13 +143,13 @@ currentUTCMicroseconds()
 			+ MicrosecondsFrom1901To1970;
 }
 
-unsigned long long
+usqLong
 ioUTCMicroseconds() { return currentUTCMicroseconds(); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned long long
+usqLong
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 

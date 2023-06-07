@@ -43,7 +43,8 @@
 #endif
 
 /* returns the local wall clock time */
-int ioSeconds(void)
+int
+ioSeconds(void)
 { SYSTEMTIME sysTime;
   GetLocalTime(&sysTime);
   return convertToSqueakTime(sysTime);
@@ -114,7 +115,7 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	*lastTickp = currentTick;
 
 	/* If the timeGetTime millisecond clock wraps (as it will every 49.71 days)
-	 * resync to the system time.  
+	 * resync to the system time.
 	 */
 	if (currentTick < prevTick) {
 		unsigned __int64 now;
@@ -131,13 +132,13 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 }
 #endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 
-unsigned long long
+usqLong
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned long long
+usqLong
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 static DWORD dwTimerPeriod;

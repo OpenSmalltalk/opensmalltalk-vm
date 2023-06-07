@@ -246,7 +246,7 @@ sqInt ioSeconds(void)
 #define MicrosecondsPerMillisecond 1000ULL
 /* Compute the current VM time basis, the number of microseconds from 1901. */
 
-static unsigned long long
+static usqLong
 currentUTCMicroseconds()
 {
 	struct timeval utcNow;
@@ -2017,7 +2017,7 @@ imgInit(void)
 
 #if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
 			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
-  void mtfsfi(unsigned long long fpscr)
+  void mtfsfi(usqLong fpscr)
   {
     __asm__("lfd   f0, %0" :: "m"(fpscr));
     __asm__("mtfsf 0xff, f0");

@@ -151,9 +151,9 @@ static DWORD vmThreadBaseTick;
  * millisecondClock is milliseconds since system start.  These are updated
  * by the heartbeat thread at up to 1KHz.
  */
-static unsigned volatile __int64 utcMicrosecondClock;
-static unsigned volatile __int64 localMicrosecondClock;
-static unsigned volatile long millisecondClock; /* for the ioMSecs clock. */
+static volatile unsigned __int64 utcMicrosecondClock;
+static volatile unsigned __int64 localMicrosecondClock;
+static volatile unsigned long millisecondClock; /* for the ioMSecs clock. */
 static unsigned __int64 utcStartMicroseconds;
 static   signed __int64 vmGMTOffset = 0;
 
@@ -260,21 +260,22 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
-void resyncSystemTime() {
-  #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+void resyncSystemTime()
+{
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   // Nothing to be done, time will be resynced upon every heartbeat tick
-  #else // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+#else // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   // By setting these values to maximum, currentUTCMicroseconds() will resync to the system time.
   lastTick = (DWORD)-1;
   vmThreadLastTick = (DWORD)-1;
-  #endif
+#endif
   ioUpdateVMTimezone();
 }
 
-unsigned long long
+usqLong
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-unsigned long long
+usqLong
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 sqInt
@@ -283,7 +284,7 @@ ioLocalSecondsOffset() { return vmGMTOffset / MicrosecondsPerSecond; }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-unsigned long long
+usqLong
 ioUTCMicrosecondsNow()
 {
 	return currentUTCMicroseconds(&vmThreadUtcTickBaseMicroseconds,
@@ -291,10 +292,10 @@ ioUTCMicrosecondsNow()
 								  &vmThreadBaseTick);
 }
 
-unsigned long long
+usqLong
 ioUTCStartMicroseconds() { return utcStartMicroseconds; }
 
-unsigned long long
+usqLong
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */

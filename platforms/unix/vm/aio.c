@@ -393,7 +393,7 @@ aioPoll(long microSeconds)
 		return 0;
 
 	do {
-		const unsigned long long start = ioUTCMicroseconds();
+		const usqLong start = ioUTCMicroseconds();
 		const struct epoll_event events[128];
 		const int eventsTriggered = epoll_wait(epollFd, (struct epoll_event*)events, 128, (int)(microSeconds / 1000));
 		if (eventsTriggered == -1) {
@@ -444,7 +444,7 @@ aioPoll(long microSeconds)
 
 	int	fd;
 	fd_set	rd, wr, ex;
-	unsigned long long us;
+	usqLong us;
 # if AIO_DEBUG
 	struct  sigaction current_sigio_action;
 	extern void forceInterruptCheck(int);	/* not really, but hey */
@@ -482,7 +482,7 @@ aioPoll(long microSeconds)
 	for (;;) {
 		struct timeval tv;
 		int	n;
-		unsigned long long now;
+		usqLong now;
 
 		tv.tv_sec = microSeconds / 1000000;
 		tv.tv_usec = microSeconds % 1000000;
