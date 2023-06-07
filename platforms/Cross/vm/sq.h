@@ -129,11 +129,11 @@ unsigned int ioMicroMSecs(void);
 /* Time API, Cog uses 64-bit microseconds fron 1901 as much as possible */
 void forceInterruptCheckFromHeartbeat(void);
 void ioInitTime(void);
-unsigned long long ioUTCMicrosecondsNow(void);
-unsigned long long ioUTCMicroseconds(void);
-unsigned long long ioLocalMicrosecondsNow(void);
-unsigned long long ioLocalMicroseconds(void);
-unsigned long long ioUTCStartMicroseconds(void);
+usqLong ioUTCMicrosecondsNow(void);
+usqLong ioUTCMicroseconds(void);
+usqLong ioLocalMicrosecondsNow(void);
+usqLong ioLocalMicroseconds(void);
+usqLong ioUTCStartMicroseconds(void);
 sqInt	ioLocalSecondsOffset(void);
 void	ioUpdateVMTimezone(void);
 void	ioSynchronousCheckForEvents(void);

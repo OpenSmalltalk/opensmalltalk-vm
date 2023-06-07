@@ -31,6 +31,7 @@
 #ifndef __sqaio_h
 #define __sqaio_h
 
+#include "sqMemoryAccess.h" // for usqLong for ioUTCMicroseconds et al
 
 #define AIO_X	(1<<0)	/* handle for exceptions */
 #define AIO_R	(1<<1)	/* handle for read */
@@ -94,8 +95,8 @@ extern long aioPoll(long microSeconds);
  */
 extern long aioSleepForUsecs(long microSeconds);
 
-extern unsigned long long ioUTCMicroseconds(void);
-extern unsigned long long ioUTCMicrosecondsNow(void);
+extern usqLong ioUTCMicroseconds(void);
+extern usqLong ioUTCMicrosecondsNow(void);
 
 /* debugging stuff. */
 #ifdef AIO_DEBUG
@@ -119,7 +120,7 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
 	aioLastTick = aioThisTick; \
 	fprintf X; } while (0)
 # endif /* ACORN */
-#else /* !DEBUG */
+#else /* AIO_DEBUG */
 # define FPRINTF(X)
 #endif
 

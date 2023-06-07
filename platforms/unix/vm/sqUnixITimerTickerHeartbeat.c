@@ -37,9 +37,9 @@
 static unsigned volatile long long utcMicrosecondClock;
 static unsigned volatile long long localMicrosecondClock;
 static unsigned volatile long millisecondClock; /* for the ioMSecs clock. */
-static unsigned long long utcStartMicroseconds; /* for the ioMSecs clock. */
+static usqLong utcStartMicroseconds; /* for the ioMSecs clock. */
 static long long vmGMTOffset = 0;
-static unsigned long long frequencyMeasureStart = 0;
+static usqLong frequencyMeasureStart = 0;
 static unsigned long heartbeats;
 
 #define microToMilliseconds(usecs) ((((usecs) - utcStartMicroseconds) \
@@ -50,7 +50,7 @@ static unsigned long heartbeats;
 
 #if LOG_CLOCK
 # define LOGSIZE 1024
-static unsigned long long useclog[LOGSIZE];
+static usqLong useclog[LOGSIZE];
 static unsigned long mseclog[LOGSIZE];
 static int logClock = 0;
 static unsigned int ulogidx = (unsigned int)-1;
@@ -85,7 +85,7 @@ ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *np, void **usecsp, sqInt *uip, void **m
 
 /* Compute the current VM time basis, the number of microseconds from 1901. */
 
-static unsigned long long
+static usqLong
 currentUTCMicroseconds()
 {
 	struct timeval utcNow;
@@ -113,8 +113,8 @@ currentUTCMicroseconds()
 static void
 updateMicrosecondClock()
 {
-	unsigned long long newUtcMicrosecondClock;
-	unsigned long long newLocalMicrosecondClock;
+	usqLong newUtcMicrosecondClock;
+	usqLong newLocalMicrosecondClock;
 
 	newUtcMicrosecondClock = currentUTCMicroseconds();
 
@@ -188,10 +188,10 @@ ioHighResClock(void)
   return value;
 }
 
-unsigned long long
+usqLong
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-unsigned long long
+usqLong
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 sqInt
@@ -200,13 +200,13 @@ ioLocalSecondsOffset() { return vmGMTOffset / MicrosecondsPerSecond; }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-unsigned long long
+usqLong
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 
-unsigned long long
+usqLong
 ioUTCStartMicroseconds() { return utcStartMicroseconds; }
 
-unsigned long long
+usqLong
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */
@@ -611,7 +611,7 @@ ioHeartbeatFrequency(int resetStats)
 	unsigned frequency = duration ? heartbeats / duration : 0;
 
 	if (resetStats) {
-		unsigned long long zero = 0;
+		usqLong zero = 0;
 		set64(frequencyMeasureStart,zero);
 	}
 	return frequency;

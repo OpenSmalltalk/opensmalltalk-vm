@@ -4,7 +4,7 @@
 *	trunk sqWin32Window.c
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 
@@ -43,7 +43,8 @@
 #endif
 
 /* returns the local wall clock time */
-int ioSeconds(void)
+int
+ioSeconds(void)
 { SYSTEMTIME sysTime;
   GetLocalTime(&sysTime);
   return convertToSqueakTime(sysTime);
@@ -63,6 +64,28 @@ ioMicroMSecs(void)
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;
 }
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+
+/* Compute the current VM time basis, the number of microseconds from 1901.
+ *
+ * As of Windows 8 there is a FILETIME wall clock interface which is high
+ * precision and so does not have to be combined with the millisecond clock.
+ */
+# define currentUTCMicroseconds(a,b,c) currentUTCMicrosecondsImplementation()
+static inline unsigned __int64
+currentUTCMicrosecondsImplementation(void)
+{
+	union { // got to love little-endian architectures...
+		FILETIME         utcNowFiletime;
+		unsigned __int64 utcNow;
+	} un;
+
+	// cannot fail...
+	GetSystemTimePreciseAsFileTime(&un.utcNowFiletime);
+	return un.utcNow / TocksPerMicrosecond - MicrosecondsFrom1601To1901;
+}
+#else // _WIN32_WINNT >= _WIN32_WINNT_WIN8
 
 /* Compute the current VM time basis, the number of microseconds from 1901.
  *
@@ -107,14 +130,15 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	return *utcTickBaseUsecsp
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
+#endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 
-unsigned long long
+usqLong
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned long long
+usqLong
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 static DWORD dwTimerPeriod;
@@ -125,7 +149,7 @@ ioInitTime()
 	TIMECAPS tCaps;
 
 	dwTimerPeriod = 0;
-	if(timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
+	if (timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
 		return;
 	dwTimerPeriod = tCaps.wPeriodMin;
 	if (timeBeginPeriod(dwTimerPeriod) != 0)
