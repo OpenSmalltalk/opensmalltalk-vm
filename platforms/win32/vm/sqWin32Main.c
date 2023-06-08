@@ -2057,6 +2057,14 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strcmp(argv[0], VMOPTION("debugfailonffiexception"))) {
 		debugBreakOnException = true;
 		return 1; }
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("eventtrace"))) {
+		extern sqInt eventTraceMask;
+		eventTraceMask = atoi(argv[1]);
+		return 2; }
+	else if (!strncmp(argv[0], VMOPTION("eventtrace:"), strlen(VMOPTION("eventtrace:")))) {
+		extern sqInt eventTraceMask;
+		eventTraceMask = atoi(argv[0]+strlen(VMOPTION("leakcheck:")));
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) {
