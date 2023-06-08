@@ -1711,6 +1711,10 @@ vm_parseArgument(int argc, char **argv)
     extern sqInt pollpip;
     pollpip = atoi(argv[1]);	 
     return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("eventtrace"))) { 
+	extern sqInt eventTraceMask;
+	eventTraceMask = atoi(argv[1]);		 
+    return 2; }
   else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
 		extern sqInt ffiExceptionResponse;
 		ffiExceptionResponse = 1;
