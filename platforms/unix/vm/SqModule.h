@@ -1,7 +1,6 @@
 #ifndef __sq_SqModule_h
 #define __sq_SqModule_h
 
-
 #define SqModuleVersionMajor	1
 #define SqModuleVersionMinor	1
 #define SqModuleVersion		((SqModuleVersionMajor << 16) | (SqModuleVersionMinor))
@@ -32,5 +31,11 @@ struct SqModule TYPE##_##NAME= {		\
   0						\
 }
 
+// Interface for sorting and printing options for usage
+
+extern void option(char *optionString);
+extern void extendOption(const char *extension);
+extern void printOptionStrings();
+extern void resetOptions();
 
 #endif /* __sq_SqModule_h */

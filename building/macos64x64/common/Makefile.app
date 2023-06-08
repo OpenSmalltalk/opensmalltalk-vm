@@ -54,6 +54,9 @@ export ENTITLEMENTS_FILE
 
 default:	$(APP)
 
+.PHONY: assert debug cleanbundles installFrameworkDylibs pathapp
+.PHONY: signFrameworks signapp touchapp
+
 include ../common/Makefile.vm
 include ../common/Makefile.lib.extra
 include ../common/Makefile.sources

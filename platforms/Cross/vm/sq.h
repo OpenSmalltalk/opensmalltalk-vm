@@ -393,7 +393,12 @@ sqInt ioProcessEvents(void);
 #define EventTypeWindow		5
 #define EventTypeComplex	6 /* For iPhone apps */
 #define EventTypeMouseWheel	7 /* optional; see sendWheelEvents & vm param 48 */
-#define EventTypePlugin		8 /* Terf: events from ActiveX Controls */
+#define EventTypePlugin		8 /* Virtend: events from ActiveX Controls */
+
+#define EVENT_TYPE_MASKS_INIT \
+  {	"  1: None", "  2: Mouse", "  4: Keyboard", "  8: DragDropFiles", \
+	" 16: Menu", " 32: Window", " 64: Complex", "128: MouseWheel", \
+	"256: Plugin", (char *)0 }
 
 
 /* Keypress state for keyboard events. */

@@ -1,4 +1,4 @@
-/* vim: set ts=8 : */
+// Please do NOT set tabstops (other than 4), except in your own vimrc file.
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
  *   Copyright (C) 1996-2008 by Ian Piumarta and other authors/contributors
@@ -65,6 +65,8 @@
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
 #define REALIZE_OPENGL_H 1
 #include "SqDisplay.h"
+#include "SqModule.h"
+
 
 #if defined(ENABLE_FAST_BLT)
   /* XXX referring to plugin variables *requires* BitBitPlugin to be included by VMM as an internal plugin */
@@ -7441,37 +7443,39 @@ SqDisplayDefine(X11);
 static void
 display_printUsage(void)
 {
-  printf("\nX11 <option>s:\n");
-  printf("  "VMOPTION("browserWindow")" <wid>  run in window <wid>\n");
-  printf("  "VMOPTION("browserPipes")" <r> <w> run as Browser plugin using descriptors <r> <w>\n");
-  printf("  "VMOPTION("cmdmod")" <n>           map Mod<n> to the Command key\n");
-  printf("  "VMOPTION("compositioninput")"     enable overlay window for composed characters\n");
-  printf("  "VMOPTION("display")" <dpy>        display on <dpy> (default: $DISPLAY)\n");
-  printf("  "VMOPTION("fullscreen")"           occupy the entire screen\n");
-  printf("  "VMOPTION("fullscreenDirect")"     simple window manager support for fullscreen\n");
+    printf("\nX11 <option>s:\n");
+    resetOptions();
+	option("  "VMOPTION("browserWindow")" <wid>  run in window <wid>\n");
+	option("  "VMOPTION("browserPipes")" <r> <w> run as Browser plugin using descriptors <r> <w>\n");
+	option("  "VMOPTION("cmdmod")" <n>           map Mod<n> to the Command key\n");
+	option("  "VMOPTION("compositioninput")"     enable overlay window for composed characters\n");
+	option("  "VMOPTION("display")" <dpy>        display on <dpy> (default: $DISPLAY)\n");
+	option("  "VMOPTION("fullscreen")"           occupy the entire screen\n");
+	option("  "VMOPTION("fullscreenDirect")"     simple window manager support for fullscreen\n");
 #if (USE_X11_GLX)
-  printf("  "VMOPTION("glxdebug")" <n>         set GLX debug verbosity level to <n>\n");
+	option("  "VMOPTION("glxdebug")" <n>         set GLX debug verbosity level to <n>\n");
 #endif
-  printf("  "VMOPTION("headless")"             run in headless (no window) mode\n");
-  printf("  "VMOPTION("iconic")"               start up iconified\n");
-  printf("  "VMOPTION("lazy")"                 go to sleep when main window unmapped\n");
-  printf("  "VMOPTION("mapdelbs")"             map Delete key onto Backspace\n");
-  printf("  "VMOPTION("nointl")"               disable international keyboard support\n");
-  printf("  "VMOPTION("notitle")"              disable the " xResName " window title bar\n");
-  printf("  "VMOPTION("title")" <t>            use t as the " xResName " window title instead of the image name\n");
-  printf("  "VMOPTION("ldtoms")" <n>           launch drop timeout milliseconds\n");
-  printf("  "VMOPTION("noxdnd")"               disable X drag-and-drop protocol support\n");
-  printf("  "VMOPTION("optmod")" <n>           map Mod<n> to the Option key\n");
+	option("  "VMOPTION("headless")"             run in headless (no window) mode\n");
+	option("  "VMOPTION("iconic")"               start up iconified\n");
+	option("  "VMOPTION("lazy")"                 go to sleep when main window unmapped\n");
+	option("  "VMOPTION("mapdelbs")"             map Delete key onto Backspace\n");
+	option("  "VMOPTION("nointl")"               disable international keyboard support\n");
+	option("  "VMOPTION("notitle")"              disable the " xResName " window title bar\n");
+	option("  "VMOPTION("title")" <t>            use t as the " xResName " window title instead of the image name\n");
+	option("  "VMOPTION("ldtoms")" <n>           launch drop timeout milliseconds\n");
+	option("  "VMOPTION("noxdnd")"               disable X drag-and-drop protocol support\n");
+	option("  "VMOPTION("optmod")" <n>           map Mod<n> to the Option key\n");
 #if defined(SUGAR)
-  printf("  "VMOPTION("sugarBundleId")" <id>   set window property _SUGAR_BUNDLE_ID to <id>\n");
-  printf("  "VMOPTION("sugarActivityId")" <id> set window property _SUGAR_ACTIVITY_ID to <id>\n");
+	option("  "VMOPTION("sugarBundleId")" <id>   set window property _SUGAR_BUNDLE_ID to <id>\n");
+	option("  "VMOPTION("sugarActivityId")" <id> set window property _SUGAR_ACTIVITY_ID to <id>\n");
 #endif
-  printf("  "VMOPTION("swapbtn")"              swap yellow (middle) and blue (right) buttons\n");
-  printf("  "VMOPTION("xasync")"               don't serialize display updates\n");
+	option("  "VMOPTION("swapbtn")"              swap yellow (middle) and blue (right) buttons\n");
+	option("  "VMOPTION("xasync")"               don't serialize display updates\n");
 #if defined(USE_XICFONT_OPTION)
-  printf("  "VMOPTION("xicfont")" <f>          use font set <f> for the input context overlay\n");
+	option("  "VMOPTION("xicfont")" <f>          use font set <f> for the input context overlay\n");
 #endif
-  printf("  "VMOPTION("xshm")"                 use X shared memory extension\n");
+	option("  "VMOPTION("xshm")"                 use X shared memory extension\n");
+	printOptionStrings();
 }
 
 static void
@@ -7616,7 +7620,5 @@ display_parseArgument(int argc, char **argv)
 }
 
 static void *display_makeInterface(void) { return &display_X11_itf; }
-
-#include "SqModule.h"
 
 SqModuleDefine(display, X11);

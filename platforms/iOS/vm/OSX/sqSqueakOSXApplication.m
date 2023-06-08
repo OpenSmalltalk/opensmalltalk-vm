@@ -524,75 +524,125 @@ static char *getVersionInfo(int verbose);
 	// exit(1);
 }
 
+static char **optionStrings = 0;
+static int count = 0;
+
+static void
+option(char *optionString)
+{
+	// This is used at start-up, so no need to check.
+	optionStrings = realloc(optionStrings, sizeof(char *) * ++count);
+	optionStrings[count - 1] = optionString;
+}
+
+static void
+extendOption(const char *extension)
+{
+	char *opt = optionStrings[count - 1];
+	int len = strlen(opt);
+	char *newopt = malloc(len + strlen(extension) + 1);
+	strcpy(newopt, opt);
+	strcpy(newopt + len, extension);
+	optionStrings[count - 1] = newopt;
+}
+
+static int
+sortStrings(const char **a, const char **b)
+{ return strcmp(*b,*a); } // N.B. reversed sort
+
+static void
+printOptionStrings()
+{
+	qsort(optionStrings,
+			count,
+			sizeof(char *),
+			(int (*)(const void*,const void*))sortStrings);
+	while (--count >= 0)
+		printf(optionStrings[count]);
+}
+
 - (void) printUsage {
-	printf("\nCommon <option>s:\n");
-	printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-	printf("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
-    printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
-	printf("  "VMOPTION("timephases")"           print start load and run times\n");
+	int i;
+	printf("%s\n","\nCommon <option>s:");
+	printf("%s\n", "  "VMOPTION("help")"                 print this help message, then exit");
+
+	option("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
+    option("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
+	option("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
-	printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
+	option("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
-	printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
-	printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-	printf("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
-	printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
-	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
-	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
-	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
-	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
-	printf("  "VMOPTION("eventtrace")" mask      print input events with types in mask to stderr\n");
+	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
+	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
+	option("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
+	option("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
+	option("  "VMOPTION("stackpages")" num       use n stack pages\n");
+	option("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
+	option("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
+	option("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
+	option("  "VMOPTION("eventtrace")" mask      print input events with types in mask to stderr\n");
+	const char *eventtraceFlagsMeanings[] = EVENT_TYPE_MASKS_INIT;
+	i = 0;
+	while (eventtraceFlagsMeanings[i]) {
+		extendOption("    ");
+		extendOption(eventtraceFlagsMeanings[i++]);
+		extendOption("\n");
+	}
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
-	printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
-	printf("  "VMOPTION("trace")"[=flags]        enable tracing (optionally to a specific value)\n");
+	option("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
+	option("  "VMOPTION("trace")"[=flags]        enable tracing (optionally to a specific value)\n");
 	extern const char *traceFlagsMeanings[];
-	int i = 0;
-	while (traceFlagsMeanings[i])
-		printf("    %s\n", traceFlagsMeanings[i++]);
+	i = 0;
+	while (traceFlagsMeanings[i]) {
+		extendOption("    ");
+		extendOption(traceFlagsMeanings[i++]);
+		extendOption("\n");
+	}
 # else
-	printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
+	option("  "VMOPTION("sendtrace")"            enable send tracing\n");
 # endif
-	printf("  "VMOPTION("warnpid")"              print pid in warnings\n");
+	option("  "VMOPTION("warnpid")"              print pid in warnings\n");
 #endif
 #if COGVM
-	printf("  "VMOPTION("codesize")" <size>[mk]  set machine code memory to bytes\n");
-	printf("  "VMOPTION("tracestores")"          enable store tracing (assert check stores)\n");
-	printf("  "VMOPTION("cogmaxlits")" <n>       set max number of literals for methods to be compiled to machine code\n");
-	printf("  "VMOPTION("cogminjumps")" <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
-	printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
+	option("  "VMOPTION("codesize")" <size>[mk]  set machine code memory to bytes\n");
+	option("  "VMOPTION("tracestores")"          enable store tracing (assert check stores)\n");
+	option("  "VMOPTION("cogmaxlits")" <n>       set max number of literals for methods to be compiled to machine code\n");
+	option("  "VMOPTION("cogminjumps")" <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
+	option("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-	printf("  "VMOPTION("maxoldspace")" <size>[kmg]  set max size of old space memory to bytes\n");
-	printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
+	option("  "VMOPTION("maxoldspace")" <size>[kmg]  set max size of old space memory to bytes\n");
+	option("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
 #if 0 /* Not sure if encoding is an issue with the Cocoa VM. eem 2015-11-30 */
-	printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",
+	option("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",
 		getEncodingType([self currentVMEncoding]));
 #endif
-	printf("  "VMOPTION("headless")"             run in headless (no window) mode (default: false)\n");
-	printf("  "VMOPTION("headfull")"             run in headful (window) mode (default: true)\n");
+	option("  "VMOPTION("headless")"             run in headless (no window) mode (default: false)\n");
+	option("  "VMOPTION("headfull")"             run in headful (window) mode (default: true)\n");
 
 #ifdef USE_OPENGL
-	printf("  "VMOPTION("opengl")"               use OpenGL for drawing the VM window. Must be the first argument.\n");
+	option("  "VMOPTION("opengl")"               use OpenGL for drawing the VM window. Must be the first argument.\n");
 #endif
 #ifdef USE_CORE_GRAPHICS
-	printf("  "VMOPTION("core-graphics")"        use CoreGraphics for drawing the VM window. Must be the first argument.\n");
+	option("  "VMOPTION("core-graphics")"        use CoreGraphics for drawing the VM window. Must be the first argument.\n");
 #endif
 #ifdef USE_METAL
-	printf("  "VMOPTION("metal")"                use Metal for drawing the VM window. Must be the first argument.\n");
+	option("  "VMOPTION("metal")"                use Metal for drawing the VM window. Must be the first argument.\n");
 #endif
 
-	printf("  "VMOPTION("version")"              print version information, then exit\n");
+	option("  "VMOPTION("version")"              print version information, then exit\n");
 
-	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb/lldb\n");
-	printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb/lldb\n");
-	printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
+	option("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb/lldb\n");
+	option("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb/lldb\n");
+	option("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
 #if defined(AIO_DEBUG)
-	printf("  "VMOPTION("aiolog")"               print async io logging info\n");
+	option("  "VMOPTION("aiolog")"               print async io logging info\n");
 #endif
+	printOptionStrings();
 }
 
 - (void) printUsageNotes
