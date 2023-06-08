@@ -521,18 +521,16 @@ void SetSystemTrayIcon(BOOL on)
 
 char *GetVMOption(int id)
 {
-  if (id < numOptionsVM)
+  if (id >= 0 && id < numOptionsVM)
     return vmOptions[id];
-  else
-    return NULL;
+  return NULL;
 }
 
 char *GetImageOption(int id)
 {
-  if (id < numOptionsImage)
+  if (id >= 0 && id < numOptionsImage)
     return imageOptions[id];
-  else
-    return NULL;
+  return NULL;
 }
 
 char *ioGetLogDirectory(void) {
