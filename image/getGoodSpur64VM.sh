@@ -4,6 +4,9 @@ set +v
 
 . ./envvars.sh
 
+RELEASES_URL="https://github.com/OpenSmalltalk/opensmalltalk-vm/releases"
+LATEST_RELEASE_URL="$RELEASES_URL/latest"
+
 for foo in once; do # allow break to jump to end of script
 
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
@@ -37,32 +40,32 @@ else
 		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
 		exit 1
 	esac
-	echo checking for latest 64-bit VM on github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest
-	curl -s -L "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest" >.LATEST.html
+	echo checking for latest 64-bit VM on $LATEST_RELEASE_URL
+	curl -s -L "$LATEST_RELEASE_URL" >.LATEST.html
 	RELEASE="`grep '<title>Release [0-9][0-9]* .*</title' .LATEST.html | sed 's/^.*Release \([0-9][0-9]*\) .*$/\1/'`"
+	if [ -z "$RELEASE" ]; then
+		echo "cannot find latest release on $LATEST_RELEASE_URL" 1>&2
+		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
+		exit 1
+	fi
 	if [ -f $LATESTFILE -a "`cat $LATESTFILE`" = $RELEASE -a -x $VM ]; then
 		echo latest 64-bit VM on $OS for $CPU is $VM
 		test "$1" = "-verbose" && $VM -version
 		break
 	fi
-	URL="`curl -s -L "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest" | grep "href=.*$LATESTVM" | sed -e 's|^[^"]*"|https://github.com/|' -e 's|".*$||'`"
-	echo $URL
-	if [ -z "$URL" ]; then
-		echo "cannot find latest release on https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest" 1>&2
-		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
-		exit 1
-	fi
-	echo Downloading $LATESTVM from $URL
+	DOWNLOAD_URL="$RELEASES_URL/download/${RELEASE}/${LATESTVM}"
+	echo $DOWNLOAD_URL
+	echo Downloading $LATESTVM from $DOWNLOAD_URL
 	if [ "$1" = -test ]; then
 		test -n "$VOLUME" && echo "VOLUME=$VOLUME"
 		echo "VMDIR=$VMDIR"
 		echo "VM=$VM"
 		echo "LATESTVM=$LATESTVM"
-		echo "URL=$URL"
-		echo curl -L "$URL" -o "$LATESTVM"
+		echo "DOWNLOAD_URL=$DOWNLOAD_URL"
+		echo curl -L "$DOWNLOAD_URL" -o "$LATESTVM"
 		exit
 	fi
-	curl -L "$URL" -o "$LATESTVM"
+	curl -L "$DOWNLOAD_URL" -o "$LATESTVM"
 	case $OS in
 	Darwin) 
 		if open $LATESTVM; then
@@ -75,7 +78,7 @@ else
 		if [[ $(file "$LATESTVM" | grep 'gzip compressed data') ]]; then 
 		  tar xzf "$LATESTVM"
 		else
-		  echo No gzip data at "$URL"
+		  echo No gzip data at "$DOWNLOAD_URL"
 		  exit 1
 		fi;;
 	esac
