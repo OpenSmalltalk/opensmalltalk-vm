@@ -1,5 +1,5 @@
 //
-//  sqSqueakOSXMetalView.h
+//  sqSqueakOSXHeadlessView.m
 //  SqueakPureObjc
 //
 //  Created by Ronie Salgado on 25-03-19.
@@ -40,18 +40,13 @@
 #import "sqSqueakOSXApplication+events.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "sq.h"
-#import "sqVirtualMachine.h"
 
 extern SqueakOSXAppDelegate *gDelegateApp;
-extern struct	VirtualMachine* interpreterProxy;
-
-static NSString *stringWithCharacter(unichar character) {
-	return [NSString stringWithCharacters: &character length: 1];
-}
 
 @implementation sqSqueakOSXHeadlessView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+@synthesize savedScreenBoundsAtTimeOfFullScreen;
+
+#include "SqSqueakOSXView.m.inc"
 
 #pragma mark Initialization / Release
 
@@ -83,7 +78,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 - (void) initializeVariables {
 }
 
-- (void) preDrawThelayers{
+- (void) preDrawThelayers {
 }
 
 - (void) dealloc {
@@ -142,208 +137,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 {
 }
 
-#pragma mark Events - Mouse
-
-- (void)mouseEntered:(NSEvent *)theEvent {
-}
-
-- (void)mouseExited:(NSEvent *)theEvent {
-}
-
-- (void)mouseMoved:(NSEvent *)theEvent {
-}
-
-- (void)mouseDragged:(NSEvent *)theEvent {
-}
-
-- (void)rightMouseDragged:(NSEvent *)theEvent {
-}
-
-- (void)otherMouseDragged:(NSEvent *)theEvent {
-}
-
-- (void)scrollWheel:(NSEvent *)theEvent {
-}
-
-- (void)mouseUp:(NSEvent *)theEvent {
-}
-
-- (void)rightMouseUp:(NSEvent *)theEvent {
-}
-
-- (void)otherMouseUp:(NSEvent *)theEvent {
-}
-
-- (void)mouseDown:(NSEvent *)theEvent {
-}
-
-- (void)rightMouseDown:(NSEvent *)theEvent {
-}
-- (void)otherMouseDown:(NSEvent *)theEvent {
-}
-
-#pragma mark Events - Keyboard
-
-- (NSString *) dealWithOpenStepChars: (NSString *) openStep {
-
-	unichar keyChar;
-	static unichar combiningHelpChar[] = {0x003F, 0x20DD};
-
-	keyChar = [openStep characterAtIndex: 0];
-
-//http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/KEYBOARD.TXT
-
-	switch (keyChar) {
-		case NSUpArrowFunctionKey: keyChar = 30; break;
-		case NSDownArrowFunctionKey: keyChar = 31; break;
-		case NSLeftArrowFunctionKey: keyChar = 28; break;
-		case NSRightArrowFunctionKey: keyChar = 29; break;
-		case NSInsertFunctionKey:
-		  	return [NSString stringWithCharacters: combiningHelpChar length: 2];
-		case NSDeleteFunctionKey: keyChar = 0x2326; break;
-		case NSHomeFunctionKey: keyChar = 1; break;
-		case NSEndFunctionKey: keyChar = 4; break;
-		case NSPageUpFunctionKey:
-			keyChar = 0x21DE; break;
-		case NSPageDownFunctionKey:
-			keyChar = 0x21DF; break;
-		case NSClearLineFunctionKey: keyChar = 0x2327; break;
-		case 127: keyChar = 8; break;
-		default:
-			if (keyChar >= NSF1FunctionKey && keyChar <= NSF35FunctionKey) {
-				keyChar = 0;
-			}
-	}
-	return stringWithCharacter(keyChar);
-}
-
-
--(void)keyDown:(NSEvent*)theEvent {
-}
-
--(void)keyUp:(NSEvent*)theEvent {
-}
-
-/* 10.5 seems only to call insertText:, but 10.6 calls insertText:replacementRange: */
-
-- (void)insertText:(id)aString
-{
-}
-
-- (void)insertText:(id)aString replacementRange:(NSRange)replacementRange
-{
-}
-
-/*
- * React to changes in modifiers. We have to maintain states ourselves for
- * rising and falling edges. But then, we can generate up/down events from that.
- */
-- (void)flagsChanged:(NSEvent *)theEvent {
-}
-
-- (void)doCommandBySelector:(SEL)aSelector {
-}
-
-- (BOOL)performKeyEquivalent:(NSEvent *)theEvent {
-    return YES;
-}
-
-
-#pragma mark Events - Keyboard - NSTextInputClient
-
-
-- (void)setMarkedText:(id)aString selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
-	inputMark= NSMakeRange(0, 1);
-	inputSelection= NSMakeRange(NSNotFound, 0);
-}
-
-- (void)		 unmarkText {
-	inputMark= NSMakeRange(NSNotFound, 0);
-}
-
-- (BOOL)		 hasMarkedText {
-	return inputMark.location != NSNotFound;
-}
-
-- (NSInteger)		 conversationIdentifier	{
-	return (NSInteger )self;
-}
-
-- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
-	return nil;
-}
-
-- (NSRange)		 markedRange {
-	return inputMark;
-}
-
-- (NSRange)		 selectedRange {
-	return inputSelection;
-}
-
-- (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
-	return NSMakeRect(0,0, 0,0);
-}
-
-- (NSUInteger) characterIndexForPoint: (NSPoint)thePoint {
-	return 0;
-}
-
-- (NSArray *) validAttributesForMarkedText {
-	return nil;
-}
-
-- (BOOL)drawsVerticallyForCharacterAtIndex:(NSUInteger)charIndex {
-	return NO;
-}
-
-#pragma mark Events - Dragging
-
-- (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
-	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 0];
-	return results;
-}
-
-
-- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
-	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 0];
-	return results;
-}
-
-- (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info {
-	return 0;
-}
-
-- (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)info {
-	return NSDragOperationGeneric;
-}
-
-- (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)info
-{
-	return NSDragOperationGeneric;
-}
-
-- (void) draggingExited: (id<NSDraggingInfo>)info
-{
-}
-
-- (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
-	return YES;
-}
-
-- (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	return NULL;
-}
-
-- (BOOL)ignoreModifierKeysWhileDragging {
-	return YES;
-}
-
 #pragma mark Fullscreen
 
-
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
-
 }
 
 @end

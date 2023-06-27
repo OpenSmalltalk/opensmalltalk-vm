@@ -1,18 +1,18 @@
 /* SqViewClut.m created by marcel on Sat 23-Dec-2000 */
 
 @implementation ContentViewClass (sqViewClut)
-	
+
 	-(void)initializeSqueakColorMap
 	{
 		colorMap32=(unsigned int*)malloc(sizeof(unsigned int)*256);
 
 #undef SetColorEntry				
 #define SetColorEntry(i,r,g,b)	[self setColorEntry:i red:r green:g blue:b]
-		
+
 		/* 1-bit colors (monochrome) */
 		SetColorEntry(0, 65535, 65535, 65535);    /* white or transparent */
 		SetColorEntry(1,     0,     0,     0);    /* black */
-		
+
 		/* additional colors for 2-bit color */
 		SetColorEntry(2, 65535, 65535, 65535);    /* opaque white */
 		SetColorEntry(3, 32768, 32768, 32768);    /* 1/2 gray */
@@ -23,14 +23,14 @@
 		SetColorEntry( 7,     0, 65535, 65535);   /* cyan */
 		SetColorEntry( 8, 65535, 65535,     0);   /* yellow */
 		SetColorEntry( 9, 65535,     0, 65535);   /* magenta */
-        
+
 		SetColorEntry(10,  8192,  8192,  8192);   /* 1/8 gray */
 		SetColorEntry(11, 16384, 16384, 16384);   /* 2/8 gray */
 		SetColorEntry(12, 24576, 24576, 24576);   /* 3/8 gray */
 		SetColorEntry(13, 40959, 40959, 40959);   /* 5/8 gray */
 		SetColorEntry(14, 49151, 49151, 49151);   /* 6/8 gray */
 		SetColorEntry(15, 57343, 57343, 57343);   /* 7/8 gray */
-		
+
 		/* additional colors for 8-bit color */
 		/* 24 more shades of gray (does not repeat 1/8th increments) */
 		SetColorEntry(16,  2048,  2048,  2048);   /*  1/32 gray */
@@ -57,7 +57,7 @@
 		SetColorEntry(37, 59391, 59391, 59391);   /* 29/32 gray */
 		SetColorEntry(38, 61439, 61439, 61439);   /* 30/32 gray */
 		SetColorEntry(39, 63487, 63487, 63487);   /* 31/32 gray */
-		
+
 		/* The remainder of color table defines a color cube with six steps
 			for each primary color. Note that the corners of this cube repeat
 			previous colors, but simplifies the mapping between RGB colors and
@@ -65,7 +65,7 @@
 		*/
 		{
 			unsigned int r,g,b;
-		
+
 			for(r=0;r<6;r++){
 				for(g=0;g<6;g++){
 					for(b=0;b<6;b++){

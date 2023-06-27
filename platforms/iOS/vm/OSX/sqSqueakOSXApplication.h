@@ -38,6 +38,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#import "SqViewClut.h"
 #import "sqSqueakMainApplication.h"
 
 @interface sqSqueakOSXApplication : sqSqueakMainApplication {

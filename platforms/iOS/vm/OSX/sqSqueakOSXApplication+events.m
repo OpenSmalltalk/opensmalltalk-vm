@@ -93,9 +93,9 @@ yZero()
 
 // The events processed by the VM are the ones in the main window or in the about window.
 - (BOOL) shouldFilterEvent: (NSEvent*)event {
-    
+
     sqSqueakOSXApplication * sqApplication = (sqSqueakOSXApplication*)gDelegateApp.squeakApplication;
-    
+
     return event.window
         && event.window != gDelegateApp.window
         && event.window != [sqApplication aboutWindow];
@@ -103,7 +103,7 @@ yZero()
 
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
 
-#ifdef PharoVM
+#if PharoVM
 	// Consume all pending events in the NSApp
 	// Events may come from the window open by the VM or windows open by other windowing systems
 	// We need to consume all events in the queue, otherwise this may produce lockups when e.g., switching resolutions
@@ -139,7 +139,7 @@ yZero()
 	NSEvent *event;
 
     while ((event = [NSApp
-                        nextEventMatchingMask:NSAnyEventMask
+                        nextEventMatchingMask:NSEventMaskAny
                         untilDate:nil 
                         inMode:NSEventTrackingRunLoopMode 
                         dequeue:YES])) {
@@ -265,7 +265,7 @@ yZero()
 	evt.modifiers = [self translateCocoaModifiersToSqueak: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.windowIndex = [[aView windowLogic] windowIndex];
+	evt.windowIndex = aView.windowLogic.windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
@@ -301,11 +301,7 @@ yZero()
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & MouseButtonMask;
 	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
-#if COGVM | STACKVM
 	evt.nrClicks = 0;
-#else
-	evt.reserved1 = 0;
-#endif 
 	evt.windowIndex =  aView.windowLogic.windowIndex;
 
 	[self pushEventToQueue:(sqInputEvent *) &evt];
@@ -327,11 +323,7 @@ yZero()
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & MouseButtonMask;
 	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
-#if COGVM | STACKVM
 	evt.nrClicks = theEvent.clickCount;
-#else
-	evt.reserved1 = theEvent.clickCount;
-#endif 
 	evt.windowIndex =  aView.windowLogic.windowIndex;
 
 	[self pushEventToQueue:(sqInputEvent *) &evt];
@@ -428,7 +420,7 @@ yZero()
 	/* Set every meta bit to distinguish the fake event from a real right/left
 	 * arrow.
 	 */
-    evt.modifiers = (CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
+    evt.modifiers = CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit;
 	evt.windowIndex = windowIndex;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
 
@@ -550,7 +542,7 @@ yZero()
 	return buttonState;
 }
 
-- (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView *)aView
+- (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView <sqSqueakOSXView> *)aView
 {
 	sqDragDropFilesEvent evt;
 
