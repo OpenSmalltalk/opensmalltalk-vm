@@ -185,8 +185,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 - (void)flagsChanged:(NSEvent *)theEvent {
     NSEventModifierFlags oldFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
     // Detects rising edge.
-    BOOL isUp = (oldFlags & NSDeviceIndependentModifierFlagsMask)
-                > ([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask);
+    BOOL isUp = (oldFlags & NSEventModifierFlagDeviceIndependentFlagsMask)
+                > ([theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask);
 
     keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
@@ -217,17 +217,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 - (void)doCommandBySelector:(SEL)aSelector {
 	unichar unicode;
 	unsigned short keyCode;
-	NSString *unicodeString;
-	BOOL isFunctionKey = NO;
+	BOOL isFunctionKey = self.lastSeenKeyBoardModifierDetails
+						&& (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSEventModifierFlagFunction) == NSEventModifierFlagFunction;
 
-	if (self.lastSeenKeyBoardModifierDetails) {
-		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSEventModifierFlagFunction) == NSEventModifierFlagFunction;
-	}
-
-#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; }
+#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; }
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
 
-	encode(  8, 51,         deleteBackward:)
+		 encode( 8, 51,     deleteBackward:)
 	else encode( 8, 51,     deleteWordBackward:)
 	else encode(127, 51,    deleteForward:)
 	else encode(127, 51,    deleteWordForward:)
@@ -281,6 +277,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 	else encode(  4, 119,   moveToEndOfLineAndModifySelection:)
 	else return;
 
+	NSString *unicodeString = [NSString stringWithCharacters: &unicode length: 1];
 	@synchronized(self) {
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 		aKeyBoardStrokeDetails.keyCode = keyCode;
@@ -371,8 +368,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
 	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
-	if ([[pboard types] containsObject: NSFilenamesPboardType]) {
-		NSArray *files= [pboard propertyListForType: NSFilenamesPboardType];
+	if ([[pboard types] containsObject: NSPasteboardTypeFileURL]) {
+		NSArray *files= [pboard propertyListForType: NSPasteboardTypeFileURL];
 		NSString *fileName;
 		for (fileName in files) {
 			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == YES)
@@ -385,8 +382,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 - (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
 	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
-	if ([[pboard types] containsObject: NSFilenamesPboardType]) {
-		NSArray *files= [pboard propertyListForType: NSFilenamesPboardType];
+	if ([[pboard types] containsObject: NSPasteboardTypeFileURL]) {
+		NSArray *files= [pboard propertyListForType: NSPasteboardTypeFileURL];
 		NSString *fileName;
 		for (fileName in files) {
 			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == NO)

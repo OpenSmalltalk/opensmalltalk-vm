@@ -576,16 +576,6 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero) {
 return 0;
 }
 
-/*** Profiling place holders ***/
-
-sqInt clearProfile(void) {}
-
-sqInt dumpProfile(void) {}
-
-sqInt startProfiling(void) {}
-
-sqInt stopProfiling(void) {}
-
 /*** System Attributes ***/
 char * osVersionString(void) {
 	sprintf(versionString, "%-3.2f", actualOSLevel/100.0);

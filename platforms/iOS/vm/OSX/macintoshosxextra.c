@@ -22,10 +22,4 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
 sqInt ioSetDisplayMode( sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {return 0;}
 
-
-sqInt clearProfile(void){return 0;}														
-sqInt dumpProfile(void){return 0;}														
-sqInt startProfiling(void){return 0;}													
-sqInt stopProfiling(void)	{return 0;}			
-
 int plugInNotifyUser(char *msg) { return 0; }

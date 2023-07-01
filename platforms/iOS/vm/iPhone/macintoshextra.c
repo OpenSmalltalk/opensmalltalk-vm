@@ -33,9 +33,4 @@ sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt
 
 sqInt ioSetDisplayMode( sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {return 0;}
 
-int clearProfile(void){return 0;}														
-int dumpProfile(void){return 0;}														
-int startProfiling(void){return 0;}													
-int stopProfiling(void)	{return 0;}			
-
 int plugInNotifyUser(char *msg) { return 0; }

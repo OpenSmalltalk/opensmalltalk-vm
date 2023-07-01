@@ -48,14 +48,13 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	NSOpenPanel *panel= [NSOpenPanel openPanel];
 	[panel setTitle: NSLocalizedString(@"SelectImagePanePrompt",nil)];
 	[panel setFloatingPanel: YES];
-	[panel setOneShot: YES];
 	[panel setReleasedWhenClosed: YES];
 	[panel setAllowedFileTypes:  @[@"image"]];
 	 
 	[panel center];
 	
-	if (NSOKButton == [panel runModal]) {
-		NSArray *urls= [panel URLs];
+	if (NSModalResponseOK == [panel runModal]) {
+		NSArray *urls = [panel URLs];
 		if (1 == [urls count])
 			[self setImageNamePathIfItWasReadable: [urls[0] path]];
     } else {
@@ -64,12 +63,11 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (BOOL) setImageNamePathIfItWasReadable: (NSString *) filePath {
-	BOOL fileIsReadable = [[NSFileManager defaultManager] isReadableFileAtPath: filePath];
-	if (fileIsReadable) {
-		[(sqSqueakOSXInfoPlistInterface*)[self infoPlistInterfaceLogic] setOverrideSqueakImageName: filePath];
-		[self imageNamePut: [filePath UTF8String]];
-	}
-	return fileIsReadable;
+	if (![[NSFileManager defaultManager] isReadableFileAtPath: filePath])
+		return false;
+	[(sqSqueakOSXInfoPlistInterface*)[self infoPlistInterfaceLogic] setOverrideSqueakImageName: filePath];
+	[self imageNamePut: [filePath UTF8String]];
+	return true;
 }
 
 

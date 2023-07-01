@@ -180,7 +180,7 @@ static unsigned int allocatedExtraLayers = 0;
 
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
-    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
+    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSPasteboardTypeFileURL, nil]];
 	//NSLog(@"registerForDraggedTypes %@",self);
 	openglInitialized = NO;
 	dragInProgress = NO;

@@ -77,7 +77,7 @@ extern struct	VirtualMachine* interpreterProxy;
 - (void)initialize {
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
-    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
+    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSPasteboardTypeFileURL, nil]];
 	dragInProgress = NO;
 	dragCount = 0;
 	clippyIsEmpty = YES;
@@ -87,7 +87,7 @@ extern struct	VirtualMachine* interpreterProxy;
 - (void) initializeVariables {
 }
 
-- (void) preDrawThelayers{
+- (void) preDrawThelayers {
 }
 
 - (void) dealloc {

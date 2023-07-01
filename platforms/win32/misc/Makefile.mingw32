@@ -226,9 +226,6 @@ Mpeg%.o:
 .c.i:
 		$(CC) -E -o $@ $(CFLAGS) $(INCS) $(DEFS) -c $<
 
-gnu-%.c:	%.c
-		$(AWK) -f $(SRCDIR)/gnuify $< > $@
-
 .rc.res:
 		$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
 
@@ -249,8 +246,6 @@ resource.o:	$(VMRES)
 #
 
 sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h platform.exports
-
-gnu-interp.c: interp.c gnuify
 
 Mpeg3Plugin.o:	Mpeg3Plugin.c
 
