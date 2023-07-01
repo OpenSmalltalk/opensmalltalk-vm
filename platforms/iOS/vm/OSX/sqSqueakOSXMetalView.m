@@ -151,7 +151,7 @@ typedef struct LayerTransformation
 
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
-    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
+    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSPasteboardTypeFileURL, nil]];
 	metalInitialized = NO;
 	displayTexture = nil;
 	displayTextureWidth = 0;
