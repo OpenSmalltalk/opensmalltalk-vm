@@ -196,6 +196,21 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
      creation time, directory flag, and file size (if the entry is a file).
+
+     Note that, due to restrictions by the operating system, this method only
+     has limited support for paths longer than 260 characters. In the case of
+     longer paths, they must not contain syntactic sugar such as ".", "..", or
+     "a/b"*:
+     
+     * DON'T: dir_Lookup("<very long path>\foo\.", ...)
+     * DON'T: dir_Lookup("<very long path>\foo\..", ...)
+     * DON'T: dir_Lookup("<very long path>\foo/bar", ...)
+     
+     For more details, see:
+     https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#paths
+     *) Long paths are automatically converted into UNC paths, which only
+        support a subset of the normal path syntax.
+
      Return:
 		0 	if a entry is found at the given index
 		1	if the directory has fewer than index entries
@@ -354,6 +369,27 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   /* Lookup a given file in a given named directory.
      Set the name, name length, creation date,
      creation time, directory flag, and file size (if the entry is a file).
+
+     Note that, due to restrictions by the operating system, this method only
+     has limited support for paths longer than 260 characters (for the full
+     path concatenated from the directory path, a backslash, and the file
+     name). In the case of longer paths, neither the path nor the file name
+     must contain syntactic sugar such as ".", "..", or "a/b"*. However, this
+     method defines a single (!) convention for passing the full nameString as
+     ".", which is also supported for long paths. This convention is provided
+     for an efficient existence check of the directory (e.g.,
+     FileDirectory>>#exists):
+     
+     * DON'T: dir_EntryLookup("<very long path>", .., "foo\.", ...)
+     * DON'T: dir_EntryLookup("<very long path>", .., "foo\..", ...)
+     * DON'T: dir_EntryLookup("<very long path>", .., "foo/bar", ...)
+     * DO:    dir_EntryLookup("<very long path>", .., ".", ...)
+     
+     For more details, see:
+     https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#paths
+     *) Long paths are automatically converted into UNC paths, which only
+        support a subset of the normal path syntax.
+
      Return:
 		0 	if found (a file or directory 'nameString' exists in directory 'pathString')
 		1	if the directory has no such entry
@@ -416,6 +452,12 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   fullPath=(char *)calloc(fullPathLength,sizeof(char));
   memcpy(fullPath,pathString,pathLength);
   if (pathString[pathLength-1] != '\\') fullPath[pathLength]='\\';
+  if (nameStringLength == 1 && nameString[0] == '.') {
+    /* special syntax: "." is the current directory. Trim it from the full
+       path to avoid generating a UNC path with an unresolved ".", which is
+       not supported there. See comment above. */
+    nameStringLength = 0;
+  }
   memcpy(fullPath+fullPathLength-nameStringLength,nameString,nameStringLength);
   
   /* convert the path name into a null-terminated C string */
