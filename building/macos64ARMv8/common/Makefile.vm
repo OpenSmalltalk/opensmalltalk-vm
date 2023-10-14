@@ -53,6 +53,7 @@ else # default CONFIGURATION=product
 endif
 ifeq ($(THREADING),multi)
     MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interpmt.c $(VMSRCDIR)/cogit.c)
+	BUILD:=$(BUILD)mt
 else
     MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
 endif
@@ -128,6 +129,9 @@ TZ:=$(shell date +%Z)
 DEFS:=	-DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
 		-DUSE_METAL=1 -DHAVE_CONFIG_H=1
+ifeq ($(THREADING),multi)
+DEFS:=-DCOGMTVM=1 $(DEFS)
+endif
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)
 INCLUDES:= $(addprefix -I,. $(SRCDIRS))
