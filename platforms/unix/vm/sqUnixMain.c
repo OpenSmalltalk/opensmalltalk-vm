@@ -1850,7 +1850,7 @@ vm_printUsage(void)
 	option("  "VMOPTION("help")"                 print this help message, then exit\n");
 	option("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
 #if !SPURVM
-	option("  "VMOPTION("mmap")" <size>[kmg]     limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+	option("  "VMOPTION("mmap")" <size>[kmg]     limit dynamic heap size (default: 1024m)\n");
 #endif
 	option("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
