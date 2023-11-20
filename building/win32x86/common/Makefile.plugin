@@ -74,7 +74,7 @@ DEFS:=	$(WINVER) -DWIN32=1 -DNO_ISNAN \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
 
 	
-CFLAGS:= -msse2 -ggdb2 -m32 -mdll \
+CFLAGS:= -msse2 -ggdb2 -m32 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
 
 
