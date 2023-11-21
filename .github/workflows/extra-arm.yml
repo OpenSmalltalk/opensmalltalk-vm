@@ -67,6 +67,7 @@ jobs:
           install: |
             apt update -y
             apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev libxrandr-dev libtool automake autoconf libltdl-dev
+            git config --global --add safe.directory ${{ github.workspace }}
 
           env: | # Copy the entire environment for the docker container
             ARCH: ${{ env.ARCH }}
@@ -101,7 +102,7 @@ jobs:
 
       - name: Update artifact in latest-release
         uses: ncipollo/release-action@v1
-        if: github.event_name == 'schedule' || (github.event_name == 'push' && endsWith( github.ref , 'Cog' ))
+        if: github.event_name == 'schedule' || (github.event.inputs.should-deploy == 'true' && endsWith( github.ref , 'Cog' ))
         with:
           prerelease: true
           allowUpdates: true
