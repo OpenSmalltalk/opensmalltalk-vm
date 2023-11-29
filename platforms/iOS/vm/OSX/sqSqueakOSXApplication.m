@@ -426,6 +426,7 @@ static char *getVersionInfo(int verbose);
 
 - (void) parseArgs: (NSArray *) args {
 	numVMArgs = 0;
+    commandLineArguments = [args copyWithZone:null];
     argsArguments = [[NSMutableArray alloc] initWithCapacity: [args count]];
 
     if ([args count] < 2)
