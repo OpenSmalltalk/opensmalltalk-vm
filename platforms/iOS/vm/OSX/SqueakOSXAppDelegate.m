@@ -133,6 +133,15 @@ SqueakOSXAppDelegate *gDelegateApp;
 	return NSTerminateCancel;
 }
 
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)sender {
+	// macOS 12.0+
+	// We do not handle save/restore ourselves. Thus, it is fine to let
+	// the operating system handle it securely.
+	// See https://sector7.computest.nl/post/2022-08-process-injection-
+	//     breaking-all-macos-security-layers-with-a-single-vulnerability/
+	return YES;
+}
+
 - (void) initializeTheWindowHandler {
     [windowHandler mainViewOnWindow: self.mainView];
     self.mainView.windowLogic = windowHandler;
