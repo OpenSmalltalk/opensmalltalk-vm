@@ -365,35 +365,34 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic;
 
 #pragma mark Events - Dragging
 
+- (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info include: (BOOL)doInclude {
+    NSPasteboard *pboard= [info draggingPasteboard];
+    NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
+    if ([[pboard types] containsObject: NSPasteboardTypeFileURL]) {
+        NSArray *urlClasses = [NSArray arrayWithObject:[NSURL class]];
+        NSDictionary *pbOptions = [NSDictionary dictionaryWithObject:
+                                 [NSNumber numberWithBool:YES] forKey:NSPasteboardURLReadingFileURLsOnlyKey];
+        NSArray *files = [pboard readObjectsForClasses:urlClasses options:pbOptions];
+        for (NSURL *fileRefURL in files) {
+            /*
+             * Although we already have an URL, it is a file-refernce-type URL
+             * of the form 'file:///.file/id=6571367.25595293' with numbers
+             * apparently identifying the file. However, this does not say
+             * anything about file names and such, which we rely on.
+             */
+            NSURL* fileURL = fileRefURL.filePathURL;
+            if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: [fileURL path]] == doInclude)
+                [results addObject: fileURL];
+        }
+    }
+    return results;
+}
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
-	NSPasteboard *pboard= [info draggingPasteboard];
-	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
-	if ([[pboard types] containsObject: NSPasteboardTypeFileURL]) {
-		NSArray *files= [pboard propertyListForType: NSPasteboardTypeFileURL];
-		NSString *fileName;
-		for (fileName in files) {
-			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == YES)
-				[results addObject: fileName];
-		}
-	}
-	return results;
+    return [self filterSqueakImageFilesFromDraggedFiles: info include: YES];
 }
 
 - (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info {
-	NSPasteboard *pboard= [info draggingPasteboard];
-	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
-	if ([[pboard types] containsObject: NSPasteboardTypeFileURL]) {
-		NSArray *files= [pboard propertyListForType: NSPasteboardTypeFileURL];
-		NSString *fileName;
-		for (fileName in files) {
-			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == NO)
-			{
-				[results addObject: [NSURL fileURLWithPath: fileName]];
-			}
-		}
-	}
-
-	return results;
+    return [self filterSqueakImageFilesFromDraggedFiles: info include: NO];
 }
 
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info {
