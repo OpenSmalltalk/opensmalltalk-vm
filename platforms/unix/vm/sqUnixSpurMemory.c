@@ -277,16 +277,21 @@ allocateJITMemory(usqInt *desiredSize)
 {
 	void *hint = sbrk(0); // a hint of the lowest possible address for mmap
 	void *result;
+	char *address;
+	unsigned long alignment;
 
 	pageSize = getpagesize();
 	pageMask = ~(pageSize - 1);
+
+	alignment = max(pageSize,1024*1024);
+	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
 
 #if !defined(MAP_JIT)
 # define MAP_JIT 0
 #endif
 
 	*desiredSize = roundUpToPage(*desiredSize);
-	result =   mmap(hint, *desiredSize,
+	result =   mmap(address, *desiredSize,
 #if DUAL_MAPPED_CODE_ZONE
 					PROT_READ | PROT_EXEC,
 #else
