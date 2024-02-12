@@ -106,6 +106,10 @@ int mmapErrno = 0;
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
 
+// a hint of the lowest possible address for mmap
+#define lowestPageAlignedAddressForMMap() \
+	(assert(pageSize), (void *)roundUpToPage((usqInt)sbrk(0)))
+
 /* Answer the address of minHeapSize rounded up to page size bytes of memory. */
 
 #if COGVM
@@ -127,7 +131,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	pageSize = getpagesize();
 	pageMask = ~(pageSize - 1);
 
-	hint = sbrk(0);
+	hint = lowestPageAlignedAddressForMMap();
 #else
 	assert(pageSize != 0 && pageMask != 0);
 	hint = endOfJITZone;
@@ -275,11 +279,13 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 void *
 allocateJITMemory(usqInt *desiredSize)
 {
-	void *hint = sbrk(0); // a hint of the lowest possible address for mmap
+	void *hint; // a hint of the lowest possible address for mmap
 	void *result;
 
 	pageSize = getpagesize();
 	pageMask = ~(pageSize - 1);
+
+	hint = lowestPageAlignedAddressForMMap();
 
 #if !defined(MAP_JIT)
 # define MAP_JIT 0
