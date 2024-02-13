@@ -88,12 +88,12 @@ sqPasteboardPutItemFlavordatalengthformatTypeformatLength(CLIPBOARDTYPE inPasteb
     NSArray *arrayOfTypes = @[formatType];
 
     [inPasteboard addTypes: arrayOfTypes owner: nil];
-	int ok = true;
+	int ok = false;
 	@try {
-		ok = [inPasteboard setData: data forType: formatType];
+		[inPasteboard setData: data forType: formatType];
+		ok = true;
 	}
-	@catch (NSException *exception) {
-		ok = false;
+	@catch (id exception) {
 	}
 	if (!ok)
 		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
