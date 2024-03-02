@@ -112,7 +112,7 @@ typedef int (*writer)(struct dsp *dsp, void *buffer, int nFrames);
   static char *capName(int i);
   static char *rdName(reader rd);
   static char *wrName(writer wr);
-  static char *devName(int dev);
+  static char *audioDevName(int dev);
 #else
 # define PRINTF(ARGS)
 #endif
@@ -911,7 +911,7 @@ static struct mixer *mixerOpen(struct mixer *mix)
       int i= 0;
       for (i= 0; i < SOUND_MIXER_NRDEVICES; ++i)
 	if (mix->devices & (1 << i))
-	  printf(" %s", devName(i));
+	  printf(" %s", audioDevName(i));
     }
     printf("\n");
 #  endif
@@ -953,11 +953,11 @@ static int mixerSetLevel(struct mixer *mix, int device, int left, int right)
       if (IOCTL(mix->fd, MIXER_WRITE(device), &vol) >= 0)
 	{
 	  PRINTF(("sound: %s: %s: level set to %d%% + %d%%\n", mix->path,
-		  devName(device), left, right));
+		  audioDevName(device), left, right));
 	  return 1;
 	}
     }
-  PRINTF(("sound: %s: %s: device not available\n", mix->path, devName(device)));
+  PRINTF(("sound: %s: %s: device not available\n", mix->path, audioDevName(device)));
   return 0;
 }
 
@@ -1095,7 +1095,7 @@ static char *capName(int i)
   return "*** UNKNOWN ***";
 }
 
-static char *devName(int dev)
+static char *audioDevName(int dev)
 {
   static char *names[]= SOUND_DEVICE_NAMES;
   if ((dev >= 0) && (dev <SOUND_MIXER_NRDEVICES)) return names[dev];

@@ -948,7 +948,7 @@ numDevicesOfType(int stream_type)
 
 /* in the libasound source include/sound/asound.h defines the max len as 80 */
 #define MAX_NAME_LEN 128
-static char devname[MAX_NAME_LEN];
+static char audioDevname[MAX_NAME_LEN];
 
 static char *
 nameOfNthDeviceOfType(int n, int stream_type)
@@ -997,13 +997,13 @@ nameOfNthDeviceOfType(int n, int stream_type)
 				}
 			}
 			if (n == count) {
-				strncpy(devname,snd_ctl_card_info_get_name(info),MAX_NAME_LEN);
+				strncpy(audioDevname,snd_ctl_card_info_get_name(info),MAX_NAME_LEN);
 #if 0
 				printf("snd_name '%s' -> dev_name '%s'\n",
 						snd_ctl_card_info_get_name(info),
-						devname);
+						audioDevname);
 #endif
-				return devname;
+				return audioDevname;
 			}
 			count += 1;
 		}
