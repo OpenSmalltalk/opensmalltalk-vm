@@ -1476,59 +1476,48 @@ void __cdecl Cleanup(void)
 /****************************************************************************/
 /*                      Embedded Images                                     */
 /****************************************************************************/
-#if 0
-/* SQ_IMAGE_MAGIC - the magic number for embedded images "SQIM" */
-#define SQ_IMAGE_MAGIC 0x83817377
+#if 1
+// Look for an image as a resource. type: RT_RCDATA, name: "SMALLTALKIMAGE"
+// If found, answer the ImageIsAResource marker, otherwise return NULL.
 
-sqImageFile findEmbeddedImage(void) {
-	sqImageFile f;
-	int endMarker;
-	int magic;
-	int start;
-	int length;
+static HRSRC imageResource = NULL;
+static BOOL foundResource = false;
+#define IMRESTYPE (LPCSTR)RT_RCDATA
 
-	f = sqImageFileOpen(vmNameA, "rb");
-	if (!f) {
-		MessageBox(0,"Error opening VM",VM_NAME,MB_OK);
-		return 0;
+static BOOL
+enumImageResources(HMODULE hModule, LPCSTR lpType, LPSTR lpName, LONG_PTR ign)
+{
+	if (lpType == IMRESTYPE
+	 && !strcmp(lpName,"SMALLTALKIMAGE")) {
+		foundResource = true;
+		return false; // found resource, so stop enumerating
 	}
-	endMarker = sqImageFileSize(f) - 8;
-	magic = start = 0;
-	sqImageFileSeek(f, endMarker);
-    sqImageFileRead(&magic, 1, 4, f);
-	sqImageFileRead(&start, 1, 4, f);
-	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
-	/* Magic number must be okay and start must be within executable boundaries */
-	if (magic != SQ_IMAGE_MAGIC || start < 0 || start >= endMarker) {
-		/* nope */
-		sqImageFileClose(f);
+	return true; // keep on enumerating
+}
+
+static sqImageFile
+findEmbeddedImage(void)
+{
+	HGLOBAL handle;
+	void *data;
+	DWORD dataSize;
+
+	foundResource = false;
+	EnumResourceNamesA((HMODULE)0,IMRESTYPE,enumImageResources,0);
+	if (!foundResource)
 		return 0;
-	}
-	/* Might have an embedded image; seek back and double check */
-	sqImageFileSeek(f,start);
-	sqImageFileRead(&magic, 1, 4, f);
-	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
-	if (magic != SQ_IMAGE_MAGIC) {
-		/* nope */
-		sqImageFileClose(f);
+
+	if (!(imageResource = FindResourceA((HMODULE)0,"SMALLTALKIMAGE",IMRESTYPE))
+	 || !(handle = LoadResource((HMODULE)0,imageResource))
+	 || !(data = LockResource(handle)))
 		return 0;
-	}
-	/* now triple check for image format */
-	sqImageFileRead(&magic, 1, 4, f);
-	if (!readableFormat(magic) && !readableFormat(byteSwapped(magic)) {
-		/* nope */
-		sqImageFileClose(f);
-		return 0;
-	}
-	/* Gotcha! */
-	sqImageFileSeek(f, sqImageFilePosition(f) - 4);
-	strcpy(imageName, name);
-	MultiByteToWideChar(CP_UTF8,0,imageName,-1,imageNameW,MAX_PATH,NULL,NULL);
-	imageSize = endMarker - sqImageFilePosition(f);
-	return f;
+
+	dataSize = SizeofResource((HMODULE)0,imageResource);
+	sqFilePluginNoteImageResourceData(data,dataSize);
+	return ImageIsAResource;
 }
 #else
-sqImageFile findEmbeddedImage(void) { return 0; }
+static __inline__ sqImageFile findEmbeddedImage(void) { return 0; }
 #endif
 
 

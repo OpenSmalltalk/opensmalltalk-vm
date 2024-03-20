@@ -36,9 +36,7 @@ extern struct VirtualMachine *interpreterProxy;
 sqInt isFileHandleATTY(HANDLE fdHandle);
 sqInt fileHandleType(HANDLE fdHandle);
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
-# include <io.h> // for _get_osfhandle
-#endif
+#include <io.h> // for _get_osfhandle
 
 
 #define true  1
@@ -103,7 +101,7 @@ sqFileAtEnd(SQFile *f)
   if (f->isStdioStream)
     return 0;
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, (PLONG)&ofs.dwHigh, FILE_CURRENT);
   return ofs.offset >= sqFileSize(f);
 }
 
@@ -161,7 +159,7 @@ sqFileGetPosition(SQFile *f)
   if (!sqFileValid(f))
     FAIL();
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, (PLONG)&ofs.dwHigh, FILE_CURRENT);
   return ofs.offset;
 }
 
@@ -221,7 +219,7 @@ sqFileOpen(SQFile *f, char *fileNameIndex, sqInt fileNameSize, sqInt writeFlag)
   AddHandleToTable(win32Files, h);
   /* compute and cache file size */
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer(h, 0, &ofs.dwHigh, FILE_END);
+  ofs.dwLow = SetFilePointer(h, 0, (PLONG)&ofs.dwHigh, FILE_END);
   SetFilePointer(h, 0, NULL, FILE_BEGIN);
   f->writable = writeFlag ? true : false;
   return 1;
@@ -411,7 +409,7 @@ sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
   /* Set the file's read/write head to the given position. */
   if (!sqFileValid(f))
     FAIL();
-  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_BEGIN);
   return 1;
 }
 
@@ -454,7 +452,7 @@ sqFileTruncate(SQFile *f, squeakFileOffsetType offset)
   ofs.offset = offset;
   if (!sqFileValid(f))
     FAIL();
-  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_BEGIN);
   return SetEndOfFile(FILE_HANDLE(f));
 }
 
@@ -495,9 +493,18 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 /***************************************************************************/
 /* Image file functions                                                    */
 /***************************************************************************/
+
+// Support for image embedded as a resource
+static char *imageResourceData = NULL;
+static DWORD imageResourceSize = 0;
+static DWORD irReadPosition = 0;
+
 int
 sqImageFileClose(sqImageFile h)
 {
+  if (h == ImageIsAResource)
+	return true;
+
   SetEndOfFile((HANDLE)(h-1));
   return CloseHandle((HANDLE)(h-1));
 }
@@ -542,9 +549,24 @@ squeakFileOffsetType
 sqImageFilePosition(sqImageFile h)
 {
   win32FileOffset ofs;
+
+  if (h == ImageIsAResource)
+	return irReadPosition;
+
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer((HANDLE)(h-1), 0, &ofs.dwHigh, FILE_CURRENT);
+  ofs.dwLow = SetFilePointer((HANDLE)(h-1), 0, (PLONG)&ofs.dwHigh, FILE_CURRENT);
   return ofs.offset;
+}
+
+static size_t
+sqImageResourceRead(void *ptr, size_t sz, size_t count)
+{
+	if (irReadPosition + (sz * count) > imageResourceSize)
+      abortMessage(TEXT("Attempting to read beyond end of image resource"));
+
+	memcpy(ptr,imageResourceData + irReadPosition, sz * count);
+	irReadPosition += sz * count;
+	return count;
 }
 
 size_t
@@ -554,6 +576,9 @@ sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
   size_t reallyRead = 0;
   size_t totalToRead = count * sz;
   squeakFileOffsetType position;
+
+  if (h == ImageIsAResource)
+	return sqImageResourceRead(ptr,sz,count);
 
   position = sqImageFilePosition(h);
   while (reallyRead != totalToRead) {
@@ -577,24 +602,31 @@ squeakFileOffsetType
 sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
 {
   win32FileOffset ofs;
+
+  if (h == ImageIsAResource)
+	return irReadPosition = pos;
+
   ofs.offset = pos;
-  ofs.dwLow = SetFilePointer((HANDLE)(h-1), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  ofs.dwLow = SetFilePointer((HANDLE)(h-1), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_BEGIN);
   return ofs.offset;
 }
 
 squeakFileOffsetType
 sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
 {
+  if (h == ImageIsAResource)
+	return imageResourceSize;
+
     win32FileOffset ofs;
     ofs.offset = pos;
-    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
+    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_END);
     return ofs.offset;
 }
 
 size_t
 sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 {
-  size_t reallyWritten =0;
+  size_t reallyWritten = 0;
   DWORD dwReallyWritten;
   size_t totalToWrite = count * sz;
   squeakFileOffsetType position;
@@ -624,4 +656,12 @@ sqImageFileSize(sqImageFile h)
   ofs.offset = 0;
   ofs.dwLow = GetFileSize((HANDLE)(h-1), &ofs.dwHigh);
   return ofs.offset;
+}
+
+
+void
+sqFilePluginNoteImageResourceData(void *data, DWORD size)
+{
+	imageResourceData = (char *)data;
+	imageResourceSize = size;
 }

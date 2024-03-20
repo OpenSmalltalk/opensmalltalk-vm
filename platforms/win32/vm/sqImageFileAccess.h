@@ -17,6 +17,8 @@
 #define invalidSqImageFile(sif) (!(sif))
 #define squeakFileOffsetType unsigned __int64
 
+#define ImageIsAResource ((sqImageFile)1)
+
 // Save/restore.
 // Read the image from the given file starting at the given image offset
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
@@ -32,5 +34,6 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
 squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
 
 #define sqImageFileStartLocation(f,fileName,sz)	0
+void sqFilePluginNoteImageResourceData(void *,DWORD);
 
 #endif /* _SQ_IMAGE_FILE_ACCESS_H */
