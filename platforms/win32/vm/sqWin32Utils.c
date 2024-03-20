@@ -131,7 +131,7 @@ void printLastError(TCHAR *prefix)
 
   lastError = GetLastError();
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                NULL, lastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
   warnPrintfT(TEXT("%s (%ld) -- %s\n"), prefix, lastError, (LPTSTR)lpMsgBuf);
   LocalFree( lpMsgBuf );
@@ -151,7 +151,7 @@ void vprintLastError(TCHAR *fmt, ...)
   va_end(args);
 
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                NULL, lastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR)&lpMsgBuf, 0, NULL );
   len = (int)_tcslen(lpMsgBuf);
   // nuke any cr-lf or lf at the end of the string...
