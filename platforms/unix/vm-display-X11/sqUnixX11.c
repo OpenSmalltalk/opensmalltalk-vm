@@ -51,6 +51,11 @@
  *
  * Support for OSProcess plugin contributed by:
  *	Dave Lewis <lewis@mail.msen.com> Mon Oct 18 20:36:54 EDT 1999
+ *
+ * Fixes calls to recordKeyboardEvent() for EventKeyDown and EventKeyUp to 
+ * provide virtual-key codes instead of Unicode (ucs4) characters. Contributed
+ * by:
+ *  Marcel Taeumel <marcel.taeumel@hpi.de>
  */
 
 #include "sq.h"
@@ -261,6 +266,9 @@ typedef int (*x2sqKey_t)(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic);
+
+static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym);
+static int xkeysym2ucs4(KeySym keysym);
 
 static x2sqKey_t x2sqKey= x2sqKeyPlain;
 
@@ -1701,7 +1709,7 @@ static int recordPendingKeys(void)
       }
       return 0;
     }
-  else
+  else /* no composition input */
     {
       if (inputCount > 0)
 	{
@@ -1743,8 +1751,6 @@ retrieveLastKeyValue(XKeyEvent *xevt)
   lastKeyValue[xevt->keycode & 0xff]= -1;
   return value;
 }
-
-static int xkeysym2ucs4(KeySym keysym);
 
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 {
@@ -1955,7 +1961,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 }
 
 #if DEBUG_KEYBOARD_EVENTS
-static const char *nameForKeycode(int keycode);
+static const char *nameForKeysym(KeySym keysym);
 #endif
 
 static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
@@ -1971,7 +1977,7 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 	fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
   }
   fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
-	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
+	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeysym(*symbolic));
 #endif
   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
       return -1;	/* unknown key */
@@ -1988,6 +1994,126 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
   }
 #endif
   return charCode;
+}
+
+/* Maps X11 key symbols to a one-byte, cross-platform compatible virtual-key 
+ * code. KeySym for special/misc. keys is directly mapped from 0xff__ to 0x00__.
+ * Selected characters from Latin-1 are shifted to fill the not used gaps 
+ * between 0x00 and 0xff, i.e., 0x01 to 0x07 and 0x44 to 0x4f. These characters 
+ * include XK_A to XK_Z and XK_0 to XK_9. Furthermore, keys common in a US layout
+ * are also mapped such as XK_period, XK_comma, XK_slash, XK_backslash, etc. This
+ * is similar to how SDL2 does it except their scancodes follow the USB standard
+ * while we mostly stick to the range of X11 KeySym, compressed into 1 byte.
+ *
+ * 0x00         (unknown virtual key)
+ * 0x01         XK_space (shifted from Latin-1)
+ * 0x02         XK_comma (shifted from Latin-1)
+ * 0x03         XK_period (shifted from Latin-1)
+ * 0x04 .. 0x07 (unused)
+ *
+ * 0x08 .. 0x1f SPECIAL KEYS 1 (from all-mask 0xff00)
+ *
+ * 0x20 .. 0x29 NUMERIC ASCII KEYS (shifted from Latin-1)
+ * 0x2a .. 0x43 ALPHABETIC ASCII KEYS (shifted from Latin-1)
+ *
+ * 0x44         XK_minus (guessed from xKeycode)
+ * 0x45         XK_equal (guessed from xKeycode)
+ * 0x46         XK_bracketleft (guessed from xKeycode)
+ * 0x47         XK_bracketright (guessed from xKeycode)
+ * 0x48         XK_semicolon (guessed from xKeycode)
+ * 0x49         XK_apostrophe (guessed from xKeycode)
+ * 0x4a         XK_tilde (guessed from xKeycode)
+ * 0x4b         XK_backslash (guessed from xKeycode)
+ * 0x4e         XK_slash (guessed from xKeycode)
+ * 0x4f         US_102 (guessed from xKeycode)
+ *
+ * 0x50 .. 0xff SPECIAL KEYS 2 (from all-mask 0xff00)
+ */
+static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
+{
+  // 1) Map XK_MISCELLANY from 0xff__ to 0x00__
+  if ((xKeysym & 0xff00) == 0xff00) // XK_MISCELLANY (e.g., backspace, return, numpad, ...)
+  {
+    int vKeyCode = xKeysym & 0x00ff;
+    if (vKeyCode > 0x07 /* end extra stuff */
+      && (vKeyCode < 0x20 /* begin Latin-1 */ || vKeyCode > 0x4f /* end Latin-1 */))
+       return vKeyCode;
+  }
+
+  // 2) Shift alpha-numeric keys from Latin-1 KeySym to fill the gaps
+  if (xKeysym >= XK_0 /* 0x30 */ && xKeysym <= XK_9 /* 0x39 */)
+    return xKeysym - 0x10; // to start at 0x20
+  if (xKeysym >= XK_A /* 0x41 */ && xKeysym <= XK_Z /* 0x5a */)
+    return xKeysym - 0x17; // to start at 0x2a
+  if (xKeysym >= XK_a && xKeysym <= XK_z)
+    return xKeysym - 0x20 - 0x17; // to lowercase and to start at 0x2a
+
+  // 3) Derive numerical keys (not num-pad) from keycode, language-agnostic
+  if (xKeycode >= 10 && xKeycode <= 19) // hopefully physical keys 1, 2, ... 9, 0
+    return 0x20 + (xKeycode - 10 + 1) % 10;
+
+  // 4) Derive virtual-key codes for other common keys, located in latin-1 range
+  switch (xKeysym)
+  {
+    case XK_space: return 0x01;
+    case XK_comma: return 0x02;
+    case XK_period: return 0x03;
+    case XK_ISO_Left_Tab: return XK_Tab & 0x00ff; // shift-tab
+  }
+
+  // 5) If still no match, fall-back to US QWERTY layout using X11 keycodes
+  switch (xKeycode)
+  {
+    case 24: return XK_Q - 0x17;
+    case 25: return XK_W - 0x17;
+    case 26: return XK_E - 0x17;
+    case 27: return XK_R - 0x17;
+    case 28: return XK_T - 0x17;
+    case 29: return XK_Y - 0x17;
+    case 30: return XK_U - 0x17;
+    case 31: return XK_I - 0x17;
+    case 32: return XK_O - 0x17;
+    case 33: return XK_P - 0x17;
+
+    case 38: return XK_A - 0x17;
+    case 39: return XK_S - 0x17;
+    case 40: return XK_D - 0x17;
+    case 41: return XK_F - 0x17;
+    case 42: return XK_G - 0x17;
+    case 43: return XK_H - 0x17;
+    case 44: return XK_J - 0x17;
+    case 45: return XK_K - 0x17;
+    case 46: return XK_L - 0x17;
+
+    case 52: return XK_Z - 0x17;
+    case 53: return XK_X - 0x17;
+    case 54: return XK_C - 0x17;
+    case 55: return XK_V - 0x17;
+    case 56: return XK_B - 0x17;
+    case 57: return XK_N - 0x17;
+    case 58: return XK_M - 0x17;
+
+  /* At this point, we can only guess about the remaining OEM keys.
+   * We comment their use in a standard US layout. */
+    case 20: return 0x44; // XK_minus
+    case 21: return 0x45; // XK_equal
+
+    case 34: return 0x46; // XK_bracketleft
+    case 35: return 0x47; // XK_bracketright
+
+    case 47: return 0x48; // XK_semicolon
+    case 48: return 0x49; // XK_apostrophe
+    case 49: return 0x4a; // XK_tilde
+
+    case 51: return 0x4b; // XK_backslash
+
+    case 59: return 0x02; // XK_comma
+    case 60: return 0x03; // XK_period
+    case 61: return 0x4e; // XK_slash
+
+    case 94: return 0x4f; // US_102
+  }
+  return 0x00;
 }
 
 
@@ -2399,9 +2525,9 @@ static int x2sqModifier(int state)
        	/* M - A C */ O|_|_|_,  O|M|_|S,  O|M|_|_,  O|M|_|S,
       };
 #    if defined(__POWERPC__) || defined(__ppc__)
-      mods= midofiers[state & 0x1f];
+      mods= midofiers[state & 0x1f]; // Ignore Mod3Mask up to Mod5Mask
 #    else
-      mods= midofiers[state & 0x0f];
+      mods= midofiers[state & 0x0f]; // Ignore Mod2Mask (e.g. NumLock), Mod3Mask, Mod4Mask (e.g. Win/Cmd), Mod5Mask
 #    endif
 #    if DEBUG_KEYBOARD_EVENTS || DEBUG_MOUSE_EVENTS
 	if (mods)
@@ -2489,8 +2615,8 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
 /*
 grep '^#[ 	]*define[ 	][ 	]*XK_.*0x[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][^0-9a-fA-F]' /usr/include/X11/*.h |  sed 's/^.*\(XK_[^     ]*\)[   ]*\(0x[0-9a-fA-F]*\).*$/{ "\1", \2 }, /'
 */
-typedef struct { char *name; int code; } KeyNameEntry;
-static KeyNameEntry codes[] = {
+typedef struct { char *name; int keysym; } KeyNameEntry;
+static KeyNameEntry keyNameEntries[] = {
 { "XK_BackSpace", 0xff08 }, 
 { "XK_Linefeed", 0xff0a }, 
 { "XK_Return", 0xff0d }, 
@@ -3480,18 +3606,23 @@ static KeyNameEntry codes[] = {
 { 0, 0 }};
 
 static const char *
-nameForKeycode(int keycode)
+nameForKeysym(KeySym keysym)
 {	KeyNameEntry *kne;
 
-	for (kne = codes; kne->name; kne++)
-		if (kne->code == keycode)
+	for (kne = keyNameEntries; kne->name; kne++)
+		if (kne->keysym == keysym)
 			return kne->name;
 
-	return "UNKNOWN CODE";
+	return "UNKNOWN KEYSYM";
 }
 
 static const char *
-nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
+nameForKeyboardEvent(XKeyEvent *evt)
+{
+  KeySym symbolic=0;
+  XLookupString(evt, 0, 0, &symbolic, 0);
+  return nameForKeysym(symbolic);
+}
 #endif /* DEBUG_EVENTS */
 
 extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
@@ -3628,28 +3759,32 @@ handleEvent(XEvent *evt)
 
     case ButtonPress:
       noteEventState(evt->xbutton);
-      if (evt->xbutton.button <= 3) { /* mouse button */
-		buttonState |= x2sqButton(evt->xbutton.button);
-		recordMouseEvent();
-	  }
-	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
-		if (sendWheelEvents)
-			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 4],
-								  mouseWheelYDelta[evt->xbutton.button - 4]);
-		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right
-												is used for text editing */
-		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
-		  /* Set every meta bit to distinguish the fake event from a real
-		   * right/left arrow.
-		   */
-		  int modifiers = modifierState | (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit);
-		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-		  recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
-		}
-	  }
-	  else
-		  ioBeep();
+      if (evt->xbutton.button <= 3)
+        { /* mouse button */
+          buttonState |= x2sqButton(evt->xbutton.button);
+          recordMouseEvent();
+        }
+      else if (evt->xbutton.button <= 7)
+        { /* mouse wheel */
+          if (sendWheelEvents)
+            recordMouseWheelEvent(
+              mouseWheelXDelta[evt->xbutton.button - 4],
+              mouseWheelYDelta[evt->xbutton.button - 4]);
+          else if (evt->xbutton.button <= 5)
+            { /* only emulate up/down, as left/right is used for text editing */
+              int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+              int ascii = keyCode;
+              /* Set every meta bit to distinguish the fake event from a real
+               * right/left arrow.
+               */
+              int modifiers = modifierState | (ShiftKeyBit|CtrlKeyBit|OptionKeyBit|CommandKeyBit);
+              recordKeyboardEvent(keyCode, EventKeyDown, modifiers, 0);
+              recordKeyboardEvent(ascii, EventKeyChar, modifiers, ascii);
+              recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, 0);
+            }
+        }
+      else
+        ioBeep();
       break;
 
     case ButtonRelease:
@@ -3671,113 +3806,112 @@ handleEvent(XEvent *evt)
     case KeyPress:
       noteEventState(evt->xkey);
       {
-	KeySym symbolic= 0;
-	int keyCode= x2sqKey(&evt->xkey, &symbolic);
-	int ucs4= xkeysym2ucs4(symbolic);
-	DCONV_PRINTERR("symbolic, keyCode, ucs4: %x, %d, %x\n", symbolic, keyCode, ucs4);
-	DCONV_PRINTERR("pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
-	if (multi_key_pressed && multi_key_buffer == 0)
-	  {
-	    switch (ucs4)
-	      {
+        KeySym symbolic= 0;
+        int ascii= x2sqKey(&evt->xkey, &symbolic);
+        int ucs4= xkeysym2ucs4(symbolic);
+        int virtualKeyCode= xkey2sqVirtualKeyCode(evt->xkey.keycode, symbolic);
+        DCONV_PRINTERR("symbolic, ascii, ucs4, virtual: %x, %d, %x, %x\n", symbolic, ascii, ucs4, virtualKeyCode);
+        DCONV_PRINTERR("pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
+        recordKeyboardEvent(virtualKeyCode, EventKeyDown, modifierState, 0);
+        if (multi_key_pressed && multi_key_buffer == 0)
+          {
+            switch (ucs4)
+              {
 #              define key_case(sym, code)		\
-	        case sym:				\
-	          multi_key_buffer= (code);		\
-		  keyCode= -1;				\
-	          ucs4= -1;				\
-	          break;
-		key_case(0x60, 0x0300); /* grave */
-		key_case(0x27, 0x0301); /* apostrophe */
-		key_case(0x5e, 0x0302); /* circumflex */
-		key_case(0x7e, 0x0303); /* tilde */
-		key_case(0x22, 0x0308); /* double quote */
-		key_case(0x61, 0x030a); /* a */
+                case sym:				\
+                  multi_key_buffer= (code);		\
+                  ascii= -1;				\
+                  ucs4= -1;				\
+                  break;
+                key_case(0x60, 0x0300); /* grave */
+                key_case(0x27, 0x0301); /* apostrophe */
+                key_case(0x5e, 0x0302); /* circumflex */
+                key_case(0x7e, 0x0303); /* tilde */
+                key_case(0x22, 0x0308); /* double quote */
+                key_case(0x61, 0x030a); /* a */
 #              undef key_case
-	      }
-	  }
-	else
-	  {
-	  switch (symbolic)
-	    {
+              }
+          }
+        else
+          {
+          switch (symbolic)
+            {
 #            define dead_key_case(sym, code, orig)	\
-	      case sym:					\
-	        if (multi_key_buffer == code)		\
-		  {					\
-		    multi_key_buffer= 0;		\
-		    keyCode= orig;			\
-		    ucs4= orig;				\
-		  }					\
-		else					\
-		  {					\
-		    multi_key_buffer= (code);		\
-		    keyCode= -1;			\
-		    ucs4= -1;				\
-		  }					\
-	        break;
-	      dead_key_case(XK_dead_grave, 0x0300, 0x60);
-	      dead_key_case(XK_dead_acute, 0x0301, 0x27);
-	      dead_key_case(XK_dead_circumflex, 0x0302, 0x5e);
-	      dead_key_case(XK_dead_tilde, 0x0303, 0x7e);
-	      dead_key_case(XK_dead_macron, 0x0304, 0x0304);
-	      dead_key_case(XK_dead_abovedot, 0x0307, 0x0307);
-	      dead_key_case(XK_dead_diaeresis, 0x0308, 0x0308);
-	      dead_key_case(XK_dead_abovering, 0x030A, 0x030A);
-	      dead_key_case(XK_dead_doubleacute, 0x030B, 0x030B);
-	      dead_key_case(XK_dead_caron, 0x030C, 0x030C);
-	      dead_key_case(XK_dead_cedilla, 0x0327, 0x0327);
-	      dead_key_case(XK_dead_ogonek, 0x0328, 0x0328);
-	      dead_key_case(XK_dead_iota, 0x0345, 0x0345);
-	      dead_key_case(XK_dead_voiced_sound, 0x3099, 0x3099);
-	      dead_key_case(XK_dead_semivoiced_sound, 0x309a, 0x309a);
-	      dead_key_case(XK_dead_belowdot, 0x0323, 0x0323);
-	      dead_key_case(XK_dead_hook, 0x0309, 0x0309);
-	      dead_key_case(XK_dead_horn, 0x031b, 0x031b);
+              case sym:					\
+                if (multi_key_buffer == code)		\
+                  {					\
+                    multi_key_buffer= 0;		\
+                    ascii= orig;			\
+                    ucs4= orig;				\
+                  }					\
+                else					\
+                  {					\
+                    multi_key_buffer= (code);		\
+                    ascii= -1;			\
+                    ucs4= -1;				\
+                  }					\
+                break;
+              dead_key_case(XK_dead_grave, 0x0300, 0x60);
+              dead_key_case(XK_dead_acute, 0x0301, 0x27);
+              dead_key_case(XK_dead_circumflex, 0x0302, 0x5e);
+              dead_key_case(XK_dead_tilde, 0x0303, 0x7e);
+              dead_key_case(XK_dead_macron, 0x0304, 0x0304);
+              dead_key_case(XK_dead_abovedot, 0x0307, 0x0307);
+              dead_key_case(XK_dead_diaeresis, 0x0308, 0x0308);
+              dead_key_case(XK_dead_abovering, 0x030A, 0x030A);
+              dead_key_case(XK_dead_doubleacute, 0x030B, 0x030B);
+              dead_key_case(XK_dead_caron, 0x030C, 0x030C);
+              dead_key_case(XK_dead_cedilla, 0x0327, 0x0327);
+              dead_key_case(XK_dead_ogonek, 0x0328, 0x0328);
+              dead_key_case(XK_dead_iota, 0x0345, 0x0345);
+              dead_key_case(XK_dead_voiced_sound, 0x3099, 0x3099);
+              dead_key_case(XK_dead_semivoiced_sound, 0x309a, 0x309a);
+              dead_key_case(XK_dead_belowdot, 0x0323, 0x0323);
+              dead_key_case(XK_dead_hook, 0x0309, 0x0309);
+              dead_key_case(XK_dead_horn, 0x031b, 0x031b);
 #            undef dead_key_case
-	    }
-	  if (symbolic != XK_Multi_key)
-	    {
-	      multi_key_pressed= 0; 
-	      DCONV_PRINTERR("multi_key reset\n");
-	    }
-	  }
-	DCONV_PRINTERR("keyCode, ucs4, multi_key_buffer: %d, %d, %x\n", keyCode, ucs4, multi_key_buffer);
-	if (keyCode >= 0)
-	  {
-	    recordKeystroke(keyCode);			/* DEPRECATED */
-	    if (multi_key_buffer != 0)
-	      recordKeystroke(multi_key_buffer);
-	  }
-	if ((keyCode >= 0) || (ucs4 > 0))
-	  {
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifierState, ucs4);
-	    if (ucs4) /* only generate a key char event if there's a code. */
-		recordKeyboardEvent(keyCode, EventKeyChar, modifierState, ucs4);
-	    if (multi_key_buffer != 0)
-	      {
-		recordKeyboardEvent(multi_key_buffer, EventKeyDown, modifierState, multi_key_buffer);
-		recordKeyboardEvent(multi_key_buffer, EventKeyChar, modifierState, multi_key_buffer);
-		multi_key_buffer= 0;
-	      }
-	  }
+            }
+          if (symbolic != XK_Multi_key)
+            {
+              multi_key_pressed= 0; 
+              DCONV_PRINTERR("multi_key reset\n");
+            }
+          }
+        DCONV_PRINTERR("ascii, ucs4, multi_key_buffer: %d, %d, %x\n", ascii, ucs4, multi_key_buffer);
+        if (ascii >= 0)
+          {
+            recordKeystroke(ascii);			/* DEPRECATED */
+            if (multi_key_buffer != 0)
+              recordKeystroke(multi_key_buffer);
+          }
+        if ((ascii >= 0) || (ucs4 > 0))
+          { /* only generate a key char event if there's a code. */
+            recordKeyboardEvent(ascii, EventKeyChar, modifierState, ucs4);
+            if (multi_key_buffer != 0)
+              {
+                recordKeyboardEvent(multi_key_buffer, EventKeyChar, modifierState, multi_key_buffer);
+                multi_key_buffer= 0;
+              }
+          }
       }
       break;
 
     case KeyRelease:
       noteEventState(evt->xkey);
       {
-	KeySym symbolic;
-	int keyCode, ucs4;
-	if (XPending(stDisplay))
-	  {
-	    XEvent evt2;
-	    XPeekEvent(stDisplay, &evt2);
-	    if ((evt2.type == KeyPress) && (evt2.xkey.keycode == evt->xkey.keycode) && ((evt2.xkey.time - evt->xkey.time < 2)))
-	      break;
-	  }
-	keyCode= x2sqKey(&evt->xkey, &symbolic);
-	ucs4= xkeysym2ucs4(symbolic);
-	if ((keyCode >= 0) || (ucs4 > 0))
-	  recordKeyboardEvent(keyCode, EventKeyUp, modifierState, ucs4);
+        if (XPending(stDisplay))
+          {
+            XEvent evt2;
+            XPeekEvent(stDisplay, &evt2);
+            if ((evt2.type == KeyPress) && (evt2.xkey.keycode == evt->xkey.keycode) && ((evt2.xkey.time - evt->xkey.time < 2)))
+              break;
+          }
+        KeySym symbolic;
+        int virtualKeyCode;
+        XLookupString(&evt->xkey, 0, 0, &symbolic, 0); // set symbolic
+        translateCode(symbolic, &modifierState, evt); // update modifierState if necessary
+        virtualKeyCode= xkey2sqVirtualKeyCode(evt->xkey.keycode, symbolic);
+        recordKeyboardEvent(virtualKeyCode, EventKeyUp, modifierState, 0);
       }
       break;
 
@@ -4146,7 +4280,7 @@ void initPixmap(void)
 	for (b= 0; b < 6; b++)
 	  {
 	    int i= 40 + ((36 * r) + (6 * b) + g);
-	    if (i > 255) error("index out of range in color table compuation");
+	    if (i > 255) perror("index out of range in color table compuation");
 	    initColourmap(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
 	  }
   }
@@ -4637,37 +4771,33 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 # endif
 
 # if defined(XK_Control_L)
-	/* For XK_Shift_L, XK_Shift_R, XK_Caps_Lock & XK_Shift_Lock we can't just
-	 * use the SHIFT metastate since it would generate key codes. We use
-	 * META + SHIFT as these are all meta keys (meta == OptionKeyBit).
-	 */
-	case XK_Shift_L:
-		return withMetaSet(255,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Shift_R:
-		return withMetaSet(254,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Caps_Lock:
-		return withMetaSet(253,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Shift_Lock:
-		return withMetaSet(252,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Control_L:
-		return withMetaSet(251,OptionKeyBit+CtrlKeyBit,CtrlKeyBit,modp,evt);
-	case XK_Control_R:
-		return withMetaSet(250,OptionKeyBit+CtrlKeyBit,CtrlKeyBit,modp,evt);
-	case XK_Meta_L:
-		return withMetaSet(249,OptionKeyBit,0,modp,evt);
-	case XK_Meta_R:
-		return withMetaSet(248,OptionKeyBit,0,modp,evt);
-	/* John Brandt notes on 2018/11/28:
-	 * This doesn't match the above; here OptionKeyBit is used for the notmeta
-	 * parameter but in the preceding cases we use the bit other than the
-	 * OptionKeyBit.  Which is right?
-	 * The underlying issue here is the lack of a key event on pressing the
-	 * shift key; a feature that GT depends upon.
-	 */
-	case XK_Alt_L:
-		return withMetaSet(247,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
-	case XK_Alt_R:
-		return withMetaSet(246,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
+    /* No need to return ascii value (> -1) because not an EventKeyChar */
+    case XK_Shift_L:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Shift_R:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Caps_Lock:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Shift_Lock:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Control_L:
+    case XK_Control_R: // Re-use conversion Ctrl+Alt=Opt, see x2sqModifier()
+        if (evt->type == KeyPress)
+          evt->state= evt->state | ControlMask;
+        else
+          evt->state= evt->state & ~ControlMask;
+        *modp= x2sqModifier(evt->state);
+        return -1;
+    case XK_Meta_L:
+    case XK_Meta_R:
+    case XK_Alt_L:
+    case XK_Alt_R: // Re-use conversion Ctrl+Alt=Opt, see x2sqModifier()
+        if (evt->type == KeyPress)
+          evt->state= evt->state | Mod1Mask;
+        else
+          evt->state= evt->state & ~Mod1Mask;
+        *modp= x2sqModifier(evt->state);
+        return -1;
 # endif
 
     default:;
