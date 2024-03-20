@@ -45,7 +45,7 @@ all : $(squeak) plugins squeak.1 $(npsqueak)
 # VM
 
 $(squeak) : config.sh $(SQLIBS) version.o
-	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS) [plibs] -Wl,-whole-archive,vm/vm.a,-no-whole-archive
+	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS) [plibs] -Wl,--whole-archive,vm/vm.a,--no-whole-archive
 	@echo
 	@size $(squeak)
 	@echo
