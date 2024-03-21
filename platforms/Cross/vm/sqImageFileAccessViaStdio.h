@@ -24,3 +24,5 @@
 #define sqImageFileSeekEnd(f, pos)				fseeko(f, pos, SEEK_END)
 #define sqImageFileWrite(ptr, sz, count, f)		fwrite(ptr, sz, count, f)
 #define sqImageFileStartLocation(f,fileName,sz)	0
+#define sqImageFileIsEmbedded() 0
+extern sqInt checkImageHeaderFromBytesAndSize(char *bytes, sqInt totalSize);

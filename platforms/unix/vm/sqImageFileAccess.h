@@ -22,6 +22,9 @@
 #define squeakFileOffsetType off_t
 
 // Save/restore.
+
+extern sqInt checkImageHeaderFromBytesAndSize(char *bytes, sqInt totalSize);
+
 // Read the image from the given file starting at the given image offset
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
@@ -139,4 +142,5 @@ sqImageFileSeekEnd(sqImageFile f,off_t pos)
 
 #define sqImageFileStartLocation(f,fileName,sz)	0
 
+#define sqImageFileIsEmbedded() 0
 #endif /* _SQ_IMAGE_FILE_ACCESS_H */
