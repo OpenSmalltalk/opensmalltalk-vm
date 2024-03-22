@@ -2280,7 +2280,7 @@ parseGenericArgs(int argc, char *argv[])
 		}
 
 	/* Always allow the command-line to override an implicit image name. */
-	if (*argv[0] && IsImage(argv[0])) {
+	if (*argv[0] && !findEmbeddedImage() && IsImage(argv[0])) {
 		strncpy(imageName, argv[0], MAX_PATH_UTF8);
 		MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
 		/* if provided, the image is a vm argument. */
