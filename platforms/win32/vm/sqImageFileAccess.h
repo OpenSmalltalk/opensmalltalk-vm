@@ -9,6 +9,8 @@
 #ifndef _SQ_IMAGE_FILE_ACCESS_H
 #define _SQ_IMAGE_FILE_ACCESS_H
 
+#include <Windows.h> // for DWORD type
+
 #if _WIN64
 # define sqImageFile unsigned __int64
 #else
