@@ -1484,7 +1484,7 @@ static LPSTR imageResourceName = NULL;
 #define IMRESTYPE (LPCSTR)RT_RCDATA
 
 #define theVM (HMODULE)0
-static BOOL
+static BOOL __stdcall
 enumImageResources(HMODULE hModule, LPCSTR lpType, LPSTR lpName, LONG_PTR ign)
 {
 	HRSRC resource;
