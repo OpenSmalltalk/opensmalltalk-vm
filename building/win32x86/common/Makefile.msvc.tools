@@ -40,11 +40,13 @@ DEBUGVM=1
 NDEBUG:=-D'VM_LABEL(foo)=0'
 endif
 
-ifeq ($(THREADING),multi)
-COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
-else
-COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
-endif
+ifeq ($(IS_PREPARING),false)
+  ifeq ($(THREADING),multi)
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+  else
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+  endif
+endif # IS_PREPARING
 
 # MSVC's preprocessor (bless its heart) can't manage complex expansions
 # and so unless we specify USE_INLINE_MEMORY_ACCESSORS lots of things

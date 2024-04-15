@@ -19,9 +19,18 @@ all: default
 
 VM?=Squeak
 VM_NAME?=$(VM)
-CONFIGURATION=product
-THREADING=single
 export VM VM_NAME CONFIGURATION COGDEFS
+
+# This Makefile has a two-pass initialization scheme for COGDEFS, which
+# sets VM-specific compilation flags such as for multi-threaded and
+# debug builds. We encode this by checking whether CONFIGURATION was 
+# provided from the outer invocation. We want to avoid expanding COGDEFS
+# with the wrong default values in the first, preparatory pass.
+ifeq ($(CONFIGURATION),)
+	IS_PREPARING:=true
+else
+	IS_PREPARING:=false
+endif
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
 CROQUET:=-DCROQUET
@@ -137,29 +146,30 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 # Common build rules
 #
 
-#default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(APPPOST)
+default: product # ensure two-pass initialization, see below
+#defaultBuild: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
+defaultBuild: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
 
-productmt:;
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=multi $(@,product=) default
+productmt:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=multi $(@,product=) defaultBuild
 
-product:;
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=single $(@,product=) default
+product:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=single $(@,product=) defaultBuild
 
 assertmt:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=multi $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=multi $(@,assert=) defaultBuild
 
 assert:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=single $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=single $(@,assert=) defaultBuild
 
 debugmt:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=multi $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=multi $(@,debug=) defaultBuild
 
 debug:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=single $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=single $(@,debug=) defaultBuild
 
 # Do make init to allow make -n to function.
 init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe

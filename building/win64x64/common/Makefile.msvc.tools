@@ -36,7 +36,7 @@ DEBUGVM=1
 NDEBUG:=-D'VM_LABEL(foo)=0'
 endif
 
-ifeq ($(findstring -DCOGMTVM=,$(COGDEFS)),)
+ifeq ($(IS_PREPARING),false)
   ifeq ($(THREADING),multi)
     COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
   else
@@ -45,7 +45,7 @@ ifeq ($(findstring -DCOGMTVM=,$(COGDEFS)),)
   ifdef BIT_IDENTICAL_FLOATING_POINT
     COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
   endif
-endif
+endif # IS_PREPARING
 
 # Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)
 #but if so, sqWin32AEC.cpp includes DeviceTopology.h & barfs

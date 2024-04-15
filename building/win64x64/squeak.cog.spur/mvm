@@ -1,11 +1,15 @@
-#!/bin/bash
-A=;D=;F=
+#!/usr/bin/env bash
+set -e
+# A=all(a,d,f) T=Threaded a=assert d=debug f=fast
+A=;D=;F=;T=
 if [ $# = 0 ]; then
 	A=1;D=1;F=1
 else
-	while getopts 'Aadf?' opt "$@"; do
+	while getopts 'ASTadf?' opt "$@"; do
 		case $opt in
 		A)	A=1;D=1;F=1;;
+		S)	echo -S not yet implemented\; use -A for now 1>&1; exit 1;;
+		T)	T=1;;
 		a)	A=1;;
 		d)	D=1;;
 		f)	F=1;;
@@ -17,18 +21,33 @@ else
 			A=1;D=1;F=1
 		fi
 	fi
-	shift `expr $OPTIND - 1`
+	shift `expr $OPTIND - 1` # drop options, pass other args to make
 fi
 if ../../../scripts/checkSCCSversion ; then exit 1; fi
-if [ -n "$D" ]; then
-	rm -rf builddbg/vm/*.exe
-	make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
-fi
-if [ -n "$A" ]; then
-	rm -rf buildast/vm/*.exe
-	make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
-fi
-if [ -n "$F" ]; then
-	rm -rf build/vm/*.exe
-	make $@ 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
+if [ -z "$T" ]; then # single-threaded VM
+	if [ -n "$D" ]; then
+		rm -rf builddbg/vm/*.exe
+		make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
+	fi
+	if [ -n "$A" ]; then
+		rm -rf buildast/vm/*.exe
+		make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
+	fi
+	if [ -n "$F" ]; then
+		rm -rf build/vm/*.exe
+		make $@ product 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
+	fi
+else # multi-threaded VM
+	if [ -n "$D" ]; then
+		rm -rf buildmtdbg/vm/*.exe
+		make $@ debugmt 2>&1 | tee LOGTD ; test ${PIPESTATUS[0]} -eq 0
+	fi
+	if [ -n "$A" ]; then
+		rm -rf buildmtast/vm/*.exe
+		make $@ assertmt 2>&1 | tee LOGTA ; test ${PIPESTATUS[0]} -eq 0
+	fi
+	if [ -n "$F" ]; then
+		rm -rf buildmt/vm/*.exe
+		make $@ productmt 2>&1 | tee LOGTF ; test ${PIPESTATUS[0]} -eq 0
+	fi
 fi
