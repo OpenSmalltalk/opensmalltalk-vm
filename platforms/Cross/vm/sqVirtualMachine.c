@@ -38,8 +38,8 @@ sqInt copyBits(void);
 sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
 
 #if VM_PROXY_MINOR > 10
-extern sqInt disownVM(sqInt flags);
-extern sqInt ownVM(sqInt threadIdAndFlags);
+extern void *disownVM(sqInt flags);
+extern sqInt ownVM(void *vmThreadHandle);
 #endif // VM_PROXY_MINOR > 10
 extern sqInt isYoung(sqInt);
 

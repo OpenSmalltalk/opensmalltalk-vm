@@ -122,7 +122,6 @@ thunkEntry(long r0, long r1, long r2, long r3,
 			void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;
-  int flags;
   int returnType;
   long regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
@@ -141,8 +140,7 @@ thunkEntry(long r0, long r1, long r2, long r3,
   dregArgs[6] = d6;
   dregArgs[7] = d7;
 
-  flags = interpreterProxy->ownVM(0);
-  if (flags < 0) {
+  if (interpreterProxy->ownVM(NULL /* unidentified thread */) < 0) {
     fprintf(stderr,"Warning; callback failed to own the VM\n");
     return -1;
   }
@@ -157,12 +155,12 @@ thunkEntry(long r0, long r1, long r2, long r3,
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
     setMRCC(vmcc.savedMostRecentCallbackContext);
-    interpreterProxy->disownVM(flags);
+    interpreterProxy->disownVM(DisownVMFromCallback);
     return -1;
   }
 
   setMRCC(vmcc.savedMostRecentCallbackContext);
-  interpreterProxy->disownVM(flags);
+  interpreterProxy->disownVM(DisownVMFromCallback);
 
   switch (returnType) {
   case retword:

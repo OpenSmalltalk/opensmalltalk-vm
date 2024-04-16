@@ -317,8 +317,8 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 10
-  sqInt	(*disownVM)(sqInt flags);
-  sqInt	(*ownVM)   (sqInt threadIdAndFlags);
+  void *(*disownVM)(sqInt flags);
+  sqInt	(*ownVM)(void *vmThreadHandle);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);

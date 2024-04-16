@@ -159,7 +159,7 @@ __attribute__((optimize("O0")))
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
-	int flags, returnType;
+	int returnType;
 
 #if STACK_ALIGN_HACK
   { void *sp = getsp();
@@ -178,7 +178,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
   }
 #endif /* STACK_ALIGN_HACK */
 
-	if ((flags = interpreterProxy->ownVM(0)) < 0) {
+	if (interpreterProxy->ownVM(NULL /* unidentified thread */) < 0) {
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
 		return -1;
 	}
@@ -193,11 +193,11 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
 		setMRCC(vmcc.savedMostRecentCallbackContext);
-		interpreterProxy->disownVM(flags);
+		interpreterProxy->disownVM(DisownVMFromCallback);
 		return -1;
 	}
 	setMRCC(vmcc.savedMostRecentCallbackContext);
-	interpreterProxy->disownVM(flags);
+	interpreterProxy->disownVM(DisownVMFromCallback);
 
 	switch (returnType) {
 

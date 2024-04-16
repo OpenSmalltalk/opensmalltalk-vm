@@ -179,7 +179,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
 	   void *thunkp, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;  /* See  src/spur64.stack/vmCallback.h */
-  int flags, returnType;
+  int returnType;
   sqIntptr_t regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
 
@@ -200,8 +200,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
   dregArgs[6] = d6;
   dregArgs[7] = d7;
 
-  flags = interpreterProxy->ownVM(0);
-  if (flags < 0) {
+  if (interpreterProxy->ownVM(NULL /* unidentified thread */) < 0) {
     fprintf(stderr,"Warning; callback failed to own the VM\n");
     return -1;
   }
@@ -216,12 +215,12 @@ thunkEntry(long x0, long x1, long x2, long x3,
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
     setMRCC(vmcc.savedMostRecentCallbackContext);
-    interpreterProxy->disownVM(flags);
+    interpreterProxy->disownVM(DisownVMFromCallback);
     return -1;
   }
 
   setMRCC(vmcc.savedMostRecentCallbackContext);
-  interpreterProxy->disownVM(flags);
+  interpreterProxy->disownVM(DisownVMFromCallback);
 
   switch (returnType) {
   case retword:
