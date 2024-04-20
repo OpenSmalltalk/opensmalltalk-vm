@@ -349,6 +349,13 @@ int  ioNumProcessors(void);
 # if !defined(ioTransferTimeslice)
 void ioTransferTimeslice(void);
 # endif
+// If the platform requires events to be accessed from a specific thread (e.g.
+// on MacOS events must only be accessed from the main applicaton thread) then
+// sqPlatfrormSpecific.h is expected to define ioEventThreadAffinity to answer
+// the numberic id of that thread, otherwise it is defined as a no-op here.
+# if !defined(ioEventThreadAffinity)
+#	define ioEventThreadAffinity() -1
+#endif
 #endif /* COGMTVM */
 
 /* Profiling. */

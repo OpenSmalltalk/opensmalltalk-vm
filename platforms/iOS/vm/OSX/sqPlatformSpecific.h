@@ -159,6 +159,7 @@ extern const pthread_key_t tltiIndex;
 #  define ioOSThreadIsAlive(thread) (pthread_kill(thread,0) == 0)
 #  define ioTransferTimeslice() sched_yield()
 #  define ioMilliSleep(ms) usleep((ms) * 1000)
+#  define ioEventThreadAffinity() 1
 # endif /* COGMTVM */
 #endif /* STACKVM */
 

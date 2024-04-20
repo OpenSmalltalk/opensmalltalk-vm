@@ -26,6 +26,12 @@
 ifeq ($(APPNAME),)
 APPNAME:=Cocoa
 endif
+ifeq ($(THREADING),multi)
+ifeq ($(APPNAMEDEF),$(APPNAME))
+APPNAMEDEF:=$(APPNAMEDEF)MT
+endif
+APPNAME:=$(APPNAME)MT
+endif
 ifeq ($(APPNAMEDEF),)
 APPNAMEDEF:=$(APPNAME)Fast
 endif
@@ -36,9 +42,6 @@ ifeq ($(USEPLUGINASDYLIB),)
 USEPLUGINASDYLIB:=FALSE
 endif
 
-ifeq ($(THREADING),multi)
-APPNAME:=$(APPNAME)MT
-endif
 ifeq ($(CONFIGURATION),debug)
 	APP:=$(APPNAME)Debug.app
 	VM_IDENTIFIER:=$(APPIDENTIFIER)Debug
