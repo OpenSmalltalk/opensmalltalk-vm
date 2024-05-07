@@ -53,7 +53,7 @@ will result in incorrect version stamps in your compiled VMs.
  - Overview
  - VM source directories
  - Platform build directories
- - Other directories
+ - Other directories (platforms, processors, deployment, image)
 
 
 Overview
@@ -255,11 +255,14 @@ The JIT is developed in Smalltalk by using one of these processor simulators
 to execute the code the JIT produces.  Currently x86 & x86-64 are derived from
 Bochs, and ARMv6/v7 & ARMv8 are derived from gdb.
 
+Customization of builds may be done in two main ways, by adapting an existing
+build directory, and by using facilities designed to be applied after the fact
+to a preexisting build.  Such facilities live in the top-level deploy directory
+and are documented there; e.g. see deploy/packaging/README.win32.
+
 Finally the image directory contains scripts that will build a "VMMaker" image,
 a Squeak Smalltalk image containing all the packages that comprise the Cog
 system, suitable for developing the VM and for generating (or updating) the
 sources in the vm source directories. There is also a script for generating a
-64-bit Spur image from a 32-bit Spur image.
-
-Eliot Miranda
-April 2021
+64-bit Spur image from a 32-bit Spur image, and the VMMaker.oscog package includes
+code for converting Spur images in either direction.

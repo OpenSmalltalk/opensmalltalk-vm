@@ -1,0 +1,19 @@
+The Win32 VMs can be packaged to include the image file as a resource. In this configuration
+a VM executable will only accept the image it includes and cannot be used to load other
+images. An image resource is added to a VM executable using a suitable tool, for example
+ResourceHacker, generously provided for free by Angus Johnson. Find ResourceHacker at
+https://www.angusj.com/resourcehacker/.
+
+An image resource has the type RT_RCDATA and any name (although resource names are limited
+to 8 characters in length and are upper case). To use ResourceHacker to add a resource to
+a VM executable
+- download and install Resource Hacker
+- locate a suitable VM executable, e.g. Squeak.exe, downloaded from Squeak.org/downloads or
+built from the sources (e.g. in building/win64x64/squeak.cog.spur.MSVC/build/vm/Squeak.exe.
+- launch ResourceHacker and open the VM executable from the File menu
+- from the Action menu invoke the "Add an Image or Other Binary Resource ..." dialog
+	- in the dialog use the "Select File" button to choose the desired image file
+	- from the Resource Type pulldown menu choose RCDATA
+	- in the Resource Name edit the name as desired (it will have been filled with a
+	  truncated upper case version of the image file name)
+- from the File menu or the Floppy Disc icon buttons choose Save or Save As...
