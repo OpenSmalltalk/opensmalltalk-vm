@@ -1726,7 +1726,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if(fHeadlessImage && !fRunService)
+    if (fHeadlessImage && !fRunService)
       SetSystemTrayIcon(1);
 
     /* read the image file */
@@ -1735,12 +1735,10 @@ sqMain(int argc, char *argv[])
       readImageFromFileHeapSizeStartingAt(imageFile, virtualMemory, 0);
     }
 	else {
-	  if (imageFile == ImageIsAResource) {
-		int i;
-		for (i = strlen(imageResourceName); i >= 0; --i)
+	  if (imageFile == ImageIsAResource)
+		for (int i = strlen(imageResourceName); i >= 0; --i)
 			imageNameW[i] = imageName[i] = imageResourceName[i];
-	  }
-		
+
       readImageFromFileHeapSizeStartingAt(imageFile, virtualMemory, sqImageFilePosition(imageFile));
     }
     sqImageFileClose(imageFile);
