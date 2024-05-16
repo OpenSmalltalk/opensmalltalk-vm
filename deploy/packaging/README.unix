@@ -1,0 +1,29 @@
+The Unix VMs can be packaged to embed the image file in the executable. In this
+configuration a VM executable will only accept the image it includes and cannot
+be used to load other images. An embedded image is added to a VM executable using
+the genUnixImageResource.c program in this directory, hacking a VM build makefile,
+and then building the VM.
+
+First compile genUnixImageResource.c, e.g.
+
+	cc -o genUnixImageResource -O3 genUnixImageResource.c
+
+then use it and the C compiler to generate an image.o file, e.g.
+
+	./genUnixImageResource myimagefile.image | gcc -c -o image.o -pipe -x c -
+
+Note that in the above we use the -pipe option to avoid creating temporary files
+as these are huge. The output of genUnixImageResource is five times larger than
+the image file, and the assembler file generated may be even larger. Even using
+pipes creating an image.o file from a 48Mb image file on a Raspberry Pi 4 takes
+nearly 9 minutes.
+
+Copy/link the image.o file to a VM build directory, e.g. into
+building/linux64ARMv8/squeak.cog.spur/build. Edit the line that defines SQLIBS
+to either include image.o or a variable you can define on the make line:
+
+SQLIBS		=  vm/vm$a $(EIO) ...
+
+Then remove any existing squeak executable and make:
+
+$ rm -f ./squeak; make EIO=image.o

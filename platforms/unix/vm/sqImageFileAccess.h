@@ -15,11 +15,12 @@
 #include <unistd.h>
 #include <errno.h>
 
-// On Unix we use the native file interface.
+// On Unix we use the native file interface. There is also support for embedded images
 
 #define sqImageFile	int
 #define invalidSqImageFile(sif) ((sif) < 0)
 #define squeakFileOffsetType off_t
+#define ImageIsEmbedded ((sqImageFile)1)
 
 // Save/restore.
 
@@ -28,9 +29,29 @@ extern sqInt checkImageHeaderFromBytesAndSize(char *bytes, sqInt totalSize);
 // Read the image from the given file starting at the given image offset
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
+
+// Image I/O API
+
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
+void sqImageFileClose(sqImageFile f);
+int sqImageFileIsEmbedded(void);
+size_t sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f);
+// sqImageFileWrite answers the number of items written, not number of bytes
+// size_t is for sizes.  ssize_t is signed, for sizes + the -1 error flag
+size_t sqImageFileWrite(void *ptr_arg, size_t sz, size_t count, sqImageFile f);
+off_t sqImageFilePosition(sqImageFile f);
+void sqImageFileSeek(sqImageFile f,off_t pos);
+void sqImageFileSeekEnd(sqImageFile f,off_t pos);
+
+#define sqImageFileStartLocation(f,fileName,sz)	0
+
+// Image I/O API Implementation
+
+#if INCLUDE_SIF_CODE
+
 static int sIFOMode;
 
-static inline sqImageFile
+sqImageFile
 sqImageFileOpen(const char *fileName, const char *mode)
 {
 	int fd = open(fileName,
@@ -43,10 +64,13 @@ sqImageFileOpen(const char *fileName, const char *mode)
 	return fd;
 }
 
-static inline void
+void
 sqImageFileClose(sqImageFile f)
 {
 extern sqInt failed(void);
+
+	if (f == ImageIsEmbedded)
+		return;
 
 	if (!failed()
 	 && sIFOMode == O_RDWR+O_CREAT
@@ -57,6 +81,35 @@ extern sqInt failed(void);
 		perror("sqImageFileClose close");
 }
 
+// Support for image embedded as a resource
+static unsigned char *eiData = NULL;
+static unsigned long eiSize = 0;
+static off_t eiReadPosition = 0;
+
+static inline void
+noteEmbeddedImage(unsigned char *data, unsigned long size)
+{
+	eiData = data;
+	eiSize = size;
+}
+
+int
+sqImageFileIsEmbedded(void) { return eiData != NULL; }
+
+static inline size_t
+sqEmbeddedImageRead(void *ptr, size_t sz, size_t count)
+{
+	if (eiReadPosition + (sz * count) > eiSize) {
+		fprintf(stderr,"Attempting to read beyond end of embedded image\n");
+		return 0;
+	}
+
+	memcpy(ptr,eiData + eiReadPosition, sz * count);
+	eiReadPosition += sz * count;
+	return count;
+}
+
+
 #if !defined(min)
 # define min(a,b) ((a)<=(b)?(a):b)
 #endif
@@ -64,11 +117,14 @@ extern sqInt failed(void);
 
 // sqImageFileRead answers the number of items read, not number of bytes
 // size_t is for sizes.  ssize_t is signed, for sizes + the -1 error flag
-static inline size_t
+size_t
 sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f)
 {
 	size_t to_be_read = sz * count, nread_in_total = 0;
 	unsigned char *ptr = ptr_arg;
+
+	if (f == ImageIsEmbedded)
+		return sqEmbeddedImageRead(ptr,sz,count);
 
 	/* read may refuse to write more than 2Gb-1.  At least on MacOS 10.13.6,
 	 * read craps out above 2Gb, so chunk the read into to 1Gb segments.
@@ -91,7 +147,7 @@ sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f)
 
 // sqImageFileWrite answers the number of items written, not number of bytes
 // size_t is for sizes.  ssize_t is signed, for sizes + the -1 error flag
-static inline size_t
+size_t
 sqImageFileWrite(void *ptr_arg, size_t sz, size_t count, sqImageFile f)
 {
 	size_t to_be_written = sz * count, nwritten_in_total = 0;
@@ -117,30 +173,35 @@ sqImageFileWrite(void *ptr_arg, size_t sz, size_t count, sqImageFile f)
 }
 #undef OneGb
 
-static inline off_t
+off_t
 sqImageFilePosition(sqImageFile f)
 {
+	if (f == ImageIsEmbedded)
+		return eiReadPosition;
+
 	off_t pos = lseek(f, 0, SEEK_CUR);
 	if (pos == (off_t)-1)
 		perror("sqImageFilePosition lseek");
 	return pos;
 }
 
-static inline void
+void
 sqImageFileSeek(sqImageFile f,off_t pos)
 {
-	if (lseek(f, pos, SEEK_SET) < 0)
+	if (f == ImageIsEmbedded)
+		eiReadPosition = pos;
+	else if (lseek(f, pos, SEEK_SET) < 0)
 		perror("sqImageFileSeek lseek");
 }
 
-static inline void
+void
 sqImageFileSeekEnd(sqImageFile f,off_t pos)
 {
-	if (lseek(f, pos, SEEK_END) < 0)
+	if (f == ImageIsEmbedded)
+		eiReadPosition = eiSize;
+	else if (lseek(f, pos, SEEK_END) < 0)
 		perror("sqImageFileSeekEnd lseek");
 }
 
-#define sqImageFileStartLocation(f,fileName,sz)	0
-
-#define sqImageFileIsEmbedded() 0
-#endif /* _SQ_IMAGE_FILE_ACCESS_H */
+#endif // INCLUDE_SIF_CODE
+#endif // _SQ_IMAGE_FILE_ACCESS_H

@@ -36,6 +36,7 @@
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryAccess.h"
+#define INCLUDE_SIF_CODE 1
 #include "sqImageFileAccess.h"
 #include "sqaio.h"
 #include "sqUnixCharConv.h"
@@ -58,6 +59,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
@@ -2151,28 +2153,46 @@ imgInit(void)
     int fd;
     struct stat sb;
     char imagePath[MAXPATHLEN];
-    sq2uxPath(shortImageName, strlen(shortImageName), imagePath, MAXPATHLEN - 1, 1);
-    if (-1 == stat(imagePath, &sb) || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode))) {
-        imageNotFound(imagePath); // imageNotFound will exit
-    }
-    fd = sqImageFileOpen(imagePath, "rb"); // sqImageFileOpen handles the errors. fd is valid here
+
+	// first check for an embedded image
+	
+	void *handle = dlopen(NULL, RTLD_NOW);
+	void *embeddedImage;
+	if (handle && (embeddedImage = dlsym(handle,"embeddedImage"))) {
+		strcpy(shortImageName,dlsym(handle,"embeddedImageName"));
+		noteEmbeddedImage(embeddedImage,
+						  *(unsigned long *)dlsym(handle,"embeddedImageSize"));
+		dlclose(handle);
+		fd = ImageIsEmbedded;
+	}
+	else {
+
+		sq2uxPath(shortImageName, strlen(shortImageName), imagePath, MAXPATHLEN - 1, 1);
+		if (-1 == stat(imagePath, &sb) || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode))) {
+			imageNotFound(imagePath); // imageNotFound will exit
+		}
+		fd = sqImageFileOpen(imagePath, "rb"); // sqImageFileOpen handles the errors. fd is valid here
 #ifdef DEBUG_IMAGE
-    printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
+		printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
 #endif
 
-    recordFullPathForImageName(shortImageName); /* full image path */
+		recordFullPathForImageName(shortImageName); /* full image path */
+	}
+
     if (extraMemory)
         useMmap= 0;
     else
         extraMemory= DefaultHeapSize * 1024 * 1024;
 #ifdef DEBUG_IMAGE
-    printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
+	if (fd != ImageIsEmbedded)
+		printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
 #endif
 #if SPURVM
     readImageFromFileHeapSizeStartingAt(fd, 0, 0);
 #else
-    extraMemory += (long)sb.st_size;
-    readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
+	if (fd != ImageIsEmbedded)
+		extraMemory += (long)sb.st_size;
+	readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
 #endif
     sqImageFileClose(fd);
 }
