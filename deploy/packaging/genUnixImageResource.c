@@ -42,7 +42,7 @@ main(int argc, char *argv[])
 		dot = basename + strlen(basename) - 1;
 	fprintf(ofh,
 			"char embeddedImageName[] = \"%.*s\";\n",
-			dot - basename, basename);
+			(int)(dot - basename), basename);
 	fseek(ifh,0,SEEK_END);
 	fprintf(ofh,"unsigned long embeddedImageSize = %ld;\n",ftell(ifh));
 	fseek(ifh,0,SEEK_SET);

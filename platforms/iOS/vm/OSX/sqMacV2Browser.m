@@ -57,7 +57,7 @@ sqInt browserGetWindowSize(void) {
 	return 0;
 }
 
-double browserGetWindowScaleFactor(voud) {
+double browserGetWindowScaleFactor(void) {
 	return 1.0;
 }
 
