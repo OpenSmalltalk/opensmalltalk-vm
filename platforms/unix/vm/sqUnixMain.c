@@ -2160,10 +2160,14 @@ imgInit(void)
 	void *embeddedImage;
 	if (handle && (embeddedImage = dlsym(handle,"embeddedImage"))) {
 		strcpy(shortImageName,dlsym(handle,"embeddedImageName"));
+		fd = ((char *)embeddedImage)[0] == GZIPMagic0 && ((char *)embeddedImage)[1] == GZIPMagic1
+				? ImageIsEmbeddedAndCompressed
+				: ImageIsEmbedded;
+		unsigned long *compressedSize = dlsym(handle,"embeddedCompressedDataSize");
 		noteEmbeddedImage(embeddedImage,
-						  *(unsigned long *)dlsym(handle,"embeddedImageSize"));
+						  *(unsigned long *)dlsym(handle,"embeddedImageSize"),
+						  compressedSize ? *compressedSize : 0);
 		dlclose(handle);
-		fd = ImageIsEmbedded;
 	}
 	else {
 
