@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#if INCLUDE_SIF_CODE
+#if HAVE_LIBZ && INCLUDE_SIF_CODE
 # include <zlib.h>
 #endif
 
@@ -64,7 +64,9 @@ static int sIFOMode; // input/output file mode
 static unsigned char *eiData = NULL;
 static unsigned long eiSize = 0, eicSize = 0;
 static off_t eiReadPosition = 0;
+#if HAVE_LIBZ
 static z_stream eizs = { 0, }; // embedded image zlib stream
+#endif
 
 
 sqImageFile
@@ -87,10 +89,12 @@ extern sqInt failed(void);
 
 	if (f == ImageIsEmbedded)
 		return;
+#if HAVE_LIBZ
 	if (f == ImageIsEmbeddedAndCompressed) {
 		(void)inflateEnd(&eizs);
 		return;
 	}
+#endif
 
 	if (!failed()
 	 && sIFOMode == O_RDWR+O_CREAT
@@ -125,7 +129,7 @@ sqEmbeddedImageRead(void *ptr, size_t sz, size_t count)
 	return count;
 }
 
-
+#if HAVE_LIBZ
 static inline size_t
 sqCompressedImageRead(void *ptr, size_t sz, size_t count)
 {
@@ -187,7 +191,7 @@ sqCompressedImageRead(void *ptr, size_t sz, size_t count)
 	eiReadPosition += ntoread;
 	return count;
 }
-
+#endif
 
 #if !defined(min)
 # define min(a,b) ((a)<=(b)?(a):b)
@@ -204,8 +208,10 @@ sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f)
 
 	if (f == ImageIsEmbedded)
 		return sqEmbeddedImageRead(ptr,sz,count);
+#if HAVE_LIBZ
 	if (f == ImageIsEmbeddedAndCompressed)
 		return sqCompressedImageRead(ptr,sz,count);
+#endif
 
 	/* read may refuse to write more than 2Gb-1.  At least on MacOS 10.13.6,
 	 * read craps out above 2Gb, so chunk the read into to 1Gb segments.
