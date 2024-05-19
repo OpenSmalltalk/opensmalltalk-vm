@@ -52,11 +52,7 @@
 
 #define IEB_SIZE	 64	/* must be power of 2 */
 
-typedef struct
-{
-  int x, y;
-} SqPoint;
-
+typedef struct { int x, y; } SqPoint;
 SqPoint mousePosition= { 0, 0 };	/* position at last motion event */
 int	swapBtn= 0;			/* 1 to swap yellow and blue buttons */
 
@@ -149,6 +145,21 @@ static sqInt getButtonState(void)
   printf("\n");
 #endif
   return buttons | (modifiers << 3);
+}
+
+
+/*** event handling ***/
+sqInt inputEventSemaIndex= 0;
+
+/* set asynchronous input event semaphore  */
+sqInt
+ioSetInputSemaphore(sqInt semaIndex)
+{
+  if ((semaIndex == 0) || (noEvents == 1))
+    success(false);
+  else
+    inputEventSemaIndex= semaIndex;
+  return true;
 }
 
 

@@ -2152,10 +2152,8 @@ imgInit(void)
     /* read the image file and allocate memory for Squeak heap */
     int fd;
     struct stat sb;
-    char imagePath[MAXPATHLEN];
 
 	// first check for an embedded image
-	
 	void *handle = dlopen(NULL, RTLD_NOW);
 	void *embeddedImage;
 	if (handle && (embeddedImage = dlsym(handle,"embeddedImage"))) {
@@ -2163,23 +2161,24 @@ imgInit(void)
 		fd = ((char *)embeddedImage)[0] == GZIPMagic0 && ((char *)embeddedImage)[1] == GZIPMagic1
 				? ImageIsEmbeddedAndCompressed
 				: ImageIsEmbedded;
+		unsigned long *imageSize = dlsym(handle,"embeddedImageSize");
 		unsigned long *compressedSize = dlsym(handle,"embeddedCompressedDataSize");
-		noteEmbeddedImage(embeddedImage,
-						  *(unsigned long *)dlsym(handle,"embeddedImageSize"),
-						  compressedSize ? *compressedSize : 0);
 		dlclose(handle);
+		noteEmbeddedImage(embeddedImage,
+						  *imageSize,
+						  compressedSize ? *compressedSize : 0);
+		sb.st_size = imageSize;
 	}
 	else {
-
+		char imagePath[MAXPATHLEN];
 		sq2uxPath(shortImageName, strlen(shortImageName), imagePath, MAXPATHLEN - 1, 1);
-		if (-1 == stat(imagePath, &sb) || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode))) {
+		if (-1 == stat(imagePath, &sb)
+		 || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode)))
 			imageNotFound(imagePath); // imageNotFound will exit
-		}
 		fd = sqImageFileOpen(imagePath, "rb"); // sqImageFileOpen handles the errors. fd is valid here
 #ifdef DEBUG_IMAGE
 		printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
 #endif
-
 		recordFullPathForImageName(shortImageName); /* full image path */
 	}
 
@@ -2188,14 +2187,12 @@ imgInit(void)
     else
         extraMemory= DefaultHeapSize * 1024 * 1024;
 #ifdef DEBUG_IMAGE
-	if (fd != ImageIsEmbedded)
-		printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
+	printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
 #endif
 #if SPURVM
     readImageFromFileHeapSizeStartingAt(fd, 0, 0);
 #else
-	if (fd != ImageIsEmbedded)
-		extraMemory += (long)sb.st_size;
+	extraMemory += (long)sb.st_size;
 	readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
 #endif
     sqImageFileClose(fd);
