@@ -8,7 +8,7 @@ extern char  *exeName;
 extern char **argVec;
 
 extern int    fullScreenFlag;
-extern int    noEvents;
+extern sqInt  inputEventSemaIndex;
 extern int    textEncodingUTF8;
 
 extern void   imgInit(void);

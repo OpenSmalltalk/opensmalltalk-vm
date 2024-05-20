@@ -148,21 +148,6 @@ static sqInt getButtonState(void)
 }
 
 
-/*** event handling ***/
-sqInt inputEventSemaIndex= 0;
-
-/* set asynchronous input event semaphore  */
-sqInt
-ioSetInputSemaphore(sqInt semaIndex)
-{
-  if ((semaIndex == 0) || (noEvents == 1))
-    success(false);
-  else
-    inputEventSemaIndex= semaIndex;
-  return true;
-}
-
-
 static void signalInputEvent(void)
 {
 #if DEBUG_EVENTS

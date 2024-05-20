@@ -1583,14 +1583,6 @@ static char *documentName= 0;
 }
 
 
-#if 0 // only for running with increased stack size
-static void *runInterpreter(void *arg)
-{
-  [(id)arg interpret: nil];
-}
-#endif
-
-
 -(void) applicationDidFinishLaunching: (NSNotification *)note
 {
   int fds[2];
@@ -1656,27 +1648,10 @@ static void *runInterpreter(void *arg)
   setUpDisplay();
   setUpWindow(fullscreen= getFullScreenFlag());
 
-#if 1
   [NSThread
     detachNewThreadSelector: @selector(interpret:)
     toTarget:		     self
     withObject:		     nil];
-#else
-  // ensure cocoa is initialised for threads
-  {
-    id obj= [NSObject new];
-    [NSThread detachNewThreadSelector: @selector(self) toTarget: obj withObject: nil];
-    [obj release];
-  }
-  // run interpreter with stack size > default
-  {
-    pthread_t	   thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 8192*1024);
-    pthread_create(&thread, &attr, runInterpreter, (void *)self);
-  }
-#endif
 }
 
 

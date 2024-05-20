@@ -91,7 +91,7 @@ popOutputFile()
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
 
-       char  *documentName= 0;			/* name if launced from document */
+       char  *documentName= 0;			/* name if launched from document */
        char   shortImageName[MAXPATHLEN+1];	/* image name */
        char   imageName[MAXPATHLEN+1];		/* full path to image */
 static char   vmName[MAXPATHLEN+1];		/* full path to vm */
@@ -114,17 +114,10 @@ static long   extraMemory=	0;
 
 static int    useItimer=	1;	/* 0 to disable itimer-based clock */
 static int    installHandlers=	1;	/* 0 to disable sigusr1 & sigsegv handlers */
-       int    noEvents=		0;	/* 1 to disable new event handling */
+static int    noEvents=		0;	/* 1 to disable new event handling */
        int    noSoundMixer=	0;	/* 1 to disable writing sound mixer levels */
        char  *squeakPlugins=	0;	/* plugin path */
        int    runAsSingleInstance=0;
-#if !STACKVM && !COGVM
-       int    useJit=		0;	/* use default */
-       int    jitProcs=		0;	/* use default */
-       int    jitMaxPIC=	0;	/* use default */
-#else
-# define useJit 0
-#endif
        int    withSpy=		0;
 
        int    uxDropFileCount=	0;	/* number of dropped items	*/
@@ -141,8 +134,6 @@ int inModalLoop= 0;
 #endif
 
 int sqIgnorePluginErrors	= 0;
-int runInterpreter		= 1;
-
 
 #include "SqDisplay.h"
 #include "SqSound.h"
@@ -562,6 +553,22 @@ getAttributeString(sqInt id)
 	}
 	return 0;
 }
+
+/*** event handling ***/
+
+sqInt inputEventSemaIndex= 0;
+
+/* set asynchronous input event semaphore  */
+sqInt
+ioSetInputSemaphore(sqInt semaIndex)
+{
+  if ((semaIndex == 0) || (noEvents == 1))
+    success(false);
+  else
+    inputEventSemaIndex= semaIndex;
+  return true;
+}
+
 
 /*** display functions ***/
 
@@ -1482,22 +1489,6 @@ strtobkmg(const char *str)
   return value;
 }
 
-#if !STACKVM && !COGVM
-static int
-jitArgs(char *str)
-{
-  char *endptr= str;
-  int  args= 3;				/* default JIT mode = fast compiler */
-  
-  if (*str == '\0') return args;
-  if (*str != ',')
-    args= strtol(str, &endptr, 10);	/* mode */
-  while (*endptr == ',')		/* [,debugFlag]* */
-    args|= (1 << (strtol(endptr + 1, &endptr, 10) + 8));
-  return args;
-}
-#endif /* !STACKVM && !COGVM */
-
 /* ----------------- built-in main vm module */
 
 # include <locale.h>
@@ -1524,11 +1515,6 @@ vm_parseEnvironment(void)
   if ((ev= getenv("SQUEAK_PLUGINS")))	squeakPlugins= strdup(ev);
   if ((ev= getenv("SQUEAK_NOEVENTS")))	noEvents= 1;
   if ((ev= getenv("SQUEAK_NOTIMER")))	useItimer= 0;
-#if !STACKVM && !COGVM
-  if ((ev= getenv("SQUEAK_JIT")))	useJit= jitArgs(ev);
-  if ((ev= getenv("SQUEAK_PROCS")))	jitProcs= atoi(ev);
-  if ((ev= getenv("SQUEAK_MAXPIC")))	jitMaxPIC= atoi(ev);
-#endif /* !STACKVM && !COGVM */
   if ((ev= getenv("SQUEAK_ENCODING")))	setEncoding(&sqTextEncoding, ev);
   if ((ev= getenv("SQUEAK_PATHENC")))	setEncoding(&uxPathEncoding, ev);
   if ((ev= getenv("SQUEAK_TEXTENC")))	setEncoding(&uxTextEncoding, ev);
@@ -1632,11 +1618,6 @@ vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("blockonwarn")))  { erroronwarn = blockOnError = 1; return 1; }
   else if (!strcmp(argv[0], VMOPTION("exitonwarn")))   { erroronwarn    = 1; return 1; }
   else if (!strcmp(argv[0], VMOPTION("timephases")))   { printPhaseTime(1) ; return 1; }
-#if !STACKVM && !COGVM
-  else if (!strncmp(argv[0],VMOPTION("jit"), 4))    { useJit  = jitArgs(argv[0]+4); return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nojit")))     { useJit  = 0; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("spy")))       { withSpy = 1; return 1; }
-#endif /* !STACKVM && !COGVM */
 #if defined(AIO_DEBUG)
   else if (!strcmp(argv[0], VMOPTION("aiolog")))	{ aioDebugLogging = 1; return 1; }
 #endif
@@ -1646,10 +1627,6 @@ vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
   /* option requires an argument */
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkmg(argv[1]); return 2; }
-#if !STACKVM && !COGVM
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("procs")))    { jitProcs     = atoi(argv[1]);     return 2; }
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxpic")))   { jitMaxPIC    = atoi(argv[1]);     return 2; }
-#endif /* !STACKVM && !COGVM */
 #if !SPURVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkmg(argv[1]); return 2; }
 #endif
@@ -1901,9 +1878,6 @@ vm_printUsage(void)
 	printf("Deprecated:\n");
 	printf("  "VMOPTION("display")" <dpy>        equivalent to '-vm-display-X11 "VMOPTION("display")" <dpy>'\n");
 	printf("  "VMOPTION("headless")"             equivalent to '-vm-display-X11 "VMOPTION("headless")"'\n");
-# if !STACKVM
-	printf("  "VMOPTION("jit")"                  enable the dynamic compiler (if available)\n");
-# endif
 	printf("  "VMOPTION("nodisplay")"            equivalent to '-vm-display-null'\n");
 	printf("  "VMOPTION("nomixer")"              disable modification of mixer settings\n");
 	printf("  "VMOPTION("nosound")"              equivalent to '-vm-sound-null'\n");
@@ -1956,15 +1930,6 @@ usage()
   }
   modulesDo(m)
     m->printUsage();
-  if (useJit)
-    {
-      printf("\njit <option>s:\n");
-      printf("  "VMOPTION("align")" <n>            align functions at <n>-byte boundaries\n");
-      printf("  "VMOPTION("jit")"<o>[,<d>...]      set optimisation [and debug] levels\n");
-      printf("  "VMOPTION("maxpic")" <n>           set maximum PIC size to <n> entries\n");
-      printf("  "VMOPTION("procs")" <n>            allow <n> concurrent volatile processes\n");
-      printf("  "VMOPTION("spy")"                  enable the system spy\n");
-    }
   printf("\nNotes:\n");
   printf("  <imageName> defaults to `" DEFAULT_IMAGE_NAME "'.\n");
   modulesDo(m)
@@ -2295,31 +2260,6 @@ main(int argc, char **argv, char **envp)
    */
   dpy->winOpen(runAsSingleInstance ? squeakArgCnt : 0, squeakArgVec);
 
-#if defined(HAVE_LIBDL) && !STACKVM
-  if (useJit)
-    {
-      /* first try to find an internal dynamic compiler... */
-      void *handle= ioLoadModule(0);
-      void *comp= ioFindExternalFunctionIn("j_interpret", handle);
-      /* ...and if that fails... */
-      if (comp == 0)
-	{
-	  /* ...try to find an external one */
-	  handle= ioLoadModule("SqueakCompiler");
-	  if (handle != 0)
-	    comp= ioFindExternalFunctionIn("j_interpret", handle);
-	}
-      if (comp)
-	{
-	  ((void (*)(void))comp)();
-	  fprintf(stderr, "handing control back to interpret() -- have a nice day\n");
-	}
-      else
-	printf("could not find j_interpret\n");
-      exit(1);
-    }
-#endif /* defined(HAVE_LIBDL) && !STACKVM */
-
   if (installHandlers) {
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
@@ -2342,10 +2282,8 @@ main(int argc, char **argv, char **envp)
 #endif
 
   /* run Squeak */
-  if (runInterpreter) {
-	printPhaseTime(2);
-    interpret();
-  }
+  printPhaseTime(2);
+  interpret();
 
   /* we need these, even if not referenced from main executable */
   (void)sq2uxPath;
