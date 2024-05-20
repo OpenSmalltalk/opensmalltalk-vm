@@ -20,6 +20,9 @@
 #define squeakFileOffsetType unsigned __int64
 
 #define ImageIsAResource ((sqImageFile)1)
+#define ImageIsACompressedResource ((sqImageFile)2)
+#define GZIPMagic0 0x1f
+#define GZIPMagic1 0x8b
 
 // Save/restore.
 

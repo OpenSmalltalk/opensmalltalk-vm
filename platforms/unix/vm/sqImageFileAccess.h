@@ -191,7 +191,7 @@ sqCompressedImageRead(void *ptr, size_t sz, size_t count)
 	eiReadPosition += ntoread;
 	return count;
 }
-#endif
+#endif // HAVE_LIBZ
 
 #if !defined(min)
 # define min(a,b) ((a)<=(b)?(a):b)
@@ -211,6 +211,11 @@ sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f)
 #if HAVE_LIBZ
 	if (f == ImageIsEmbeddedAndCompressed)
 		return sqCompressedImageRead(ptr,sz,count);
+#else
+	if (f == ImageIsEmbeddedAndCompressed) {
+		fprintf(stderr,"Embedded image is compressed but libz is missing!\n");
+		exit(1);
+	}
 #endif
 
 	/* read may refuse to write more than 2Gb-1.  At least on MacOS 10.13.6,

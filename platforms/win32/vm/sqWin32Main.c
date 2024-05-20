@@ -1481,6 +1481,7 @@ void __cdecl Cleanup(void)
 // If found, answer the ImageIsAResource marker, otherwise return NULL.
 
 static LPSTR imageResourceName = NULL;
+static sqImageFile imageResourceFormat = 0;
 #define IMRESTYPE (LPCSTR)RT_RCDATA
 
 #define theVM (HMODULE)0
@@ -1508,6 +1509,10 @@ enumImageResources(HMODULE hModule, LPCSTR lpType, LPSTR lpName, LONG_PTR ign)
 		imageResourceName = malloc(strlen(lpName) + 1);
 		strcpy(imageResourceName,lpName);
 		sqFilePluginNoteImageResourceData(data,dataSize);
+		imageResourceFormat =  ((char *)data)[0] == GZIPMagic0
+							&& ((char *)data)[1] == GZIPMagic1
+								? ImageIsACompressedResource
+								: ImageIsAResource;
 		return false; // found resource, so stop enumerating
 	}
 #if 0 // debug/development
@@ -1528,7 +1533,7 @@ findEmbeddedImage(void)
 	if (imageResourceName)
 		fprintf(stderr,"imageResourceName: %s\n", imageResourceName);
 #endif
-	return imageResourceName ? ImageIsAResource : 0;
+	return imageResourceFormat;
 }
 
 sqInt sqImageFileIsEmbedded() { return imageResourceName != NULL; }

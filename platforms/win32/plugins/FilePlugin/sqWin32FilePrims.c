@@ -498,12 +498,21 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 static char *imageResourceData = NULL;
 static DWORD imageResourceSize = 0;
 static DWORD irReadPosition = 0;
+#if HAVE_LIBZ
+static z_stream irzs = { 0, }; // compressed image resource zlib stream
+#endif
 
 int
 sqImageFileClose(sqImageFile h)
 {
   if (h == ImageIsAResource)
 	return true;
+#if HAVE_LIBZ
+  if (h == ImageIsACompressedResource) {
+	(void)inflateEnd(&irzs);
+	return true;
+  }
+#endif
 
   SetEndOfFile((HANDLE)(h-1));
   return CloseHandle((HANDLE)(h-1));
@@ -550,7 +559,8 @@ sqImageFilePosition(sqImageFile h)
 {
   win32FileOffset ofs;
 
-  if (h == ImageIsAResource)
+  if (h == ImageIsAResource
+   || h == ImageIsACompressedResource)
 	return irReadPosition;
 
   ofs.offset = 0;
@@ -569,6 +579,73 @@ sqImageResourceRead(void *ptr, size_t sz, size_t count)
 	return count;
 }
 
+#if HAVE_LIBZ
+static inline size_t
+sqCompressedImageRead(void *ptr, size_t sz, size_t count)
+{
+	size_t nread = 0, ntoread = sz * count;
+	unsigned long nreadSoFar = irzs.total_out;
+	int ret;
+
+	if (!irzs.next_in) {
+		irzs.avail_in = imageResourceSize;
+		irzs.next_in = imageResourceData;
+		ret = inflateInit2(&irzs,MAX_WBITS+16);
+		if (ret != Z_OK) {
+			abortMessage(TEXT("inflateInit failed on reading compressed image resource"));
+			return 0;
+		}
+	}
+
+#if 0	// Currently there is no convenient way of determining the size of the
+		// uncompressed image, so we don't implement this check, which isn't a
+		// problem in practice.
+	if (irReadPosition + ntoread > imageResourceSize) {
+		abortMessage(TEXT("Attempting to read beyond end of image resource"));
+		return 0;
+	}
+#endif
+	// N.B. seeking backwards is as yet unimplemented (cuz all platforms,
+	// and hence all images, are little endian as of 2024). One way to
+	// implement this is to go back to the beginning and advance forward.
+	// This should be a fine strategy since seeking backwards is only done
+	// if the initial image magic number looks wrong, and the initial
+	// magic number is the first word in the image file.
+	assert(irReadPosition >= nreadSoFar);
+	// to seek forward simply discard that much data
+	if (irReadPosition > nreadSoFar) {
+		assert(irReadPosition - nreadSoFar <= sz * count);
+		irzs.avail_out = irReadPosition - nreadSoFar;
+		irzs.next_out = ptr;
+
+		// Decompress to fill ptr with irReadPosition - nreadSoFar's worth
+		ret = inflate(&irzs, Z_NO_FLUSH);
+		switch (ret) {
+		case Z_NEED_DICT:
+		case Z_DATA_ERROR:
+		case Z_MEM_ERROR:
+			(void)inflateEnd(&irzs);
+			return nread;
+		}
+		nreadSoFar = irReadPosition;
+	}
+	irzs.avail_out = ntoread;
+	irzs.next_out = ptr;
+
+	// Decompress to fill ptr with count's worth
+	ret = inflate(&irzs, Z_NO_FLUSH);
+	switch (ret) {
+	case Z_NEED_DICT:
+	case Z_DATA_ERROR:
+	case Z_MEM_ERROR:
+		(void)inflateEnd(&irzs);
+		return nread;
+	}
+	assert(irzs.total_out - nreadSoFar == sz * count);
+	irReadPosition += ntoread;
+	return count;
+}
+#endif // HAVE_LIBZ
 size_t
 sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
@@ -579,6 +656,12 @@ sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 
   if (h == ImageIsAResource)
 	return sqImageResourceRead(ptr,sz,count);
+  if (h == ImageIsACompressedResource)
+#if HAVE_LIBZ
+	return sqCompressedImageRead(ptr,sz,count);
+#else
+	abortMessage(TEXT("Image resource is compressed but libz is missing!"));
+#endif
 
   position = sqImageFilePosition(h);
   while (reallyRead != totalToRead) {
@@ -603,24 +686,13 @@ sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
 {
   win32FileOffset ofs;
 
-  if (h == ImageIsAResource)
+  if (h == ImageIsAResource
+   || h == ImageIsACompressedResource)
 	return irReadPosition = pos;
 
   ofs.offset = pos;
   ofs.dwLow = SetFilePointer((HANDLE)(h-1), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_BEGIN);
   return ofs.offset;
-}
-
-squeakFileOffsetType
-sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
-{
-  if (h == ImageIsAResource)
-	return imageResourceSize;
-
-    win32FileOffset ofs;
-    ofs.offset = pos;
-    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_END);
-    return ofs.offset;
 }
 
 size_t
