@@ -431,6 +431,8 @@ if test "$try_epoll" = yes; then
   AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
 fi
 
+AX_CHECK_ZLIB([], AC_MSG_NOTICE([No zlib found]))
+
 # Checks for platform characteristics.
 
 AC_GNU_OPT
