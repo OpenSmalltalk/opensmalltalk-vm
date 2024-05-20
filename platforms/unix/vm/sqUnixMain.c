@@ -563,25 +563,6 @@ getAttributeString(sqInt id)
 	return 0;
 }
 
-/*** event handling ***/
-
-
-sqInt inputEventSemaIndex= 0;
-
-
-/* set asynchronous input event semaphore  */
-
-sqInt
-ioSetInputSemaphore(sqInt semaIndex)
-{
-  if ((semaIndex == 0) || (noEvents == 1))
-    success(false);
-  else
-    inputEventSemaIndex= semaIndex;
-  return true;
-}
-
-
 /*** display functions ***/
 
 sqInt
