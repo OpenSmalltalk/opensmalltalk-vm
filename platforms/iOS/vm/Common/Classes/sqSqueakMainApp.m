@@ -250,8 +250,8 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
 			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
 			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
-			"    x29 %14p  fp %14p  lr %14p  sp %14p\n",
-			"    cpsr 0x%08x\n",
+			"    x28 %14p  fp %14p  lr %14p  sp %14p\n",
+			"     pc %14p cpsr 0x%08x\n",
 			vr( __x[0]), vr( __x[1]), vr( __x[2]), vr( __x[3]),
 			vr( __x[4]), vr( __x[5]), vr( __x[6]), vr( __x[7]),
 			vr( __x[8]), vr( __x[9]), vr(__x[10]), vr(__x[11]),

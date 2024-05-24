@@ -126,7 +126,10 @@ unsigned int ioMicroMSecs(void);
  * Since all OpenSmalltalk VMs are at least STACKVMs, STACKVM is synonymous
  * with OpenSmalltalk-VM and Cog VM.
  */
-/* Time API, Cog uses 64-bit microseconds fron 1901 as much as possible */
+
+// Alternate stack zone initialization path, e.g. for threaded VMs
+void initStackPagesAndContinueIntowith(void (*continuation)(void *), void *);
+// Time API, Cog uses 64-bit microseconds fron 1901 as much as possible
 void forceInterruptCheckFromHeartbeat(void);
 void ioInitTime(void);
 usqLong ioUTCMicrosecondsNow(void);
@@ -138,9 +141,9 @@ sqInt	ioLocalSecondsOffset(void);
 void	ioUpdateVMTimezone(void);
 void	ioSynchronousCheckForEvents(void);
 void	checkHighPriorityTickees(usqLong);
-# if ITIMER_HEARTBEAT		/* Hack; allow heartbeat to avoid */
-extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
-# endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
+# if ITIMER_HEARTBEAT		// Hack; allow heartbeat to avoid
+extern int numAsyncTickees; // prodHighPriorityThread unless necessary
+# endif						// see platforms/unix/vm/sqUnixHeartbeat.c
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
 void	addIdleUsecs(sqInt);
 
@@ -162,7 +165,7 @@ extern void reportMinimumUnusedHeadroomOn(FILE *);
 extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
 extern void dumpPrimTraceLog();
 extern void dumpPrimTraceLogOn(FILE *);
-#endif /* STACKVM */
+#endif // STACKVM
 extern void printCallStack(void);
 extern void printCallStackOn(FILE *);
 extern void printAllStacks(void);
@@ -271,7 +274,7 @@ int  ioOSThreadsEqual(sqOSThread,sqOSThread);
 extern sqOSThread ioVMThread;
 # define getVMOSThread() ioVMThread
 # endif
-#endif /* STACKVM || NewspeakVM */
+#endif // STACKVM || NewspeakVM
 
 #if STACKVM
 /* Event polling via periodic heartbeat thread. */
@@ -279,7 +282,7 @@ void  ioInitHeartbeat(void);
 int   ioHeartbeatMilliseconds(void);
 void  ioSetHeartbeatMilliseconds(int);
 unsigned long ioHeartbeatFrequency(int);
-#endif /* STACKVM */
+#endif // STACKVM
 
 #if COGMTVM
 /* COGMTVM is a yet-to-be-released "multi-threaded" VM in the style of Python,
@@ -356,7 +359,7 @@ void ioTransferTimeslice(void);
 # if !defined(ioEventThreadAffinity)
 #	define ioEventThreadAffinity() -1
 #endif
-#endif /* COGMTVM */
+#endif // COGMTVM
 
 /* Profiling. */
 void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb);
@@ -641,4 +644,4 @@ sqInt ioFreeModule(void *moduleHandle);
 /* The Squeak version from which this interpreter was generated. */
 extern const char *interpreterVersion;
 
-#endif /* _SQ_H */
+#endif // _SQ_H

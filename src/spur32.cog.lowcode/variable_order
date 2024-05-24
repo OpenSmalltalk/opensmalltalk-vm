@@ -1,5 +1,3 @@
-vmOwner
-stackLimitFromMachineCode
 stackLimit
 stackPointer
 framePointer
@@ -17,7 +15,6 @@ newMethod
 instructionPointer
 argumentCount
 nextProfileTick
-nativeSP
 nativeStackPointer
 shadowCallStackPointer
 primTraceLog
