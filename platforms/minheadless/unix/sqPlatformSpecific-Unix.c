@@ -155,13 +155,12 @@ time_t convertToSqueakTime(time_t unixTime)
 }
 
 #if COGVM
-/*
- * Support code for Cog.
- * a) Answer whether the C frame pointer is in use, for capture of the C stack
- *    pointers.
- * b) answer the amount of stack room to ensure in a Cog stack page, including
- *    the size of the redzone, if any.
- */
+// Support code for Cog.
+// a) Answer whether the C frame pointer is in use, for capture of the C stack
+//    pointers.
+// b) answer the amount of headroom to ensure in a Cog stack page, including
+//    the size of the redzone, if any. This allows signal/interrupt delivery
+//    while executing jitted Smalltalk code.
 
 int
 isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
@@ -174,27 +173,37 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
 
-/* Answer an approximation of the size of the redzone (if any).  Do so by
- * sending a signal to the process and computing the difference between the
- * stack pointer in the signal handler and that in the caller. Assumes stacks
- * descend.
- */
+// Answer an approximation of the size of the redzone (if any).  Do so by
+// sending a signal to the process and computing the difference between the
+// stack pointer in the signal handler and that in the caller. Assumes stacks
+// descend.
+// In calculating the redzone size we must ensure that the signal sender is the
+// same thread as the signal catcher, otherwise we're measuring the distance
+// between thread stacks, not the distance between a stack frame and an
+// interrupt handler (!!).
 
 static char * volatile p = 0;
+static sqOSThread signalling_thread;
 
 static void
-sighandler(int sig, siginfo_t *info, void *uap) { p = (char *)&sig; }
+sighandler(int sig)
+{
+	assert(ioOSThreadsEqual(signalling_thread,ioCurrentOSThread()));
+	p = (char *)&sig;
+}
 
 static int
 getRedzoneSize()
 {
 	struct sigaction handler_action, old;
-	handler_action.sa_sigaction = sighandler;
-	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	handler_action.sa_handler = sighandler;
+	handler_action.sa_flags = SA_NODEFER;
 	sigemptyset(&handler_action.sa_mask);
 	(void)sigaction(SIGPROF, &handler_action, &old);
 
-	do kill(getpid(),SIGPROF); while (!p);
+	signalling_thread = ioCurrentOSThread();
+
+	do pthread_kill(signalling_thread,SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
 	return (char *)min(&old,&handler_action) - p;
 }
@@ -202,20 +211,24 @@ getRedzoneSize()
 sqInt reportStackHeadroom;
 static int stackPageHeadroom;
 
-/* Answer the redzone size plus space for any signal handlers to run in.
- * N.B. Space for signal handers may include space for the dynamic linker to
- * run in since signal handlers may reference other functions, and linking may
- * be lazy.  The reportheadroom switch can be used to check empirically that
- * there is sufficient headroom.
- */
+// Answer the redzone size plus space for any signal handlers to run in.
+// N.B. Space for signal handers may include space for the dynamic linker to
+// run in since signal handlers may reference other functions, and linking may
+// be lazy.  The reportheadroom switch can be used to check empirically that
+// there is sufficient headroom.
+
 int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
+#if SQ_HOST64
 		stackPageHeadroom = getRedzoneSize() + 1024;
+#else
+		stackPageHeadroom = getRedzoneSize();
+#endif
 	return stackPageHeadroom;
 }
-#endif /* COGVM */
+#endif // COGVM
 
 /* New filename converting function; used by the interpreterProxy function
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the

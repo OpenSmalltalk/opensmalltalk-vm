@@ -289,15 +289,13 @@ findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 #if COGVM
 #include <signal.h>
 
-/*
-* Support code for Cog.
-* a) Answer whether the C frame pointer is in use, for capture of the C stack
-*    pointers.
-* b) answer the amount of stack room to ensure in a Cog stack page, including
-*    the size of the redzone, if any.
-*/
-# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \
-	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+// Support code for Cog.
+// a) Answer whether the C frame pointer is in use, for capture of the C stack
+//    pointers.
+// b) answer the amount of headroom to ensure in a Cog stack page, including
+//    the size of the redzone, if any. This allows signal/interrupt delivery
+//    while executing jitted Smalltalk code.
+
 int
 isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
@@ -308,15 +306,11 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 	assert(*cStkPtrPtr < currentCSP);
 	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-# else
-#	error please provide a definition of isCFramePointerInUse for this platform
-# endif /* defined(_M_IX86) et al... */
 
-/* Answer an approximation of the size of the redzone (if any).  Do so by
-* sending a signal to the process and computing the difference between the
-* stack pointer in the signal handler and that in the caller. Assumes stacks
-* descend.
-*/
+// Answer an approximation of the size of the redzone (if any).  Do so by
+// sending a signal to the process and computing the difference between the
+// stack pointer in the signal handler and that in the caller. Assumes stacks
+// descend.
 
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
@@ -363,7 +357,7 @@ osCogStackPageHeadroom()
         stackPageHeadroom = getRedzoneSize() + 1024;
     return stackPageHeadroom;
 }
-#endif /* COGVM */
+#endif // COGVM
 
 #error "the new exception handling code from platforms/win32/vm/sqWin32Main.c needs to be integrated here. eem 2021/9/28"
 

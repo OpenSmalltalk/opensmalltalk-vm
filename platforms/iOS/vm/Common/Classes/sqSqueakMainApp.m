@@ -430,13 +430,12 @@ sqInt reportStackHeadroom;
 #endif
 
 #if COGVM
-/*
- * Support code for Cog.
- * a) Answer whether the C frame pointer is in use, for capture of the C stack
- *    pointers.
- * b) answer the amount of stack room to ensure in a Cog stack page, including
- *    the size of the redzone, if any.
- */
+// Support code for Cog.
+// a) Answer whether the C frame pointer is in use, for capture of the C stack
+//    pointers.
+// b) answer the amount of headroom to ensure in a Cog stack page, including
+//    the size of the redzone, if any. This allows signal/interrupt delivery
+//    while executing jitted Smalltalk code.
 
 int
 isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
@@ -449,32 +448,26 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
 
-/* Answer an approximation of the size of the redzone (if any).  Do so by
- * sending a signal to the process and computing the difference between the
- * stack pointer in the signal handler and that in the caller. Assumes stacks
- * descend.
- */
-
-#if !defined(min)
-# define min(x,y) (((x)>(y))?(y):(x))
-#endif
-static char *p = 0;
-
-#if COGMTVM
-// In calculating the redzone siZe we must ensure that the signal sender is the
+// Answer an approximation of the size of the redzone (if any).  Do so by
+// sending a signal to the process and computing the difference between the
+// stack pointer in the signal handler and that in the caller. Assumes stacks
+// descend.
+// In calculating the redzone size we must ensure that the signal sender is the
 // same thread as the signal catcher, otherwise we're measuring the distance
 // between thread stacks, not the distance between a stack frame and an
 // interrupt handler (!!).
 
-static sqOSThread me;
+#if !defined(min)
+# define min(x,y) (((x)>(y))?(y):(x))
 #endif
 
+static char * volatile p = 0;
+static sqOSThread signalling_thread;
+
 static void
-sighandler(int sig, siginfo_t *info, void *uap)
+sighandler(int sig)
 {
-#if COGMTVM
-	assert(ioOSThreadsEqual(me,ioCurrentOSThread()));
-#endif
+	assert(ioOSThreadsEqual(signalling_thread,ioCurrentOSThread()));
 	p = (char *)&sig;
 }
 
@@ -482,39 +475,37 @@ static int
 getRedzoneSize()
 {
 	struct sigaction handler_action, old;
-	handler_action.sa_sigaction = sighandler;
-	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	handler_action.sa_handler = sighandler;
+	handler_action.sa_flags = SA_NODEFER;
 	sigemptyset(&handler_action.sa_mask);
 	(void)sigaction(SIGPROF, &handler_action, &old);
 
-#if COGMTVM
-	me = ioCurrentOSThread();
-#endif
+	signalling_thread = ioCurrentOSThread();
 
-	do kill(getpid(),SIGPROF); while (!p);
+	do pthread_kill(signalling_thread,SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
 	return (char *)min(&old,&handler_action) - p;
 }
 
 static int stackPageHeadroom;
 
-/* Answer the redzone size plus space for any signal handlers to run in.
- * N.B. Space for signal handers may include space for the dynamic linker to
- * run in since signal handlers may reference other functions, and linking may
- * be lazy.  The reportheadroom switch can be used to check empirically that
- * there is sufficient headroom.  At least on Mac OS X we see no large stack
- * usage that would indicate e.g. dynamic linking in signal handlers.
- * So answer only the redzone size and likely get small pages (2048 byte on 32
- * bit, 4096 bytes on 64-bits).
- *
- * eem, february/march 2022: recent experience with Virtend shows that more
- * headroom is needed on current versions of MacOS. So 8k pages on 64-bits.
- */
+// Answer the redzone size plus space for any signal handlers to run in.
+// N.B. Space for signal handers may include space for the dynamic linker to
+// run in since signal handlers may reference other functions, and linking may
+// be lazy.  The reportheadroom switch can be used to check empirically that
+// there is sufficient headroom.  At least on Mac OS X we see no large stack
+// usage that would indicate e.g. dynamic linking in signal handlers.
+// So answer only the redzone size and likely get small pages (2048 byte on 32
+// bit, 4096 bytes on 64-bits).
+//
+// eem, february/march 2022: recent experience with Virtend shows that more
+// headroom is needed on current versions of MacOS. So 8k pages on 64-bits.
+
 int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
-#if SQ_HOST64 // was __ARM_ARCH_ISA_A64 || __aarch64__ || __arm64__
+#if SQ_HOST64
 		stackPageHeadroom = getRedzoneSize() + 1024;
 #else
 		stackPageHeadroom = getRedzoneSize();
@@ -522,8 +513,8 @@ osCogStackPageHeadroom()
 	return stackPageHeadroom;
 }
 
-#endif /* COGVM */
+#endif // COGVM
 
 /* Andreas' stubs */
-char* ioGetLogDirectory(void) { return ""; };
+char *ioGetLogDirectory(void) { return ""; };
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz){ return 1; }
