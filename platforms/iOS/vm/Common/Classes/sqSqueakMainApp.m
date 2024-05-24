@@ -44,6 +44,7 @@ such third-party acknowledgments.
 
 #import "sqSqueakAppDelegate.h"
 #import "sq.h"
+#import "sqAssert.h"
 #import "sqSqueakMainApp.h"
 #import <limits.h>
 #import "include_ucontext.h"
@@ -459,8 +460,23 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 #endif
 static char *p = 0;
 
+#if COGMTVM
+// In calculating the redzone siZe we must ensure that the signal sender is the
+// same thread as the signal catcher, otherwise we're measuring the distance
+// between thread stacks, not the distance between a stack frame and an
+// interrupt handler (!!).
+
+static sqOSThread me;
+#endif
+
 static void
-sighandler(int sig, siginfo_t *info, void *uap) { p = (char *)&sig; }
+sighandler(int sig, siginfo_t *info, void *uap)
+{
+#if COGMTVM
+	assert(ioOSThreadsEqual(me,ioCurrentOSThread()));
+#endif
+	p = (char *)&sig;
+}
 
 static int
 getRedzoneSize()
@@ -470,6 +486,10 @@ getRedzoneSize()
 	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&handler_action.sa_mask);
 	(void)sigaction(SIGPROF, &handler_action, &old);
+
+#if COGMTVM
+	me = ioCurrentOSThread();
+#endif
 
 	do kill(getpid(),SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
