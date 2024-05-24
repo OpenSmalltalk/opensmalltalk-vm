@@ -1,9 +1,62 @@
-Assuming you know how to update these files and want to run make to make a new
-configure, a word to the wise.  Do _not_ run make on eg. Mac OS X.  It will not
-produce a valid configure.  Instead things will appear to work until libtool is
-invoked.  libtool will go into an infinite recursion.  Instead, run make on
-e.g. linux.  make configure did work on e.g. Mac OS X 10.4 but at least on 10.6
-it fails.
+Configuration infrastructure for Unix-based VMs
+===============================================
+
+The goal of everything in this directory, essentially, is to generate
+a `config.h` and a `Makefile` to steer the building of a VM binary.
+
+To that extent, the traditional GNU _autotools_ tool chain is employed.
+
+TL;DR
+-----
+
+
+```
+(command -v autoreconf2.69 || command -v autoreconf) && \
+command -v libtoolize && \
+command -v make && \
+make
+```
+
+
+Considerations
+--------------
+
+
+* Do NOT run `./configure` here. This is not the place.  
+  Look in the tree at  `../../../building`.  
+  This directory is for _creating_ the `configure` file.
+
+* Make sure you have the necessary infrastructure to generate the
+  `configure` file:
+
+  * `make` (Optional if you execute the commands in `Makefile` manually)
+  * `libtool`
+  * `autoconf` (currently, we actually use `autoconfg2.69`)
+  * `pkg-config`
+
+  On Debian-derived Linuxen, these packages are sufficient. On
+  EL-distributions, similar packages should do it.
+
+* Generating on non-Linux might work, but the tools might have
+  different names. For example, when installing the GNU tools on a Mac
+  OSX/OSX/macOS machine, with `homebrew` or suchwise, the command from
+  the libtool-package might actually be `glibtoolize`. YMMV.
+
+* _NOTE:_ The `Makefile` in this directory has nothing to do with the
+  _other_ files starting with `Makefile.*` next to it. The suffix-less
+  `Makefile` is there to easily generate `configure` an such, where
+  the other files are used for configuration.
+
+Postscriptum
+------------
+
+Some of the file sin this directory are reminiscent of a build process
+that _still should work_ but has not been employed for some years now
+in favor of the infrastructure in the toplevel `building` directories.
+If you're curious, tho, look and `./build` or even `Squeak.spec.in`.
+
 
 Eliot Miranda
 Jan 2010
+Tobias Pape
+2024-05-24
