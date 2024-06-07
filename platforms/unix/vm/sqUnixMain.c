@@ -2113,7 +2113,7 @@ imgInit(void)
 		noteEmbeddedImage(embeddedImage,
 						  *imageSize,
 						  compressedSize ? *compressedSize : 0);
-		sb.st_size = imageSize;
+		sb.st_size = *imageSize;
 	}
 	else {
 		char imagePath[MAXPATHLEN];
