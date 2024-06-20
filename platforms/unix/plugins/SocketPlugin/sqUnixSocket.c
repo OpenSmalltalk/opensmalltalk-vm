@@ -802,6 +802,7 @@ void
 sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogSize, sqInt addr)
 {
   struct sockaddr_in saddr;
+  int result;
 
   if (!socketValid(s))
 	return;
@@ -819,11 +820,29 @@ sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogS
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
   saddr.sin_addr.s_addr= htonl(addr);
-  bind(SOCKET(s), (struct sockaddr*) &saddr, sizeof(saddr));
+  result = bind(SOCKET(s), (struct sockaddr*) &saddr, sizeof(saddr));
+  if (result != 0)
+  	{
+	  SOCKETSTATE(s)= Unconnected;
+	  SOCKETERROR(s)= errno;
+	  perror("sqSocketListenOnPortBacklogSizeInterface (bind)");
+	  success(false);
+	  return;
+  	}
+
   if (TCPSocketType == s->socketType)
 	{
 	  /* --- TCP --- */
-	  listen(SOCKET(s), backlogSize);
+	  result = listen(SOCKET(s), backlogSize);
+	  if (result != 0)
+		{
+		  SOCKETSTATE(s)= Unconnected;
+		  SOCKETERROR(s)= errno;
+		  perror("sqSocketListenOnPortBacklogSizeInterface (listen)");
+		  success(false);
+		  return;
+		}
+
 	  SOCKETSTATE(s)= WaitingForConnection;
 	  aioEnable(SOCKET(s), PSP(s), 0);
 	  aioHandle(SOCKET(s), acceptHandler, AIO_RX); /* R => accept() */
