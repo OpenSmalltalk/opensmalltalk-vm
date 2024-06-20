@@ -799,38 +799,49 @@ sqSocketListenOnPort(SocketPtr s, sqInt port)
 }
 
 void
-sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogSize, sqInt addr)
-{
-  struct sockaddr_in saddr;
+sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogSize, sqInt addr) {
+    struct sockaddr_in saddr;
 
-  if (!socketValid(s))
-	return;
+    if (!socketValid(s))
+        return;
 
-  /* only TCP sockets have a backlog */
-  if ((backlogSize > 1) && (s->socketType != TCPSocketType))
-	{
-	  success(false);
-	  return;
+    /* only TCP sockets have a backlog */
+    if ((backlogSize > 1)
+&& (s->socketType != TCPSocketType)) {
+        success(false);
+        return;
 	}
 
-  PSP(s)->multiListen= (backlogSize > 1);
-  FPRINTF((stderr, "listenOnPortBacklogSize(%d, %ld)\n", SOCKET(s), backlogSize));
-  memset(&saddr, 0, sizeof(saddr));
-  saddr.sin_family= AF_INET;
-  saddr.sin_port= htons((short)port);
-  saddr.sin_addr.s_addr= htonl(addr);
-  bind(SOCKET(s), (struct sockaddr*) &saddr, sizeof(saddr));
-  if (TCPSocketType == s->socketType)
-	{
-	  /* --- TCP --- */
-	  listen(SOCKET(s), backlogSize);
-	  SOCKETSTATE(s)= WaitingForConnection;
-	  aioEnable(SOCKET(s), PSP(s), 0);
-	  aioHandle(SOCKET(s), acceptHandler, AIO_RX); /* R => accept() */
+    PSP(s)->multiListen = (backlogSize > 1);
+    FPRINTF((stderr, "listenOnPortBacklogSize(%d, %ld)\n", SOCKET(s), backlogSize));
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons((short)port);
+    saddr.sin_addr.s_addr = htonl(addr);
+	if (0 != bind(SOCKET(s), (struct sockaddr*) &saddr, sizeof(saddr))) {
+        SOCKETSTATE(s) = Unconnected;
+        SOCKETERROR(s) = errno;
+        perror("sqSocketListenOnPortBacklogSizeInterface (bind)");
+        success(false);
+        return;
+  	}
+
+    if (TCPSocketType == s->socketType) {
+        /* --- TCP --- */
+        if (0 != listen(SOCKET(s), backlogSize)) {
+            SOCKETSTATE(s) = Unconnected;
+            SOCKETERROR(s) = errno;
+            perror("sqSocketListenOnPortBacklogSizeInterface (listen)");
+            success(false);
+            return;
+		}
+
+        SOCKETSTATE(s) = WaitingForConnection;
+        aioEnable(SOCKET(s), PSP(s), 0);
+        aioHandle(SOCKET(s), acceptHandler, AIO_RX); /* R => accept() */
 	}
-  else
-	{
-	  /* --- UDP/RAW --- */
+    else {
+        /* --- UDP/RAW --- */
 	}
 }
 
