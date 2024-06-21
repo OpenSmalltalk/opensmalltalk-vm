@@ -51,6 +51,7 @@ will result in incorrect version stamps in your compiled VMs.
 
 ### Contents:
  - Overview
+ - Variants
  - VM source directories
  - Platform build directories
  - Other directories (platforms, processors, deployment, image)
@@ -76,24 +77,22 @@ You can find scripts to build a Smalltalk image in which to do core VM developme
 in the [image](https://github.com/OpenSmalltalk/opensmalltalk-vm/tree/Cog/image)
 directory in this repository.  You can read about the Simulator here:
 * https://www.researchgate.net/publication/328509577_Two_Decades_of_Smalltalk_VM_Development_Live_VM_Development_through_Simulation_Tools
-* https://hal.archives-ouvertes.fr/hal-01883380/document
-Please look at the wiki on this site for a description of on-going projects.
 
 Cog is an evolution of the Squeak Back-to-the-future Smalltalk virtual machine
 that provides a number of different Smalltalk virtual machines.  The VMs are
 developed in Smalltalk, using all the dynamic and reflective facilities of the
-Squeak/Pharo Smalltalk system.  As such, developing in Cog is a delight.  The
+Squeak Smalltalk system.  As such, developing in Cog is a delight.  The
 Smalltalk framework comprising the various Cog VMs is translated into C by its
 Slang component to produce VM source that is combined with platform-specific
 support sources and compiled via a C compiler to obtain a fast production VM.
 This directory tree includes the output of Slang for various configurations of
-"Cog VM" and the associated platform support code, plus build directories that
+"Cog VM" along with the associated platform support code, plus build directories that
 can be used to produce production VMs.
 
-This directory tree also includes an instance of the Smalltalk Cog development
-system, suitable for developing the VM in Smalltalk, and for generating new
-VM sources.
+This directory tree also includes a directory containing scripts that can be used to create an instance of the Smalltalk Cog development system, suitable for developing the VM in Smalltalk, and for generating new VM sources. See the image subdirectory, described below.
 
+Variants
+--------
 The "Cog VM" comes in a bewildering variety of forms.  The first distinction
 is between Stack, Cog and Sista VMs.  Stack VMs are those with context-to-stack
 mapping that optimise message sending by keeping method activations on a stack
@@ -105,7 +104,7 @@ optimization that does speculative inlining at the bytecode-to-bytecode level.
 
 Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
 object representation for Squeak as described in the back-to-the-future paper.
-Spur, as described on the www.mirandabanda.org blog, is a faster object
+Spur, as described on the www.mirandabanda.org blog, and in the paper "A partial read barrier for efficient support of live object-oriented programming" by Miranda & BÃra, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
 become, a single object header format common to 32 and 64 bit versions, and a
 segmented heap that can grow and shrink, releasing memory back to the host OS.
@@ -265,4 +264,6 @@ a Squeak Smalltalk image containing all the packages that comprise the Cog
 system, suitable for developing the VM and for generating (or updating) the
 sources in the vm source directories. There is also a script for generating a
 64-bit Spur image from a 32-bit Spur image, and the VMMaker.oscog package includes
-code for converting Spur images in either direction.
+code for converting Spur images in either direction. Note that JIT development depends on processor simulations which are included under the top-level processors directory, Bochs providing x86 and x86-64, gdb providing ARMv6 and ARMv8. To do JIT development the processor plugins must be built. These will be built automatically if the simulator libraries are built. In several building top-level subdirectory are four directories, bochsx86, bochsx64, gdbarm32 & gdbarm64, which contain the build scripts. To build a VM suitable for full JIT simulation, first build the support code in the building subdirectory for your platform, and then build a squeak.cog.spur VM in the sibling directory.
+
+Enjoy, and give forward.
