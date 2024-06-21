@@ -142,10 +142,13 @@ static long pc_buffer_index;
 static long pc_buffer_size;
 static long pc_buffer_wrapped;
 
+// The necessity of casting weither the uap argument to ucontext_t *, or to
+// declare the parameter as ucontext_t * and cast the assignment to sa_sigaction
+// is so wilfully toxic it beggars belief.
 static void
-pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
+pcbufferSIGPROFhandler(int sig, siginfo_t *info, void *uap)
 {
-	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT;
+	pc_buffer[pc_buffer_index] = ((ucontext_t *)uap)->_PC_IN_UCONTEXT;
 	if (++pc_buffer_index >= pc_buffer_size) {
 		pc_buffer_index = 0;
 		pc_buffer_wrapped = 1;
