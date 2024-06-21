@@ -104,7 +104,7 @@ optimization that does speculative inlining at the bytecode-to-bytecode level.
 
 Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
 object representation for Squeak as described in the back-to-the-future paper.
-Spur, as described on the www.mirandabanda.org blog, and in the paper "A partial read barrier for efficient support of live object-oriented programming" by Miranda & BÃra, is a faster object
+Spur, as described on the www.mirandabanda.org blog, and in the paper "A partial read barrier for efficient support of live object-oriented programming" by Miranda & Béra, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
 become, a single object header format common to 32 and 64 bit versions, and a
 segmented heap that can grow and shrink, releasing memory back to the host OS.
