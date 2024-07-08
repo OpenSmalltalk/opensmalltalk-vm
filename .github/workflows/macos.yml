@@ -55,7 +55,7 @@ jobs:
           - debug
           - assert
 
-    runs-on: macos-11 # macos-latest
+    runs-on: macos-12 # macos-latest
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
