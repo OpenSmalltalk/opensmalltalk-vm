@@ -149,4 +149,10 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 # endif /* defined(i386) */
 # endif /* COGVM && defined(__SUNPRO_C) */
 
+/* DISGUSTING HACK to get XDisplayControlPlugin.h to compile without changing VMMaker. Eliot, I'm sorry */
+extern int forgetXDisplay(void);
+extern int disconnectXDisplay(void);
+extern int openXDisplay(void);
+extern int synchronizeXDisplay(void);
+
 #endif /* _SQ_PLATFORM_SPECIFIC_H */
