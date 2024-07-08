@@ -55,6 +55,7 @@
 
 #include "sq.h"
 #include "sqMemoryAccess.h"
+#include "sqAssert.h"
 
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
