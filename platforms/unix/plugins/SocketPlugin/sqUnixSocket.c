@@ -1789,7 +1789,7 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
    && !(flags & SQ_SOCKET_NUMERIC))
 	{
 	  struct stat st;
-	  if (!stat(servName, &st) && (st.st_mode & S_IFSOCK))
+	  if (!stat(servName, &st) || (st.st_mode & S_IFSOCK))
 		{
 		  struct sockaddr_un *saun= calloc(1, sizeof(struct sockaddr_un));
 		  localInfo= (struct addrinfo *)calloc(1, sizeof(struct addrinfo));
