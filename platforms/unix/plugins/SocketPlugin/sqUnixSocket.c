@@ -83,7 +83,6 @@
 #   include <time.h>
 # endif
 # include <sys/param.h>
-# include <sys/stat.h>
 # include <sys/socket.h>
 # include <sys/ioctl.h>
 # include <net/if.h>
