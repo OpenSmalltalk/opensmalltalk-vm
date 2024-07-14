@@ -83,7 +83,6 @@
 #   include <time.h>
 # endif
 # include <sys/param.h>
-# include <sys/stat.h>
 # include <sys/socket.h>
 # include <sys/ioctl.h>
 # include <net/if.h>
@@ -1788,23 +1787,19 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
    && servSize < sizeof(((struct sockaddr_un *)0)->sun_path)
    && !(flags & SQ_SOCKET_NUMERIC))
 	{
-	  struct stat st;
-	  if (!stat(servName, &st) && (st.st_mode & S_IFSOCK))
-		{
-		  struct sockaddr_un *saun= calloc(1, sizeof(struct sockaddr_un));
-		  localInfo= (struct addrinfo *)calloc(1, sizeof(struct addrinfo));
-		  localInfo->ai_family= AF_UNIX;
-		  localInfo->ai_socktype= SOCK_STREAM;
-		  localInfo->ai_addrlen= sizeof(struct sockaddr_un);
-		  localInfo->ai_addr= (struct sockaddr *)saun;
-		  /*saun->sun_len= sizeof(struct sockaddr_un);*/
-		  saun->sun_family= AF_UNIX;
-		  memcpy(saun->sun_path, servName, servSize);
-		  saun->sun_path[servSize]= '\0';
-		  addrInfo= localInfo;
-		  interpreterProxy->signalSemaphoreWithIndex(resolverSema);
-		  return;
-		}
+	  struct sockaddr_un *saun= calloc(1, sizeof(struct sockaddr_un));
+	  localInfo= (struct addrinfo *)calloc(1, sizeof(struct addrinfo));
+	  localInfo->ai_family= AF_UNIX;
+	  localInfo->ai_socktype= SOCK_STREAM;
+	  localInfo->ai_addrlen= sizeof(struct sockaddr_un);
+	  localInfo->ai_addr= (struct sockaddr *)saun;
+	  /*saun->sun_len= sizeof(struct sockaddr_un);*/
+	  saun->sun_family= AF_UNIX;
+	  memcpy(saun->sun_path, servName, servSize);
+	  saun->sun_path[servSize]= '\0';
+	  addrInfo= localInfo;
+	  interpreterProxy->signalSemaphoreWithIndex(resolverSema);
+	  return;
 	}
 
   memset(&request, 0, sizeof(request));
