@@ -32,17 +32,17 @@ static sqInt sound_AvailableSpace(void)
   return  par.bufsz * par.bps * par.pchan;
 }
 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   trace();
   return success(false);
 }
 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex)
 {
   size_t bytes_played;
   trace();
-  bytes_played = sio_write(snd, pointerForOop(arrayIndex) + startIndex * (par.bps * par.pchan), frameCount * par.bps * par.pchan);
+  bytes_played = sio_write(snd, ((unsigned char*) arrayIndex) + startIndex * (par.bps * par.pchan), frameCount * par.bps * par.pchan);
   if (bytes_played < 0)
     return 0;
   return bytes_played / (par.bps * par.pchan);
@@ -145,7 +145,7 @@ double sound_GetRecordingSampleRate(void)
   return 8192;
 }
 
-sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   trace();
   return 8192;
@@ -165,17 +165,16 @@ void sound_SetVolume(double left, double right)
   trace();
 }
 
-sqInt sound_SetRecordLevel(sqInt level)
+void sound_SetRecordLevel(sqInt level)
 {
   trace();
-  return level;
 }
 
-sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)   { return success(true); }
+sqInt sound_GetSwitch(int id, int captureFlag, int channel)   { return success(true); }
 
-sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) { return success(true); }
+sqInt sound_SetSwitch(int id, int captureFlag, int parameter) { return success(true); }
 
-sqInt sound_SetDevice(sqInt id, char *name)      { return success(true); }
+sqInt sound_SetDevice(int id, char *name)      { return success(true); }
 
 
 #include "SqSound.h"

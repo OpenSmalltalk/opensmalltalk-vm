@@ -278,13 +278,13 @@ static sqInt sound_AvailableSpace(void)
 #endif
 }
 
-static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
+static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
 
-static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex)
 {
   if (playback_handle)
     {
-      void *samples= (void *)arrayIndex + startIndex * output_channels * 2;
+      void *samples= arrayIndex + startIndex * output_channels * 2;
       int   count=   snd_pcm_writei(playback_handle, samples, frameCount);
       if (count < 0)
 	{
@@ -382,13 +382,13 @@ static double sound_GetRecordingSampleRate(void)
 # include <sys/time.h>
 
 static sqInt
-protected_sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+protected_sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
 	/* see git://android.git.kernel.org/platform/hardware/alsa_sound.git/
 	 *		AudioStreamInALSA.cpp: AudioStreamInALSA::read
 	 */
 	if (capture_handle) {
-		void *samples=    (void *)buf + (startSliceIndex * 2);
+		void *samples=    buf + (startSliceIndex * 2);
 # if 1
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 # else
@@ -424,12 +424,12 @@ protected_sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqIn
 }
 #endif /* PROTECT_RECORD_SAMPLES */
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
 #if 0
   if (capture_handle)
     {
-      void *samples=    (void *)buf + (startSliceIndex * 2);
+      void *samples=    buf + (startSliceIndex * 2);
       int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
       int   count=      snd_pcm_readi(capture_handle, samples, frameCount);
       if (count < 0)
@@ -446,7 +446,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
   return 0;
 #elif 1
 	if (capture_handle) {
-		void *samples=    (void *)buf + (startSliceIndex * 2);
+		void *samples=    buf + (startSliceIndex * 2);
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 		int   count;
 
@@ -474,7 +474,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 	 *		AudioStreamInALSA.cpp: AudioStreamInALSA::read
 	 */
 	if (capture_handle) {
-		void *samples=    (void *)buf + (startSliceIndex * 2);
+		void *samples=    buf + (startSliceIndex * 2);
 # if 0
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 # else
@@ -823,10 +823,9 @@ static void sound_SetVolume(double left, double right)
  * where 0 is the lowest recording level and 1000 is the maximum.  Do nothing
  * if the sound input hardware does not support changing the recording level.
  */
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
 	mixer_default_volume_get_set(CaptureSetting, 0, (double)level / 1000.0);
-	return 1;
 }
 
 /* Squeak Prim: Get the recording level to the given value in the range 0-1000,
@@ -840,7 +839,7 @@ static sqInt sound_GetRecordLevel(void) /* eem Feb 7 2010 after hrs' SoundRecord
   return level * 1000.0L;
 }
 
-static sqInt sound_SetDevice(sqInt id, char *arg)
+static sqInt sound_SetDevice(int id, char *arg)
 { 
 #if  HARDWIRE_DEFAULT 
 	return 1;
@@ -864,7 +863,7 @@ static sqInt sound_SetDevice(sqInt id, char *arg)
 #endif
 }
 
-static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
+static sqInt sound_GetSwitch(int id, int captureFlag, int channel)
 {
   if (id == 0)
     return mixer_getSwitch(sound_device, captureFlag, channel);
@@ -875,7 +874,7 @@ static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
   return -1;
 }
 
-static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
+static sqInt sound_SetSwitch(int id, int captureFlag, int parameter)
 {
   if (id == 0)
       return mixer_setSwitch(sound_device, captureFlag, parameter);

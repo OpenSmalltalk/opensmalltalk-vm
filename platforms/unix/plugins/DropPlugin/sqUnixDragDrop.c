@@ -49,6 +49,7 @@ extern void						dndReceived(char *fileName);
 
 #if defined(SQUEAK_INTERNAL_PLUGIN)
 extern SQFile * fileValueOf(sqInt objectPointer);
+extern usqIntptr_t fileRecordSize(void);
 #else
 /*	Return a pointer to the first byte of of the SQFile data structure file
 	record within anSQFileRecord, which is expected to be a ByteArray of size
@@ -60,6 +61,15 @@ static SQFile *
 fileValueOf(sqInt anSQFileRecord)
 {
 	return interpreterProxy->arrayValueOf(anSQFileRecord);
+}
+
+/*	Return the size of a Smalltalk file record in bytes. */
+
+	/* FilePlugin>>#fileRecordSize */
+static usqIntptr_t
+fileRecordSize(void)
+{
+	return sizeof(SQFile);
 }
 #endif /* defined(SQUEAK_INTERNAL_PLUGIN) */
 

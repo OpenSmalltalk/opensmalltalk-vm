@@ -213,10 +213,10 @@ static int mixer_setSwitch(char *name, int captureFlag, int parameter);
 static int mixer_getSwitch(char *name, int captureFlag, int channel);
 static void sound_Volume(double *left, double *right);
 static void sound_SetVolume(double left, double right);
-static sqInt sound_SetRecordLevel(sqInt level);
-static sqInt sound_SetDevice(sqInt id, char *arg);
-static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel);
-static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter);
+static void sound_SetRecordLevel(sqInt level);
+static sqInt sound_SetDevice(int id, char *arg);
+static sqInt sound_GetSwitch(int id, int captureFlag, int channel);
+static sqInt sound_SetSwitch(int id, int captureFlag, int parameter);
 
 
 /* ==================== 				*/
@@ -1093,23 +1093,21 @@ static void sound_SetVolume(double left, double right) {
   trace();
 }
 
-static sqInt sound_SetRecordLevel(sqInt level) {
+static void sound_SetRecordLevel(sqInt level) {
   trace();
-  return 1;
-  return level;
 }
 
-static sqInt sound_SetDevice(sqInt id, char *arg) {
+static sqInt sound_SetDevice(int id, char *arg) {
   trace();
   return -1;
 }
 
-static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel) {
+static sqInt sound_GetSwitch(int id, int captureFlag, int channel) {
   trace();
   return -1;
 }
 
-static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) {
+static sqInt sound_SetSwitch(int id, int captureFlag, int parameter) {
   trace();
   return -1;
 }
