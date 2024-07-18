@@ -57,6 +57,19 @@ interceptFetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer)
 
 	return fetchIntegerofObject(fieldIndex, objectPointer);
 }
+
+static void
+shouldNotImplementGC(void)
+{
+	warning("Spur mandates no garbage collection during primitives!");
+}
+
+static sqInt
+shouldNotImplementCharacterTable(void)
+{
+	warning("Spur has no character table");
+	return 0;
+}
 #endif
 
 sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
@@ -138,7 +151,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->positive32BitValueOf = positive32BitValueOf;
 
 	/* InterpreterProxy methodsFor: 'special objects' */
+# if SPURVM
+	VM->characterTable = shouldNotImplementCharacterTable;
+# else
 	VM->characterTable = characterTable;
+# endif
 	VM->displayObject = displayObject;
 	VM->falseObject = falseObject;
 	VM->nilObject = nilObject;
@@ -169,7 +186,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->failed = failed;
 	VM->fullDisplayUpdate = fullDisplayUpdate;
 	VM->fullGC = fullGC;
+# if SPURVM
+	VM->incrementalGC = shouldNotImplementGC;
+# else
 	VM->incrementalGC = incrementalGC;
+# endif
 	VM->primitiveFail = primitiveFail;
 	VM->showDisplayBitsLeftTopRightBottom = showDisplayBitsLeftTopRightBottom;
 	VM->signalSemaphoreWithIndex = signalSemaphoreWithIndex;
@@ -292,7 +313,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->addHighPriorityTickee = addHighPriorityTickee;
 	VM->addSynchronousTickee = addSynchronousTickee;
 	VM->utcMicroseconds = ioUTCMicroseconds;
+# if SPURVM
+	VM->incrementalGC = shouldNotImplementGC;
+# else
 	VM->tenuringIncrementalGC = tenuringIncrementalGC;
+# endif
 	VM->isYoung = isYoung;
 	VM->isKindOfClass = isKindOfClass;
 	VM->primitiveErrorTable = primitiveErrorTable;
