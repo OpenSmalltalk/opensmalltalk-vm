@@ -1078,7 +1078,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
 			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
 			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
-			"    x29 %14p  fp %14p  lr %14p  sp %14p\n",
+			"    x29 %14p  fp %14p  lr %14p  sp %14p\n"
 			regs[0], regs[1], regs[2], regs[3],
 			regs[4], regs[5], regs[6], regs[7],
 			regs[8], regs[9], regs[10], regs[11],
