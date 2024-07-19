@@ -1079,14 +1079,17 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
 			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
 			"    x29 %14p  fp %14p  lr %14p  sp %14p\n"
-			regs[0], regs[1], regs[2], regs[3],
-			regs[4], regs[5], regs[6], regs[7],
-			regs[8], regs[9], regs[10], regs[11],
-			regs[12], regs[13], regs[14], regs[15],
-			regs[16], regs[17], regs[18], regs[19],
-			regs[20], regs[21], regs[22], regs[23],
-			regs[24], regs[25], regs[26], regs[27],
-			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
+			"     pc %14p pstate 0x%08x fault @ %14p\n"
+			v(regs[ 0]), v(regs[ 1]), v(regs[ 2]), v(regs[ 3]),
+			v(regs[ 4]), v(regs[ 5]), v(regs[ 6]), v(regs[ 7]),
+			v(regs[ 8]), v(regs[ 9]), v(regs[10]), v(regs[11]),
+			v(regs[12]), v(regs[13]), v(regs[14]), v(regs[15]),
+			v(regs[16]), v(regs[17]), v(regs[18]), v(regs[19]),
+			v(regs[20]), v(regs[21]), v(regs[22]), v(regs[23]),
+			v(regs[24]), v(regs[25]), v(regs[26]), v(regs[27]),
+			v(regs[28]), v(regs[29]), v(regs[30]), v(uap->uc_mcontext.sp),
+			v(uap->uc_mcontext.pc), uap->uc_mcontext.pstate,
+			v(uap->uc_mcontext.fault_address));
 	return v(uap->uc_mcontext.pc);
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
