@@ -325,8 +325,8 @@ getRedzoneSize()
 {
 #if defined(SIGPROF) /* cygwin */
     struct sigaction handler_action, old;
-    handler_action.sa_sigaction = sighandler;
-    handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+    handler_action.sa_handler = sighandler;
+    handler_action.sa_flags = SA_NODEFER;
     sigemptyset(&handler_action.sa_mask);
     (void)sigaction(SIGPROF, &handler_action, &old);
 

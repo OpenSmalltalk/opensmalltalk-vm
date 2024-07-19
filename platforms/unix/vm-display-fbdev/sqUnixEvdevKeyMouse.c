@@ -508,17 +508,6 @@ static void kb_bell(struct kb *kbdSelf)
 }
 
 
-static void sigusr1(int sig)
-{
-  extern sqInt fullDisplayUpdate(void);
-
-  clearMouseButtons();
-  clearModifierState();
-  /* @@FIXME: other cleanouts? @@ */
-  fullDisplayUpdate();
-}
-
-
 static void kb_initGraphics(struct kb *kbdSelf)
 {
   /* NoOp */

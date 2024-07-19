@@ -334,7 +334,7 @@ prodHighPriorityThread()
 }
 
 static void
-high_performance_tick_handler(int sig, struct siginfo *sig_info, void *context)
+high_performance_tick_handler(int sig)
 {
 static int tickCheckInProgress;
 
@@ -445,7 +445,7 @@ static int handling_heartbeat = 0;
 #endif
 
 static void
-heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
+heartbeat_handler(int sig)
 {
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -511,7 +511,7 @@ extern sqInt suppressHeartbeatFlag;
 	while (!tickerSlumbering)
 		nanosleep(&halfAMo, 0);
 
-	ticker_handler_action.sa_sigaction = high_performance_tick_handler;
+	ticker_handler_action.sa_handler = high_performance_tick_handler;
 	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
 	 * during the heartbeat. We /must/ include SA_RESTART to avoid issues with
      * e.g. ODBC connections.
@@ -523,7 +523,7 @@ extern sqInt suppressHeartbeatFlag;
 		exit(1);
 	}
 
-	heartbeat_handler_action.sa_sigaction = heartbeat_handler;
+	heartbeat_handler_action.sa_handler = heartbeat_handler;
 	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).

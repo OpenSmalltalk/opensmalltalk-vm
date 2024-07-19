@@ -142,7 +142,7 @@ static long pc_buffer_index;
 static long pc_buffer_size;
 static long pc_buffer_wrapped;
 
-// The necessity of casting weither the uap argument to ucontext_t *, or to
+// The necessity of casting either the uap argument to ucontext_t *, or to
 // declare the parameter as ucontext_t * and cast the assignment to sa_sigaction
 // is so wilfully toxic it beggars belief.
 static void

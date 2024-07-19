@@ -310,7 +310,7 @@ static int handling_heartbeat = 0;
 #endif
 
 static void
-heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
+heartbeat_handler(int sig)
 {
 #if !defined(SA_NODEFER)
 	/* if the CAS fails, the heartbeat is already being handled. */
@@ -357,7 +357,7 @@ extern sqInt suppressHeartbeatFlag;
 
 	if (suppressHeartbeatFlag) return;
 
-	heartbeat_handler_action.sa_sigaction = heartbeat_handler;
+	heartbeat_handler_action.sa_handler = heartbeat_handler;
 	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).
@@ -418,8 +418,8 @@ printHeartbeatTimer()
 		perror("sigaction");
 	else
 		printf("heartbeat signal handler %p (%s)\n",
-				hb_handler_action.sa_sigaction,
-				hb_handler_action.sa_sigaction == heartbeat_handler
+				hb_handler_action.sa_handler,
+				hb_handler_action.sa_handler == heartbeat_handler
 					? "heartbeat_handler"
 					: "????");
 }

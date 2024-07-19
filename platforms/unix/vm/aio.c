@@ -285,7 +285,7 @@ aioInit(void)
 	}
 	{	struct sigaction sigio_action;
 
-		sigio_action.sa_sigaction = forceInterruptCheck;
+		sigio_action.sa_handler = forceInterruptCheck;
 		sigio_action.sa_flags = SA_RESTART | SA_ONSTACK;
 		sigemptyset(&sigio_action.sa_mask);
 		if (sigaction(SIGIO, &sigio_action, 0)) {
