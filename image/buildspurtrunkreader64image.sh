@@ -4,11 +4,17 @@ set -e
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
 
+if test -n "$1"; then
+	VM="$1"
+else
+. ./getGoodSpurVM.sh
+fi
+
 . ./updatespur64image.sh
 
 ./ensureSqueakV50sources.sh
 
-echo $0 3 $@
+# echo $0 3 $@
 
 cp -p ${BASE64}.image spurreader-64.image
 cp -p ${BASE64}.changes spurreader-64.changes
