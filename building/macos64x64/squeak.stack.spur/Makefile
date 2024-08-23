@@ -8,6 +8,8 @@ BIT_IDENTICAL_FLOATING_POINT=BIT_IDENTICAL_FLOATING_POINT
 VMSRCDIR:= ../../../src/spur64.stack
 SOURCEFILE:=SqueakV50.sources
 
+XCFLAGS=-DLOGPRIMITIVES=1
+
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #
 include ../common/Makefile.app.squeak
