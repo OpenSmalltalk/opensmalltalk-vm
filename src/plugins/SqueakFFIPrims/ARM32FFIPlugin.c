@@ -3,7 +3,7 @@
    from
 	ThreadedARM32FFIPlugin VMMaker.oscog-eem.3445 uuid: bf34d535-d388-48bb-b497-6a6661b81d9a
  */
-static char __buildInfo[] = "ThreadedARM32FFIPlugin VMMaker.oscog-eem.3445 uuid: bf34d535-d388-48bb-b497-6a6661b81d9a " __DATE__ ;
+static char __buildInfo[] = "ThreadedARM32FFIPlugin * VMMaker.oscog-eem.3445 uuid: bf34d535-d388-48bb-b497-6a6661b81d9a " __DATE__ ;
 
 
 #include "config.h"
@@ -328,7 +328,7 @@ extern sqInt classIndexOf(sqInt);
 static sqInt (*booleanValueOf)(sqInt obj);
 static sqInt (*byteSizeOf)(sqInt oop);
 static sqInt (*characterObjectOf)(int characterCode);
-static usqInt (*characterValueOf)(sqInt aCharacter);
+static sqInt (*characterValueOf)(sqInt aCharacter);
 static sqInt (*classAlien)(void);
 static sqInt (*classByteArray)(void);
 static sqInt (*classExternalAddress)(void);
@@ -420,7 +420,7 @@ extern sqInt characterObjectOf(int characterCode);
 # define characterObjectOf(characterCode) 0
 #endif
 #if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
-extern usqInt characterValueOf(sqInt aCharacter);
+extern sqInt characterValueOf(sqInt aCharacter);
 #else
 # define characterValueOf(aCharacter) 0
 #endif
