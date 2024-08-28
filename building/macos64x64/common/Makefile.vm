@@ -173,13 +173,13 @@ debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
 productilc:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product validImage
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product build/vm/validImage
 
 assertilc:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert validImage
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert buildast/vm/validImage
 
 debugilc:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug validImage
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug builddbg/vm/validImage
 
 cleanallvm:	cleandeps cleanvm cleanvmast cleanvmdbg cleangv
 
