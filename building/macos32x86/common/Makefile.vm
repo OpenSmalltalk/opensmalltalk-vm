@@ -130,11 +130,6 @@ CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)
 INCLUDES:= $(addprefix -I,. $(SRCDIRS))
 
 #############################################################################
-# Linker settings
-#
-LD:=	 gcc
-
-#############################################################################
 # Ensure version control info is up-to-date, and extract it from the file.
 #
 SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
@@ -242,8 +237,8 @@ else
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 endif
 
-$(OBJDIR)/validImage: $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
-	$(LD) -arch $(TARGET_ARCH) -o $@ $^
+$(OBJDIR)/validImage: $(OBJDIR) $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
+	$(LD) -arch $(TARGET_ARCH) -o $@ $(filter %.o,$^)
 
 $(OBJDIR):
 	@-mkdir -p $(BLDDIR)
