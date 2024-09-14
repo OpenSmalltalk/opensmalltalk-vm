@@ -903,7 +903,7 @@ sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 		  else
 			{
 			  /* connection error */
-			  perror("sqConnectToPort");
+			  perror("sqSocketConnectToPort");
 			  SOCKETSTATE(s)= Unconnected;
 			  SOCKETERROR(s)= errno;
 			  notify(PSP(s), CONN_NOTIFY);
@@ -995,7 +995,7 @@ sqSocketCloseConnection(SocketPtr s)
 	  SOCKETSTATE(s)= Unconnected;
 	  SOCKETERROR(s)= errno;
 	  notify(PSP(s), CONN_NOTIFY);
-	  perror("closeConnection");
+	  perror("sqSocketCloseConnection");
 	}
   else if (0 == result)
 	{
@@ -2251,7 +2251,7 @@ sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 		  return;
 		}
 	  /* connection error */
-	  perror("sqConnectToAddressSize");
+	  perror("sqSocketConnectToAddressSize");
 	  SOCKETSTATE(s)= Unconnected;
 	  SOCKETERROR(s)= err;
 	  notify(PSP(s), CONN_NOTIFY);
