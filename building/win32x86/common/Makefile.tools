@@ -22,7 +22,7 @@ CC:= $(TOOLPREFIX)gcc
 CXX:= $(TOOLPREFIX)g++
 endif
 
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
