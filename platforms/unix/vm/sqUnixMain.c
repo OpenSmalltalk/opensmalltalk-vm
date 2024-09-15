@@ -1092,12 +1092,12 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			v(uap->uc_mcontext.fault_address));
 	return v(uap->uc_mcontext.pc);
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
-	struct sigcontext *regs = &uap->uc_mcontext;
+	struct sigcontext *regs = (struct sigcontext *)&uap->uc_mcontext;
 	fprintf(file,
-			"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
-	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
-	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
-	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n",
+			"\t r0 0lx%08lx r1 0lx%08lx r2 0lx%08lx r3 0lx%08lx\n"
+	        "\t r4 0lx%08lx r5 0lx%08lx r6 0lx%08lx r7 0lx%08lx\n"
+	        "\t r8 0lx%08lx r9 0lx%08lx r10 0lx%08lx fp 0lx%08lx\n"
+	        "\t ip 0lx%08lx sp 0lx%08lx lr 0lx%08lx pc 0lx%08lx\n",
 	        regs->arm_r0,regs->arm_r1,regs->arm_r2,regs->arm_r3,
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,

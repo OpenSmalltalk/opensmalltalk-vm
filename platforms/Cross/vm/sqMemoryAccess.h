@@ -1,8 +1,7 @@
 /* sqMemoryAccess.h -- memory accessors (and associated type definitions)
  *
- * Author: Ian.Piumarta@squeakland.org
- *
- * Last edited: 2013-10-14 12:23:39 by eliot on McStalker
+ * Authors: Ian Piumarta, Nicolas Cellier, David Lewis, & Eliot Miranda.
+ * If you feel you should be included here, let us know.
  */
 
 /* This file defines the core types for the VM, sqInt, usqInt et al, and
@@ -59,42 +58,44 @@
 # error host is neither 32- nor 64-bit?
 #endif
 
-/* sqInt is a signed integer with size adequate for holding an Object Oriented Pointer (or immediate value)
-  - that is 32bits long on a 32bits image or 64bits long on a 64bits image
-  we could use C99 int32_t and int64_t once retiring legacy compiler support this time has not yet come
-  usqInt is the unsigned flavour
-  SQABS is a macro for taking absolute value of an sqInt */
-#if SQ_IMAGE32
-  typedef int		sqInt;
-  typedef unsigned int	usqInt;
-#define PRIdSQINT "d"
-#define PRIuSQINT "u"
-#define PRIxSQINT "x"
-#define PRIXSQINT "X"
-# define SQABS abs
-#elif SQ_HOST64 && (SIZEOF_LONG == 8)
-  typedef long		sqInt;
-  typedef unsigned long	usqInt;
-#define PRIdSQINT "ld"
-#define PRIuSQINT "lu"
-#define PRIxSQINT "lx"
-#define PRIXSQINT "lX"
+/* sqInt is a signed integer with size adequate for holding an Object Oriented Pointer
+ * (or immediate value).  That is 32bits in a 32bit image or 64bits in a 64bit image.
+ * usqInt is the unsigned flavour. SQABS is a macro for the absolute value of a sqInt.
+ *
+ * We could use C99 int32_t and int64_t once retiring legacy compiler support this
+ * time has not yet come.
+ */
+#if (SQ_IMAGE32 && (SIZEOF_LONG == 4)) || (SQ_HOST64 && (SIZEOF_LONG == 8))
+  typedef long           sqInt;
+  typedef unsigned long usqInt;
+# define PRIdSQINT "ld"
+# define PRIuSQINT "lu"
+# define PRIxSQINT "lx"
+# define PRIXSQINT "lX"
 # define SQABS labs
+#elif SQ_IMAGE32
+  typedef int           sqInt;
+  typedef unsigned int usqInt;
+# define PRIdSQINT "d"
+# define PRIuSQINT "u"
+# define PRIxSQINT "x"
+# define PRIXSQINT "X"
+# define SQABS abs
 #elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
 #else
-  typedef long long		sqInt;
-  typedef unsigned long long	usqInt;
-#define PRIdSQINT "lld"
-#define PRIuSQINT "llu"
-#define PRIxSQINT "llx"
-#define PRIXSQINT "llX"
+  typedef long long           sqInt;
+  typedef unsigned long long usqInt;
+# define PRIdSQINT "lld"
+# define PRIuSQINT "llu"
+# define PRIxSQINT "llx"
+# define PRIXSQINT "llX"
 # define SQABS llabs
 #endif
 
-/* sqLong is a signed integer with at least 64bits on both 32 and 64 bits images
-   usqLong is the unsigned flavour
-   SQLABS is a macro for taking absolute value of a sqLong */
+/* sqLong is a signed integer with at least 64bits on both 32 and 64 bit platforms.
+ * usqLong is the unsigned flavour. SQLABS is a macro for the absolute value of a sqLong
+ */
 #if !defined(sqLong)
 #  if SIZEOF_LONG == 8
 #     define sqLong long
@@ -111,24 +112,25 @@
 #  endif
 #endif /* !defined(sqLong) */
 
-/* sqIntptr_t is a signed integer with enough bits to hold a pointer
-   usqIntptr_t is the unsigned flavour
-   this is essentially C99 intptr_t and uintptr_t but we support legacy compilers
-   the C99 printf formats macros are also defined with SQ prefix */
+/* sqIntptr_t is a signed integer with enough bits to hold a pointer (a void *).
+ * usqIntptr_t is the unsigned flavour.
+ * this is essentially C99 intptr_t and uintptr_t but we support legacy compilers
+ * the C99 printf formats macros are also defined with SQ prefix
+ */
 #if SIZEOF_LONG == SIZEOF_VOID_P
 typedef long sqIntptr_t;
 typedef unsigned long usqIntptr_t;
-#define PRIdSQPTR "ld"
-#define PRIuSQPTR "lu"
-#define PRIxSQPTR "lx"
-#define PRIXSQPTR "lX"
+# define PRIdSQPTR "ld"
+# define PRIuSQPTR "lu"
+# define PRIxSQPTR "lx"
+# define PRIXSQPTR "lX"
 #else
 typedef long long sqIntptr_t;
 typedef unsigned long long usqIntptr_t;
-#define PRIdSQPTR "lld"
-#define PRIuSQPTR "llu"
-#define PRIxSQPTR "llx"
-#define PRIXSQPTR "llX"
+# define PRIdSQPTR "lld"
+# define PRIuSQPTR "llu"
+# define PRIxSQPTR "llx"
+# define PRIXSQPTR "llX"
 #endif
 
 #if SQ_HOST64 && SQ_IMAGE32
