@@ -58,14 +58,18 @@ You MUST have WRITE PERMISSION for the following devices:
 	this is usually /dev/fb0
 
   - the mouse
-	Yhis may be either /dev/psaux (if you have a real PS/2 mouse) or
+	This may be either /dev/psaux (if you have a real PS/2 mouse) or
 	/dev/input/mice (which emulates PS/2 when you have some other
 	kind of mouse).
 	If using libevdev (required -DUSEEVDEV) then /dev/input/event?
 
+On Linux, /dev/fb0 is owned by `video` and /dev/input/event?'s are
+owned by `input`.  You should add your user to these groups to gain
+usage access.
+
 In case of difficulty, the following might help:
 
-	chmod a+rw /dev/tty* /dev/fb* /dev/psaux /dev/input/mice /dev/input/event*
+  chmod a+rw /dev/tty* /dev/fb* /dev/psaux /dev/input/mice /dev/input/event*
 
 although this will somewhat compromise the security of your machine.
 
@@ -85,8 +89,29 @@ or set the variable SQUEAK_VM in your environment:
 
 	export SQUEAK_VM=display-fbdev
 
+You can use the `evtest` program to see what devices /dev/input/event?
+attaches to.
+
+Sample settings:
+##FrameBuffer wants: (test with evtest)
+export SQUEAK_KBDEV=/dev/input/event3
+export SQUEAK_VM=display-fbdev
+export SQUEAK_FBDEV=/dev/fb0
+export SQUEAK_MSDEV=/dev/input/event0
+
 
 5. RECOVERY
+
+A message "could not find module "vm-display-fbdev" means that the
+OpenSmalltalk VM needs to be built with the appropriate libraries.
+
+A message from the `mvm` script "*** disabling vm-display-fbdev"
+indicates a missing library.
+
+You must have a proper libevdev library and includes to enable this.
+ apt seatch fbdev  ##  pacman -sS fbdev
+ apt seatch framebuffer
+ apt search evdev
 
 If the VM becomes unresponsive for any reason you will have no option
 other than to log into your machine remotely and kill the VM.  If you
