@@ -3,8 +3,10 @@
 #include <Windows.h>
 
 #ifdef __MINGW32__
-#define HMONITOR_DECLARED
-#undef WINNT
+# ifndef HMONITOR_DECLARED
+#	define HMONITOR_DECLARED
+# endif
+# undef WINNT
 #endif
 
 #include <ddraw.h>
@@ -13,5 +15,3 @@
 #include <d3d.h>
 #include <dinput.h>
 #include <unknwn.h>
-
-

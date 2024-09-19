@@ -20,6 +20,7 @@
 *       Option  -> Right ALT
 *
 *****************************************************************************/
+
 #include <Windows.h>
 #include <windowsx.h>
 #include <dbt.h>
@@ -43,7 +44,9 @@
 /** Not needed in cygwin **/
 # define COMPILE_MULTIMON_STUBS
 # undef SM_CMONITORS
-# define HMONITOR_DECLARED
+# ifndef HMONITOR_DECLARED
+#	define HMONITOR_DECLARED
+# endif
 # include "multimon.h"
 #endif /* defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3) */
 

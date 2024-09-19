@@ -34,8 +34,10 @@
 #include <ole2.h>
 #include "sq.h"
 #ifdef __MINGW32__
-#define HMONITOR_DECLARED
-#undef WINNT
+# ifndef HMONITOR_DECLARED
+#	define HMONITOR_DECLARED
+# endif
+# undef WINNT
 #endif
 
 #include <dinput.h>
