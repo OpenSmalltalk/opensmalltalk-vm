@@ -4,21 +4,22 @@
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
 
+
 ifeq ($(findstring /vm,$(OBJDIR)),/vm)
-DEPFLAGS:= -MMD -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+BD:=$(BUILD)/vm
 else
-DEPFLAGS:= -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+BD:=$(BUILD)/$(LIBNAME)/vm
 endif
-ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLFLAGS = $(CFLAGS) $(INCLUDES) $(DEFS)
 
 $(OBJDIR)/%.o: %.c
-	$(CC) -x c $(ALLFLAGS) -c $< -o $@
+	$(CC) -x c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.m
-	$(CC) -x objective-c $(ALLFLAGS) -c $< -o $@
+	$(CC) -x objective-c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) $(ALLFLAGS) -c $< -o $@
+	$(CXX) -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
 
 %res: %.rc
 	$(RC) $(RCFLAGS) -i $< -o $@
