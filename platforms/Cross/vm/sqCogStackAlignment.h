@@ -1,17 +1,19 @@
-/****************************************************************************
+/********************************************************************************
  *   FILE:    sqCogUnixStackAlignment.h
- *   CONTENT: Answer & check stack alignment for current plaform, plus
- *            getReturnAddress which is part of the fly-weight setjmp/longjmp
- *            alternative ceInvokeInterpreter which is used to enter the
- *            interpreter from machine code.
+ *   CONTENT: Answer & check stack alignment for current plaform. Provide
+ *			  getReturnAddress which is part of ceInvokeInterpret, the fly-weight
+ *			  setjmp/longjmp alternative that enters interpret from machine code.
+ *			  Provide setsp which may required to correct the result of alloca in
+ *			  SqueakFFIPrims when marshalling a call involving stacked arguments.
  *
  *   AUTHOR:   Eliot Miranda
  *   DATE:     February 2009
  *
- * Changes: eem September 2020 move getReturnAddress here from sq.h
+ * Changes: eem Sep 2024 add assertStackPointersWellAligned; use assertfnl
+ *			eem Sep 2020 move getReturnAddress here from sq.h
  *          eem Jan 2020 add support for ARMv8
- *          eem Apr 2015 Add ARM32 support.
- *			eem Jul 2010 make 16 bytes the default alignment for all x86.
+ *          eem Apr 2015 Add ARM32 support
+ *			eem Jul 2010 make 16 bytes the default alignment for all x86 (SSE2)
  */
  
 /* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
@@ -25,7 +27,7 @@
 # elif defined(__GNUC__) /* gcc, clang, icc etc */
 #	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
 # else
-#	error "Cog requires getReturnAddress defining for the current platform."
+#	error "Cog requires getReturnAddress to be defined for the current platform."
 # endif
 #endif
 
@@ -99,10 +101,10 @@
 #if defined(STACK_ALIGN_BYTES)
 # if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
 #  if __GNUC__ || __clang__
-#   define getfp() ({ register usqIntptr_t fp;					\
+#   define getfp() ({ register usqIntptr_t fp;						\
 					  asm volatile ("movl %%ebp,%0" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ register usqIntptr_t sp;					\
+#   define getsp() ({ register usqIntptr_t sp;						\
 					  asm volatile ("movl %%esp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  endif
@@ -177,19 +179,41 @@
 #if !defined(STACK_SP_ALIGNMENT)
 #	define STACK_SP_ALIGNMENT 0
 #endif
-#if !defined(assertCStackWellAligned)
-# if defined(cFramePointerInUse)
-#	define assertCStackWellAligned() do {							\
-	if (cFramePointerInUse)											\
-		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
-	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
-} while (0)
+
+#if !defined(assertStackPointersWellAligned)
+# if defined(NDEBUG) // compatible with Mac OS X (FreeBSD) /usr/include/assert.h
+#	  define assertStackPointersWellAligned(fpa,spa,fn,ln) 0
+	// N.B. macro arguments assigned to locals to avoid expanding the getsp/getfp
+	// macros above in the assert messages. Different names needed for debugger.
+# elif defined(cFramePointerInUse)
+#	if cFramePointerInUse
+#	  define assertStackPointersWellAligned(fpa,spa,fn,ln) do {			\
+		usqInt spv = (usqInt)(spa); usqInt fpv = (usqInt)(fpa);			\
+		assertfnl((fpv & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
+		assertfnl((spv & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT,fn,ln);\
+	  } while (0)
+#	else
+#	  define assertStackPointersWellAligned(fpa,spa,fn,ln) do { 		\
+		usqInt spv = (usqInt)(spa);										\
+		assertfnl((spv & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT,fn,ln);\
+	  } while (0)
+#	endif
 # else
-#	define assertCStackWellAligned() do {							\
-	extern sqInt cFramePointerInUse;								\
-	if (cFramePointerInUse)											\
-		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
-	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
-} while (0)
+#	define assertStackPointersWellAligned(fpa,spa,fn,ln) do {				\
+		extern sqInt cFramePointerInUse;									\
+		usqInt spv = (usqInt)(spa); usqInt fpv = (usqInt)(fpa);				\
+		if (cFramePointerInUse)												\
+			assertfnl((fpv & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
+		assertfnl((spv & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT,fn,ln);	\
+	  } while (0)
 # endif
+#endif
+
+#if !defined(assertCStackWellAligned)
+# define assertCStackWellAligned() \
+	assertStackPointersWellAligned(getfp(),getsp(),__func__,__LINE__)
+#endif
+#if !defined(assertSavedCStackPointersWellAligned)
+# define assertSavedCStackPointersWellAligned() \
+	assertStackPointersWellAligned(CFramePointer,CStackPointer,__func__,__LINE__)
 #endif

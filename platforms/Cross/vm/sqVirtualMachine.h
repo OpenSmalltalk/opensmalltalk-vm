@@ -304,7 +304,7 @@ typedef struct VirtualMachine {
   sqInt  (*methodReturnBool)(sqInt);
   sqInt  (*methodReturnFloat)(double);
   sqInt  (*methodReturnInteger)(sqInt);
-  sqInt  (*methodReturnString)(char *);
+  sqInt  (*methodReturnString)(const char *);
 #	define returnSelf() methodReturnValue(0)
 # else
   sqInt  (*methodArg)  (sqInt index); /* These ended up never being used. */
@@ -621,7 +621,7 @@ sqInt  methodReturnBool(sqInt);
 sqInt  methodReturnFloat(double);
 sqInt  methodReturnInteger(sqInt);
 sqInt  methodReturnReceiver(void);
-sqInt  methodReturnString(char *);
+sqInt  methodReturnString(const char *);
 # else
 sqInt methodArg(sqInt index);
 sqInt objectArg(sqInt index);

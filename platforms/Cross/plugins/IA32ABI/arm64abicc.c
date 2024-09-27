@@ -58,7 +58,7 @@ struct VirtualMachine* interpreterProxy;
  * Call a foreign function to set x8 structure result address return register
  */
 void
-callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
+callAndReturnWithStructAddr(void *structAddr, void *procAddr, void *regValuesArrayAddr)
 { /* Any float regs already loaded
      Place alloca'd struct address in x8 for results.
      Spread int args into int registers.

@@ -2,7 +2,9 @@
  * Informative assert definitions that print expression and line number.
  *
  * assert's expression is evaluated only if NDEBUG is not defined and printed
- * along with its the line number if it is false.
+ * along with its line number if it is false.
+ *
+ * assertfnl is exactly like assert but it takes function name and line arguments.
  *
  * asserta's expression is always evaluated but only printed if it is false and
  * NDEBUG is not defined. (asserta => assert always)
@@ -20,11 +22,13 @@
 IMPORT(void) error(const char *);
 IMPORT(void) warning(const char *);
 IMPORT(void) warningat(const char *,int);
+IMPORT(void) warninginat(const char *, const char *,int);
 #else
 # if defined(SQUEAK_BUILTIN_PLUGIN)
 void error(const char *);
 void warning(const char *);
 void warningat(const char *,int);
+void warninginat(const char *, const char *,int);
 # else
 #   if !defined(EXPORT)
 #	  define EXPORT(returnType) returnType
@@ -32,6 +36,7 @@ void warningat(const char *,int);
 EXPORT(void) error(const char *);
 EXPORT(void) warning(const char *);
 EXPORT(void) warningat(const char *,int);
+EXPORT(void) warninginat(const char *, const char *,int);
 #  endif
 #endif
 #pragma auto_inline(on)
@@ -41,6 +46,7 @@ EXPORT(void) warningat(const char *,int);
 # define __stringifyNum(n) __stringify(n)
 #ifdef NDEBUG /* compatible with Mac OS X (FreeBSD) /usr/include/assert.h */
 # define assert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
+# define assertfnl(expr,fn,l) 0
 # define asserta(expr) (expr)
 # define assertf(msg) 0
 # define assertl(expr,line) 0
@@ -72,9 +78,18 @@ warningIfNotAt(__word condition, const char *msg, int line)
 		warningat(msg, line);
 	return condition;
 }
+
+static inline __word
+warningIfNotInAt(__word condition, const char *msg, const char *fn, int line)
+{
+    if (!condition)
+		warninginat(msg, fn, line);
+	return condition;
+}
 # undef __word
 
 # define assert(expr)  warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
+# define assertfnl(expr,fn,l)  warningIfNotInAt(expr, #expr,fn,l)
 # define asserta(expr) warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
 # define assertl(expr,line)  warningIfNotAt(expr, #expr, line)
@@ -85,6 +100,7 @@ extern char expensiveAsserts;
 # define PRODUCTION 0
 #else
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
+# define assertfnl(expr,fn,l)  ((expr)||(warninginat(#expr,fn,l),0))
 # define asserta(expr) ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
 # define assertl(expr,line)  ((expr)||(warningat(#expr,line),0))

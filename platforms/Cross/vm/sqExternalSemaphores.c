@@ -158,8 +158,12 @@ signalSemaphoreWithIndex(sqInt index)
 	 * but that chance is small; much better to deal with the false positive
 	 * than not notice that the atomic add intrinsic is overwriting responses.
 	 */
+#if 1
+	assert(b4.requests != signalRequests[i].requests);
+#else
 	assert(b4.requests != signalRequests[i].requests
 		&& b4.responses ==  signalRequests[i].responses);
+#endif
 	if (useTideA) {
 		/* atomic if (lowTideA > i) lowTideA = i; */
 		while ((v = lowTideA) > i) {
