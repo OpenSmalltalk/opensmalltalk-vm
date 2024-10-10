@@ -1841,13 +1841,12 @@ const double BASE_DPI = 96.0;
 double ioScreenScaleFactor(void)
 {
   static getDpi_t getDpi = NULL;
-  double physicalDpi = 0.0;
-
   if (!getDpi) { getDpi = determineGetDpiFunction(); }
 
-  physicalDpi = getDpi();
+  double physicalDpi = getDpi();
   if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
-    return physicalDpi / BASE_DPI;
+    double apparentFactor = physicalDpi / BASE_DPI;
+    return apparentFactor > DBL_EPSILON ? apparentFactor : nan("MISS");
   }
   return 1.0 ;
 }
