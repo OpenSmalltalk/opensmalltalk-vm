@@ -111,7 +111,9 @@ extern struct VirtualMachine* interpreterProxy;
 }
 
 
-void 
+#if !BUILD_FOR_OSX // On iOS/OSX these are elsewhere
+
+static void 
 sqCloseDir()
 {
   /* Ensure that the cached open directory is closed */
@@ -121,8 +123,6 @@ sqCloseDir()
   lastIndex= -1;
   lastPath[0]= '\0';
 }
-
-
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
@@ -349,8 +349,30 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   return ENTRY_FOUND;
 }
 
-/* unix files are untyped, and the creator is correct by default */
+#endif // BUILD_FOR_OSX
 
+/* UTF8 access to the working directory */
+// copy working directory name into path answering byte len, or negative errno
+sqInt
+dir_GetPathToWorkingDirAsUTF8(char *pathName, sqInt pathNameMax)
+{
+	return getcwd(pathName,pathNameMax)
+			? strlen(pathName)
+			: -errno;
+}
+
+// set working directory to pathName, answering 0 if ok, otherwise errno
+sqInt
+dir_SetPathToWorkingDirAsUTF8(char *pathName)
+{
+	return chdir(pathName)
+			? errno
+			: 0;
+}
+
+#if !BUILD_FOR_OSX
+
+/* unix files are untyped, and the creator is correct by default */
 
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator)
 {
@@ -374,3 +396,5 @@ sqStdoutToDevTTY()
 	if (!freopen("/dev/tty","w",stdout))
 		perror("sqStdoutToDevTTY freopen(\"/dev/tty\",\"w\",stdout):");
 }
+
+#endif // BUILD_FOR_OSX

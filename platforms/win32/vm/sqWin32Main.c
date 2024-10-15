@@ -1712,7 +1712,12 @@ sqMain(int argc, char *argv[])
 # endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
 
-#if !NewspeakVM
+	// Generally a bad idea. Used to be done on startup on Windows. Used to
+	// be done a long time ago on MacOS. But it gets in teh way of real apps
+	// that want to run in specific places, and the image's FileDirectory
+	// facilities don't depend on the working directory; instead they depend
+	// omn the image's path name
+#if SET_WORKING_DIR_TO_IMAGE_DIR_ON_STARTUP
     /* set the CWD to the image location */
     if (*imageNameW) {
       WCHAR path[MAX_PATH+1], *ptr;
@@ -1724,7 +1729,7 @@ sqMain(int argc, char *argv[])
         SetCurrentDirectoryW(path);
       }
     }
-#endif /* !NewspeakVM */
+#endif // SET_WORKING_DIR_TO_IMAGE_DIR_ON_STARTUP
 
     /* display the splash screen */
     ShowSplashScreen();

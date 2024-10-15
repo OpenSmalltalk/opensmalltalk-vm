@@ -216,12 +216,3 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString,
     }
 	return 0;
 }
-
-/* This routine is exposed but no-one seems to call it from the VM
- in the past the macintosh VM used this to set the working directory based
- on where the VM was opened from, but it seems now post os-x no-one uses it */
-
-sqInt dir_PathToWorkingDir(char *pathName, sqInt pathNameMax){
-	//API Documented
-	return 0;
-}

@@ -82,6 +82,9 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char *nameString
 		/* outputs: */
 		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
-sqInt dir_PathToWorkingDir(char *pathName, sqInt pathNameMax);
+	// copy working directory name into path answering byte len, or negative errno
+sqInt dir_GetPathToWorkingDirAsUTF8(char *pathName, sqInt pathNameMax);
+	// set working directory to pathName, answering 0 if ok, otherwise errno
+sqInt dir_SetPathToWorkingDirAsUTF8(char *pathName);
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);
 sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);

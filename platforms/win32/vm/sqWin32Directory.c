@@ -499,6 +499,38 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
 }
 
 
+// UTF8 access to the working directory
+// copy working directory name into path answering byte len, or negative errno
+sqInt
+dir_GetPathToWorkingDirAsUTF8(char *pathName, sqInt pathNameMax)
+{
+	WCHAR buff[MAX_PATH+1];
+	sqInt nWChars, nBytes;
+
+	if ((nWChars = GetCurrentDirectoryW(MAX_PATH+1,buff)) > 0) {
+		nBytes = WideCharToMultiByte(CP_UTF8, 0, buff, nWChars,
+									 pathName, pathNameMax, 0, 0);
+		if (nBytes > 0)
+			return nBytes;
+	}
+	return 0 - GetLastError();
+}
+
+// set working directory to pathName, answering 0 if ok, otherwise errno
+sqInt
+dir_SetPathToWorkingDirAsUTF8(char *pathName)
+{
+	WCHAR buff[MAX_PATH+1];
+
+	if (!MultiByteToWideChar(CP_UTF8, 0, pathName, -1, buff, MAX_PATH+1))
+		return GetLastError();
+
+	return SetCurrentDirectoryW(buff)
+			? 0
+			: GetLastError();
+}
+
+// Compatibility with the Mac
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
 			     char *fType, char *fCreator)
 {
