@@ -106,6 +106,7 @@ build_macOS() {
     pushd "${BUILD_PATH}"
 
     echo "::group::Building ${BUILD_PATH}..."
+	export LDFLAGS="-v -Xlinker -why_load"
     if [[ "${MODE}" == "debug" ]]; then
         bash -e ./mvm -d || exit 1
     elif [[ "${MODE}" == "assert" ]]; then
