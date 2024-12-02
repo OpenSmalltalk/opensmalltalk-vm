@@ -22,7 +22,7 @@ ifeq ($(strip $(SDK)),)
 endif
 TARGET_ARCH:=x86_64
 ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
-TARGET_VERSION_MIN:=10.9
+TARGET_VERSION_MIN:=10.13
 endif
 
 # Determine where to install plugins in the .app bundle using the Squeak
@@ -76,7 +76,7 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-trigraphs -Wdeprecated-declarations -Wimplicit-function-declaration
 
 # N.B. No QuickTime framework; that is 32-bit only.
-FRAMEWORKS?=-fobjc-link-runtime \
+FRAMEWORKS?=-fobjc-abi-version=3 \
 			-framework Foundation -framework OpenGL -framework Cocoa \
 			-framework AudioToolbox -framework CoreAudio -framework AVFoundation \
 			-framework SystemConfiguration \
