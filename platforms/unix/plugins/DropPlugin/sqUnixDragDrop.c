@@ -66,6 +66,18 @@ fileValueOf(sqInt anSQFileRecord)
 sqInt dropInit(void)     { return 1; }
 sqInt dropShutdown(void) { return 1; }
 
+static int
+hexValue(const int c)
+{
+  if (c <  '0') return 0;
+  if (c <= '9') return c - '0';
+  if (c <  'A') return 0;
+  if (c <= 'F') return c - 'A' + 10;
+  if (c <  'a') return 0;
+  if (c <= 'f') return c - 'a' + 10;
+  return 0;
+}
+
 /* We now set USE_FILE_URIs to 1 in platforms/unix//vm-display-X11/sqUnixXdnd.c
  * hence dropRequestFileName skips the URI prefix and dropRequestURI includes it
  */
@@ -95,9 +107,19 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 		++prefixLength;
 
 	// file:///path & file:/path => /path; anything else answered verbatim
-	return prefixLength == 8 || prefixLength == 6
+	char *path = prefixLength == 8 || prefixLength == 6
 		? uxDropFileNames[dropIndex - 1] + prefixLength - 1
 		: uxDropFileNames[dropIndex - 1];
+
+	// Decode path (i.e. URI => String)
+	for (int i = 0; path[i]; ++i) {
+		if ((path[i] == '%') && isxdigit(path[i + 1]) && isxdigit(path[i + 2])) {
+			path[i] = hexValue(path[i + 1]) << 4 | hexValue(path[i + 2]);
+			memmove(path + i + 1, path + i + 3, strlen(path + i + 3) + 1);
+		}
+	}
+
+	return path;
 }
 
 char *
