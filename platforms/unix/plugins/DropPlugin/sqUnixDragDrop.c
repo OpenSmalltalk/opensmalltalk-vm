@@ -41,6 +41,7 @@
 #include "sqVirtualMachine.h"
 #include "FilePlugin.h"
 #include "DropPlugin.h"
+#include <ctype.h>
 
 extern struct VirtualMachine  *interpreterProxy;
 extern int						uxDropFileCount;
