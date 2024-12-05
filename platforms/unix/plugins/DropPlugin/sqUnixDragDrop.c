@@ -68,15 +68,13 @@ sqInt dropInit(void)     { return 1; }
 sqInt dropShutdown(void) { return 1; }
 
 static int
-hexValue(const int c)
-{
-  if (c <  '0') return 0;
-  if (c <= '9') return c - '0';
-  if (c <  'A') return 0;
-  if (c <= 'F') return c - 'A' + 10;
-  if (c <  'a') return 0;
-  if (c <= 'f') return c - 'a' + 10;
-  return 0;
+hexValue(const int c) {
+	switch (c) {
+		case '0' ... '9': return c - '0';
+		case 'A' ... 'F': return c - 'A' + 10;
+		case 'a' ... 'f': return c - 'a' + 10;
+		default: return 0;
+	}
 }
 
 /* We now set USE_FILE_URIs to 1 in platforms/unix//vm-display-X11/sqUnixXdnd.c
@@ -88,6 +86,7 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 	char *fileURIPrefix = "file:///";
 	int prefixLength = 0;
 	char *dropFileName;
+	char *path;
 
 	if (dropIndex <= 0 || dropIndex > uxDropFileCount)
 		return 0;
@@ -108,7 +107,7 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 		++prefixLength;
 
 	// file:///path & file:/path => /path; anything else answered verbatim
-	char *path = prefixLength == 8 || prefixLength == 6
+	path = prefixLength == 8 || prefixLength == 6
 		? uxDropFileNames[dropIndex - 1] + prefixLength - 1
 		: uxDropFileNames[dropIndex - 1];
 

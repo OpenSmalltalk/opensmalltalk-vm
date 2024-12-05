@@ -184,6 +184,12 @@ xrealloc(void *ptr, size_t size)
 }
 
 
+/* e.g. StandardFileStream>>requestDropStream: doesn't deal with file: URIs.
+ * Neither does unix/plugins/DropPlugin/sqUnixDragDrop.c::dropRequestFileHandle.
+ * Simplest thing is to convert file: URIs to file names at source.
+ */
+#define USE_FILE_URIs 1
+#if !USE_FILE_URIs
 static int
 hexValue(const int c)
 {
@@ -197,12 +203,6 @@ hexValue(const int c)
 }
 
 
-/* e.g. StandardFileStream>>requestDropStream: doesn't deal with file: URIs.
- * Neither does unix/plugins/DropPlugin/sqUnixDragDrop.c::dropRequestFileHandle.
- * Simplest thing is to convert file: URIs to file names at source.
- */
-#define USE_FILE_URIs 1
-#if !USE_FILE_URIs
 static char *
 uri2string(const char *uri)
 {
