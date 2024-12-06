@@ -112,10 +112,11 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 		: uxDropFileNames[dropIndex - 1];
 
 	// Decode path (i.e. URI => String)
-	for (int i = 0; path[i]; ++i) {
+	for (int i = 0, l = strlen(path); path[i]; ++i, --l) {
 		if ((path[i] == '%') && isxdigit(path[i + 1]) && isxdigit(path[i + 2])) {
 			path[i] = hexValue(path[i + 1]) << 4 | hexValue(path[i + 2]);
-			memmove(path + i + 1, path + i + 3, strlen(path + i + 3) + 1);
+			l -= 2;
+			memmove(path + i + 1, path + i + 3, l);
 		}
 	}
 
