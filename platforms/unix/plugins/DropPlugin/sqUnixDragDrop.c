@@ -41,6 +41,7 @@
 #include "sqVirtualMachine.h"
 #include "FilePlugin.h"
 #include "DropPlugin.h"
+#include <ctype.h>
 
 extern struct VirtualMachine  *interpreterProxy;
 extern int						uxDropFileCount;
@@ -66,6 +67,16 @@ fileValueOf(sqInt anSQFileRecord)
 sqInt dropInit(void)     { return 1; }
 sqInt dropShutdown(void) { return 1; }
 
+static int
+hexValue(const int c) {
+	switch (c) {
+		case '0' ... '9': return c - '0';
+		case 'A' ... 'F': return c - 'A' + 10;
+		case 'a' ... 'f': return c - 'a' + 10;
+		default: return 0;
+	}
+}
+
 /* We now set USE_FILE_URIs to 1 in platforms/unix//vm-display-X11/sqUnixXdnd.c
  * hence dropRequestFileName skips the URI prefix and dropRequestURI includes it
  */
@@ -75,6 +86,7 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 	char *fileURIPrefix = "file:///";
 	int prefixLength = 0;
 	char *dropFileName;
+	char *path;
 
 	if (dropIndex <= 0 || dropIndex > uxDropFileCount)
 		return 0;
@@ -95,9 +107,20 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 		++prefixLength;
 
 	// file:///path & file:/path => /path; anything else answered verbatim
-	return prefixLength == 8 || prefixLength == 6
+	path = prefixLength == 8 || prefixLength == 6
 		? uxDropFileNames[dropIndex - 1] + prefixLength - 1
 		: uxDropFileNames[dropIndex - 1];
+
+	// Decode path (i.e. URI => String)
+	for (int i = 0, l = strlen(path); path[i]; ++i, --l) {
+		if ((path[i] == '%') && isxdigit(path[i + 1]) && isxdigit(path[i + 2])) {
+			path[i] = hexValue(path[i + 1]) << 4 | hexValue(path[i + 2]);
+			l -= 2;
+			memmove(path + i + 1, path + i + 3, l);
+		}
+	}
+
+	return path;
 }
 
 char *
