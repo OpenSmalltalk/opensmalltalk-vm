@@ -243,10 +243,9 @@ N.B. if you get failures due to version conflicts try
 and then retry.
 
 Ubuntu
-sudo apt-get install libcairo2-dev   
-sudo apt-get install libpango1.0-dev
-sudo apt-get install libssl-dev
-sudo apt-get install libgl1-mesa-glx
+sudo apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev
+sudo apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+sudo apt install libxrandr-dev
 
 Raspbian
 sudo apt-get update
