@@ -575,7 +575,7 @@ ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
 }
 
 static sqInt result, monitorIdx;
-static BOOL
+static BOOL __stdcall
 enumMonitor(HMONITOR monitor, HDC dc, LPRECT rect, LPARAM store)
 {
 	if (store) {

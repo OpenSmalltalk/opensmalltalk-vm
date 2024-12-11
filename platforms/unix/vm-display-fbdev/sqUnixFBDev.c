@@ -569,7 +569,7 @@ static long display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
 static long display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
 static long display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
 #if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
-static long display_hostWindowCloseAll(void) { return 0; }
+static long display_ioScreenRectangles(void) { return 0; }
 #endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
 #endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
