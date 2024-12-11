@@ -558,16 +558,20 @@ static long display_hostWindowCloseAll(void)                                    
 #endif
 
 
-
 // new stubs for the CogVM
-long display_ioSetCursorPositionXY(long x, long y) { return 0; }
-long display_ioPositionOfScreenWorkArea (long windowIndex) { return -1; }
-long display_ioSizeOfScreenWorkArea (long windowIndex) { return -1; }
-void *display_ioGetWindowHandle() { return 0; }
-long display_ioPositionOfNativeDisplay(void *windowHandle) { return -1; }
-long display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
-long display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
-long display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
+#if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
+static long display_ioSetCursorPositionXY(long x, long y) { return 0; }
+static long display_ioPositionOfScreenWorkArea (long windowIndex) { return -1; }
+static long display_ioSizeOfScreenWorkArea (long windowIndex) { return -1; }
+static void *display_ioGetWindowHandle() { return 0; }
+static long display_ioPositionOfNativeDisplay(void *windowHandle) { return -1; }
+static long display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
+static long display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
+static long display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
+#if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
+static long display_hostWindowCloseAll(void) { return 0; }
+#endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
+#endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
 
 

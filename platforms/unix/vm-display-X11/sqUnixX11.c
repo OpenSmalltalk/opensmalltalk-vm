@@ -55,6 +55,7 @@
 
 #include "sq.h"
 #include "sqMemoryAccess.h"
+#include "sqAssert.h" // for error
 
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
@@ -4924,6 +4925,8 @@ display_ioScreenScaleFactor(void)
   return scale;
 }
 
+#define packedXY(x,y) (((x) << 16) | ((y)&0xFFFF))
+
 /* returns the size of the Squeak window */
 static sqInt
 display_ioScreenSize(void)
@@ -4931,10 +4934,10 @@ display_ioScreenSize(void)
   int winSize= getSavedWindowSize();
 
   if (headless || !isConnectedToXServer)
-    return winSize ? winSize : ((64 << 16) | 64);
+    return winSize ? winSize : packedXY(64,64);
 
   if ((windowState == WIN_ZOOMED) && !resized())
-    return (scrW << 16) | scrH;
+    return packedXY(scrW,scrH);
 
   if (resized())
     {
@@ -4951,7 +4954,7 @@ display_ioScreenSize(void)
 #    endif
       XResizeWindow(stDisplay, stWindow, (stWidth= xWidth), (stHeight= xHeight));
     }
-  return (stWidth << 16) | stHeight;  /* w is high 16 bits; h is low 16 bits */
+  return packedXY(stWidth,stHeight);  /* w is high 16 bits; h is low 16 bits */
 }
 
 
@@ -5236,8 +5239,8 @@ display_ioSetFullScreen(sqInt fullScreen)
 	  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
 	  if ((winW % sizeof(void *)) != 0)
 	    winW= (winW / sizeof(void *)) * sizeof(void *);
-	  setSavedWindowSize((winW << 16) + (winH & 0xFFFF));
-	  savedWindowOrigin= (winX << 16) + (winY & 0xFFFF);
+	  setSavedWindowSize(packedXY(winW,winH));
+	  savedWindowOrigin= packedXY(winX,winY);
 	  if (fullScreenDirect)
 	    enterFullScreenMode(root); /* simple window manager, e.g. twm */
 	  else
@@ -5794,7 +5797,7 @@ display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscree
 {
   fprintf(stderr, "ioSetDisplayMode(%ld, %ld, %ld, %ld)\n",
 	  width, height, depth, fullscreenFlag);
-  setSavedWindowSize((width << 16) + (height & 0xFFFF));
+  setSavedWindowSize(packedXY(width,height));
   setFullScreenFlag(fullScreen);
   return 0;
 }
@@ -7275,8 +7278,7 @@ display_ioSizeOfNativeWindow(void *windowHandle)
    * width.
    */
   real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
-  return ((attrs.width + 2 * real_border_width) << 16)
-    | (attrs.height + attrs.y + real_border_width);
+  return packedXY(attrs.width + 2 * real_border_width,attrs.height + attrs.y + real_border_width);
 }
 
 static long
@@ -7292,7 +7294,7 @@ display_ioPositionOfNativeWindow(void *windowHandle)
 				&rootx, &rooty, &neglected_child))
     return -1;
 
-  return ((rootx - attrs.x) << 16) | (rooty - attrs.y);
+  return packedXY(rootx - attrs.x,rooty - attrs.y);
 }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
@@ -7385,7 +7387,7 @@ display_ioPositionOfScreenWorkArea(long windowIndex)
  * cursor and no ATI control center once the multi-monitor mode was enabled.
  */
 #define NominalMenubarHeight 24 /* e.g. Gnome default */
-	return (0 << 16) | NominalMenubarHeight;
+	return packedXY(0,NominalMenubarHeight);
 }
 
 /* Return the pixel extent of the platform-defined working area
@@ -7398,7 +7400,7 @@ display_ioSizeOfScreenWorkArea(long windowIndex)
 	if (!XGetWindowAttributes(stDisplay, DefaultRootWindow(stDisplay), &attrs))
 		return -1;
 
-	return (attrs.width << 16) | attrs.height;
+	return packedXY(attrs.width,attrs.height);
 }
 
 void *display_ioGetWindowHandle() { return (void *)stParent; }
@@ -7416,7 +7418,7 @@ display_ioPositionOfNativeDisplay(void *windowHandle)
 								&rootx, &rooty, &neglected_child))
 		return -1;
 
-	return (rootx << 16) | rooty;
+	return packedXY(rootx,rooty);
 }
 
 static long
@@ -7428,10 +7430,42 @@ display_ioSizeOfNativeDisplay(void *windowHandle)
 	if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs))
 		return -1;
 
-	return (attrs.width << 16) | attrs.height;
+	return packedXY(attrs.width,attrs.height);
 }
 
-#endif /* SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3 */
+#if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
+# include "sqVirtualMachine.h"
+extern struct VirtualMachine *interpreterProxy;
+// eem 2024/12/10
+// Currently answers screen rectangle for main screen.
+// X11 experts are encouraged to extend this to a proper implementation
+// that answers all screen rectangles.
+
+#define packedDoubleXY(x,y) packedXY((int)(x),(int)(y))
+
+static sqInt
+display_ioScreenRectangles()
+{
+	int screenCount = ScreenCount(stDisplay);
+	sqInt a = interpreterProxy->
+				instantiateClassindexableSize
+					(interpreterProxy->classArray(),
+					 screenCount * 2);
+
+	if (a)
+		for (int i = 0; i < screenCount; i++) {
+			(void)interpreterProxy->
+				storeIntegerofObjectwithValue
+					(i * 2, a, packedDoubleXY(0,0));
+			(void)interpreterProxy->
+				storeIntegerofObjectwithValue
+					(i * 2 + 1, a, packedDoubleXY(DisplayWidth (stDisplay, i),
+												  DisplayHeight(stDisplay, i)));
+		}
+	return  a;
+}
+#endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
+#endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
 
 SqDisplayDefine(X11);

@@ -7,7 +7,7 @@ extern int    uxDropFileCount;
 extern char **uxDropFileNames;
 
 #define SqDisplayVersionMajor	1
-#define SqDisplayVersionMinor	6
+#define SqDisplayVersionMinor	7
 #define SqDisplayVersion	((SqDisplayVersionMajor << 16) | (SqDisplayVersionMinor))
 
 #if (REALIZE_OPENGL_H)
@@ -71,7 +71,7 @@ struct SqDisplay
   sqInt  (*primitivePluginRequestFileHandle)(void);
   sqInt  (*primitivePluginDestroyRequest)(void);
   sqInt  (*primitivePluginRequestState)(void);
-  /* host window support */
+  // host window support; see platforms/Cross/plugins/HostWindowPlugin/HostWindowPlugin.h
   long    (*hostWindowClose)(long index);
   long    (*hostWindowCreate)(long w, long h, long x, long y, char * list, long attributeListLength);
   long    (*hostWindowShowDisplay)(unsigned* dispBitsIndex, long width, long height, long depth, long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex);
@@ -91,6 +91,7 @@ struct SqDisplay
   long    (*ioSizeOfNativeDisplay)(void *);
   long    (*ioPositionOfNativeWindow)(void *);
   long    (*ioSizeOfNativeWindow)(void *);
+  sqInt   (*ioScreenRectangles)(void);
 };
 
 
@@ -144,8 +145,8 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_primitivePluginRequestFileHandle,	\
   display_primitivePluginDestroyRequest,	\
   display_primitivePluginRequestState,		\
-  display_hostWindowClose,			\
-  display_hostWindowCreate,			\
+  display_hostWindowClose,				\
+  display_hostWindowCreate,				\
   display_hostWindowShowDisplay,		\
   display_hostWindowGetSize,			\
   display_hostWindowSetSize,			\
@@ -158,9 +159,10 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_ioSetCursorPositionXY,		\
   display_ioGetWindowHandle,			\
   display_ioPositionOfNativeDisplay,	\
-  display_ioSizeOfNativeDisplay,	\
-  display_ioPositionOfNativeWindow,	\
-  display_ioSizeOfNativeWindow	\
+  display_ioSizeOfNativeDisplay,		\
+  display_ioPositionOfNativeWindow,		\
+  display_ioSizeOfNativeWindow,			\
+  display_ioScreenRectangles			\
 }
 
 

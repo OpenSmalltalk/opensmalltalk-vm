@@ -366,7 +366,6 @@ ioSizeOfWindow(sqIntptr_t windowIndex)
   return -1;
 }
 
-#if TerfVM
 /* ioSizeOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
  * for convenience. Return the size of the specified native window in
  * (width<<16 | height) format like ioScreenSize.
@@ -394,7 +393,6 @@ ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 			| ((boundingRect.bottom - boundingRect.top) & 0xFFFF)
 		: -1;
 }
-#endif /* TerfVM */
 
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
@@ -428,7 +426,6 @@ ioPositionOfWindow(sqIntptr_t windowIndex)
 		: -1;
 }
 
-#if TerfVM
 /* ioPositionOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
  * for convenience. Return the pos of the specified native window in
  * (left<<16 | top) format like ioScreenSize (& ioPositionOfWindow).
@@ -470,7 +467,6 @@ ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 	y = boundingRect.top + titleHeight;
 	return (x << 16) | (short)y;
 }
-#endif /* TerfVM */
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
@@ -548,7 +544,6 @@ ioSetCursorPositionXY(long x, long y)
 		: -1;
 }
 
-#if TerfVM
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
 sqInt
@@ -607,4 +602,3 @@ ioScreenRectangles(void)
 	}
 	return result;
 }
-#endif /* TerfVM */

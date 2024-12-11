@@ -302,7 +302,6 @@ windowDescriptorBlock *prevEntry;
 sqInt
 getCurrentIndexInUse(void) { return nextIndex - 1; }
 
-#if TerfVM
 void *
 ioGetWindowHandle(void)
 {
@@ -422,7 +421,6 @@ ioScreenRectangles(void)
 		}
 	return  a;
 }
-#endif // TerfVM
 
 /* What happens with multiple monitors? There's a unified address space that
  * covers all displays.

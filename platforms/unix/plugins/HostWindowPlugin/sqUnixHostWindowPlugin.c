@@ -204,3 +204,21 @@ ioSetCursorPositionXY(long x, long y)
 		return -1;
 	return dpy->ioSetCursorPositionXY(x,y);
 }
+sqInt ioPositionOfScreenWorkArea(sqIntptr_t windowIndex)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioPositionOfScreenWorkArea(windowIndex);
+}
+sqInt ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioSizeOfScreenWorkArea(windowIndex);
+}
+sqInt ioScreenRectangles(void)
+{
+	if (noDisplay)
+		return 0;
+	return dpy->ioScreenRectangles();
+}

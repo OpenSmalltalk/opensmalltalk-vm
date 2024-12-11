@@ -117,7 +117,7 @@ static sqInputEvent *allocateInputEvent(int eventType)
 )
 
 #define allocateMouseWheelEvent() ( \
-  (sqKeyboardEvent *)allocateInputEvent(EventTypeMouseWheel) \
+  (sqMouseEvent *)allocateInputEvent(EventTypeMouseWheel) \
 )
 
 #define allocateDragEvent() ( \
