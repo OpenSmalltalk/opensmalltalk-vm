@@ -12,10 +12,10 @@ typedef struct glRenderer
   void	 *context;
 } glRenderer;
 
-#if USE_X11_GLX || USE_QUARTZ_CGL
+#define GL_RENDERER_DEFINED 1 // For platforms/Cross/plugins/B3DAcceleratorPlugin/sqOpenGLRenderer.h
+#define MAX_RENDERER		16
 
-# define GL_RENDERER_DEFINED	 1
-# define MAX_RENDERER		16
+#if USE_X11_GLX || USE_QUARTZ_CGL
 
 # if defined(HAVE_GL_GL_H)
 #   include <GL/gl.h>
