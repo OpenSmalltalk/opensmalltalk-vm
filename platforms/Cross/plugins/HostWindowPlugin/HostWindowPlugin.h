@@ -10,7 +10,7 @@
  * goes wrong - typically the windowIndex invalid or similar */
 extern sqInt closeWindow(sqIntptr_t index);
 
-/* createWindow: takes sqInt width, height and origin x/y plus a char* list of
+/* createWindow: takes sqInt width, height and origin x/y plus a char * list of
  * as yet undefined attributes. Returns an sqInt window index or 0 for failure
  * Failure may occur because of an inability to add the window, too many
  * windows already extant (platform dependant), the specified size being
@@ -32,7 +32,7 @@ sqIntptr_t windowIndex);
  * I hope is unlikely for some time to come */
 extern sqInt ioSizeOfWindow(sqIntptr_t windowIndex);
 
-/* ioSizeOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
+/* ioSizeOfNativeWindow: arg is void * windowHandle, defined as usqIntptr_t
  * for convenience. Return the size of the specified native window in
  * (width<<16 || height) format like ioScreenSize. The size includes
  * the window's title bar, and borders, if any.
@@ -41,7 +41,7 @@ extern sqInt ioSizeOfWindow(sqIntptr_t windowIndex);
  * which it is hoped is unlikely for some time to come */
 extern sqInt ioSizeOfNativeWindow(usqIntptr_t windowHandle);
 
-/* as per ioSizeOfNativeWindow, but answers the size of the drawing
+/* as per ioSizeOfNativeWindow, but returns the size of the drawing
  * surface (the inside) of the window.
  */
 extern sqInt ioSizeOfNativeDisplay(usqIntptr_t windowHandle);
@@ -58,7 +58,7 @@ extern sqInt ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h);
  * Return -1 (as above) for failure - typically invalid windowIndex */
 extern sqInt ioPositionOfWindow(sqIntptr_t windowIndex);
 
-/* ioPositionOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
+/* ioPositionOfNativeWindow: arg is void * windowHandle, defined as usqIntptr_t
  * for convenience. Return the pos of the specified native window in
  * (left<<16 || top) format like ioScreenSize. The position is the origin of the
  * host window and not its content, so it does not offset the position by the
@@ -66,7 +66,7 @@ extern sqInt ioPositionOfWindow(sqIntptr_t windowIndex);
  * Return -1 (as above) for failure - typically invalid windowHandle */
 extern sqInt ioPositionOfNativeWindow(usqIntptr_t windowHandle);
 
-/* as per ioPositionOfNativeWindow, but answers the position of the drawing
+/* as per ioPositionOfNativeWindow, but returns the position of the drawing
  * surface (the inside) of the window.
  */
 extern sqInt ioPositionOfNativeDisplay(usqIntptr_t windowHandle);
@@ -78,12 +78,12 @@ extern sqInt ioPositionOfNativeDisplay(usqIntptr_t windowHandle);
  * format or -1 for failure, as above */
 extern sqInt ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y);
 
-/* ioSetTitleOfWindow: args are sqIntptr_t windowIndex, char* newTitle and
+/* ioSetTitleOfWindow: args are sqIntptr_t windowIndex, char * newTitle and
  * sqInt size of new title. Fail with -1 if windowIndex is invalid, string is too
 long for platform etc. Leave previous title in place on failure */
 sqInt ioSetTitleOfWindow(sqIntptr_t windowIndex, char *newTitle, sqInt sizeOfTitle);
 
-/* ioSetIconOfWindow: args are int windowIndex windowIndex, char* iconPath and
+/* ioSetIconOfWindow: args are int windowIndex windowIndex, char * iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
 extern sqInt ioSetIconOfWindow(sqIntptr_t windowIndex, char *iconPath, sqInt sizeOfPath);
@@ -106,8 +106,8 @@ extern sqInt ioPositionOfScreenWorkArea(sqIntptr_t windowIndex);
  */
 extern sqInt ioSizeOfScreenWorkArea(sqIntptr_t windowIndex);
 
-/* ioScreenRectangles answer an Array of screen coordinates as pairs of packed
- * points, origin, extent for each screen.
+/* ioScreenRectangles returns an Array of screen coordinates as pairs of packed
+ * points, origin, extent for each screen, or 0 if none can be found.
  */
 extern sqInt ioScreenRectangles(void);
 

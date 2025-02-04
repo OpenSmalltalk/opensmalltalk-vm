@@ -35,10 +35,10 @@
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+ and its contributors", in the same place and form as other third-party acknowledgments.
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
  such third-party acknowledgments.
  */
 
@@ -56,7 +56,7 @@
 extern struct VirtualMachine *interpreterProxy;
 
 /* WARNING, WARNING, WARNING, Will Robertson!! This is a partial implementation
- * that cannot create new windows.  It simply answers or operates on the main
+ * that cannot create new windows.  It simply returns or operates on the main
  * Squeak window, which is all that Terf needs.
  *
  * Regarding coordinate system transformations use recordWindowEvent:window: in
@@ -83,10 +83,10 @@ closeWindow(wIndexType windowIndex)
 {
 	NSWindow *window = nsWindowFromIndex(windowIndex);
 
-	if (!window) 
+	if (!window)
 		return 0;
 	windowBlockFromIndex(windowIndex)->context = NULL;
-	RemoveWindowBlock(windowBlockFromIndex(windowIndex));	
+	RemoveWindowBlock(windowBlockFromIndex(windowIndex));
 	[window close];
 	return 1;
 }
@@ -99,9 +99,9 @@ ioPositionOfWindow(wIndexType windowIndex)
 	if (!window)
 		return -1;
 
-    NSRect win = [window frame];
-	return packedDoubleXY(win.origin.x,
-						  yZero() - (win.origin.y + win.size.height));
+	NSRect frame = [window frame];
+	return packedDoubleXY(frame.origin.x,
+						  yZero() - (frame.origin.y + frame.size.height));
 }
 
 sqInt
@@ -110,10 +110,10 @@ ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 	if (windowIndex != 1)
 		return 0;
 	NSWindow *window = nsWindowFromIndex(windowIndex);
-    NSRect frame = [window frame];
-    frame.origin.x = x;
-    frame.origin.y = yZero() - (y + frame.size.height);
-    [window setFrame: frame display: YES];    
+	NSRect frame = [window frame];
+	frame.origin.x = x;
+	frame.origin.y = yZero() - (y + frame.size.height);
+	[window setFrame: frame display: YES];
 
 	return 0;
 }
@@ -126,9 +126,9 @@ ioSizeOfWindow(wIndexType windowIndex)
 	if (!window)
 		return -1;
 
-	NSRect win = [window frame];
+	NSRect frame = [window frame];
 
-	return packedDoubleXY(win.size.width,win.size.height);
+	return packedDoubleXY(frame.size.width,frame.size.height);
 }
 
 sqInt
@@ -138,10 +138,10 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 		return 0;
 
 	NSWindow *window = nsWindowFromIndex(windowIndex);
-    NSRect frame = [window convertRectToBacking: [window frame]];
-    frame.size.width = x;
-    frame.size.height = y;
-    [window setFrame: [window convertRectFromBacking: frame] display:YES];  
+	NSRect frame = [window frame];
+	frame.size.width = x;
+	frame.size.height = y;
+	[window setFrame: frame display: YES];
 
 	return 0;
 }
@@ -154,10 +154,10 @@ ioSetTitleOfWindow(wIndexType windowIndex, char *newTitle, sqInt sizeOfTitle)
 	if (!window)
 		return 0;
 
-    NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
+	NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
 
-    [window setTitle: title];
-    RELEASEOBJ(title);
+	[window setTitle: title];
+	RELEASEOBJ(title);
 
 	return 1;
 }
@@ -215,7 +215,7 @@ windowDescriptorBlock *entry;
 
 
 wHandleType
-windowHandleFromIndex(wIndexType windowIndex) 
+windowHandleFromIndex(wIndexType windowIndex)
 {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
@@ -253,7 +253,7 @@ windowDescriptorBlock *entry;
 	return 0;
 }
 
-static sqInt nextIndex = 1; 
+static sqInt nextIndex = 1;
 
 /* Create a new entry in the linkedlist of windows.
  * If the calloc fails, return NULL which will then go back to the
@@ -316,10 +316,10 @@ ioPositionOfNativeWindow(usqIntptr_t windowHandle)
 		return -1;
 
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
-    NSRect win = [window frame];
+	NSRect frame = [window frame];
 
-	return packedDoubleXY(win.origin.x,
-						  yZero() - (win.origin.y + win.size.height));
+	return packedDoubleXY(frame.origin.x,
+						  yZero() - (frame.origin.y + frame.size.height));
 }
 
 sqInt
@@ -329,20 +329,20 @@ ioSizeOfNativeWindow(usqIntptr_t windowHandle)
 		return -1;
 
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
-	NSRect win = [window frame];
+	NSRect frame = [window frame];
 
-	return packedDoubleXY(win.size.width,win.size.height);
+	return packedDoubleXY(frame.size.width,frame.size.height);
 }
 
 static int
 titlebarHeight(NSWindow *window,NSRect win)
 {
-    NSSize contentSize = [window contentRectForFrameRect: win].size;
+	NSSize contentSize = [window contentRectForFrameRect: win].size;
 
-    return win.size.height - contentSize.height;
+	return win.size.height - contentSize.height;
 }
 
-/* ioPositionOfNativeDisplay answers the origin of the client rectangle,
+/* ioPositionOfNativeDisplay returns the origin of the client rectangle,
  * in screen coordinates of the specified window handle, i.e. of the
  * rectangle below the title bar.
  */
@@ -353,14 +353,14 @@ ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 		return -1;
 
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
-    NSRect win = [window frame];
+	NSRect frame = [window frame];
 
-	return packedDoubleXY(win.origin.x,
-						  yZero() + titlebarHeight(window,win)
-						  - (win.origin.y + win.size.height));
+	return packedDoubleXY(frame.origin.x,
+						  yZero() + titlebarHeight(window,frame)
+						  - (frame.origin.y + frame.size.height));
 }
 
-/* ioSizeOfNativeDisplay answers the extent of the client rectangle,
+/* ioSizeOfNativeDisplay returns the extent of the client rectangle,
  * in screen coordinates of the specified window handle, i.e. of the
  * rectangle below the title bar.
  */
@@ -371,36 +371,38 @@ ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 		return -1;
 
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
-    NSRect win = [window frame];
+	NSRect frame = [window frame];
 
-	return packedDoubleXY(win.size.width,
-						  win.size.height-titlebarHeight(window,win));
+	return packedDoubleXY(frame.size.width,
+						  frame.size.height-titlebarHeight(window,frame));
 }
 
 /* Return the pixel origin (topleft) of the platform-defined working area
-   for the screen containing the given window. */
-/* copied from platforms/unix/vm-display-X11/sqUnixX11.c */
+ * for the screen containing the given window.
+ * copied from platforms/unix/vm-display-X11/sqUnixX11.c
+ */
 sqInt
 ioPositionOfScreenWorkArea(sqIntptr_t windowIndex)
 {
-    NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
-    NSRect frame = [screen visibleFrame];
+	NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
+	NSRect frame = [screen visibleFrame];
 	// 0@36 last we looked...
 	return packedDoubleXY(frame.origin.x,
 						  yZero() - (frame.origin.y + frame.size.height));
 }
 
 /* Return the pixel extent of the platform-defined working area
-   for the screen containing the given window. */
+ * for the screen containing the given window.
+ */
 sqInt
 ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
 {
-    NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
-    NSRect frame = [screen visibleFrame];
+	NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
+	NSRect frame = [screen visibleFrame];
 	return packedDoubleXY(frame.size.width,frame.size.height);
 }
 
-/* Answer an Array of screen coordinates as pairs of packed points, origin,
+/* Return an Array of screen coordinates as pairs of packed points, origin,
  * extent for each screen. So if there is one monitor the array has two entries.
  */
 sqInt
@@ -419,7 +421,7 @@ ioScreenRectangles(void)
 			(void)storeIntegerofObjectwithValue
 					(i * 2 + 1, a, packedDoubleXY(f.size.width,f.size.height));
 		}
-	return  a;
+	return a;
 }
 
 /* What happens with multiple monitors? There's a unified address space that
