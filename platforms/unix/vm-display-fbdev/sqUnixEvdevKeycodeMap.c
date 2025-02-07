@@ -589,6 +589,11 @@ int i;
     baseKey[KEY_MICMUTE]  = 0x;
     shiftKey[KEY_MICMUTE] = 0x;
 **************/
+    /* NB:  Command-.  NOT  Ctrl-.
+       Checked in setKeyCode() "sqUnixEvdevMeyMouse.c"
+     */
+    setInterruptKeycode( baseKey[KEY_DOT] & (CommandKeyBit << 8) );
+
     keyMapInitialized = 1; /* C thinks this means TRUE */
 }
 
