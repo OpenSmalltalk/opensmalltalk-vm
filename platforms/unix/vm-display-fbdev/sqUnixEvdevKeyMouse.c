@@ -340,7 +340,7 @@ static void setKeyCode(struct input_event* evt) {
 			       0, /* keyUp: C FALSE */
 			       modifierBits);
 	/* initially cmd-. (command+period) */
-	if ((squeakKeyCode && (modifierBits << 8)) == getInterruptKeycode())	
+	if ((squeakKeyCode & (modifierBits << 8)) == getInterruptKeycode())	
 	  setInterruptPending(true);
 
 	  break;
