@@ -41,15 +41,15 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
     unsigned int width, 
     unsigned int height, 
     int nativeDepth,
-    unsigned int* bitmap,
-    char* jpegCompressStruct,
-    char* jpegErrorMgr2Struct,
+    unsigned int *bitmap,
+    unsigned char *jpegCompressStruct,
+    unsigned char *jpegErrorMgr2Struct,
     int quality,
     int progressiveFlag, 
     unsigned int pixelsPerWord, 
     unsigned int wordsPerRow,
-    char* destination,
-    unsigned int* destinationSizePtr)
+    unsigned char *destination,
+    unsigned int *destinationSizePtr)
 {
 	jmp_buf jb;
 
@@ -138,12 +138,12 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
 
 void
 primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
-    char* jpegDecompressStruct,
-    char* jpegErrorMgr2Struct,
-    char* source,
+    unsigned char *jpegDecompressStruct,
+    unsigned char *jpegErrorMgr2Struct,
+    unsigned char *source,
     unsigned int sourceSize,
     int ditherFlag,
-    unsigned int* bitmap,
+    unsigned int *bitmap,
     unsigned int pixelsPerWord,
     unsigned int wordsPerRow,
     int nativeDepth)
@@ -287,10 +287,10 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 
 void
 primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
-    char* jpegDecompressStruct,
-    char* source, 
+    unsigned char *jpegDecompressStruct,
+    unsigned char *source, 
     unsigned int sourceSize,
-    char* jpegErrorMgr2Struct)
+    unsigned char *jpegErrorMgr2Struct)
 {
 	jmp_buf jb;
 
