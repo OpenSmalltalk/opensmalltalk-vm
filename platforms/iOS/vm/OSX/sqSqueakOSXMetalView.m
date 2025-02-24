@@ -243,7 +243,9 @@ typedef struct LayerTransformation
 	 */
 	if(!syncNeeded) {
 		syncNeeded = YES;
-		[self setNeedsDisplayInRect: [self frame]];
+        [gDelegateApp runBlockOnMainThread:^{
+            [self setNeedsDisplayInRect: [self frame]];
+        }];
 	}
 }
 

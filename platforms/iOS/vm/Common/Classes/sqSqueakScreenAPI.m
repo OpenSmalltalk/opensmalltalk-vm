@@ -17,10 +17,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -44,6 +44,8 @@ such third-party acknowledgments.
 
 #ifdef BUILD_FOR_OSX
 # import "sqMacHostWindow.h"
+#import "SqueakOSXAppDelegate.h"
+extern SqueakOSXAppDelegate *gDelegateApp;
 #else
 # include "SqueakNoOGLIPhoneAppDelegate.h"
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
@@ -51,8 +53,14 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 
 
 sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
+	__block id<NSWindowDelegate> answer;
+	[gDelegateApp runBlockOnMainThread:^{
+		answer = ((__bridge NSWindow *) windowHandleFromIndex(1)).delegate;
+	}];
+
+
 #ifdef BUILD_FOR_OSX
-	return ((__bridge NSWindow *) windowHandleFromIndex(1)).delegate;
+	return answer;
 #else
 	return [gDelegateApp screenAndWindow];
 #endif
@@ -60,13 +68,17 @@ sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
 
 double ioScreenScaleFactor(void) {
 	//API Documented
-		 
-	return [getMainWindowDelegate() ioScreenScaleFactor];
+	__block double answer;
+
+	[gDelegateApp runBlockOnMainThread:^{
+		answer = [getMainWindowDelegate() ioScreenScaleFactor];
+	}];
+	return answer;
 }
 
 sqInt ioScreenSize(void) {
 	//API Documented
-		 
+
 	return [getMainWindowDelegate() ioScreenSize];
 }
 
@@ -101,7 +113,7 @@ sqInt ioShowDisplay(
 				  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
 
 	//API Documented
-	
+
 	ioShowDisplayOnWindow((unsigned char *)pointerForOop(dispBitsIndex),  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
 }
@@ -127,12 +139,12 @@ ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width,
 
 char *ioGetWindowLabel(void)
 {
-    return [getMainWindowDelegate() ioGetTitle];
+	return [getMainWindowDelegate() ioGetTitle];
 }
 
 sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
 {
-    [getMainWindowDelegate() ioSetTitle: lblIndex length: sz];
+	[getMainWindowDelegate() ioSetTitle: lblIndex length: sz];
 	return 1;
 }
 

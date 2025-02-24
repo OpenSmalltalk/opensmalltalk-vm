@@ -72,11 +72,11 @@ char *exeName;
 extern sqInt interpret(void);  //This is a VM Callback
 
 - (id) init {
-    self = [super init];
-    if (self) {
-        [self setNoHandlers: NO];
-    }
-    return self;
+	self = [super init];
+	if (self) {
+		[self setNoHandlers: NO];
+	}
+	return self;
 }
 
 - (void) setupFloat {
@@ -91,15 +91,15 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setInfoPlistInterfaceLogic:(sqSqueakInfoPlistInterface *)anObject {
-    infoPlistInterfaceLogic = anObject;
+	infoPlistInterfaceLogic = anObject;
 }
 
 - (sqSqueakInfoPlistInterface *) infoPlistInterfaceLogic {
-    if (!infoPlistInterfaceLogic) {
-        [self fetchPreferences];
-    }
+	if (!infoPlistInterfaceLogic) {
+		[self fetchPreferences];
+	}
 
-    return infoPlistInterfaceLogic;
+	return infoPlistInterfaceLogic;
 }
 
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
@@ -114,7 +114,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 - (void) doHeadlessSetup {
 #ifndef PharoVM
-    gSqueakHeadless = false;
+	gSqueakHeadless = false;
 #endif
 }
 
@@ -130,7 +130,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupMenus {
-//    nothing to do so far since the menu is setup in the MainMenu.nib file
+//	nothing to do so far since the menu is setup in the MainMenu.nib file
 }
 
 - (void) setupTimers {
@@ -193,15 +193,16 @@ extern sqInt interpret(void);  //This is a VM Callback
 	if (![self readImageIntoMemory])
 		return;
 
-    // The headless setup is now after the image setup on purpose. This is to
-    // be able to select an image with the popup even when running headless
-	[self doHeadlessSetup];
-
-    [self setupMenus];
-	[self setupAIO];
-	[self setupBrowserLogic];
-	[self setupSoundLogic];
-	[gDelegateApp makeMainWindow];
+	// The headless setup is now after the image setup on purpose. This is to
+	// be able to select an image with the popup even when running headless
+	[gDelegateApp runBlockOnMainThread:^{
+		[self doHeadlessSetup];
+		[self setupMenus];
+		[self setupAIO];
+		[self setupBrowserLogic];
+		[self setupSoundLogic];
+		[gDelegateApp makeMainWindow];
+	  }];
 
 	interpret();
   }
@@ -209,7 +210,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 
 - (void) MenuBarRestore {
-    //    nothing to do so far since the menu is setup in the MainMenu.nib file
+	//	nothing to do so far since the menu is setup in the MainMenu.nib file
 }
 
 - (void) ioExit {
@@ -229,15 +230,15 @@ extern sqInt reportStackHeadroom;
 
 #ifndef SPURVM
 # if COGVM
-    void sqMacMemoryFree();
+	void sqMacMemoryFree();
 # else
-    void sqMacMemoryFree(void);
+	void sqMacMemoryFree(void);
 # endif
 #endif
 
 - (void)dealloc {
 	sqMacMemoryFree();
-    SUPERDEALLOC
+	SUPERDEALLOC
 }
 
 @end
@@ -265,6 +266,6 @@ convertToSqueakTime(NSDate *givenDate)
 #  error: cannot determine timezone correction
 #endif
 	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
-     and 52 non-leap years later than Squeak. */
+	 and 52 non-leap years later than Squeak. */
 	return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }

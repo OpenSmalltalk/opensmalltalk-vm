@@ -55,6 +55,10 @@
 
 extern struct VirtualMachine *interpreterProxy;
 
+// for runBlockOnMainThread:
+#import "SqueakOSXAppDelegate.h"
+extern SqueakOSXAppDelegate *gDelegateApp;
+
 /* WARNING, WARNING, WARNING, Will Robertson!! This is a partial implementation
  * that cannot create new windows.  It simply returns or operates on the main
  * Squeak window, which is all that Terf needs.
@@ -87,7 +91,9 @@ closeWindow(wIndexType windowIndex)
 		return 0;
 	windowBlockFromIndex(windowIndex)->context = NULL;
 	RemoveWindowBlock(windowBlockFromIndex(windowIndex));
-	[window close];
+	[gDelegateApp runBlockOnMainThread:^{
+		[window close];
+	}];
 	return 1;
 }
 
@@ -113,8 +119,9 @@ ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 	NSRect frame = [window frame];
 	frame.origin.x = x;
 	frame.origin.y = yZero() - (y + frame.size.height);
-	[window setFrame: frame display: YES];
-
+	[gDelegateApp runBlockOnMainThread:^{
+		[window setFrame: frame display: YES];
+	}];
 	return 0;
 }
 
@@ -138,11 +145,12 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 		return 0;
 
 	NSWindow *window = nsWindowFromIndex(windowIndex);
-	NSRect frame = [window frame];
-	frame.size.width = x;
-	frame.size.height = y;
-	[window setFrame: frame display: YES];
-
+	[gDelegateApp runBlockOnMainThread:^{
+		NSRect frame = [window frame];
+		frame.size.width = x;
+		frame.size.height = y;
+		[window setFrame: frame display: YES];
+	}];
 	return 0;
 }
 
@@ -155,8 +163,9 @@ ioSetTitleOfWindow(wIndexType windowIndex, char *newTitle, sqInt sizeOfTitle)
 		return 0;
 
 	NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
-
-	[window setTitle: title];
+	[gDelegateApp runBlockOnMainThread:^{
+		[window setTitle: title];
+	}];
 	RELEASEOBJ(title);
 
 	return 1;

@@ -104,6 +104,7 @@ void
 snd_SetVolume(double left, double right)
 { [gDelegateApp.squeakApplication.soundInterfaceLogic snd_SetOutputLevel: (left + right) / 2.0]; }
 
+#ifdef BUILD_FOR_OSX
 /* Terf SqSoundVersion 1.2 improvements */
 sqInt
 snd_SetRecordBufferFrameCount(sqInt frameCount)
@@ -149,11 +150,11 @@ getSoundRecorderDeviceUID(sqInt i)
 
 void
 setDefaultSoundPlayer(char *deviceName)
-{ return [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundPlayer: deviceName]; }
+{ [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundPlayer: deviceName]; }
 
 void
 setDefaultSoundRecorder(char *deviceName)
-{ return [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundRecorder: deviceName]; }
+{ [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundRecorder: deviceName]; }
 
 
 /* Terf SqSoundVersion 1.3 improvements */
@@ -164,3 +165,55 @@ snd_SupportsAEC(void)
 sqInt
 snd_EnableAEC(sqInt flag)
 { return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_EnableAEC: flag]; }
+#else
+sqInt
+snd_SetRecordBufferFrameCount(sqInt frameCount)
+{ return 0; }
+
+int
+snd_GetRecordLevel(void)
+{ return 0;}
+
+sqInt
+getNumberOfSoundPlayerDevices(void)
+{ return 0;}
+
+sqInt
+getNumberOfSoundRecorderDevices(void)
+{ return 0; }
+
+char *
+getDefaultSoundPlayer(void)
+{ return NULL; }
+
+char *
+getDefaultSoundRecorder(void)
+{ return NULL; }
+
+char *
+getSoundPlayerDeviceName(sqInt i)
+{ return NULL; }
+
+char *
+getSoundRecorderDeviceName(sqInt i)
+{ return NULL; }
+
+void
+setDefaultSoundPlayer(char *deviceName)
+{}
+
+void
+setDefaultSoundRecorder(char *deviceName)
+{ }
+
+
+/* Terf SqSoundVersion 1.3 improvements */
+sqInt
+snd_SupportsAEC(void)
+{ return 0; }
+
+sqInt
+snd_EnableAEC(sqInt flag)
+{ return 0; }
+
+#endif

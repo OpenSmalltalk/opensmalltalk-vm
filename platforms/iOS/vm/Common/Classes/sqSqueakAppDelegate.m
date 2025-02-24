@@ -41,6 +41,18 @@ such third-party acknowledgments.
 #import "sqSqueakAppDelegate.h"
 #import "sqMacHostWindow.h"
 
+extern sqSqueakAppDelegate *gDelegateApp;
+
+void *runBlock(void *arg) {
+    @autoreleasepool {
+        // Retrieve the block
+        void (^block)(void) = (__bridge_transfer void (^)(void))arg;
+        // Execute the block
+        block();
+    }
+    return NULL;
+}
+
 @implementation sqSqueakAppDelegate
 @synthesize squeakApplication,squeakThread;
 
@@ -96,12 +108,50 @@ such third-party acknowledgments.
 - (void) placeMainWindowOnLargerScreenWidth: (sqInt) width height: (sqInt) height {};
 
 - (void) workerThreadStart {
+    
+
+
+ /*   pthread_t thread;
+    pthread_attr_t attr;
+    size_t stackSize = 64 * 1024 * 1024; // Set stack size to 16 MB
+
+    // Initialize thread attributes
+    pthread_attr_init(&attr);
+    // Set the stack size attribute
+    pthread_attr_setstacksize(&attr, stackSize);
+
+    // Define the block to be executed on the thread
+    void (^block)(void) = ^{
+        [self.squeakApplication runSqueak];
+    };
+
+    // Create the thread with the block as an argument
+    pthread_create(&thread, &attr, runBlock, (__bridge_retained void *)block);
+    if (true)
+        return;
+    
+    /*     // Dispatch a task to the custom serial queue
+     dispatch_queue_t mySerialQueue = dispatch_queue_create("org.squeak.interpreter", DISPATCH_QUEUE_SERIAL);
+     dispatch_async(mySerialQueue, ^{
+         [self.squeakApplication runSqueak];
+     });
+    if (true)
+        return;
+    
+/*    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self.squeakApplication runSqueak];
+    });
+    if (true)
+        return;
+*/
+    
 	// Run the squeak process in a worker thread
 	squeakThread = [[NSThread alloc] initWithTarget: self.squeakApplication
 												 selector: @selector(runSqueak)
 												   object:nil];
 #if COGVM
 	[squeakThread setStackSize: [squeakThread stackSize]*4];
+    squeakThread.name = @"org.squeak.interpreter";
 #endif
 
 	[squeakThread start];
@@ -119,5 +169,15 @@ such third-party acknowledgments.
 }
 
 
+- (void)runBlockOnMainThread:(void (^)(void))block {
+    if ([NSThread isMainThread]) {
+        // If we are already on the main thread, execute the block directly
+        block();
+    } else {
+        // If we are not on the main thread, dispatch the block to the main queue
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
 
 @end
+

@@ -89,8 +89,8 @@ SqueakOSXAppDelegate *gDelegateApp;
 		// Push the startup schema and open file events into the event queue.
 		if(self.dragItems && [self.dragItems count] > 0)
 			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: [self.dragItems count]];
-		[self singleThreadStart];
-//	[self workerThreadStart];
+	//	[self singleThreadStart];
+	[self workerThreadStart];
 	}
     
 #ifdef PharoVM
