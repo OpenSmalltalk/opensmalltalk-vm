@@ -22,6 +22,7 @@
 #endif
 
 extern sqInt tryLockVMOwnerTo(sqInt threadIndex);
+extern sqInt vmIsOwned(void);
 extern sqInt accessorDepthForPrimitiveIndex(sqInt primIndex);
 extern usqInt argumentCountAddress(void);
 extern void callForCogCompiledCodeCompaction(void);

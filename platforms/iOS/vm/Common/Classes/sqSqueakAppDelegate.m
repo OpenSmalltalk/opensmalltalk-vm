@@ -36,7 +36,6 @@ and its contributors", in the same place and form as other third-party acknowled
 Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
 such third-party acknowledgments.
 */
-//
 
 #import "sqSqueakAppDelegate.h"
 #import "sqMacHostWindow.h"
@@ -44,21 +43,21 @@ such third-party acknowledgments.
 extern sqSqueakAppDelegate *gDelegateApp;
 
 void *runBlock(void *arg) {
-    @autoreleasepool {
-        // Retrieve the block
-        void (^block)(void) = (__bridge_transfer void (^)(void))arg;
-        // Execute the block
-        block();
-    }
-    return NULL;
+	@autoreleasepool {
+		// Retrieve the block
+		void (^block)(void) = (__bridge_transfer void (^)(void))arg;
+		// Execute the block
+		block();
+	}
+	return NULL;
 }
 
 @implementation sqSqueakAppDelegate
 @synthesize squeakApplication,squeakThread;
 
 - (void)dealloc {
-    RELEASEOBJ(squeakApplication);
-    SUPERDEALLOC
+	RELEASEOBJ(squeakApplication);
+	SUPERDEALLOC
 }
 
 - (void) makeMainWindow {
@@ -77,9 +76,9 @@ void *runBlock(void *arg) {
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 
-    extern sqInt getFullScreenFlag(void);
-    if (!getFullScreenFlag())
-        [self placeMainWindowOnLargerScreenGivenWidth: width height: height];
+	extern sqInt getFullScreenFlag(void);
+	if (!getFullScreenFlag())
+		[self placeMainWindowOnLargerScreenGivenWidth: width height: height];
 
 	windowBlock = AddWindowBlock();
 	windowBlock->handle =   (__bridge void*) createdWindow;
@@ -93,73 +92,32 @@ void *runBlock(void *arg) {
 	ioSetFullScreen(getFullScreenFlag());
 }
 
-- (sqSqueakMainApplication *) makeApplicationInstance {
-	return nil;
-}
+- (sqSqueakMainApplication *) makeApplicationInstance { return nil; }
 
-- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds {
-	return 0.0333f;
-}
+- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds { return 0.0333f; }
 
 - (void) makeMainWindowOnMainThread {};
 
-- (id) createPossibleWindow { return NULL;};
+- (id) createPossibleWindow { return NULL; };
 
 - (void) placeMainWindowOnLargerScreenWidth: (sqInt) width height: (sqInt) height {};
 
 - (void) workerThreadStart {
-    
-
-
- /*   pthread_t thread;
-    pthread_attr_t attr;
-    size_t stackSize = 64 * 1024 * 1024; // Set stack size to 16 MB
-
-    // Initialize thread attributes
-    pthread_attr_init(&attr);
-    // Set the stack size attribute
-    pthread_attr_setstacksize(&attr, stackSize);
-
-    // Define the block to be executed on the thread
-    void (^block)(void) = ^{
-        [self.squeakApplication runSqueak];
-    };
-
-    // Create the thread with the block as an argument
-    pthread_create(&thread, &attr, runBlock, (__bridge_retained void *)block);
-    if (true)
-        return;
-    
-    /*     // Dispatch a task to the custom serial queue
-     dispatch_queue_t mySerialQueue = dispatch_queue_create("org.squeak.interpreter", DISPATCH_QUEUE_SERIAL);
-     dispatch_async(mySerialQueue, ^{
-         [self.squeakApplication runSqueak];
-     });
-    if (true)
-        return;
-    
-/*    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [self.squeakApplication runSqueak];
-    });
-    if (true)
-        return;
-*/
-    
 	// Run the squeak process in a worker thread
 	squeakThread = [[NSThread alloc] initWithTarget: self.squeakApplication
-												 selector: @selector(runSqueak)
-												   object:nil];
+										   selector: @selector(runSqueak)
+											 object: nil];
 #if COGVM
 	[squeakThread setStackSize: [squeakThread stackSize]*4];
-    squeakThread.name = @"org.squeak.interpreter";
 #endif
+	squeakThread.name = @"org.squeak.interpreter";
 
 	[squeakThread start];
 }
 
 - (void) singleThreadStart {
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
+	// This the carbon logic model described by
+	// http://developer.apple.com/qa/qa2001/qa1061.html
 
 	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
 									  target: self.squeakApplication
@@ -170,13 +128,10 @@ void *runBlock(void *arg) {
 
 
 - (void)runBlockOnMainThread:(void (^)(void))block {
-    if ([NSThread isMainThread]) {
-        // If we are already on the main thread, execute the block directly
-        block();
-    } else {
-        // If we are not on the main thread, dispatch the block to the main queue
-        dispatch_sync(dispatch_get_main_queue(), block);
-    }
+	if ([NSThread isMainThread])
+		block(); // If we are already on the main thread, execute the block directly
+	else // If we are not on the main thread, dispatch the block to the main queue
+		dispatch_sync(dispatch_get_main_queue(), block);
 }
 
 @end

@@ -463,7 +463,7 @@ static NoDbgRegParms void startVMThread(CogVMThread *vmThread);
 static NoDbgRegParms sqInt threadIndexisCompatibleWith(sqInt aThreadIndex, sqInt threadAffinity);
 extern sqInt tryLockVMOwnerTo(sqInt threadIndex);
 static CogVMThread * unusedThreadInfo(void);
-static int vmIsOwned(void);
+extern sqInt vmIsOwned(void);
 static NoDbgRegParms sqInt vmOwnerIsCompatibleWith(sqInt processThreadId);
 static NoDbgRegParms int vmOwnerIs(sqInt index);
 static NoDbgRegParms CogVMThread * vmThreadAt(sqInt index);
@@ -11926,10 +11926,10 @@ unusedThreadInfo(void)
 /*	Answer if the vm is owned */
 
 	/* CogThreadManager>>#vmIsOwned */
-static int
+sqInt
 vmIsOwned(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-	return (atomic_load((&GIV(vmOwner)))) != 0;
+	return (atomic_load((&GIV(vmOwner)))) > 0;
 }
 
 
@@ -36718,7 +36718,7 @@ primitiveInvokeObjectAsMethod(void)
     sqInt lookupClassTag;
     usqInt newObj;
     usqInt numBytes;
-    sqInt runArgs;
+    usqInt runArgs;
     sqInt runReceiver;
     char *sp;
     sqInt tagBits;
@@ -36733,7 +36733,7 @@ primitiveInvokeObjectAsMethod(void)
 	/* begin allocateNewSpaceSlots:format:classIndex: */
 	if (GIV(argumentCount) >= (numSlotsMask())) {
 		if (GIV(argumentCount) > 0xFFFFFFFFU) {
-			runArgs = ((usqInt) null);
+			runArgs = null;
 			goto l1;
 		}
 		newObj = GIV(freeStart) + BaseHeaderSize;
@@ -46098,9 +46098,9 @@ allWeakSurvivorsOnWeakList(void)
 				/* begin nextCorpseOrNil: */
 				assert(isYoung(corpse));
 				listOffset = ((((usqInt)(((long32At(corpse + 4)) & (identityHashHalfWordMask()))) << (formatFieldWidthShift())))) + ((((usqInt)((longAt(corpse)))) >> (formatShift())) & (formatMask()));
-				corpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+				corpse = (listOffset
+							? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+							: 0);
 			}
 			return 0;
 			return 0;
@@ -46963,9 +46963,9 @@ processEphemerons(void)
 			/* begin nextCorpseOrNil: */
 			assert(isYoung(ephemeronCorpse));
 			listOffset = ((((usqInt)(((long32At(ephemeronCorpse + 4)) & (identityHashHalfWordMask()))) << (formatFieldWidthShift())))) + ((((usqInt)((longAt(ephemeronCorpse)))) >> (formatShift())) & (formatMask()));
-			ephemeronCorpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+			ephemeronCorpse = (listOffset
+						? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+						: 0);
 		}
 		/* end fireEphemeronsOnEphemeronList */
 l1:;
@@ -47038,9 +47038,9 @@ processWeaklings(void)
 			/* begin nextCorpseOrNil: */
 			assert(isYoung(weakCorpse));
 			listOffset = ((((usqInt)(((long32At(weakCorpse + 4)) & (identityHashHalfWordMask()))) << (formatFieldWidthShift())))) + ((((usqInt)((longAt(weakCorpse)))) >> (formatShift())) & (formatMask()));
-			weakCorpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+			weakCorpse = (listOffset
+						? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+						: 0);
 		}
 		GIV(weakList) = null;
 	}
@@ -60892,8 +60892,8 @@ oldSpaceObjectAfter(sqInt objOop)
 static NoDbgRegParms NeverInline void
 outOfPlaceBecomeandcopyHashFlag(sqInt obj1, sqInt obj2, sqInt copyHashFlag)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt clone1;
-    sqInt clone2;
+    usqInt clone1;
+    usqInt clone2;
     sqInt hash;
 
 	clone1 = (((longAt(obj1)) & (classIndexMask())) == ClassMethodContextCompactIndex
@@ -68169,7 +68169,7 @@ prepareForSnapshot(void)
     sqInt largeChild;
     sqInt newEndOfMemory;
     sqInt next;
-    usqInt node;
+    sqInt node;
     SpurSegmentInfo *seg;
     sqInt smallChild;
     sqInt treeNode;

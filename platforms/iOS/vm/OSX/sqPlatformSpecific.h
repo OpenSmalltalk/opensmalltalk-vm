@@ -142,6 +142,9 @@ extern void reportMinimumUnusedHeadroom(void);
 /* these are used both in the STACKVM & the COGMTVM */
 # define ioOSThreadsEqual(a,b) pthread_equal(a,b)
 # define ioCurrentOSThread() pthread_self()
+
+extern sqOSThread guiThread;
+
 # if COGMTVM
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.
