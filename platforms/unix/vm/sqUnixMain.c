@@ -1955,6 +1955,11 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
+#if COGMTVM
+# define VM "MTVM"
+#else
+# define VM "VM"
+#endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
   char *info = (char *)malloc(8192);
@@ -1989,7 +1994,7 @@ getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s VM]\n", vm_date, cc_version, getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s " VM "]\n", vm_date, cc_version, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
