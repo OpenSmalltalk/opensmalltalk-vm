@@ -30,9 +30,11 @@ Considerations
   `configure` file:
 
   * `make` (Optional if you execute the commands in `Makefile` manually)
-  * `libtool`
-  * `autoconf` (currently, we actually use `autoconfg2.69`)
-  * `pkg-config`
+  * `libtool` (currently, version 2.4.7, version 2.5.4 requires update)
+  * `autoconf` (currently, version 2.69, version 2.72 requires update)
+  * `automake` (currently, version 1.16.5 or version 1.17)
+  * `pkg-config` (currently, version 0.29.2 from freedesktop.org)
+  * OR: `pkgconf pkg-config replacement` (version 2.3.0 from pkgconf.org)
 
   On Debian-derived Linuxen, these packages are sufficient. On
   EL-distributions, similar packages should do it.
@@ -50,7 +52,7 @@ Considerations
 Postscriptum
 ------------
 
-Some of the file sin this directory are reminiscent of a build process
+Some of the files in this directory are reminiscent of a build process
 that _still should work_ but has not been employed for some years now
 in favor of the infrastructure in the toplevel `building` directories.
 If you're curious, tho, look and `./build` or even `Squeak.spec.in`.
@@ -60,3 +62,4 @@ Eliot Miranda
 Jan 2010
 Tobias Pape
 2024-05-24
+
