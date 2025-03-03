@@ -126,12 +126,18 @@ void *runBlock(void *arg) {
 									   modes: @[NSDefaultRunLoopMode]];		
 }
 
-
 - (void)runBlockOnMainThread:(void (^)(void))block {
 	if ([NSThread isMainThread])
 		block(); // If we are already on the main thread, execute the block directly
 	else // If we are not on the main thread, dispatch the block to the main queue
 		dispatch_sync(dispatch_get_main_queue(), block);
+}
+
+- (void)runBlockAsyncOnMainThread:(void (^)(void))block {
+	if ([NSThread isMainThread])
+		block(); // If we are already on the main thread, execute the block directly
+	else // If we are not on the main thread, dispatch the block to the main queue
+		dispatch_async(dispatch_get_main_queue(), block);
 }
 
 @end

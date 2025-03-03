@@ -58,4 +58,5 @@ such third-party acknowledgments.
 - (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds;
 - (sqSqueakMainApplication *) makeApplicationInstance;
 - (void)runBlockOnMainThread:(void (^)(void))block;
+- (void)runBlockAsyncOnMainThread:(void (^)(void))block;
 @end

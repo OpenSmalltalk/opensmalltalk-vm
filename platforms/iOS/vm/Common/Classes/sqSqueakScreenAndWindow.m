@@ -42,24 +42,15 @@ such third-party acknowledgments.
 #import "sqMacHostWindow.h"
 
 #ifdef BUILD_FOR_OSX
-#import "SqueakOSXAppDelegate.h"
+# import "SqueakOSXAppDelegate.h"
 extern SqueakOSXAppDelegate *gDelegateApp;
 #else
-#import "SqueakNoOGLIPhoneAppDelegate.h"
+# import "SqueakNoOGLIPhoneAppDelegate.h"
 SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 #endif
 
-void MyProviderReleaseData (
-void *info,
-const void *data,
-size_t size
-);
-void MyProviderReleaseData (
-void *info,
-const void *data,
-size_t size
-) {
-}
+void
+MyProviderReleaseData(void *info, const void *data, size_t size) {}
 
 @interface sqSqueakScreenAndWindow()
 @property (nonatomic,strong) NSTimer *blip;
@@ -72,148 +63,151 @@ size_t size
 @synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,lastFlushTime,displayIsDirty;
 
 - (instancetype)init {
-self = [super init];
-if (self) {
-// Initialization code here.
-squeakUIFlushPrimaryDeferNMilliseconds = 0.0f;
-forceUpdateFlush = NO;
+	self = [super init];
+	if (self) { // Initialization code here.
+		squeakUIFlushPrimaryDeferNMilliseconds = 0.0f;
+		forceUpdateFlush = NO;
 #warning why is this YES in Pharo?
-displayIsDirty = NO;
-}
-return self;
+		displayIsDirty = NO;
+	}
+	return self;
 }
 
 - (double) ioScreenScaleFactor {
-return (double)[gDelegateApp.window backingScaleFactor];
+	return (double)[gDelegateApp.window backingScaleFactor];
 }
 
 - (sqInt) ioScreenSize {
-sqInt w, h;
-
+	sqInt w, h;
 #if BUILD_FOR_OSX
-__block NSRect screenSize;
+	__block NSRect screenSize;
 #else
-__block CGRect screenSize;
+	__block CGRect screenSize;
 #endif
 
-[gDelegateApp runBlockOnMainThread:^{
-screenSize = [gDelegateApp.mainView sqScreenSize];
-}];
+	[gDelegateApp runBlockOnMainThread:^{
+		screenSize = [gDelegateApp.mainView sqScreenSize];
+	}];
 
-w = (sqInt) screenSize.size.width;
-h = (sqInt) screenSize.size.height;
+	w = (sqInt) screenSize.size.width;
+	h = (sqInt) screenSize.size.height;
 
-return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-- (char *) ioGetTitle { return [gDelegateApp.window.title UTF8String]; }
+- (char *) ioGetTitle { return (char *)[gDelegateApp.window.title UTF8String]; }
 
 - (void)   ioSetTitle: (void *)titleBytes length: (int)len {
 
-NSString *title = [[NSString alloc]
-initWithBytes: titleBytes
-length: len
-encoding: NSUTF8StringEncoding];
-[gDelegateApp.window setTitle: title];
-RELEASEOBJ(title);
+	NSString *title = [[NSString alloc]
+							initWithBytes: titleBytes
+							length: len
+							encoding: NSUTF8StringEncoding];
+	[gDelegateApp.window setTitle: title];
+	RELEASEOBJ(title);
 }
 
 - (void) ioForceDisplayUpdate {
-lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
-self.displayIsDirty = NO;
-self.forceUpdateFlush = NO;
+	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
+	self.displayIsDirty = NO;
+	self.forceUpdateFlush = NO;
 
-[[self getMainView] preDrawThelayers];
+	[[self getMainView] preDrawThelayers];
 
-//SQK-24
-//javier_diaz_r@mac.com iOS VM problems with dragging a morph and PasteUpMorph>>flashRects:color:
-if ([NSThread isMainThread]) {
-[[self getMainView] drawThelayers];
-} else {
-dispatch_async(dispatch_get_main_queue(), ^{   //note try sync not async, I wonder if that would be an issue?
-[[self getMainView] drawThelayers];
-});
-}
+	//SQK-24
+	//javier_diaz_r@mac.com iOS VM problems with dragging a morph and PasteUpMorph>>flashRects:color:
+	[gDelegateApp runBlockAsyncOnMainThread:^{ // note try sync not async, I wonder if that would be an issue?
+		[[self getMainView] drawThelayers];
+	}];
 }
 
 - (int) ioShowDisplayOnWindowActual: (unsigned char*) dispBitsIndex
-width: (int) width 
-height: (int) height
-depth: (int) depth
-affectedL: (int) affectedL
-affectedR: (int) affectedR
-affectedT: (int) affectedT
-affectedB: (int) affectedB
-windowIndex: (int) passedWindowIndex {
+		width: (int) width 
+		height: (int) height
+		depth: (int) depth
+		affectedL: (int) affectedL
+		affectedR: (int) affectedR
+		affectedT: (int) affectedT
+		affectedB: (int) affectedB
+		windowIndex: (int) passedWindowIndex {
 
-static CGColorSpaceRef colorspace = NULL;
-windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(passedWindowIndex);	
+	static CGColorSpaceRef colorspace = NULL;
+	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(passedWindowIndex);	
 
-if (colorspace == NULL) {
-colorspace = CGColorSpaceCreateDeviceRGB();
-//Special case of first draw
-[self ioShowDisplayOnWindow:dispBitsIndex width:width height: height depth: depth affectedL: 0 affectedR: width affectedT: 0 affectedB: height windowIndex: passedWindowIndex];
-//		[self ioForceDisplayUpdate];
-return 0;
-}
+	if (!colorspace) {
+		colorspace = CGColorSpaceCreateDeviceRGB();
+		//Special case of first draw
+		[self ioShowDisplayOnWindow:dispBitsIndex width:width height: height depth: depth affectedL: 0 affectedR: width affectedT: 0 affectedB: height windowIndex: passedWindowIndex];
+		//		[self ioForceDisplayUpdate];
+		return 0;
+	}
 
-if (affectedL < 0) affectedL = 0;
-if (affectedT < 0) affectedT = 0;
-if (affectedR > width) affectedR = width;
-if (affectedB > height) affectedB = height;
+	if (affectedL < 0) affectedL = 0;
+	if (affectedT < 0) affectedT = 0;
+	if (affectedR > width) affectedR = width;
+	if (affectedB > height) affectedB = height;
 
-if ((targetWindowBlock->handle == nil) || ((affectedR - affectedL) <= 0) || ((affectedB - affectedT) <= 0)){
-return 0;
-}
+	if ((targetWindowBlock->handle == nil)
+	 || ((affectedR - affectedL) <= 0)
+	 || ((affectedB - affectedT) <= 0))
+		return 0;
 
-CGRect clip = CGRectMake((CGFloat)affectedL,(CGFloat)(height-affectedB), (CGFloat)(affectedR-affectedL), (CGFloat)(affectedB-affectedT));
-[gDelegateApp runBlockOnMainThread:^{
-[gDelegateApp.mainView drawImageUsingClip: clip];
-}];
+	CGRect clip = CGRectMake((CGFloat)affectedL,(CGFloat)(height-affectedB), (CGFloat)(affectedR-affectedL), (CGFloat)(affectedB-affectedT));
+	[gDelegateApp runBlockOnMainThread:^{
+		[gDelegateApp.mainView drawImageUsingClip: clip];
+	}];
 
-self.displayIsDirty = YES;
+	self.displayIsDirty = YES;
 
-if ((targetWindowBlock->width != width || targetWindowBlock->height  != height)) {
-targetWindowBlock->width = width;
-targetWindowBlock->height = height; 
-}
+	if ((targetWindowBlock->width != width || targetWindowBlock->height  != height)) {
+		targetWindowBlock->width = width;
+		targetWindowBlock->height = height; 
+	}
 
-return 0;	
+	return 0;	
 }
 
 - (void) ioForceDisplayUpdateFlush: (NSTimer*)theTimer {
-NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-if (self.displayIsDirty && ((now - self.lastFlushTime) > squeakUIFlushPrimaryDeferNMilliseconds)) {
-self.lastFlushTime = now;
-self.forceUpdateFlush = YES;
-}
+	NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+	if (self.displayIsDirty
+	 && ((now - self.lastFlushTime) > squeakUIFlushPrimaryDeferNMilliseconds)) {
+		self.lastFlushTime = now;
+		self.forceUpdateFlush = YES;
+	}
 }
 
-- (int)   ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
-width: (int) width 
-height: (int) height
-depth: (int) depth
-affectedL: (int) affectedL
-affectedR: (int) affectedR
-affectedT: (int) affectedT
-affectedB: (int) affectedB
-windowIndex: (int) passedWindowIndex {
-int value;
-value = [self ioShowDisplayOnWindowActual:dispBitsIndex width: width height: height depth:depth affectedL:affectedL affectedR:affectedR affectedT:affectedT affectedB:affectedB windowIndex: passedWindowIndex];
-if (!self.blip) {
-if (squeakUIFlushPrimaryDeferNMilliseconds == 0.0f) 
-squeakUIFlushPrimaryDeferNMilliseconds =  [gDelegateApp squeakUIFlushPrimaryDeferNMilliseconds];
+- (int) ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
+		width: (int) width 
+		height: (int) height
+		depth: (int) depth
+		affectedL: (int) affectedL
+		affectedR: (int) affectedR
+		affectedT: (int) affectedT
+		affectedB: (int) affectedB
+		windowIndex: (int) passedWindowIndex {
+	int value = [self
+					ioShowDisplayOnWindowActual:dispBitsIndex
+					width: width
+					height: height
+					depth: depth
+					affectedL: affectedL
+					affectedR: affectedR
+					affectedT: affectedT
+					affectedB: affectedB
+					windowIndex: passedWindowIndex];
+	if (!self.blip) {
+		if (squeakUIFlushPrimaryDeferNMilliseconds == 0.0f) 
+		squeakUIFlushPrimaryDeferNMilliseconds =  [gDelegateApp squeakUIFlushPrimaryDeferNMilliseconds];
 
-self.blip = [NSTimer timerWithTimeInterval: squeakUIFlushPrimaryDeferNMilliseconds target:self selector:@selector(ioForceDisplayUpdateFlush:) userInfo:nil repeats: YES];
-[[NSRunLoop mainRunLoop] addTimer: self.blip forMode: NSDefaultRunLoopMode];
-}
-return value;
+		self.blip = [NSTimer timerWithTimeInterval: squeakUIFlushPrimaryDeferNMilliseconds target:self selector:@selector(ioForceDisplayUpdateFlush:) userInfo:nil repeats: YES];
+		[[NSRunLoop mainRunLoop] addTimer: self.blip forMode: NSDefaultRunLoopMode];
+	}
+	return value;
 }
 
 - (void)dealloc {
-if (blip) {
-[blip invalidate];
-}
-SUPERDEALLOC
+	if (blip)
+		[blip invalidate];
+	SUPERDEALLOC
 }
 @end
