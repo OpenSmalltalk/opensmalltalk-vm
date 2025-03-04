@@ -1,0 +1,88 @@
+#!/bin/sh
+# Contributed by David Stes to OpenSmalltalk-VM.  March 2025
+#
+# Running "make configure" in the directory (platforms/unix/config)
+# builds a "configure" file for OpenSmalltalk-VM
+#
+# This requires some tools (the traditional GNU autotools) to generate
+# the file configure from the input files (configure.ac)
+#
+# Please see the README in this directory for the exact versions of
+# the autotools that are currently being used.
+#
+# Different versions of GNU autotools will generate different configure files
+# making it difficult to compare configure scripts or to use revision control
+#
+# This script downloads (using wget) some autotools and installs them
+# in a temporary directory so that they can be used to generate the configure file
+# Perhaps this creates a configure script that *may* be similar to a script generated
+# on a different machine with the same autotools
+#
+# Alternatively a server with the correct autotools preinstalled can be used.
+#
+# Or a Vagrantfile to create a virtual machine to run "make configure" in it
+#
+# That approach would be superior because it would use a VM with the same OS
+# and versions of other tools (perl etc.) while this script only builds minimal tools
+# and cannot integrate patches like the build systems of full operating system can
+# 
+
+MAKE=make
+PREFIX=/tmp/autotools
+AUTOCONF=autoconf-2.69
+AUTOCONFURL=https://ftp.gnu.org/gnu/autoconf
+AUTOMAKE=automake-1.17
+AUTOMAKEURL=https://ftp.gnu.org/gnu/automake
+LIBTOOL=libtool-2.4.7
+LIBTOOLURL=https://ftp.gnu.org/gnu/libtool
+PKGCONF=pkgconf-2.3.0
+PKGCONFURL=https://distfiles.ariadne.space/pkgconf/
+
+TOOLS="$AUTOCONF $AUTOMAKE $LIBTOOL $PKGCONF"
+URLS="$AUTOCONFURL $AUTOMAKEURL $LIBTOOLURL $PKGCONFURL"
+
+# in order to run ./configure add "." to PATH
+PATH=.:$PATH
+
+# cleanup previous build
+rm -rf $PREFIX $TOOLS
+
+set $URLS
+for tool in $TOOLS
+do
+  url=$1
+  shift
+  echo "Building $tool from $url"
+  echo " "
+  wget -O $tool.tar.gz $url/$tool.tar.gz
+  if [[ $? -ne 0 ]]  ;then exit 1 ;fi
+  tar xfz $tool.tar.gz
+  if [[ $? -ne 0 ]]  ;then exit 1 ;fi
+  ( cd $tool;
+    if [[ $? -ne 0 ]]  ;then exit 1 ;fi;
+    configure --prefix=$PREFIX;
+    if [[ $? -ne 0 ]]  ;then exit 1 ;fi;
+    $MAKE;
+    if [[ $? -ne 0 ]]  ;then exit 1 ;fi;
+    $MAKE install;
+    if [[ $? -ne 0 ]]  ;then exit 1 ;fi;
+  ) 
+# cleanup build
+  rm -f $tool.tar.gz
+  rm -rf $tool
+done
+
+cat <<EOF
+
+Summary:
+$AUTOCONF $AUTOMAKE $LIBTOOL $PKGCONF installed in : $PREFIX
+
+Now run:
+
+PATH=$PREFIX/bin:\$PATH
+export PATH
+cd platforms/unix/config
+make configure
+EOF
+
+
