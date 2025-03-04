@@ -7,7 +7,7 @@ set -e
 if test -n "$1"; then
 	VM="$1"
 else
-. ./getGoodSpurVM.sh
+. ./getGoodSpur64VM.sh
 fi
 
 . ./updatespur64image.sh
@@ -16,16 +16,18 @@ fi
 
 # echo $0 3 $@
 
-cp -p ${BASE64}.image spurreader-64.image
-cp -p ${BASE64}.changes spurreader-64.changes
+READER=spurreader-64
+
+cp -p ${BASE64}.image ${READER}.image
+cp -p ${BASE64}.changes ${READER}.changes
 
 if [ "$1" = FFI ]; then
-	echo $VM spurreader-64.image LoadFFI.st
-	$VM spurreader-64.image LoadFFI.st
+	echo $VM ${READER}.image LoadFFI.st
+	$VM ${READER}.image LoadFFI.st
 fi
 
-echo $VM spurreader-64.image LoadReader.st
-$VM spurreader-64.image LoadReader.st
+echo $VM ${READER}.image LoadReader.st
+$VM ${READER}.image LoadReader.st
 
-echo $VM spurreader-64.image StartReader.st
-$VM spurreader-64.image StartReader.st
+echo $VM ${READER}.image StartReader.st
+$VM ${READER}.image StartReader.st

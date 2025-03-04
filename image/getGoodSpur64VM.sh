@@ -85,7 +85,7 @@ else
 fi
 echo latest 64-bit VM on $OS for $CPU is $VM
 test "$1" = "-verbose" && $VM -version
-echo $RELEASE >$LATESTFILE
+test -n "$RELEASE" && test -n "$LATESTFILE" && echo $RELEASE >$LATESTFILE
 if [ "$1" = -vmargs ]; then
 	VM="$VM $2"
 	shift;shift
