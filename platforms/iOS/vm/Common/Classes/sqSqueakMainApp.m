@@ -47,6 +47,7 @@ such third-party acknowledgments.
 #import "sqAssert.h"
 #import "sqSqueakMainApp.h"
 #import <limits.h>
+#import <sys/time.h> // for gettimeofday
 #import "include_ucontext.h"
 #import "sqPlatformSpecific.h"
 
