@@ -468,7 +468,7 @@ typedef struct sqKeyboardEvent {
 
 /* drop files event */
 typedef struct sqDragDropFilesEvent {
-  sqIntptr_t type;			/* EventTypeDropFiles */
+  sqIntptr_t type;			/* EventTypeDragDropFiles */
   usqIntptr_t timeStamp;	/* time stamp */
   sqIntptr_t dragType;		/* one of DragXXX (see below) */
   sqIntptr_t x;				/* mouse position x */
