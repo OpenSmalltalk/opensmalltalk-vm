@@ -1079,7 +1079,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
 			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
 			"    x29 %14p  fp %14p  lr %14p  sp %14p\n"
-			"     pc %14p pstate 0x%08x fault @ %14p\n",
+			"     pc %14p pstate 0x%08lx fault @ %14p\n",
 			v(regs[ 0]), v(regs[ 1]), v(regs[ 2]), v(regs[ 3]),
 			v(regs[ 4]), v(regs[ 5]), v(regs[ 6]), v(regs[ 7]),
 			v(regs[ 8]), v(regs[ 9]), v(regs[10]), v(regs[11]),
@@ -1094,10 +1094,10 @@ printRegisterState(FILE *file,ucontext_t *uap)
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = (struct sigcontext *)&uap->uc_mcontext;
 	fprintf(file,
-			"\t r0 0lx%08lx r1 0lx%08lx r2 0lx%08lx r3 0lx%08lx\n"
-	        "\t r4 0lx%08lx r5 0lx%08lx r6 0lx%08lx r7 0lx%08lx\n"
-	        "\t r8 0lx%08lx r9 0lx%08lx r10 0lx%08lx fp 0lx%08lx\n"
-	        "\t ip 0lx%08lx sp 0lx%08lx lr 0lx%08lx pc 0lx%08lx\n",
+			"\t r0 0x%08lx r1 0x%08lx r2 0x%08lx r3 0x%08lx\n"
+	        "\t r4 0x%08lx r5 0x%08lx r6 0x%08lx r7 0x%08lx\n"
+	        "\t r8 0x%08lx r9 0x%08lx rA 0x%08lx fp 0x%08lx\n"
+	        "\t ip 0x%08lx sp 0x%08lx lr 0x%08lx pc 0x%08lx\n",
 	        regs->arm_r0,regs->arm_r1,regs->arm_r2,regs->arm_r3,
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,

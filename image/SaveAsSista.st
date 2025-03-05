@@ -1,1 +1,15 @@
-Smalltalk saveAs: 'trunk6-sista-64'.CompiledCode preferredBytecodeSetEncoderClass: EncoderForSistaV1.CurrentReadOnlySourceFiles cacheDuring:	[ReleaseBuilder			updateCorePackages;			unloadForeignPackages;			loadWellKnownPackages;			checkForUndeclaredSymbols;			recompileAll].ReleaseBuilder	prepareEnvironment;	saveAndQuit."Error: Missing snapshot: Traits-pre.307""wc checkModified in MCWorkingCopy class>>checkModified:"
+Smalltalk saveAs: 'trunk6-sista-64'.
+CompiledCode preferredBytecodeSetEncoderClass: EncoderForSistaV1.
+CurrentReadOnlySourceFiles cacheDuring:
+	[ReleaseBuilder
+			updateCorePackages;
+			unloadForeignPackages;
+			loadWellKnownPackages;
+			checkForUndeclaredSymbols;
+			recompileAll].
+ReleaseBuilder
+	prepareEnvironment;
+	saveAndQuit.
+
+"Error: Missing snapshot: Traits-pre.307"
+"wc checkModified in MCWorkingCopy class>>checkModified:"
