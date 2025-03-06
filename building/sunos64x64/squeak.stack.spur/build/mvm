@@ -22,6 +22,8 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--without-libtls \
+		--without-vm-sound-Sun \
+		--without-vm-sound-OSS \
 		--disable-dynamicopenssl \
 		--with-src=src/spur64.stack --disable-cogit \
 		--without-vm-display-fbdev --without-npsqueak \

@@ -356,11 +356,18 @@ For the Makefiles, pkg:/developer/build/gnu-make  must be installed.
 pkg-config
 ----------
 
-The configure script uses the pkg-config tool for some plugins.
+The configure script uses the pkg.m4 file from the pkg-config or pkgconf tool for some plugins.
 
 Be sure to install it:
 
    pkg install developer/build/pkg-config
+
+or
+
+   pkg install developer/build/pkgconf  (from pkgconf.org)
+
+
+See the README in platforms/unix/config for the required versions of automake, autoconf, libtool and pkg-config.
 
 IPS Package
 -----------
