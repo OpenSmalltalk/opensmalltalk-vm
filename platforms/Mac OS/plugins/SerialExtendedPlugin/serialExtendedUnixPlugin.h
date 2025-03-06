@@ -1,1 +1,0 @@
-#include <termios.h>#include <unistd.h>#include <sys/types.h>#include <sys/stat.h>#include <sys/ioctl.h>#include <fcntl.h>#include <errno.h>int serialPortFindNamesPlusKeysstorage(int aUpperNumber, char *aByteArray);

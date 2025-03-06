@@ -1,1 +1,0 @@
-/* *  sqMacLocaleOS9.h *  SqueakLocale * *  Created by John M McIntosh on 6/9/05. * */#include "sqMemoryAccess.h"#include "sq.h"#include "LocalePlugin.h"
