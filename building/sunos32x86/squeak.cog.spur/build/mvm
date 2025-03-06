@@ -33,6 +33,8 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-vmversion=5.0 \
 		--without-libtls \
 		--disable-dynamicopenssl \
+		--without-vm-sound-Sun \
+		--without-vm-sound-OSS \
 		--with-src=src/spur32.cog \
 		--with-scriptname=spur32 \
 	TARGET_ARCH="-m32" \
