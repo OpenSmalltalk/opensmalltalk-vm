@@ -315,6 +315,10 @@ extern char *thrlog[];
 } while (0)
 
 extern sqOSThread getVMOSThread(void);
+#else
+# define THRLOG(...) 0
+#endif // COGMTVM
+#if COGMTVM || NEED_OSSEMAPHORE
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.  N.B. code is included from sqPlatformSpecific.h
  * before the code here.  e.g.
@@ -358,8 +362,8 @@ void ioTransferTimeslice(void);
 // the numberic id of that thread, otherwise it is defined as a no-op here.
 # if !defined(ioEventThreadAffinity)
 #	define ioEventThreadAffinity() -1
-#endif
-#endif // COGMTVM
+# endif
+#endif // COGMTVM || NEED_OSSEMAPHORE
 
 /* Profiling. */
 void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb);

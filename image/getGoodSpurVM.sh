@@ -5,6 +5,8 @@ exit 1
 set -e
 set +v
 
+if [ "$GOTGOODVMPID" != $$ ]; then
+
 . ./envvars.sh
 
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
@@ -90,3 +92,6 @@ else
 	esac
 fi
 echo latest 32-bit VM on $OS is $VM
+
+GOTGOODVMPID=$$
+fi

@@ -4,11 +4,7 @@ set -e
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
 
-if test -n "$1"; then
-	VM="$1"
-else
 . ./getGoodSpur64VM.sh
-fi
 
 . ./updatespur64image.sh
 
@@ -22,12 +18,12 @@ cp -p ${BASE64}.image ${READER}.image
 cp -p ${BASE64}.changes ${READER}.changes
 
 if [ "$1" = FFI ]; then
-	echo $VM ${READER}.image -doit LoadFFI.st
-	$VM ${READER}.image -doit LoadFFI.st
+	echo $VM ${READER}.image LoadFFI.st
+	$VM ${READER}.image LoadFFI.st
 fi
 
-echo $VM ${READER}.image -doit LoadReader.st
-$VM ${READER}.image -doit LoadReader.st
+echo $VM ${READER}.image LoadReader.st
+$VM ${READER}.image LoadReader.st
 
-echo $VM ${READER}.image -doit StartReader.st
-$VM ${READER}.image -doit StartReader.st
+echo $VM ${READER}.image StartReader.st
+$VM ${READER}.image StartReader.st

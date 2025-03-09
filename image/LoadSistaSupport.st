@@ -1,6 +1,6 @@
 | manifest load |
-manifest := #(	('http://source.squeak.org/VMMaker'				6	('BytecodeSets.spur' ))
-				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))
+manifest := #(	('https://source.squeak.org/VMMaker'		6	('BytecodeSets.spur' ))
+				('https://source.squeak.org/VMMaker'		3	('MethodMassage' 'MethodMassageCompatibility'))
 				).
 
 load := (manifest collect:

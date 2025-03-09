@@ -2,6 +2,8 @@
 set -e
 set +v
 
+if [ "$GOTGOODVMPID" != $$ ]; then
+
 . ./envvars.sh
 
 RELEASES_URL="https://github.com/OpenSmalltalk/opensmalltalk-vm/releases"
@@ -91,3 +93,6 @@ if [ "$1" = -vmargs ]; then
 	shift;shift
 fi
 done
+
+GOTGOODVMPID=$$
+fi

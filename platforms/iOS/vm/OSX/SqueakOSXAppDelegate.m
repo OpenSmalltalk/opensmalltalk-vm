@@ -88,9 +88,11 @@ sqOSThread guiThread;
 		guiThread = ioCurrentOSThread();
 		self.squeakApplication = [self makeApplicationInstance];
 		[self.squeakApplication setupEventQueue];
+#if TerfVM
 		// Push the startup schema and open file events into the event queue.
-		if(self.dragItems && [self.dragItems count] > 0)
+		if (self.dragItems && [self.dragItems count] > 0)
 			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: [self.dragItems count]];
+#endif // TerfVM
 		[self workerThreadStart];
 	}
 

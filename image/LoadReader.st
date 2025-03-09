@@ -1,6 +1,6 @@
 | repository flags |
 repository := MCHttpRepository
-				location: 'http://source.squeak.org/VMMaker'
+				location: 'https://source.squeak.org/VMMaker'
 				user: 'squeak'
 				password: 'squeak'.
 #('CogTools-Listener' 'CogThreads') do:

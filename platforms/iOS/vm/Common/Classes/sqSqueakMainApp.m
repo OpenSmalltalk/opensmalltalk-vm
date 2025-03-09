@@ -68,6 +68,7 @@ such third-party acknowledgments.
 EXPORT(int)		argCnt= 0;
 EXPORT(char**)	argVec= 0;
 EXPORT(char**)	envVec= 0;
+#define NEED_OSSEMAPHORE 1
 #endif
 
 extern sqSqueakAppDelegate *gDelegateApp;

@@ -1,5 +1,5 @@
 [[[MCMcmUpdater
-			defaultUpdateURL: 'http://source.squeak.org/trunk';
+			defaultUpdateURL: 'https://source.squeak.org/trunk';
 			updateFromServer] valueSupplyingAnswer: true]
 		on: Deprecation
 		do: [:ex| ex resume: nil]]
