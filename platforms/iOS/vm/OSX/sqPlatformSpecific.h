@@ -142,7 +142,14 @@ extern void reportMinimumUnusedHeadroom(void);
 /* these are used both in the STACKVM & the COGMTVM */
 # define ioOSThreadsEqual(a,b) pthread_equal(a,b)
 # define ioCurrentOSThread() pthread_self()
-# if COGMTVM
+
+extern sqOSThread guiThread;
+
+/* The GUI thread scheme needs sqOSSemaphore for signalling the main
+ * thread to generate a Smalltalk stack trace.
+ */
+#define NEED_OSSEMAPHORE 1
+
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.
  */
@@ -151,6 +158,8 @@ typedef struct {
     pthread_mutex_t mutex;
     int				count;
 } sqOSSemaphore;
+
+# if COGMTVM
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const pthread_key_t tltiIndex;
 #  endif

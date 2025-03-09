@@ -36,17 +36,28 @@ and its contributors", in the same place and form as other third-party acknowled
 Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
 such third-party acknowledgments.
 */
-//
 
 #import "sqSqueakAppDelegate.h"
 #import "sqMacHostWindow.h"
+
+extern sqSqueakAppDelegate *gDelegateApp;
+
+void *runBlock(void *arg) {
+	@autoreleasepool {
+		// Retrieve the block
+		void (^block)(void) = (__bridge_transfer void (^)(void))arg;
+		// Execute the block
+		block();
+	}
+	return NULL;
+}
 
 @implementation sqSqueakAppDelegate
 @synthesize squeakApplication,squeakThread;
 
 - (void)dealloc {
-    RELEASEOBJ(squeakApplication);
-    SUPERDEALLOC
+	RELEASEOBJ(squeakApplication);
+	SUPERDEALLOC
 }
 
 - (void) makeMainWindow {
@@ -65,9 +76,9 @@ such third-party acknowledgments.
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 
-    extern sqInt getFullScreenFlag(void);
-    if (!getFullScreenFlag())
-        [self placeMainWindowOnLargerScreenGivenWidth: width height: height];
+	extern sqInt getFullScreenFlag(void);
+	if (!getFullScreenFlag())
+		[self placeMainWindowOnLargerScreenGivenWidth: width height: height];
 
 	windowBlock = AddWindowBlock();
 	windowBlock->handle =   (__bridge void*) createdWindow;
@@ -81,35 +92,32 @@ such third-party acknowledgments.
 	ioSetFullScreen(getFullScreenFlag());
 }
 
-- (sqSqueakMainApplication *) makeApplicationInstance {
-	return nil;
-}
+- (sqSqueakMainApplication *) makeApplicationInstance { return nil; }
 
-- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds {
-	return 0.0333f;
-}
+- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds { return 0.0333f; }
 
 - (void) makeMainWindowOnMainThread {};
 
-- (id) createPossibleWindow { return NULL;};
+- (id) createPossibleWindow { return NULL; };
 
 - (void) placeMainWindowOnLargerScreenWidth: (sqInt) width height: (sqInt) height {};
 
 - (void) workerThreadStart {
 	// Run the squeak process in a worker thread
 	squeakThread = [[NSThread alloc] initWithTarget: self.squeakApplication
-												 selector: @selector(runSqueak)
-												   object:nil];
+										   selector: @selector(runSqueak)
+											 object: nil];
 #if COGVM
 	[squeakThread setStackSize: [squeakThread stackSize]*4];
 #endif
+	squeakThread.name = @"org.squeak.interpreter";
 
 	[squeakThread start];
 }
 
 - (void) singleThreadStart {
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
+	// This the carbon logic model described by
+	// http://developer.apple.com/qa/qa2001/qa1061.html
 
 	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
 									  target: self.squeakApplication
@@ -118,6 +126,19 @@ such third-party acknowledgments.
 									   modes: @[NSDefaultRunLoopMode]];		
 }
 
+- (void)runBlockOnMainThread:(void (^)(void))block {
+	if ([NSThread isMainThread])
+		block(); // If we are already on the main thread, execute the block directly
+	else // If we are not on the main thread, dispatch the block to the main queue
+		dispatch_sync(dispatch_get_main_queue(), block);
+}
 
+- (void)runBlockAsyncOnMainThread:(void (^)(void))block {
+	if ([NSThread isMainThread])
+		block(); // If we are already on the main thread, execute the block directly
+	else // If we are not on the main thread, dispatch the block to the main queue
+		dispatch_async(dispatch_get_main_queue(), block);
+}
 
 @end
+

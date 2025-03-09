@@ -677,6 +677,11 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
+#if COGMTVM
+# define VM "MTVM"
+#else
+# define VM "VM"
+#endif
   extern char vmBuildString[];
   CFStringRef versionString;
   char *info = (char *)malloc(4096);
@@ -710,7 +715,7 @@ getVersionInfo(int verbose)
 #else
     CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), kCFStringEncodingUTF8);
 #endif
-  sprintf(info+strlen(info), " %s [" BuildVariant " %s VM]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), " %s [" BuildVariant " %s " VM "]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

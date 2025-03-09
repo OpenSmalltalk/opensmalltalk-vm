@@ -16,10 +16,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +28,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -57,6 +57,7 @@
 #import "sqSqueakOSXOpenGLView.h"
 
 SqueakOSXAppDelegate *gDelegateApp;
+sqOSThread guiThread;
 
 @implementation SqueakOSXAppDelegate
 
@@ -69,7 +70,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
 	self.checkForFileNameOnFirstParm = YES;
 	dragItems = NULL;
-	
+
 	NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
 	[appleEventManager setEventHandler:self
 					   andSelector:@selector(handleGetURLEvent:withReplyEvent:)
@@ -84,15 +85,17 @@ SqueakOSXAppDelegate *gDelegateApp;
 
     @autoreleasepool {
 		gDelegateApp = self;	
+		guiThread = ioCurrentOSThread();
 		self.squeakApplication = [self makeApplicationInstance];
 		[self.squeakApplication setupEventQueue];
+#if TerfVM
 		// Push the startup schema and open file events into the event queue.
-		if(self.dragItems && [self.dragItems count] > 0)
+		if (self.dragItems && [self.dragItems count] > 0)
 			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: [self.dragItems count]];
-		[self singleThreadStart];
-//	[self workerThreadStart];
+#endif // TerfVM
+		[self workerThreadStart];
 	}
-    
+
 #ifdef PharoVM
      [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:self];
 #endif
@@ -104,7 +107,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 	NSURL *url = [NSURL URLWithString: urlString];
 	dragItems = [NSMutableArray arrayWithCapacity: 1];
 	[dragItems addObject: url];
-	
+
 	if(self.squeakApplication)
 		[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
 }
@@ -112,7 +115,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 - (NSURL*) dragURIAtIndex: (sqInt) index {
 	if (!self.dragItems || index < 1 || index > [self.dragItems count])
 		return NULL;
-	
+
 	return (self.dragItems)[(NSUInteger) index - 1];
 }
 
@@ -160,19 +163,19 @@ SqueakOSXAppDelegate *gDelegateApp;
     } else {
         self.windowHandler = AUTORELEASEOBJ([[sqSqueakOSXScreenAndWindow alloc] init]);
     }
-    
-  
+
+
     [self initializeTheWindowHandler];
     self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
 
     //I setup the window with all the right properties. Some of them are depending on image information.
-    
+
 	sqInt width,height;
 	extern sqInt getSavedWindowSize(void); //This is VM Callback
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	width = (sqInt) ((width*4)/32.0f+0.5)*8.0;  //JMM OPEN/GL THOUGHTS FOR PERFORMANCE
-	
+
 	NSRect resetFrame;
 	resetFrame.origin.x = 0.0f;
 	resetFrame.origin.y	= 0.0f;
@@ -201,7 +204,7 @@ SqueakOSXAppDelegate *gDelegateApp;
     //Creates and sets the contentView for our window.
     //It can right now, I have two implementations to pick (CoreGraphics or OpenGL), muy more/different could be added 
     //in the future. 
-    
+
 }
 
 - (id) createPossibleWindow {
@@ -258,7 +261,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 			launchSpec.itemURLs = (__bridge CFArrayRef)@[[NSURL fileURLWithPath: fileName]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
-		
+
 			OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
 //			NSLog(@"error %i",err);
 #pragma unused(err)
@@ -269,12 +272,12 @@ SqueakOSXAppDelegate *gDelegateApp;
 		NSURL *url = [NSURL fileURLWithPath: fileName];
 		dragItems = [NSMutableArray arrayWithCapacity: 1];
 		[dragItems addObject: url];
-		
+
 		if(self.squeakApplication)
 			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
 		return YES;
 	}
-	
+
 	return NO;
 }
 

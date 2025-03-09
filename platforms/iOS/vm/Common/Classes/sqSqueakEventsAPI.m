@@ -16,10 +16,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +28,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -57,13 +57,15 @@ extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
 extern sqSqueakNullScreenAndWindow *getMainWindowDelegate();
 
-void vmIOProcessEvents(void) {
+void
+vmIOProcessEvents(void)
+{
 	//API Documented
 
-    if ([[NSThread currentThread] isCancelled]) {
-        gQuitNowRightNow = YES;
-        ioExit();  //This might not return, might call exittoshell
-    }
+	if ([[NSThread currentThread] isCancelled]) {
+		gQuitNowRightNow = YES;
+		ioExit();  //This might not return, might call exittoshell
+	}
 
 	if ([getMainWindowDelegate() forceUpdateFlush]) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
@@ -77,7 +79,7 @@ void vmIOProcessEvents(void) {
 	 */
 	if (interpreterProxy->methodPrimitiveIndex() == 0) {
 		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:YES];
-    } else {
+	} else {
 		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:NO];
 	}
 
@@ -89,11 +91,13 @@ void vmIOProcessEvents(void) {
 void (*ioProcessEventsHandler) (void) = vmIOProcessEvents;
 
 extern void setIoProcessEventsHandler(void * handler) {
-    ioProcessEventsHandler = (void(*)()) handler;
+	ioProcessEventsHandler = (void(*)()) handler;
 }
 
-sqInt ioProcessEvents(void) {
-    aioPoll(0);
+sqInt
+ioProcessEvents(void)
+{
+	aioPoll(0);
 
 #if defined(PharoVM) && !defined(USE_METAL)
 	// We need to restore the opengl context to whatever the image was
@@ -103,13 +107,16 @@ sqInt ioProcessEvents(void) {
 
 	// We need to run the vmIOProcessEvents even if we are using SDL2,
 	// otherwise we end with some double free errors in an autorelease pool.
-	vmIOProcessEvents();
-    if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
-        ioProcessEventsHandler();
+	[gDelegateApp runBlockOnMainThread:^{
+		vmIOProcessEvents();
+	}];
+
+	if (ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
+		ioProcessEventsHandler();
 
 #if defined(PharoVM) && !defined(USE_METAL)
 	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
-	if(oldContext != newContext) {
+	if (oldContext != newContext) {
 		if (oldContext != nil) {
 			[oldContext makeCurrentContext];
 		} else {
@@ -118,17 +125,21 @@ sqInt ioProcessEvents(void) {
 	}
 #endif
 
-    return 0;
+	return 0;
 }
 
-sqInt ioSetInputSemaphore(sqInt semaIndex) {
+sqInt
+ioSetInputSemaphore(sqInt semaIndex)
+{
 	//API Documented
-	
+
 	gDelegateApp.squeakApplication.inputSemaphoreIndex = semaIndex;
 	return 0;
 }
 
-sqInt ioGetNextEvent( sqInputEvent *evt) {
+sqInt
+ioGetNextEvent( sqInputEvent *evt)
+{
 	//API Documented
 	[gDelegateApp.squeakApplication ioGetNextEvent: evt];
 /*	if (evt->type != 0) {

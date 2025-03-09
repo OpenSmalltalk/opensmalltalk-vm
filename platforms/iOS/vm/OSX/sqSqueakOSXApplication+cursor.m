@@ -39,6 +39,9 @@
 //
 #import "sqSqueakOSXApplication.h"
 #import "sqSqueakOSXApplication+cursor.h"
+#import "sqSqueakAppDelegate.h"
+
+extern sqSqueakAppDelegate *gDelegateApp;
 extern BOOL gSqueakHeadless;
 extern BOOL browserActiveAndDrawingContextOk(void);
 BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
@@ -105,15 +108,8 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 #warning what about browser
 	
 	
-	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) {
-            if ([NSThread isMainThread]) {
-                [self.squeakCursor set];
-            } else {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self.squeakCursor set];
-                });
-            }
-	}
+	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode())
+		[gDelegateApp runBlockAsyncOnMainThread:^{ [self.squeakCursor set]; }];
 	}
 }
 
@@ -149,13 +145,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	[image addRepresentation: bitmap];
 	NSPoint hotSpot= { -offsetX, -offsetY };
 	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
-    if ([NSThread isMainThread]) {
-            [self.squeakCursor set];
-    } else {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.squeakCursor set];
-            });
-    }
+	[gDelegateApp runBlockAsyncOnMainThread:^{ [self.squeakCursor set]; }];
     }
 	return 1;
 }

@@ -19,7 +19,7 @@
 
 #include <unistd.h>			/* for ioNumProcesors & sleep */
 
-#if COGMTVM
+#if COGMTVM || NEED_OSSEMAPHORE
 
 #include <sys/types.h>		/* for ioNumProcesors */
 #if __linux__
@@ -82,33 +82,6 @@ ioDestroyOSSemaphore(sqOSSemaphore *sem)
 	if ((err = pthread_mutex_destroy(&sem->mutex)))
 		pthreadperror("pthread_mutex_destroy",err);
 }
-#endif
-
-#define DEBUG 1
-#if DEBUG
-# include "sqAtomicOps.h"
-int thrlogidx = 0;
-char *thrlog[THRLOGSZ];
-
-void
-dumpThreadLog()
-{
-	int f = thrlogidx,				/* first used entry if non-null */
-		l = (f-1) & (THRLOGSZ-1),	/* last used entry */
-		s = thrlog[f] ? f : 0;		/* start */
-
-	if (!thrlog[s])
-		return;
-
-	do {
-		printf(thrlog[s]);
-		if (s == l) break;
-		s = (s + 1) & (THRLOGSZ-1);
-	}
-	while (1);
-}
-
-extern pthread_key_t tltiIndex;
 #endif
 void
 ioSignalOSSemaphore(sqOSSemaphore *sem)
@@ -207,11 +180,11 @@ ioNumProcessors(void)
 	return 1;
 # endif
 }
-#else /* COGMTVM */
+#else // COGMTVM || NEED_OSSEMAPHORE
 /* This is for sqVirtualMachine.h's default ownVM implementation. */
 sqInt
 amInVMThread() { return ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()); }
-#endif /* COGMTVM */
+#endif // COGMTVM || NEED_OSSEMAPHORE
 
 void
 ioInitThreads()
@@ -264,3 +237,33 @@ crashInThisOrAnotherThread(sqInt flags)
 	}
 	return 0;
 }
+
+// Implementation of the thread log.
+#if COGMTVM
+#define DEBUG 1
+#if DEBUG
+# include "sqAtomicOps.h"
+int thrlogidx = 0;
+char *thrlog[THRLOGSZ];
+
+void
+dumpThreadLog()
+{
+	int f = thrlogidx,				/* first used entry if non-null */
+		l = (f-1) & (THRLOGSZ-1),	/* last used entry */
+		s = thrlog[f] ? f : 0;		/* start */
+
+	if (!thrlog[s])
+		return;
+
+	do {
+		printf(thrlog[s]);
+		if (s == l) break;
+		s = (s + 1) & (THRLOGSZ-1);
+	}
+	while (1);
+}
+
+extern pthread_key_t tltiIndex;
+#endif // DEBUG
+#endif // COGMTVM

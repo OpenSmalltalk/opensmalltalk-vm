@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -50,14 +50,14 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	[panel setFloatingPanel: YES];
 	[panel setReleasedWhenClosed: YES];
 	[panel setAllowedFileTypes:  @[@"image"]];
-	 
+
 	[panel center];
-	
+
 	if (NSModalResponseOK == [panel runModal]) {
 		NSArray *urls = [panel URLs];
 		if (1 == [urls count])
 			[self setImageNamePathIfItWasReadable: [urls[0] path]];
-    } else {
+	} else {
 		exit(142);
 	}
 }
@@ -73,34 +73,34 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 
 - (void) findImageViaBundleOrPreferences {
 	@autoreleasepool {
-	
+
 	/* Check for squeak image name in resource directory if not found 
 	 then check for image after resolving image name incase it's a ./ or ../ or ~/ etc 
 	 plus also could be in working directory? 
-	 
+
 	 So first let's see if the imageName is a partial path, if so use it. 
 	 otherwise check the resource directory then the vmpath.
-	 
+
 	 */
-	
+
 		NSBundle *mainBundle = [NSBundle mainBundle];
 		NSString *resourcePath = [mainBundle resourcePath];
 		BOOL fileIsReadable;
 //	extern char	imageName[];
-		
+
 #warning do we check for imageName that is elsewhere? like ~/Foo/squeak.image
-		
+
 		NSString *possibleImage;
 		NSString *imageNameString;
-		
+
 		if (gDelegateApp.possibleImageNameAtLaunchTime) {
 			imageNameString = possibleImage = gDelegateApp.possibleImageNameAtLaunchTime;
 		} else {
-			    imageNameString = @(imageName);
-				possibleImage = [imageNameString stringByStandardizingPath];
+			imageNameString = @(imageName);
+			possibleImage = [imageNameString stringByStandardizingPath];
 		}
 
-        if ([imageNameString isEqualToString: possibleImage]) {
+		if ([imageNameString isEqualToString: possibleImage]) {
 			if ([possibleImage isAbsolutePath]) {
 				fileIsReadable = [self setImageNamePathIfItWasReadable: possibleImage];			
 			} else {
@@ -115,12 +115,13 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 		} else {
 			fileIsReadable = [self setImageNamePathIfItWasReadable: possibleImage];
 		}
-		
+
 		// At this point we did not find a file name in the resources or in the vm directory or via a set image name
 		if (!fileIsReadable) {
-                [self attempToOpenImageFromOpenPanel];
+			[gDelegateApp runBlockOnMainThread:^{
+				[self attempToOpenImageFromOpenPanel];
+			}];
 		}
-		
 		return;
 	}
 }
@@ -129,7 +130,9 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	if (!sqImageName) 
 		return;
 	[super imageNamePut: sqImageName];
-	[gDelegateApp.window setRepresentedURL: self.imageNameURL];
-	[gDelegateApp.window setTitle: [[self.imageNameURL path] lastPathComponent]];
+	[gDelegateApp runBlockOnMainThread:^{
+		[gDelegateApp.window setRepresentedURL: self.imageNameURL];
+		[gDelegateApp.window setTitle: [[self.imageNameURL path] lastPathComponent]];
+	}];
 }
 @end

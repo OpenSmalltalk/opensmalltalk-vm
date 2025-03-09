@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
 set -e
-# Build a Spur image that starts up in a simple REPL, which is
+# Build a 32-bit Spur image that starts up in a simple REPL, which is
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
+
+. ./getGoodSpurVM.sh
 
 . ./updatespurimage.sh
 
 ./ensureSqueakV50sources.sh
 
-echo $0 3 $@
+# echo $0 3 $@
 
-cp -p ${BASE}.image spurreader.image
-cp -p ${BASE}.changes spurreader.changes
+READER=spurreader
+
+cp -p ${BASE}.image ${READER}.image
+cp -p ${BASE}.changes ${READER}.changes
 
 if [ "$1" = FFI ]; then
-	echo $VM spurreader.image LoadFFI.st
-	$VM spurreader.image LoadFFI.st
+	echo $VM ${READER}.image LoadFFI.st
+	$VM ${READER}.image LoadFFI.st
 fi
 
-echo $VM spurreader.image LoadReader.st
-$VM spurreader.image LoadReader.st
+echo $VM ${READER}.image LoadReader.st
+$VM ${READER}.image LoadReader.st
 
-echo $VM spurreader.image StartReader.st
-$VM spurreader.image StartReader.st
+echo $VM ${READER}.image StartReader.st
+$VM ${READER}.image StartReader.st

@@ -47,6 +47,7 @@ such third-party acknowledgments.
 #import "sqAssert.h"
 #import "sqSqueakMainApp.h"
 #import <limits.h>
+#import <sys/time.h> // for gettimeofday
 #import "include_ucontext.h"
 #import "sqPlatformSpecific.h"
 
@@ -67,6 +68,7 @@ such third-party acknowledgments.
 EXPORT(int)		argCnt= 0;
 EXPORT(char**)	argVec= 0;
 EXPORT(char**)	envVec= 0;
+#define NEED_OSSEMAPHORE 1
 #endif
 
 extern sqSqueakAppDelegate *gDelegateApp;
@@ -112,24 +114,75 @@ block()
 	}
 }
 
+/* Stack printing machinery. Main routine is reportStackState.
+ * printSmalltalkStack is a helper. Because there is a GUI thread we may have to
+ * do inter-thread signalling to get the Smalltalk stack printed. The stackSemaphore,
+ * stackFile, and stackPrintAll variables are used to communicate/synchronize here.
+ */
+static int stackSemaphoreInitialized = false, stackPrintAll;
+static sqOSSemaphore stackSemaphore;
+static FILE *stackFile;
+
+/* flag prevents recursive error when trying to print a broken stack */
+static sqInt printingStack = false;
+
+static void
+printSmalltalkStack(FILE *file, ucontext_t *uap, int printAll)
+{
+	if (!printingStack) {
+# if COGVM
+	/* If in generated machine code then the stack dump machinery can
+	 * only give an accurate report if stackPointer & framePointer are
+	 * set to the native stack & frame pointers.
+	 */
+		extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
+		void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
+		void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
+		char *savedSP, *savedFP;
+
+		ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
+# endif /* COGVM */
+
+		printingStack = true;
+		if (printAll) {
+			fprintf(file,"\n\nAll Smalltalk process stacks (active first):\n");
+			printAllStacksOn(file);
+		}
+		else {
+			fprintf(file,"\n\nSmalltalk stack dump:\n");
+			printCallStackOn(file);
+		}
+		printingStack = false;
+# if COGVM
+		/* Now restore framePointer and stackPointer via same function */
+		ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
+# endif
+	}
+}
+
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
 static void
 reportStackState(FILE *file, const char *msg, char *date, int printAll, ucontext_t *uap)
 {
+#if COGMTVM
+	extern sqInt vmIsOwned();
+#else
+# define vmIsOwned() 0
+#endif
+
 # if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
 	int depth;
 # endif
-	/* flag prevents recursive error when trying to print a broken stack */
-	static sqInt printingStack = false;
 
 # if STACKVM
 	/* Testing stackLimit tells us whether the VM is initialized. */
 	extern usqInt stackLimitAddress(void);
 # endif
 
+	printingStack = false;
 	fprintf(file,"\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
 # if STACKVM
     fprintf(file,"%s\n\n", sourceVersionString('\n'));
@@ -153,39 +206,29 @@ reportStackState(FILE *file, const char *msg, char *date, int printAll, ucontext
 	backtrace_symbols_fd(addrs, depth, fileno(file));
 # endif
 
-	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-		if (!printingStack) {
-# if COGVM
-		/* If in generated machine code then the stack dump machinery can
-		 * only give an accurate report if stackPointer & framePointer are
-		 * set to the native stack & frame pointers.
-		 */
-			extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
-			void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
-			void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
-			char *savedSP, *savedFP;
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()))
+		printSmalltalkStack(file,uap,printAll);
+	else if (ioOSThreadsEqual(ioCurrentOSThread(),guiThread)
+		  || vmIsOwned()) {
+        struct timeval tv;
+        struct timespec ts;
 
-			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
-# endif /* COGVM */
-
-			printingStack = true;
-			if (printAll) {
-				fprintf(file,"\n\nAll Smalltalk process stacks (active first):\n");
-				printAllStacksOn(file);
-			}
-			else {
-				fprintf(file,"\n\nSmalltalk stack dump:\n");
-				printCallStackOn(file);
-			}
-			printingStack = false;
-# if COGVM
-			/* Now restore framePointer and stackPointer via same function */
-			ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
-# endif
+		stackFile = file;
+		stackPrintAll = printAll;
+		if (!stackSemaphoreInitialized) {
+			ioNewOSSemaphore(&stackSemaphore);
+			stackSemaphoreInitialized = true;
 		}
+		pthread_kill(getVMOSThread(),SIGUSR2);
+
+		// give printSmalltalkStack 1 second to do its stuff...
+        gettimeofday(&tv, NULL);
+        ts.tv_sec = tv.tv_sec + 1;
+        ts.tv_nsec = 0;
+		pthread_cond_timedwait(&stackSemaphore.cond,&stackSemaphore.mutex,&ts);
 	}
 	else
-		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM or GUI thread\n");
 # if STACKVM
 	fprintf(file,"\nMost recent primitives\n");
 	dumpPrimTraceLogOn(file);
@@ -305,7 +348,7 @@ crashDumpFile()
  *
  */
 
-void
+static void
 sigusr1(int sig, siginfo_t *info, void *uap)
 {
 	int saved_errno = errno;
@@ -363,6 +406,13 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 	if (blockOnError) block();
 	abort();
 }
+
+static void
+sigusr2(int sig, siginfo_t *info, void *uap)
+{
+	printSmalltalkStack(stackFile,uap,stackPrintAll);
+	ioSignalOSSemaphore(&stackSemaphore);
+}
 #else /* COGVM || STACKVM */
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
@@ -388,21 +438,26 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 void
 attachToSignals()
 {
-	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
+	struct sigaction handler_action;
 
 	if (gNoSignalHandlers) return;
 
-	sigsegv_handler_action.sa_sigaction = sigsegv;
-	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-	sigemptyset(&sigsegv_handler_action.sa_mask);
-	(void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
-	(void)sigaction(SIGILL, &sigsegv_handler_action, 0);
-	(void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+	handler_action.sa_sigaction = sigsegv;
+	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&handler_action.sa_mask);
+	(void)sigaction(SIGBUS, &handler_action, 0);
+	(void)sigaction(SIGILL, &handler_action, 0);
+	(void)sigaction(SIGSEGV, &handler_action, 0);
 
-	sigusr1_handler_action.sa_sigaction = sigusr1;
-	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-	sigemptyset(&sigusr1_handler_action.sa_mask);
-	(void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
+	handler_action.sa_sigaction = sigusr1;
+	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&handler_action.sa_mask);
+	(void)sigaction(SIGUSR1, &handler_action, 0);
+
+	handler_action.sa_sigaction = sigusr2;
+	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&handler_action.sa_mask);
+	(void)sigaction(SIGUSR2, &handler_action, 0);
 }
 #endif // STACKVM
 

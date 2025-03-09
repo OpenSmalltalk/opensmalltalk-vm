@@ -12,3 +12,6 @@ fi
 
 echo $VM SpurVMMaker.image UpdateSqueakTrunkImage.st
 $VM SpurVMMaker.image UpdateSqueakTrunkImage.st
+
+echo $VM SpurVMMaker.image UpdateVMMakerImage.st
+$VM SpurVMMaker.image UpdateVMMakerImage.st

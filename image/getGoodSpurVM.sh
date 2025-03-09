@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-echo NOT YET IMPLEMENTED
-echo USE getGoodSpur64VM.sh AS YOUR GUIDE
+echo $0: NOT YET IMPLEMENTED
+echo $0: USE getGoodSpur64VM.sh AS YOUR GUIDE
 exit 1
 set -e
 set +v
+
+if [ "$GOTGOODVMPID" != $$ ]; then
 
 . ./envvars.sh
 
@@ -90,3 +92,6 @@ else
 	esac
 fi
 echo latest 32-bit VM on $OS is $VM
+
+GOTGOODVMPID=$$
+fi

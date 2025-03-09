@@ -12,7 +12,7 @@
  Creator:	Alain Fischer
  Admin:	Avi Bryant, Alain Fischer
  Developer:	Todd Blanchard
- 
+
  MIT License
  Permission is hereby granted, free of charge, to any person
  obtaining a copy of this software and associated documentation
@@ -22,10 +22,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -34,7 +34,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -58,24 +58,24 @@
 
 - (instancetype) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: aTarget
 {
+	self = [super init];
+
 	sem = squeakSem;
 	if (nameString)
 		protocol = objc_getProtocol([nameString UTF8String]);
 	else
 		protocol = nil;
-	
-	if (aTarget) {
-		[self setTarget: aTarget];
-	} else {
-		NSObject *dummy = [[NSObject alloc] init];
-		[self setTarget: dummy];
-	}
-	
-	self.lockForSqueak = [[NSConditionLock alloc] initWithCondition: 0];
-	self.sigs = [[NSMutableDictionary alloc] initWithCapacity: 10];
+
+	if (aTarget)
+		self setTarget: aTarget;
+	else
+		self.target = AUTORELEASEOBJ([[NSObject alloc] init]);
+
+	self.lockForSqueak = AUTORELEASEOBJ([[NSConditionLock alloc] initWithCondition: 0]);
+	self.sigs = [NSMutableDictionary dictionaryWithCapacity: 10];
 	isCarbonVM = NO;
 	callbackid = 0;
-	
+
 	return self;
 }
 
@@ -91,29 +91,29 @@
 		[anInvocation invokeWithTarget: target];
 		return;
 	}
-	
-	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 3.0]))])
+
+	if ([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = [NSDate dateWithTimeIntervalSinceNow: 3.0])])
 	{ 
 		// NSLog(@"inside lock 0");
 		[lockForSqueak unlockWithCondition: 1];
-		invocation = RETAINOBJ(anInvocation);
-		
+		self.invocation = anInvocation;
+
 		// NSLog(@"signalling squeak");
 		interpreterProxy->signalSemaphoreWithIndex(sem);
-		
+
 		if (isCarbonVM)
 			interpreterProxy->callbackEnter(&callbackid);
-		
-		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 5.0]))] )
+
+		if ([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [NSDate dateWithTimeIntervalSinceNow: 5.0])])
 		{
 			// NSLog(@"inside lock 2");
-			invocation = nil;
+			self.invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
 		}
 		else
 		{
 			// NSLog(@"failed lock 2");
-			invocation = nil;
+			self.invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
 		}
 		//NSLog(@"returning");
@@ -131,31 +131,27 @@
 	sig = [target methodSignatureForSelector: selector];
 	if (sig)
 		return sig;
-	
+
 	sig = [super methodSignatureForSelector: selector];
 	if(sig) 
 		return sig;
-	
+
 	NSString *selectorString = NSStringFromSelector (selector);
-	
-	if (sigAsString = sigs[selectorString]) {
-		
+
+	if ((sigAsString = sigs[selectorString])) {
 		if (protocol) {
 			struct objc_method_description methodDescription;
 			methodDescription = protocol_getMethodDescription(protocol, selector, YES, YES);
-			if(methodDescription.name == NULL) {
-				methodDescription = protocol_getMethodDescription(protocol, selector, NO, YES);
-			}
-			
-			if(methodDescription.name != NULL) {
+			if (methodDescription.name) {
 				NSMethodSignature *foo = [NSMethodSignature signatureWithObjCTypes:methodDescription.types];
 				return foo;
 			}
+			methodDescription = protocol_getMethodDescription(protocol, selector, NO, YES);
 		}
 		NSMethodSignature *foo = [NSMethodSignature signatureWithObjCTypes: [sigAsString cStringUsingEncoding: NSASCIIStringEncoding]];
 		return foo;
 	}
-	
+
 	return nil;
 }	
 
@@ -163,15 +159,15 @@
 {
 	if([super respondsToSelector: selector]) 
 		return true;
-	
+
 	if ([target respondsToSelector: selector]) 
 		return true;
-	
+
 	NSString *which = NSStringFromSelector(selector);
-	
+
 	if (sigs[which]) 
 		return true;
-	
+
 	return false;
 }
 

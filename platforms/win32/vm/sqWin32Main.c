@@ -935,6 +935,11 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
+#if COGMTVM
+# define VM "MTVM"
+#else
+# define VM "VM"
+#endif
   char *info = (char *)malloc(4096);
   info[0] = '\0';
 
@@ -955,7 +960,7 @@ getVersionInfo(int verbose)
 # define BuildVariant "Assert" ObjectMemory
 #endif
 
-  sprintf(info+strlen(info), "%s [" BuildVariant " %s VM]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), "%s [" BuildVariant " %s " VM "]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
