@@ -106,7 +106,8 @@ extern struct VirtualMachine * interpreterProxy;
  */
 #if OBJECTS_32BIT_ALIGNED
 static FILE *
-getFile(SQFile *f) {
+getFile(SQFile *f)
+{
   FILE *file;
   void *in= (void *)&f->file;
   void *out= (void *)&file;
@@ -114,7 +115,8 @@ getFile(SQFile *f) {
   return file;
 }
 static void
-setFile(SQFile *f, FILE *file) {
+setFile(SQFile *f, FILE *file)
+{
   void *in= (void *)&file;
   void *out= (void *)&f->file;
   memcpy(out, in, sizeof(FILE *));
@@ -125,7 +127,8 @@ setFile(SQFile *f, FILE *file) {
 #endif /* OBJECTS_32BIT_ALIGNED */
 
 static squeakFileOffsetType
-getSize(SQFile *f) {
+getSize(SQFile *f)
+{
   FILE *file = getFile(f);
   squeakFileOffsetType currentPosition = ftello(file);
   fseeko(file, 0, SEEK_END);
@@ -144,7 +147,9 @@ getSize(SQFile *f) {
 # define pfail() 0
 #endif
 
-sqInt sqFileAtEnd(SQFile *f) {
+sqInt
+sqFileAtEnd(SQFile *f)
+{
 	/* Return true if the file's read/write head is at the end of the file.
 	 *
 	 * libc's end of file function, feof(), returns a flag that is set by
@@ -193,7 +198,8 @@ sqInt sqFileAtEnd(SQFile *f) {
 }
 
 sqInt
-sqFileClose(SQFile *f) {
+sqFileClose(SQFile *f)
+{
 	/* Close the given file. */
 
 	int result;
@@ -220,7 +226,8 @@ sqFileClose(SQFile *f) {
 }
 
 sqInt
-sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize) {
+sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize)
+{
 	char cFileName[PATH_MAX];
 	int err;
 
@@ -238,7 +245,8 @@ sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize) {
 }
 
 squeakFileOffsetType
-sqFileGetPosition(SQFile *f) {
+sqFileGetPosition(SQFile *f)
+{
 	/* Return the current position of the file's read/write head. */
 
 	squeakFileOffsetType position;
@@ -256,7 +264,8 @@ sqFileGetPosition(SQFile *f) {
 }
 
 sqInt
-sqFileInit(void) {
+sqFileInit(void)
+{
 	/* Create a session ID that is unlikely to be repeated.
 	   Zero is never used for a valid session number.
 	   Should be called once at startup time.
@@ -323,7 +332,8 @@ setNewFileMacTypeAndCreator(char *sqFileName, sqInt sqFileNameSize)
 }
 
 sqInt
-sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
+sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag)
+{
 	/* Opens the given file using the supplied sqFile structure
 	   to record its state. Fails with no side effects if f is
 	   already open. Files are always opened in binary mode;
@@ -432,7 +442,8 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 }
 
 sqInt
-sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) {
+sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists)
+{
 	/* Opens the given file for writing and if possible reading
 	   if it does not already exist using the supplied sqFile
 	   structure to record its state.
@@ -677,7 +688,8 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 }
 
 sqInt
-sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize) {
+sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize)
+{
 	char cOldName[PATH_MAX], cNewName[PATH_MAX];
 	int err;
 
@@ -696,7 +708,8 @@ sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName
 }
 
 sqInt
-sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
+sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
+{
 	/* Set the file's read/write head to the given position. */
 
 	if (!sqFileValid(f))
@@ -724,7 +737,8 @@ sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 }
 
 squeakFileOffsetType
-sqFileSize(SQFile *f) {
+sqFileSize(SQFile *f)
+{
 	/* Return the length of the given file. */
 
 	if (!sqFileValid(f))
@@ -735,7 +749,8 @@ sqFileSize(SQFile *f) {
 }
 
 sqInt
-sqFileFlush(SQFile *f) {
+sqFileFlush(SQFile *f)
+{
 	/* Flush stdio buffers of file */
 
 	if (!sqFileValid(f))
@@ -754,7 +769,8 @@ sqFileFlush(SQFile *f) {
 }
 
 sqInt
-sqFileSync(SQFile *f) {
+sqFileSync(SQFile *f)
+{
 	/* Flush kernel-level buffers of any written/flushed data to disk */
 
 	if (!sqFileValid(f))
@@ -766,7 +782,8 @@ sqFileSync(SQFile *f) {
 }
 
 sqInt
-sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
+sqFileTruncate(SQFile *f, squeakFileOffsetType offset)
+{
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	fflush(getFile(f));
@@ -776,15 +793,17 @@ sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 }
 
 sqInt
-sqFileValid(SQFile *f) {
-	return (
+sqFileValid(SQFile *f)
+{
+	return
 		(f != NULL) &&
 		(getFile(f) != NULL) &&
-		(f->sessionID == thisSession));
+		(f->sessionID == thisSession);
 }
 
 size_t
-sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
+sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)
+{
 	/* Write count bytes to the given writable file starting at startIndex
 	   in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
 	   of byteArray and startIndex).
@@ -810,7 +829,5 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 }
 
 sqInt
-sqFileThisSession() {
-	return thisSession;
-}
+sqFileThisSession() { return thisSession; }
 #endif /* NO_STD_FILE_SUPPORT */

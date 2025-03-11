@@ -603,15 +603,8 @@ void *ioLoadFunctionFrom(char *fnName, char *modName);
 
 
 /* Proxy declarations for v1.8 */
-#if NewspeakVM
-static sqInt
-callbackEnter(sqInt *callbackID) { return 0; }
-static sqInt
-callbackLeave(sqInt callbackID) { return 0; }
-#else
 sqInt callbackEnter(sqInt *callbackID);
 sqInt callbackLeave(sqInt  callbackID);
-#endif
 sqInt addGCRoot(sqInt *varLoc);
 sqInt removeGCRoot(sqInt *varLoc);
 
