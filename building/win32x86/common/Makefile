@@ -239,9 +239,6 @@ print-tools:
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
-mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
-	$(CC) -o $@ -O1 -mconsole -m32 $<
-
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(CC) -o $@ -mconsole -m32 $<
 
