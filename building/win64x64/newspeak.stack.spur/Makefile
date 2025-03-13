@@ -1,7 +1,7 @@
-#############################################################################
-# Makefile for Win32 Stack Spur Newspeak VM using gcc and cygwin
+######################################################################################
+# Makefile for Win32 Stack Spur Newspeak VM using either gcc and cygwin or MSVC and LLVM
 # Do make init to allow make -n to function.
-#############################################################################
+######################################################################################
 
 # The name of the VM to build
 VM:=nsvm

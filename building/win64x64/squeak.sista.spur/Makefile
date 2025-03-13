@@ -1,5 +1,5 @@
 #############################################################################
-# Makefile for Win32 Cog Spur Squeak VM using gcc-3.4.x and cygwin
+# Makefile for Win32 Sista Spur Squeak VM using either gcc and cygwin or MSVC and LLVM
 # Do make init to allow make -n to function.
 #############################################################################
 

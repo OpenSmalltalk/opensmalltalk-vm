@@ -1,7 +1,7 @@
-#############################################################################
-# Makefile for Win32 Stack Spur Squeak VM using gcc-3.4.x and cygwin
+####################################################################################
+# Makefile for Win32 Stack Spur Squeak VM using either gcc and cygwin or MSVC and LLVM
 # Do make init to allow make -n to function.
-#############################################################################
+####################################################################################
 
 VM:=Squeak
 VMSRCDIR:=../../../src/spur64.stack
