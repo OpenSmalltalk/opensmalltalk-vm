@@ -1,7 +1,7 @@
 #############################################################################
-# Common Makefile for Win64 VM using Clang/MSVC, e.g. 2017 Community, gnu make
+# Common Makefile for Win64 VM using Clang/MSVC, e.g. 2022 Community, gnu make
 # and the Windows 10 SDK.
-# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2020,2025 3D Immersive Collaboration Consulting, LLC
 #############################################################################
 
 ARCH:=x64
@@ -26,7 +26,7 @@ override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
 override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 
 #############################################################################
-# C compiler settings assuming Clang & Visual C++ 2017 Community Edition
+# C compiler settings assuming Clang & Visual C++ 2022 Community Edition
 #
 # use clang.exe from either C:\Program Files\LLVM or C:\LLVM
 # We use clang rather than clang-cl or MSVC because
@@ -36,7 +36,8 @@ override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 
-CC:="C:/LLVM/bin/clang.exe"
+#CC:="C:/LLVM/bin/clang.exe"
+CC:=clang.exe
 Clang:=Clang
 undefine MSVC
 export TOOLPREFIX

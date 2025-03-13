@@ -12,7 +12,7 @@ export ARCH
 # Find out where the MSVC tools are if not already defined.
 ifeq ($(VCToolsInstallDir),)
 # For wildcard we /must/ escape spaces and /must not/ escape parentheses.
-RT:=C:/Program\ Files\ (x86)/Microsoft\ Visual\ Studio/2017/Community/VC/Tools/MSVC
+RT:=C:/Program\ Files\ (x86)/Microsoft\ Visual\ Studio/*/Community/VC/Tools/MSVC
 VCToolsInstallDir:=$(wildcard $(RT)/*)
 else
 # If VCToolsInstallDir is taken from the environment then modify it to use the

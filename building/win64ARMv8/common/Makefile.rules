@@ -1,0 +1,31 @@
+#############################################################################
+# Compilation rules for Microsoft Windows
+#
+# See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+# for an explanation of the dependency management scheme.
+
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+BD:=$(BUILD)/vm
+else
+BD:=$(BUILD)/$(LIBNAME)/vm
+endif
+ALLFLAGS = $(CFLAGS) $(INCLUDES) $(DEFS)
+
+$(OBJDIR)/%.o: %.c
+	$(CC) -x c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.m
+	$(CC) -x objective-c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cpp
+	$(CXX) -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+
+%res: %.rc
+	$(RC) $(RCFLAGS) -i $< -o $@
+
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
