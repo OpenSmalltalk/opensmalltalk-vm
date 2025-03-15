@@ -1788,29 +1788,34 @@ static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
 /*
  * Per-system DPI (for Windows < 8.1)
  */
-static double getDpiSystem(void)
+static double
+getDpiSystem(void)
 {
   double dpi;
   HDC dc = GetWindowDC(stWindow);
-  if (!dc) return 0.0; /* fail */
+  if (!dc)
+	return 0.0; /* fail */
   dpi = (double) GetDeviceCaps(dc, LOGPIXELSY);
   ReleaseDC(stWindow,dc);
   return dpi;
 }
 
 
-static double getDpiMonitor(void)
+static double
+getDpiMonitor(void)
 {
   UINT hdpi = 0, vdpi = 0;
   HMONITOR hMonitor = NULL;
 
-  if (!thisGetDpiForMonitor) { return 0.0; }
+  if (!thisGetDpiForMonitor)
+	return 0.0;
 
-  if ((hMonitor = MonitorFromWindow(stWindow, MONITOR_DEFAULTTONULL))) {
-    if (thisGetDpiForMonitor(hMonitor, thisMDT_EFFECTIVE_DPI, &hdpi, &vdpi) == S_OK && hdpi > 0 && vdpi > 0) {
-      return (double) vdpi;
-    }
-  }
+  if ((hMonitor = MonitorFromWindow(stWindow, MONITOR_DEFAULTTONULL))
+   && thisGetDpiForMonitor(hMonitor, thisMDT_EFFECTIVE_DPI, &hdpi, &vdpi) == S_OK
+   && hdpi > 0
+   && vdpi > 0)
+	return vdpi;
+
   return 0.0;
 }
 
@@ -1818,37 +1823,36 @@ static double getDpiMonitor(void)
  * Expected to be called only once.
  * But I'm just a function, not a cop.
  */
-getDpi_t determineGetDpiFunction(void)
+getDpi_t
+determineGetDpiFunction(void)
 {
   HMODULE shcore = NULL;
   if (IsWindows8Point1OrGreater()) {
-    if (thisGetDpiForMonitor) {
+    if (thisGetDpiForMonitor)
       return getDpiMonitor;
-    } else {
-      // Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
-      if ((shcore = LoadLibrary("Shcore.dll"))) {
-        if ((thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor"))) {
-          return getDpiMonitor;
-        }
-      }
-    }
+	// Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
+	if ((shcore = LoadLibraryA("Shcore.dll"))
+	 && (thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor")))
+	  return getDpiMonitor;
   }
   return getDpiSystem;
 }
 
 const double BASE_DPI = 96.0;
 
-double ioScreenScaleFactor(void)
+double
+ioScreenScaleFactor(void)
 {
   static getDpi_t getDpi = NULL;
-  if (!getDpi) { getDpi = determineGetDpiFunction(); }
+  if (!getDpi)
+	getDpi = determineGetDpiFunction();
 
   double physicalDpi = getDpi();
   if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
     double apparentFactor = physicalDpi / BASE_DPI;
     return apparentFactor > DBL_EPSILON ? apparentFactor : nan("MISS");
   }
-  return 1.0 ;
+  return 1.0;
 }
 
 /* returns the size of the Squeak window */
@@ -2150,25 +2154,22 @@ int
 copy_image_words(unsigned int *dst, unsigned int *src,
 		     int depth, int width, RECT *rect)
 {
-  int pitch, first, last, nWords, delta, yy;
+  int pitch, first, last, nWords, yy;
 
   /* note: all  of the below are in DWORDs not BYTEs */
   pitch = ((width * depth) + 31) / 32;
   first = (rect->left * depth) / 32;
   last  = ((rect->right * depth) + 31) / 32;
   nWords = last - first;
-  delta = pitch - nWords;
   if (nWords <= 0) return 1;
 
   {/* the inner loop */
-    DWORD* srcPixPtr;
-    DWORD* dstPixPtr;
-    srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
-    dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for (yy = rect->top; yy < rect->bottom;
-	yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
+    DWORD *srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
+    DWORD *dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
+    for (yy = rect->top;
+		 yy < rect->bottom;
+		 yy++, srcPixPtr += pitch, dstPixPtr += pitch)
       memcpy(dstPixPtr, srcPixPtr, nWords*4);
-    }
   }
   return 1;
 }

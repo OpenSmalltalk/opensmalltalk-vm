@@ -29,10 +29,6 @@ BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
-# include <io.h> // for _waccess
-#endif
-
 /* main window procedure(s) */
 static LRESULT CALLBACK HostWndProcA(HWND hwnd,
                               UINT message,
@@ -517,13 +513,17 @@ ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
 	if (len <= 0) return -1; /* invalid UTF8 ? */
 	iconPathW[len] = 0;
-	//Check if file exists and have read rights
-	if (_waccess(iconPathW, 4) == -1)
-		return -1;
-	//Load the image into an icon
+	// Load the image into an icon
 	HICON hIcon = (HICON)LoadImageW(NULL, iconPathW, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-	if (hIcon == 0)
+	if (hIcon == 0) {
+		// Check if file exists and has read rights
+		DWORD attributes = GetFileAttributesW(iconPathW);
+		if (attributes == INVALID_FILE_ATTRIBUTES
+		 || (attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE))
+		 || !(attributes & FILE_ATTRIBUTE_NORMAL))
+			return -1;
 		return -2;
+	}
 	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG_PTR)hIcon); 
 	return 0;
 }

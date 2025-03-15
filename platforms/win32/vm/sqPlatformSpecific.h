@@ -162,6 +162,10 @@ extern const unsigned long tltiIndex;
 #	define CONTEXT_PC Rip
 #	define CONTEXT_FP Rbp
 #	define CONTEXT_SP Rsp
+#elif defined(_M_ARM64) || defined(__aarch64__)
+#	define CONTEXT_PC Pc
+#	define CONTEXT_FP Fp
+#	define CONTEXT_SP Sp
 #else
 # error "unknown architecture, program counter field undefined"
 #endif

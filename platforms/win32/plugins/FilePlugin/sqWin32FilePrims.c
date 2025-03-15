@@ -25,6 +25,7 @@
 #include <Windows.h>
 #include <malloc.h>
 #include "sq.h"
+#include "sqAssert.h" // for warning until sqFileSetPosition is done.
 #include "FilePlugin.h"
 
 #include "sqWin32File.h"
@@ -71,6 +72,10 @@ sqInt fileHandleType(HANDLE fdHandle);
 #include "sqWin32HandleTable.h"
 static HandleTable *win32Files = NULL;
 /**********************************************************************/
+
+#if !defined(EOF) // this is used for peeking on stdio streams
+# define EOF -1
+#endif
 
 /*** Variables ***/
 int thisSession = 0;
@@ -310,6 +315,7 @@ sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile * file, HANDLE handle, i
 	file->writable = isWritable;
 	file->lastOp = 0; /* unused on win32 */
 	file->isStdioStream = isFileHandleATTY(handle);
+	file->lastChar = EOF;
 	AddHandleToTable(win32Files, handle);
 }
 
@@ -362,7 +368,7 @@ sqFileDescriptorType(int fdNum)
 }
 
 size_t
-sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)
+sqFileReadIntoAt(SQFile *f, size_t count, char *byteArray, size_t startIndex)
 {
   /* Read count bytes from the given file into byteArray starting at
      startIndex. byteArray is the address of the first byte of a
@@ -374,11 +380,16 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 
   if (!sqFileValid(f))
     FAIL();
-  if (f->isStdioStream)
-    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+  if (f->isStdioStream) {
+    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count,
                 &dwReallyRead, NULL);
+	/* support for skipping back 1 character for stdio streams */
+	if (f->isStdioStream)
+	  if (dwReallyRead > 0)
+		f->lastChar = byteArray[dwReallyRead-1];
+  }
   else
-    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count,
              &dwReallyRead, NULL);
   return dwReallyRead;
 }
@@ -409,6 +420,25 @@ sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
   /* Set the file's read/write head to the given position. */
   if (!sqFileValid(f))
     FAIL();
+  if (f->isStdioStream) {
+	/* support one character of pushback for stdio streams. */
+	if (!f->writable
+	 && f->lastChar != EOF) {
+		squeakFileOffsetType currentPos = f->lastChar == EOF ? 0 : 1;
+		if (currentPos == position)
+			return 1;
+		if (currentPos - 1 == position) {
+#if 0
+			ungetc(f->lastChar, getFile(f));
+			f->lastChar = EOF;
+#else
+			warning("sqFileSetPosition on isStdioStream unimplemented\n");
+#endif
+			return 1;
+		}
+	}
+	return interpreterProxy->success(false);
+  }
   SetFilePointer(FILE_HANDLE(f), ofs.dwLow, (PLONG)&ofs.dwHigh, FILE_BEGIN);
   return 1;
 }
@@ -469,7 +499,7 @@ sqFileValid(SQFile *f)
 }
 
 size_t
-sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)
+sqFileWriteFromAt(SQFile *f, size_t count, char *byteArray, size_t startIndex)
 {
   /* Write count bytes to the given writable file starting at startIndex
      in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
@@ -481,9 +511,9 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
     FAIL();
 
   if (f->isStdioStream)
-    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count, &dwReallyWritten, NULL);
   else
-    WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+    WriteFile(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count, &dwReallyWritten, NULL);
   
   if (dwReallyWritten != count)
     FAIL();
@@ -541,12 +571,12 @@ sqImageFileOpen(const char *fileName, const char *mode)
     return 0;
   
   h = CreateFileW(win32Path,
-		  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-		  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
-		  NULL, /* No security descriptor */
-		  writeFlag ? CREATE_ALWAYS : OPEN_EXISTING,
-		  FILE_ATTRIBUTE_NORMAL,
-		  NULL /* No template */);
+				  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
+				  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
+				  NULL, /* No security descriptor */
+				  writeFlag ? CREATE_ALWAYS : OPEN_EXISTING,
+				  FILE_ATTRIBUTE_NORMAL,
+				  NULL /* No template */);
 
   if (h == INVALID_HANDLE_VALUE)
     return 0;

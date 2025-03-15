@@ -1,7 +1,7 @@
 /*
- *  x86ia32abicc.c
+ *  x64sysvabicc.c
  *
- * Support for Call-outs and Call-backs from the Plugin on x86_64.
+ * Support for Call-outs and Call-backs from the Plugin on Sys V UNIX ABI for x86_64.
  *  Written by Eliot Miranda 12/14, Ryan Macnak 9/15
  *
  * Based on

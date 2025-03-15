@@ -12,16 +12,20 @@
  */
 #if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 
-#include <unistd.h> // for getpagesize/sysconf
-#include <stdlib.h> // for valloc
-#include <sys/mman.h> // for mprotect
-#if __APPLE__ && __MACH__ /* Mac OS X */
+#if defined(_MSC_VER) || defined(__MINGW32__)
+# include <Windows.h> /* for GetSystemInfo & VirtualAlloc */
+#else
+# include <unistd.h> // for getpagesize/sysconf
+# include <sys/mman.h> // for mprotect
+# if __APPLE__ && __MACH__ /* Mac OS X */
 #  if defined(MAP_JIT) // for pthread_jit_write_protect_np
 #	include <pthread.h>
 #  endif
 #  include <libkern/OSCacheControl.h>
+# endif
 #endif
 
+#include <stdlib.h> // for valloc
 #include <string.h> // for memcpy et al
 #include <setjmp.h>
 #include <stdio.h> // for fprintf(stderr,...)
@@ -57,7 +61,7 @@ struct VirtualMachine* interpreterProxy;
 /*
  * Call a foreign function to set x8 structure result address return register
  */
-void
+EXPORT(void)
 callAndReturnWithStructAddr(void *structAddr, void *procAddr, void *regValuesArrayAddr)
 { /* Any float regs already loaded
      Place alloca'd struct address in x8 for results.
@@ -76,6 +80,9 @@ callAndReturnWithStructAddr(void *structAddr, void *procAddr, void *regValuesArr
   );
 }
 
+#if defined(_MSC_VER) || defined(__MINGW32__)
+# define labs(v) llabs(v) // LLP64 crap
+#endif
 /*
  * Call a foreign function that answers an integral result in r0 according to
  * ARM EABI rules.
@@ -149,11 +156,11 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  *	large struct address returns in x8, NOT x0
  */
 long long
-thunkEntry(long x0, long x1, long x2, long x3,
-	   long x4, long x5, long x6, long x7,
-	   double d0, double d1, double d2, double d3,
-	   double d4, double d5, double d6, double d7,
-	   void *thunkpPlus16, sqIntptr_t *stackp)
+thunkEntry(sqIntptr_t x0, sqIntptr_t x1, sqIntptr_t x2, sqIntptr_t x3,
+		   sqIntptr_t x4, sqIntptr_t x5, sqIntptr_t x6, sqIntptr_t x7,
+		   double d0, double d1, double d2, double d3,
+		   double d4, double d5, double d6, double d7,
+		   void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;  /* See, e.g. spurstack64src/vm/vmCallback.h */
   int returnType;

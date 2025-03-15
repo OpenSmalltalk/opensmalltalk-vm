@@ -1078,7 +1078,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
 			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
 			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
-			"    x29 %14p  fp %14p  lr %14p  sp %14p\n"
+			"    x28 %14p  fp %14p  lr %14p  sp %14p\n"
 			"     pc %14p pstate 0x%08lx fault @ %14p\n",
 			v(regs[ 0]), v(regs[ 1]), v(regs[ 2]), v(regs[ 3]),
 			v(regs[ 4]), v(regs[ 5]), v(regs[ 6]), v(regs[ 7]),

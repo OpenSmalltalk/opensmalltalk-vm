@@ -243,14 +243,24 @@ AtomicGet(__int64 *target)
 # define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
 
 #elif defined(_MSC_VER)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) \
+  || defined(_M_ARM64) || defined(__aarch64__)
 #	define sqAtomicAddConst(var,n) do {\
-	if (sizeof(var) == sizeof(int)) \
+	  if (sizeof(var) == sizeof(long)) \
 		InterlockedAdd((volatile void *)&var,n); \
-	else if (sizeof(var) == 8) \
-		InterlockedAdd64((volatile void *)&var,n); \
-	else \
+	  else \
 		error("no interlocked add for this variable size"); \
 	} while (0)
+# else
+#	define sqAtomicAddConst(var,n) do {\
+	  if (sizeof(var) == sizeof(int)) \
+		InterlockedAdd((volatile void *)&var,n); \
+	  else if (sizeof(var) == sizeof(void *)) \
+		InterlockedAdd64((volatile void *)&var,n); \
+	  else \
+		error("no interlocked add for this variable size"); \
+	} while (0)
+# endif
 
 #elif defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C)
 /* N.B. I know you want to use the intrinsics; they're pretty; they're official;

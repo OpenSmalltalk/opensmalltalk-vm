@@ -1363,57 +1363,55 @@ printCrashDebugInformation(PEXCEPTION_POINTERS exp)
 			(int) sizeof(exp->ExceptionRecord->ExceptionInformation[1])*2,
 			exp->ExceptionRecord->ExceptionInformation[1]);
     }
+# define reg(r) exp->ContextRecord->r
 #if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-    fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
-	    exp->ContextRecord->Eax,
-	    exp->ContextRecord->Ebx,
-	    exp->ContextRecord->Ecx,
-	    exp->ContextRecord->Edx);
-    fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
-	    exp->ContextRecord->Esi,
-	    exp->ContextRecord->Edi,
-	    exp->ContextRecord->Ebp,
-	    exp->ContextRecord->Esp);
-    fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
-	    exp->ContextRecord->Eip,
-	    exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
-	    exp->ContextRecord->FloatSave.ControlWord,
-	    exp->ContextRecord->FloatSave.StatusWord,
-	    exp->ContextRecord->FloatSave.TagWord);
+    fprintf(f,
+			"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n"
+			"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n"
+			"EIP:%08lX\tEFL:%08lX\n"
+			"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
+			reg(Eax), reg(Ebx), reg(Ecx), reg(Edx),
+			reg(Esi), reg(Edi), reg(Ebp), reg(Esp),
+			reg(Eip), reg(EFlags),
+			reg(FloatSave.ControlWord), reg(FloatSave.StatusWord), reg(FloatSave.TagWord));
 #elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 # define FMT PRIxSQPTR
     fprintf(f,
-			"RAX:%016" FMT "\tRBX:%016" FMT "\tRCX:%016" FMT "\n",
-			exp->ContextRecord->Rax,
-			exp->ContextRecord->Rbx,
-			exp->ContextRecord->Rcx);
-    fprintf(f,
-			"RDX:%016" FMT "\tRSI:%016" FMT "\tRDI:%016" FMT "\n",
-			exp->ContextRecord->Rdx,
-			exp->ContextRecord->Rsi,
-			exp->ContextRecord->Rdi);
-    fprintf(f,
-			"RBP:%016" FMT "\tRSP:%016" FMT "\tR8 :%016" FMT "\n",
-			exp->ContextRecord->Rbp,
-			exp->ContextRecord->Rsp,
-			exp->ContextRecord->R8);
-    fprintf(f,"R9 :%016" FMT "\tR10:%016" FMT "\tR11:%016" FMT "\n",
-			exp->ContextRecord->R9,
-			exp->ContextRecord->R10,
-			exp->ContextRecord->R11);
-    fprintf(f,"R12:%016" FMT "\tR13:%016" FMT "\tR14:%016" FMT "\n",
-			exp->ContextRecord->R12,
-			exp->ContextRecord->R13,
-			exp->ContextRecord->R14);
-    fprintf(f,"R15:%016" FMT "\tRIP:%016" FMT " EFL:%08lx\n",
-			exp->ContextRecord->R15,
-			exp->ContextRecord->Rip,
-			exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08x\tFP Status:  %08x\tFP Tag:     %08x\n",
-			exp->ContextRecord->FltSave.ControlWord,
-			exp->ContextRecord->FltSave.StatusWord,
-			exp->ContextRecord->FltSave.TagWord);
+			"RAX:%016" FMT "\tRBX:%016" FMT "\tRCX:%016" FMT "\n"
+			"RDX:%016" FMT "\tRSI:%016" FMT "\tRDI:%016" FMT "\n"
+			"RBP:%016" FMT "\tRSP:%016" FMT "\tR8 :%016" FMT "\n"
+			"R9 :%016" FMT "\tR10:%016" FMT "\tR11:%016" FMT "\n"
+			"R12:%016" FMT "\tR13:%016" FMT "\tR14:%016" FMT "\n"
+			"R15:%016" FMT "\tRIP:%016" FMT " EFL:%08lx\n"
+			"FP Control: %08x\tFP Status:  %08x\tFP Tag:     %08x\n",
+			reg(Rax), reg(Rbx), reg(Rcx),
+			reg(Rdx), reg(Rsi), reg(Rdi),
+			reg(Rbp), reg(Rsp), reg(R8),
+			reg(R9),  reg(R10), reg(R11),
+			reg(R12), reg(R13), reg(R14),
+			reg(R15), reg(Rip), reg(EFlags),
+			reg(FltSave.ControlWord), reg(FltSave.StatusWord), reg(FltSave.TagWord));
+#elif defined(_M_ARM64) || defined(__aarch64__)
+# define FMT PRIxSQPTR
+	fprintf(f,
+			"     x0:%014" FMT " x1:%014" FMT " x2:%014" FMT " x3 :%014" FMT "\n"
+			"     x4:%014" FMT " x5:%014" FMT " x6:%014" FMT " x7 :%014" FMT "\n"
+			"     x8:%014" FMT " x9:%014" FMT "x10:%014" FMT "x11 :%014" FMT "\n"
+			"    x12:%014" FMT "x13:%014" FMT "x14:%014" FMT "x15 :%014" FMT "\n"
+			"    x16:%014" FMT "x17:%014" FMT "x18:%014" FMT "x19 :%014" FMT "\n"
+			"    x20:%014" FMT "x21:%014" FMT "x22:%014" FMT "x23 :%014" FMT "\n"
+			"    x24:%014" FMT "x25:%014" FMT "x26:%014" FMT "x27 :%014" FMT "\n"
+			"    x28:%014" FMT " fp:%014" FMT " lr:%014" FMT " sp :%014" FMT "\n"
+			"     pc:%014" FMT "fpcr 0x%08lx fpsr 0x%08lx\n",
+			reg(X0),  reg(X1),  reg(X2),  reg(X3),
+			reg(X4),  reg(X5),  reg(X6),  reg(X7),
+			reg(X8),  reg(X9),  reg(X10), reg(X11),
+			reg(X12), reg(X13), reg(X14), reg(X15),
+			reg(X16), reg(X17), reg(X18), reg(X19),
+			reg(X20), reg(X21), reg(X22), reg(X23),
+			reg(X24), reg(X25), reg(X26), reg(X27),
+			reg(X28), reg(Fp),  reg(Lr),  reg(Sp),
+			reg(Pc),  reg(Fpcr), reg(Fpsr));
 #else
 # error "unknown architecture, cannot pick dump registers"
 #endif
@@ -2094,7 +2092,7 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);
 		return 2; }
-	else if (argc > 1 && !strcmp(argv[0], VMOPTION("logplugin"))) { 
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("logplugin"))) {
 		extern char *primTracePluginName;
 		primTracePluginName = argv[1];
 		return 2; }

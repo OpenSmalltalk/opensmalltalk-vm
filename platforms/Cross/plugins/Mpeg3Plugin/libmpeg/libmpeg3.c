@@ -36,6 +36,7 @@
 #include "libmpeg3.h"
 #include "mpeg3protos.h"
 #include "video/mpeg3videoprotos.h"
+#include "changesForSqueak.h" // eem 2025.03.14 fix strcase[n]cmp on win64
 
 #include <stdlib.h>
 #include <string.h>

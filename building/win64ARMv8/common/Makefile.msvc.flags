@@ -4,7 +4,7 @@
 # Copyright (c) 2020,2025 3D Immersive Collaboration Consulting, LLC
 #############################################################################
 
-ARCH:=x64
+ARCH:=arm64
 export ARCH
 
 # Find out where the MSVC tools are if not already defined.

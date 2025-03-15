@@ -138,7 +138,7 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(JMPOBJ) $(LIBSRC)
 	$(LD) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(VMLIB) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
 	-NOIMPLIB \
 	-LIBPATH:$(BUILD)/vm \
-	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x64" \
-	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x64" \
-	-LIBPATH:"$(VCToolsInstallDir)/lib/x64/" $(EXTRALIBPATH) \
+	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/$(MACHINE)" \
+	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/$(MACHINE)" \
+	-LIBPATH:"$(VCToolsInstallDir)/lib/$(MACHINE)/" $(EXTRALIBPATH) \
 	-OUT:$(subst /,\\,$(PLUGINDLL))

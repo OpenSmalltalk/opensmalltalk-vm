@@ -69,10 +69,10 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 #if defined(i386) || defined(__i386) || defined(__i386__) || (defined(_WIN32) && !defined(_WIN64)) || defined(_M_IX86)
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
-#elif _WIN64 || defined(_M_X64) || defined(_M_AMD64) || defined(_WIN64)
+#elif _WIN64 && (defined(_M_X64) || defined(_M_AMD64))
 # undef thunkEntryType
 # define thunkEntryType long long
-# define INT_REG_ARGS long long,long long,long long,long long,
+# define INT_REG_ARGS sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,
 # define DBL_REG_ARGS /* double,double,double,double, NOT INCLUDED because only 4 parameters are passed in registers, either int or float */
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
 # define INT_REG_ARGS long,long,long,long,long,long,
@@ -80,10 +80,10 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */
-#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64) || defined(_M_ARM64)
 # undef thunkEntryType
 # define thunkEntryType long long
-# define INT_REG_ARGS long,long,long,long,long,long,long,long,
+# define INT_REG_ARGS sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,sqIntptr_t,
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 # if __APPLE__
 # undef ifIsWithinExecutablePageMakePageWritable

@@ -67,6 +67,16 @@
 #	define warnPrintfW wprintf
 #endif /* _M_X64 & al */
 
+#if defined(_M_ARM64) || defined(__aarch64__)
+#	define WIN32_NAME "Win32"
+#	define WIN32_OS_NAME "NT"
+#	define WIN32_PROCESSOR_NAME "aarch64"
+
+  /* Use console for warnings */
+#	define warnPrintf printf
+#	define warnPrintfW wprintf
+#endif /* _M_X64 & al */
+
 /* Experimental */
 #ifdef MINIMAL
   /* The hardcoded defs:

@@ -1,5 +1,5 @@
 /*
- *  x64win64ia32abicc.c
+ *  x64win64abicc.c
  *
  * Support for Call-outs and Call-backs from the Plugin on x86_64 on Windows.
  * here referred to as x64win64ABI
