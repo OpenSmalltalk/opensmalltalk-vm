@@ -1808,7 +1808,7 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
   if (flags & SQ_SOCKET_PASSIVE)	request.ai_flags |= AI_PASSIVE;
 
   switch (family) {
-	case SQ_SOCKET_FAMILY_UNSPECIFIED:	request.ai_family= PF_UNSPEC;	break;
+	case SQ_SOCKET_FAMILY_UNSPECIFIED:	request.ai_family= AF_UNSPEC;	break;
 	case SQ_SOCKET_FAMILY_LOCAL:		request.ai_family= AF_UNIX;		break;
 	case SQ_SOCKET_FAMILY_INET4:		request.ai_family= AF_INET;		break;
 	case SQ_SOCKET_FAMILY_INET6:		request.ai_family= AF_INET6;	break;
@@ -1816,12 +1816,14 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
   }
 
   switch (type) {
+	case SQ_SOCKET_TYPE_UNSPECIFIED:	request.ai_socktype= 0;			break;
 	case SQ_SOCKET_TYPE_STREAM:		request.ai_socktype= SOCK_STREAM;	break;
 	case SQ_SOCKET_TYPE_DGRAM:		request.ai_socktype= SOCK_DGRAM;	break;
 	default: goto fail;
   }
 
   switch (protocol) {
+	case SQ_SOCKET_PROTOCOL_UNSPECIFIED:	request.ai_protocol= IPPROTO_IP;	break;
 	case SQ_SOCKET_PROTOCOL_TCP:	request.ai_protocol= IPPROTO_TCP;	break;
 	case SQ_SOCKET_PROTOCOL_UDP:	request.ai_protocol= IPPROTO_UDP;	break;
 	default: goto fail;
