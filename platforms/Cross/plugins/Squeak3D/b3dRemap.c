@@ -209,9 +209,7 @@ void b3dRemapAttributes(B3DAttrAllocList *list, sqInt attrOffset)
 */
 int b3dValidateAndRemapState(B3DRasterizerState *state)
 {
-	sqInt faceOffset, edgeOffset, attrOffset, aetOffset, objOffset;
-	int i;
-	B3DPrimitiveObject *obj;
+	sqInt faceOffset, edgeOffset, attrOffset, aetOffset;
 
 	if(!state) return B3D_GENERIC_ERROR;
 	
@@ -224,10 +222,10 @@ int b3dValidateAndRemapState(B3DRasterizerState *state)
 	if(state->fillList->magic   != B3D_FILL_LIST_MAGIC) return B3D_MAGIC_ERROR;
 
 	/* Check if we need to relocate objects */
-	faceOffset = (int)state->faceAlloc - (int)state->faceAlloc->This;
-	edgeOffset = (int)state->edgeAlloc - (int)state->edgeAlloc->This;
-	attrOffset = (int)state->attrAlloc - (int)state->attrAlloc->This;
-	aetOffset = (int)state->aet - (int)state->aet->This;
+	faceOffset = (sqInt)state->faceAlloc - (sqInt)state->faceAlloc->This;
+	edgeOffset = (sqInt)state->edgeAlloc - (sqInt)state->edgeAlloc->This;
+	attrOffset = (sqInt)state->attrAlloc - (sqInt)state->attrAlloc->This;
+	aetOffset = (sqInt)state->aet - (sqInt)state->aet->This;
 	
 	/* remap faces */
 	if(attrOffset || edgeOffset)
@@ -262,10 +260,10 @@ int b3dValidateAndRemapState(B3DRasterizerState *state)
 	state->aet->This = (void*) state->aet;
 
 	/* Remap any vertex pointers */
-	for(i=0; i<state->nObjects; i++) {
-		obj = state->objects[i];
+	for (int i=0; i<state->nObjects; i++) {
+		B3DPrimitiveObject *obj = state->objects[i];
 		if(obj->magic != B3D_PRIMITIVE_OBJECT_MAGIC) return B3D_MAGIC_ERROR;
-		objOffset = (int)obj - (int)obj->This;
+		sqInt objOffset = (sqInt)obj - (sqInt)obj->This;
 		if(objOffset) {
 			if((obj->flags & B3D_OBJECT_ACTIVE)) {
 				B3DPrimitiveVertex *firstVtx = obj->vertices;

@@ -1,7 +1,7 @@
-/* 
+/*
  *
  *  This file is part of libmpeg3
- *	
+ *
  * LibMPEG3
  * Author: Adam Williams <broadcast@earthling.net>
  * Page: heroine.linuxbox.com
@@ -9,7 +9,7 @@
  *
     LibMPEG3 was originally licenced under GPL. It was relicensed by
     the author under the LGPL and the Squeak license on Nov 1st, 2000
-    
+
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
     License as published by the Free Software Foundation; either
@@ -22,12 +22,12 @@
 
     You should have received a copy of the GNU Lesser General Public
     License along with this library; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
-    
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
     Also licensed under the Squeak license.
     http://www.squeak.org/license.html
  */
- 
+
  /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
  */
 #include "libmpeg3.h"
@@ -112,7 +112,7 @@ int mpeg3_get_adaptation_field(mpeg3_demuxer_t *demuxer)
 /* get adaptation field length */
 	length = mpeg3packet_read_char(demuxer);
 /* get first byte */
-  	pcr_flag = (mpeg3packet_read_char(demuxer) >> 4) & 1;           
+  	pcr_flag = (mpeg3packet_read_char(demuxer) >> 4) & 1;
 
 	if(pcr_flag)
 	{
@@ -124,7 +124,7 @@ int mpeg3_get_adaptation_field(mpeg3_demuxer_t *demuxer)
 			clk_ref_base = 0;               /* ie. longer than 32 bits when multiplied by 2 */
 			clk_ref_ext = 0;                /* multiplied by 2 corresponds to shift left 1 (<<=1) */
 		}
-		else 
+		else
 		{
 			clk_ref_base <<= 1; /* Create space for bit */
 			clk_ref_base |= (clk_ref_ext >> 15);          /* Take bit */
@@ -165,7 +165,7 @@ int mpeg3_get_pes_packet_header(mpeg3_demuxer_t *demuxer, unsigned long *pts, un
 	int pes_header_data_length;
 
 /* drop first 8 bits */
-	mpeg3packet_read_char(demuxer);  
+	mpeg3packet_read_char(demuxer);
 	pts_dts_flags = (mpeg3packet_read_char(demuxer) >> 6) & 0x3;
 	pes_header_data_length = mpeg3packet_read_char(demuxer);
 
@@ -180,7 +180,7 @@ int mpeg3_get_pes_packet_header(mpeg3_demuxer_t *demuxer, unsigned long *pts, un
 		pes_header_bytes += 5;
 	}
 	else if(pts_dts_flags == 3)
-	{      
+	{
 		*pts = (mpeg3packet_read_char(demuxer) >> 1) & 7;  /* Only low 4 bits (7==1111) */
 		*pts <<= 15;
 		*pts |= (mpeg3packet_read_int16(demuxer) >> 1);
@@ -194,7 +194,7 @@ int mpeg3_get_pes_packet_header(mpeg3_demuxer_t *demuxer, unsigned long *pts, un
 		pes_header_bytes += 10;
   }
 /* extract other stuff here! */
-  
+
 	mpeg3packet_skip(demuxer, pes_header_data_length - pes_header_bytes);
 	return 0;
 }
@@ -223,7 +223,7 @@ int mpeg3_get_pes_packet_data(mpeg3_demuxer_t *demuxer, unsigned int stream_id)
 			return mpeg3packet_get_data_buffer(demuxer);
     	}
 	}
-	else 
+	else
 	if((stream_id >> 4)==14)
 	{
 /* Just pick the first available stream if no ID is set */
@@ -238,7 +238,7 @@ int mpeg3_get_pes_packet_data(mpeg3_demuxer_t *demuxer, unsigned int stream_id)
 			return mpeg3packet_get_data_buffer(demuxer);
 		}
 	}
-	else 
+	else
 	{
 		return get_unknown_data(demuxer);
 	}
@@ -290,9 +290,9 @@ int mpeg3_get_payload(mpeg3_demuxer_t *demuxer)
 	if(demuxer->payload_unit_start_indicator)
 	{
     	if(demuxer->pid==0) mpeg3_get_program_association_table(demuxer);
-    	else 
+    	else
 		if(mpeg3packet_next_int24(demuxer) == MPEG3_PACKET_START_CODE_PREFIX) mpeg3_get_pes_packet(demuxer);
-    	else 
+    	else
 		mpeg3packet_skip(demuxer, demuxer->raw_size - demuxer->raw_offset);
 	}
 	else
@@ -301,12 +301,12 @@ int mpeg3_get_payload(mpeg3_demuxer_t *demuxer)
 		{
 			mpeg3packet_get_data_buffer(demuxer);
 		}
-    	else 
+    	else
 		if(demuxer->pid == demuxer->video_pid && demuxer->do_video)
 		{
 			mpeg3packet_get_data_buffer(demuxer);
 		}
-    	else 
+    	else
 		mpeg3packet_skip(demuxer, demuxer->raw_size - demuxer->raw_offset);
 	}
 	return 0;
@@ -356,7 +356,7 @@ int mpeg3_read_transport(mpeg3_demuxer_t *demuxer)
 		fprintf(stderr, "demuxer->transport_error_indicator\n");
 		return 1;
 	}
- 
+
     if (demuxer->pid == 0x1fff)
 	{
 		demuxer->is_padding = 1;  /* padding; just go to next */
@@ -387,7 +387,7 @@ int mpeg3_read_transport(mpeg3_demuxer_t *demuxer)
 	result = 0;
 
 /* Check counters */
-    if(demuxer->pid != MPEG3_PROGRAM_ASSOCIATION_TABLE && 
+    if(demuxer->pid != MPEG3_PROGRAM_ASSOCIATION_TABLE &&
 		demuxer->pid != MPEG3_CONDITIONAL_ACCESS_TABLE &&
         (demuxer->adaptation_field_control == 1 || demuxer->adaptation_field_control == 3))
 	{
@@ -420,7 +420,7 @@ unsigned long mpeg3_get_timestamp(mpeg3_demuxer_t *demuxer)
 {
 	unsigned long timestamp;
 /* Only low 4 bits (7==1111) */
-	timestamp = (mpeg3packet_read_char(demuxer) >> 1) & 7;  
+	timestamp = (mpeg3packet_read_char(demuxer) >> 1) & 7;
 	timestamp <<= 15;
 	timestamp |= (mpeg3packet_read_int16(demuxer) >> 1);
 	timestamp <<= 15;
@@ -460,7 +460,7 @@ int mpeg3_get_pack_header(mpeg3_demuxer_t *demuxer, unsigned int *header)
 			i = mpeg3packet_read_char(demuxer) & 0x7;
 
 /* stuffing */
-			mpeg3packet_skip(demuxer, i);  
+			mpeg3packet_skip(demuxer, i);
 		}
 	}
 	else
@@ -491,7 +491,7 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 	pes_packet_length = mpeg3packet_read_int16(demuxer);
 	pes_packet_start = demuxer->raw_offset;
 
-	if(stream_id != MPEG3_PRIVATE_STREAM_2 && 
+	if(stream_id != MPEG3_PRIVATE_STREAM_2 &&
 		stream_id != MPEG3_PADDING_STREAM)
 	{
 		if((mpeg3packet_next_char(demuxer) >> 6) == 0x02)
@@ -505,7 +505,7 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 			if(scrambling && (demuxer->do_audio || demuxer->do_video))
 			{
 /* Decrypt it */
-				if(mpeg3_decrypt_packet(demuxer->titles[demuxer->current_title]->fs->css, 
+				if(mpeg3_decrypt_packet(demuxer->titles[demuxer->current_title]->fs->css,
 					demuxer->raw_data))
 				{
 					fprintf(stderr, "mpeg3_get_ps_pes_packet: Decryption not available\n");
@@ -523,7 +523,7 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 				pts |= (mpeg3packet_read_int16(demuxer) >> 1);
 				pes_header_bytes += 5;
 			}
-    		else 
+    		else
 			if(pts_dts_flags == 3)
 			{
         		pts = (mpeg3packet_read_char(demuxer) >> 1) & 7;  /* Only low 4 bits (7==1111) */
@@ -593,7 +593,7 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 			if(!demuxer->do_audio && !demuxer->do_video)
 				demuxer->astream_table[stream_id & 0x0f] = AUDIO_MPEG;
 			else
-			if(demuxer->astream == -1) 
+			if(demuxer->astream == -1)
 				demuxer->astream = stream_id & 0x0f;
 
 			if((stream_id & 0x0f) == demuxer->astream && demuxer->do_audio)
@@ -606,20 +606,20 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 				demuxer->data_size += pes_packet_length;
 				demuxer->raw_offset += pes_packet_length;
 		  	}
-			else 
+			else
 			{
     			mpeg3packet_skip(demuxer, pes_packet_length);
 			}
 		}
-    	else 
+    	else
 		if((stream_id >> 4) == 0xe)
 		{
 /* Video data */
 /* Take first stream ID if -1 */
-			if(!demuxer->do_audio && !demuxer->do_video) 
+			if(!demuxer->do_audio && !demuxer->do_video)
 				demuxer->vstream_table[stream_id & 0x0f] = 1;
 			else
-			if(demuxer->vstream == -1) 
+			if(demuxer->vstream == -1)
 				demuxer->vstream = stream_id & 0x0f;
 
 			pes_packet_length -= demuxer->raw_offset - pes_packet_start;
@@ -627,18 +627,18 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
 			{
         		if(pts) demuxer->pes_video_time = pts;
 
-				memcpy(&demuxer->data_buffer[demuxer->data_size], 
+				memcpy(&demuxer->data_buffer[demuxer->data_size],
 					&demuxer->raw_data[demuxer->raw_offset],
 					pes_packet_length);
 				demuxer->data_size += pes_packet_length;
 				demuxer->raw_offset += pes_packet_length;
     	  	}
-    		else 
+    		else
 			{
         	    mpeg3packet_skip(demuxer, pes_packet_length);
     		}
     	}
-    	else 
+    	else
 		if(stream_id == 0xbd && demuxer->raw_data[demuxer->raw_offset] != 0xff)
 		{
 /* DVD audio data */
@@ -677,14 +677,14 @@ int mpeg3_get_ps_pes_packet(mpeg3_demuxer_t *demuxer, unsigned int *header)
         	    mpeg3packet_skip(demuxer, pes_packet_length);
       		}
     	}
-    	else 
+    	else
 		if(stream_id == 0xbc || 1)
 		{
 			pes_packet_length -= demuxer->raw_offset - pes_packet_start;
         	mpeg3packet_skip(demuxer, pes_packet_length);
     	}
 	}
-  	else 
+  	else
 	if(stream_id == MPEG3_PRIVATE_STREAM_2 || stream_id == MPEG3_PADDING_STREAM)
 	{
 		pes_packet_length -= demuxer->raw_offset - pes_packet_start;
@@ -712,7 +712,7 @@ int mpeg3_read_program(mpeg3_demuxer_t *demuxer)
 	demuxer->raw_size = demuxer->packet_size;
 	demuxer->raw_offset = 0;
 	demuxer->data_size = 0;
-	
+
 /* Search backward for it. */
 	header = mpeg3io_read_int32(title->fs);
 	result = mpeg3io_eof(title->fs);
@@ -736,7 +736,7 @@ int mpeg3_read_program(mpeg3_demuxer_t *demuxer)
 // couldn't find MPEG3_PACK_START_CODE
 		return 1;
 	}
-	
+
 	result = mpeg3io_read_data(demuxer->raw_data, demuxer->packet_size, title->fs);
 	if(result)
 	{
@@ -769,7 +769,7 @@ double mpeg3_lookup_time_offset(mpeg3_demuxer_t *demuxer, long byte)
 
 	if(!title->timecode_table_size) return 0;
 
-	for(i = title->timecode_table_size - 1; 
+	for(i = title->timecode_table_size - 1;
 		i >= 0 && title->timecode_table[i].start_byte > byte;
 		i--)
 		;
@@ -784,8 +784,8 @@ int mpeg3_advance_timecode(mpeg3_demuxer_t *demuxer, int reverse)
 	int do_seek = 0;
 
 /* Skip timecode advancing when constructing timecode table */
-	if(!title->timecode_table || 
-		!title->timecode_table_size || 
+	if(!title->timecode_table ||
+		!title->timecode_table_size ||
 		demuxer->generating_timecode) return 0;
 
 	if(!reverse)
@@ -795,9 +795,9 @@ int mpeg3_advance_timecode(mpeg3_demuxer_t *demuxer, int reverse)
 		{
 			mpeg3io_seek(title->fs, title->timecode_table[demuxer->current_timecode].start_byte);
 		}
-		
+
 /* Get the next timecode */
-		while(!result && 
+		while(!result &&
 			(mpeg3io_tell(title->fs) >= title->timecode_table[demuxer->current_timecode].end_byte ||
 				demuxer->current_program != title->timecode_table[demuxer->current_timecode].program))
 		{
@@ -833,7 +833,7 @@ int mpeg3_advance_timecode(mpeg3_demuxer_t *demuxer, int reverse)
 	else
 	{
 /* Get the previous timecode */
-		while(!result && 
+		while(!result &&
 			(mpeg3io_tell(title->fs) < title->timecode_table[demuxer->current_timecode].start_byte ||
 				demuxer->current_program != title->timecode_table[demuxer->current_timecode].program))
 		{
@@ -860,7 +860,7 @@ int mpeg3_advance_timecode(mpeg3_demuxer_t *demuxer, int reverse)
 			}
 		}
 
-		if(!result && do_seek) 
+		if(!result && do_seek)
 			mpeg3io_seek(title->fs, title->timecode_table[demuxer->current_timecode].start_byte);
 	}
 
@@ -892,7 +892,7 @@ int mpeg3_read_next_packet(mpeg3_demuxer_t *demuxer)
 		do
 		{
 			p1 = title->fs->current_byte;
-			
+
 			result = mpeg3_advance_timecode(demuxer, 0);
 
 			if(!result)
@@ -914,7 +914,7 @@ int mpeg3_read_next_packet(mpeg3_demuxer_t *demuxer)
 					result = mpeg3io_read_data(demuxer->data_buffer, demuxer->packet_size, title->fs);
 					if(!result) demuxer->data_size = demuxer->packet_size;
 				}
-				
+
 				// We can spin out on attempts to read the last packet over and over.
 				if (p1 >= title->fs->current_byte) {
 					result = -1;
@@ -967,7 +967,7 @@ int mpeg3_read_prev_packet(mpeg3_demuxer_t *demuxer)
 /* Elementary stream */
 /* Read the packet forwards and seek back to the start */
 			result = mpeg3io_read_data(demuxer->data_buffer, demuxer->packet_size, title->fs);
-			if(!result) 
+			if(!result)
 			{
 				demuxer->data_size = demuxer->packet_size;
 				result = mpeg3io_seek_relative(title->fs, -demuxer->packet_size);
@@ -983,15 +983,15 @@ int mpeg3_read_prev_packet(mpeg3_demuxer_t *demuxer)
 
 
 /* Used for audio */
-int mpeg3demux_read_data(mpeg3_demuxer_t *demuxer, 
-		unsigned char *output, 
+int mpeg3demux_read_data(mpeg3_demuxer_t *demuxer,
+		unsigned char *output,
 		long size)
 {
 	long i;
 	int result = 0;
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
 	demuxer->error_flag = 0;
-	
+
 	if(demuxer->data_position >= 0)
 	{
 /* Read forwards */
@@ -1048,11 +1048,11 @@ unsigned int mpeg3demux_read_prev_char_packet(mpeg3_demuxer_t *demuxer)
 	return demuxer->next_char;
 }
 
-mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer, 
-		mpeg3_title_t *title, 
-		long prev_byte, 
-		double prev_time, 
-		long next_byte, 
+mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
+		mpeg3_title_t *title,
+		long prev_byte,
+		double prev_time,
+		long next_byte,
 		double next_time,
 		int dont_store)
 {
@@ -1060,10 +1060,10 @@ mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
 	mpeg3demux_timecode_t *new_timecode = NULL, *old_timecode = NULL;
 	long i;
 
-	if(!title->timecode_table || 
+	if(!title->timecode_table ||
 		title->timecode_table_allocation <= title->timecode_table_size)
 	{
-		if(title->timecode_table_allocation == 0) 
+		if(title->timecode_table_allocation == 0)
 			title->timecode_table_allocation = 1;
 		else
 			title->timecode_table_allocation *= 2;
@@ -1093,9 +1093,9 @@ mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
 			old_timecode = &title->timecode_table[title->timecode_table_size - 1];
 			old_timecode->end_byte = prev_byte;
 			old_timecode->end_time = prev_time;
-			new_timecode->absolute_start_time = 
-				prev_time - 
-				old_timecode->start_time + 
+			new_timecode->absolute_start_time =
+				prev_time -
+				old_timecode->start_time +
 				old_timecode->absolute_start_time;
 			new_timecode->absolute_end_time = next_time;
 		}
@@ -1105,8 +1105,8 @@ mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
 	return new_timecode;
 }
 
-mpeg3demux_timecode_t* mpeg3demux_next_timecode(mpeg3_demuxer_t *demuxer, 
-		int *current_title, 
+mpeg3demux_timecode_t* mpeg3demux_next_timecode(mpeg3_demuxer_t *demuxer,
+		int *current_title,
 		int *current_timecode,
 		int current_program)
 {
@@ -1114,7 +1114,7 @@ mpeg3demux_timecode_t* mpeg3demux_next_timecode(mpeg3_demuxer_t *demuxer,
 	while(!done)
 	{
 /* Increase timecode number */
-		if(*current_timecode < demuxer->titles[*current_title]->timecode_table_size - 1) 
+		if(*current_timecode < demuxer->titles[*current_title]->timecode_table_size - 1)
 		{
 			(*current_timecode)++;
 			if(demuxer->titles[*current_title]->timecode_table[*current_timecode].program == current_program)
@@ -1136,8 +1136,8 @@ mpeg3demux_timecode_t* mpeg3demux_next_timecode(mpeg3_demuxer_t *demuxer,
 	return 0;
 }
 
-mpeg3demux_timecode_t* mpeg3demux_prev_timecode(mpeg3_demuxer_t *demuxer, 
-		int *current_title, 
+mpeg3demux_timecode_t* mpeg3demux_prev_timecode(mpeg3_demuxer_t *demuxer,
+		int *current_title,
 		int *current_timecode,
 		int current_program)
 {
@@ -1163,7 +1163,7 @@ mpeg3demux_timecode_t* mpeg3demux_prev_timecode(mpeg3_demuxer_t *demuxer,
 		else
 /* End of disk */
 			done = 1;
-		
+
 	}
 	return 0;
 }
@@ -1220,7 +1220,7 @@ int mpeg3demux_assign_programs(mpeg3_demuxer_t *demuxer)
 //	if(total_timecodes < 3) return 0;
 
 /*
- * // Assign programs based on length of contiguous timecode 
+ * // Assign programs based on length of contiguous timecode
  * 	timecode1 = demuxer->titles[current_title]->timecode_table;
  * 	while(!done)
  * 	{
@@ -1228,45 +1228,45 @@ int mpeg3demux_assign_programs(mpeg3_demuxer_t *demuxer)
  * 		else
  * 		if(timecode1->end_time - timecode1->start_time < MPEG3_PROGRAM_THRESHOLD)
  * 		{
- * // Got interleaved section 
+ * // Got interleaved section
  * 			interleaved = 1;
  * 			program_times[0] = timecode1->end_time;
- * 
+ *
  * 			while(interleaved && !done)
  * 			{
- * 				timecode2 = mpeg3demux_next_timecode(demuxer, 
- * 					&current_title, 
+ * 				timecode2 = mpeg3demux_next_timecode(demuxer,
+ * 					&current_title,
  * 					&current_timecode,
  * 					0);
- * 
+ *
  * 				if(!timecode2) done = 1;
  * 				else
  * 				{
- * // Another segment of interleaved data 
+ * // Another segment of interleaved data
  * 					if(timecode2->end_time - timecode2->start_time < MPEG3_PROGRAM_THRESHOLD)
  * 					{
- * // Search program times for where the previous instance of the program left off 
- * 						for(program_exists = 0, i = 0; 
- * 							i < total_programs && !program_exists; 
+ * // Search program times for where the previous instance of the program left off
+ * 						for(program_exists = 0, i = 0;
+ * 							i < total_programs && !program_exists;
  * 							i++)
  * 						{
- * // Got a previous instance of the program 
+ * // Got a previous instance of the program
  * 							if(program_times[i] + 0.5 > timecode2->start_time &&
  * 								program_times[i] - 0.5 < timecode2->start_time)
  * 							{
  * 								program_times[i] = timecode2->end_time;
  * 								timecode2->program = i;
  * 								program_exists = 1;
- * 
- * // Programs must always start at 0 for an interleaved section 
+ *
+ * // Programs must always start at 0 for an interleaved section
  * 								if(i < last_program_assigned && i != 0)
  * 								{
- * // Shift programs in the interleaved section down until they start at 0 
+ * // Shift programs in the interleaved section down until they start at 0
  * 									for(j = 0; j < total_programs - 1; j++)
  * 										program_times[j] = program_times[j + 1];
- * 									
+ *
  * 									for(previous_title = current_title, previous_timecode = current_timecode;
- * 										titles[previous_title]->timecode_table[previous_timecode].program > 0 && 
+ * 										titles[previous_title]->timecode_table[previous_timecode].program > 0 &&
  * 										(previous_title >= 0 || previous_timecode >= 0); )
  * 									{
  * 										titles[previous_title]->timecode_table[previous_timecode].program--;
@@ -1280,8 +1280,8 @@ int mpeg3demux_assign_programs(mpeg3_demuxer_t *demuxer)
  * 								}
  * 							}
  * 						}
- * 
- * // Didn't get one 
+ *
+ * // Didn't get one
  * 						if(!program_exists)
  * 						{
  * 							program_times[total_programs] = timecode2->end_time;
@@ -1289,15 +1289,15 @@ int mpeg3demux_assign_programs(mpeg3_demuxer_t *demuxer)
  * 						}
  * 						last_program_assigned = timecode2->program;
  * 					}
- * // No more interleaved section 
+ * // No more interleaved section
  * 					else
  * 					{
  * 						interleaved = 0;
- * // Restart program table from the beginning 
+ * // Restart program table from the beginning
  * 						total_programs = 1;
  * 						last_program_assigned = 0;
- * 						timecode1 = mpeg3demux_next_timecode(demuxer, 
- * 							&current_title, 
+ * 						timecode1 = mpeg3demux_next_timecode(demuxer,
+ * 							&current_title,
  * 							&current_timecode,
  * 							0);
  * 					}
@@ -1305,27 +1305,27 @@ int mpeg3demux_assign_programs(mpeg3_demuxer_t *demuxer)
  * 			}
  * 		}
  * 		else
- * // Get next timecode 
- * 			timecode1 = mpeg3demux_next_timecode(demuxer, 
- * 				&current_title, 
+ * // Get next timecode
+ * 			timecode1 = mpeg3demux_next_timecode(demuxer,
+ * 				&current_title,
  * 				&current_timecode,
  * 				0);
  * 	}
- * 	
+ *
  * 	demuxer->total_programs = total_programs;
  */
 
 /* Assign absolute timecodes in each program. */
-	for(current_program = 0; 
-		current_program < total_programs; 
+	for(current_program = 0;
+		current_program < total_programs;
 		current_program++)
 	{
 		current_time = 0;
 		current_title = 0;
 		current_timecode = -1;
-		while(timecode1 = mpeg3demux_next_timecode(demuxer, 
-		    &current_title, 
-			&current_timecode, 
+		while(timecode1 = mpeg3demux_next_timecode(demuxer,
+		    &current_title,
+			&current_timecode,
 			current_program))
 		{
 			timecode1->absolute_start_time = current_time;
@@ -1417,7 +1417,7 @@ int mpeg3demux_create_title(mpeg3_demuxer_t *demuxer, int timecode_search, FILE 
 	if(file->is_program_stream)
 	{
 		mpeg3io_seek(title->fs, 4);
-		for(i = 0; i < MPEG3_MAX_PACKSIZE && 
+		for(i = 0; i < MPEG3_MAX_PACKSIZE &&
 			test_header != MPEG3_PACK_START_CODE; i++)
 		{
 			test_header <<= 8;
@@ -1442,16 +1442,16 @@ int mpeg3demux_create_title(mpeg3_demuxer_t *demuxer, int timecode_search, FILE 
 			{
 				next_time = demuxer->time;
 //printf("%f %f\n", next_time, prev_time);
-				if(next_time < prev_time || 
+				if(next_time < prev_time ||
 					next_time - prev_time > MPEG3_CONTIGUOUS_THRESHOLD ||
 					!title->timecode_table_size)
 				{
 /* Discontinuous */
-					timecode = mpeg3_append_timecode(demuxer, 
-						title, 
-						prev_byte, 
-						prev_time, 
-						next_byte, 
+					timecode = mpeg3_append_timecode(demuxer,
+						title,
+						prev_byte,
+						prev_time,
+						next_byte,
 						next_time,
 						0);
 /*
@@ -1470,7 +1470,7 @@ int mpeg3demux_create_title(mpeg3_demuxer_t *demuxer, int timecode_search, FILE 
 			}
 
 /* Just get the first bytes if not building a toc to get the stream ID's. */
-			if(next_byte > 0x100000 && 
+			if(next_byte > 0x100000 &&
 				(!timecode_search || !toc)) done = 1;
 		}
 
@@ -1526,13 +1526,13 @@ int mpeg3demux_read_titles(mpeg3_demuxer_t *demuxer)
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
 
 // Eventually use IFO file to generate titles
-	while(!mpeg3io_end_of_file(file->fs))   //JMM use accessors 
+	while(!mpeg3io_end_of_file(file->fs))   //JMM use accessors
 	{
-		mpeg3io_scanf5(file->fs, "%s %s %ld %f %f %f", 
+		mpeg3io_scanf5(file->fs, "%s %s %ld %f %f %f",
 			string1,
 			string2,
-			&end_byte, 
-			&start_time, 
+			&end_byte,
+			&start_time,
 			&end_time); //JMM use accessors
 
 		if(!strncasecmp(string1, "PATH:", 5))
@@ -1548,11 +1548,11 @@ int mpeg3demux_read_titles(mpeg3_demuxer_t *demuxer)
 			start_byte = atol(string2);
 			if(!strcasecmp(string1, "REGION:"))
 			{
-				mpeg3_append_timecode(demuxer, 
-					title, 
-					0, 
-					0, 
-					0, 
+				mpeg3_append_timecode(demuxer,
+					title,
+					0,
+					0,
+					0,
 					0,
 					1);
 				title->timecode_table[title->timecode_table_size - 1].start_byte = start_byte;
@@ -1625,7 +1625,7 @@ double mpeg3demux_length(mpeg3_demuxer_t *demuxer)
 	mpeg3_title_t *title;
 	int i, j;
 	double length;
-	
+
 	for(i = demuxer->total_titles - 1; i >= 0; i--)
 	{
 		title = demuxer->titles[i];
@@ -1633,8 +1633,8 @@ double mpeg3demux_length(mpeg3_demuxer_t *demuxer)
 		{
 			if(title->timecode_table[j].program == demuxer->current_program)
 			{
-				return title->timecode_table[j].end_time - 
-					title->timecode_table[j].start_time + 
+				return title->timecode_table[j].end_time -
+					title->timecode_table[j].start_time +
 					title->timecode_table[j].absolute_start_time;
 			}
 		}
@@ -1673,7 +1673,7 @@ int mpeg3demux_seek_byte(mpeg3_demuxer_t *demuxer, long byte)
 	long current_position;
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
 	mpeg3_title_t *title = demuxer->titles[demuxer->current_title];
-	
+
 	demuxer->data_position = 0;
 	demuxer->data_size = 0;
 
@@ -1746,19 +1746,19 @@ int mpeg3demux_seek_time(mpeg3_demuxer_t *demuxer, double new_time)
 	while(!done && !result && byte_offset >= 0)
 	{
 		result = mpeg3demux_seek_byte(demuxer, (long)byte_offset);
-//printf("seek_time 0 byte %.0f want %f result %d\n", byte_offset, new_time, result); 
+//printf("seek_time 0 byte %.0f want %f result %d\n", byte_offset, new_time, result);
 
 		if(!result)
 		{
 			result = mpeg3_read_next_packet(demuxer);
-// printf("seek_time 1 guess %f want %f\n", guess, new_time); 
+// printf("seek_time 1 guess %f want %f\n", guess, new_time);
 			guess = demuxer->time + demuxer->time_offset;
 
 			if(fabs(new_time - guess) >= fabs(minimum)) done = 1;
 			else
 			{
 				minimum = guess - new_time;
-				new_byte_offset = byte_offset + ((new_time - guess) / 
+				new_byte_offset = byte_offset + ((new_time - guess) /
 					(timecode->end_time - timecode->start_time) *
 					(timecode->end_byte - timecode->start_byte));
 				if(labs((long)new_byte_offset - (long)byte_offset) < demuxer->packet_size) done = 1;
@@ -1812,8 +1812,8 @@ int mpeg3demux_seek_percentage(mpeg3_demuxer_t *demuxer, double percentage)
 	relative_position = (long)(absolute_position - total_bytes);
 
 /* Get the timecode the byte is inside */
-	for(demuxer->current_timecode = 0; 
-		demuxer->current_timecode < title->timecode_table_size; 
+	for(demuxer->current_timecode = 0;
+		demuxer->current_timecode < title->timecode_table_size;
 		demuxer->current_timecode++)
 	{
 		if(title->timecode_table[demuxer->current_timecode].start_byte <= relative_position &&

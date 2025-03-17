@@ -129,8 +129,8 @@ sqPasteboardCopyItemFlavorDataformatformatLength(void *inPasteboard, char *forma
 {
 	int bytes = clipboardSizeWithType(format, formatLength);
 
-    if (!bytes)
-        return interpreterProxy->nilObject();
+	if (!bytes)
+		return interpreterProxy->nilObject();
 
 	sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), bytes);
 	if (!outData) {
