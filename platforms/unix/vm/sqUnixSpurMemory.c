@@ -121,7 +121,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	char *hint, *address, *alloc;
     unsigned long alignment;
-    sqInt allocBytes;
+    usqInt allocBytes;
 
 #if !COGVM
 	if (pageSize) {
@@ -209,7 +209,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
  * alloc.
  */
 static void
-memory_alias_map(size_t size, size_t naddr, void **addrs)
+memory_alias_map(size_t size, int naddr, void **addrs)
 {
 extern char  *exeName;
 	char path[128];
@@ -222,17 +222,16 @@ extern char  *exeName;
 	}
 	shm_unlink(path);
 	ftruncate(fd, size);
-	for (size_t i = 0; i < naddr; i++) {
+	for (int i = 0; i < naddr; i++) {
 		addrs[i] = mmap(addrs[i], size, PROT_READ | PROT_WRITE,
-								addrs[i] ? MAP_FIXED | MAP_SHARED : MAP_SHARED,
-								fd, 0);
+						addrs[i] ? MAP_FIXED | MAP_SHARED : MAP_SHARED,
+						fd, 0);
 		if (addrs[i] == MAP_FAILED) {
 			perror("memory_alias_map: mmap(addrs[i]...");
 			exit(0667);
 		}
 	}
 	close(fd);
-	return;
 }
 #   endif /* DUAL_MAPPED_CODE_ZONE */
 void

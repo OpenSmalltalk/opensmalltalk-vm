@@ -207,7 +207,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 void *
 allocateJITMemory(usqInt *desiredSize)
 {
-	sqInt allocBytes;
+	usqInt allocBytes;
 
 	char *alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
 				(*desiredSize, minAddressHint(), &allocBytes);

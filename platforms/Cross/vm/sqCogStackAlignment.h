@@ -24,7 +24,7 @@
 #	define getReturnAddress() _ReturnAddress()
 #	include <intrin.h>
 #	pragma intrinsic(_ReturnAddress)
-# elif defined(__GNUC__) /* gcc, clang, icc etc */
+# elif __GNUC__ || __clang__ /* gcc, clang, icc etc */
 #	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
 # else
 #	error "Cog requires getReturnAddress to be defined for the current platform."
@@ -52,10 +52,13 @@
 # endif
 #endif
 
-#if defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+#if defined(__arm64__) || defined(__aarch64__) || defined(ARM64) || defined(_M_ARM64)
 /* 16 byte stack alignment on ARM64 is required always. (SP mod 16) == 0 */
 # define STACK_ALIGN_BYTES 16
 # define STACK_FP_ALIGNMENT 0
+# if _WIN64 // clang 14 on win64 doesn't align the fp beyond a machien word
+#	define FRAME_ALIGN_BYTES 8
+# endif
 #elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 /* 8 byte stack alignment on ARM32 is required for instructions which
  * require 8 byte aligned addresses to access doubles in memory.
@@ -108,11 +111,11 @@
 					  asm volatile ("movl %%esp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  endif
-# elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+# elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64) || defined(_M_ARM64)
 	/* https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended-Asm
 	 * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/index.html
 	 */
-#  if __GNUC__
+#  if __GNUC__ || __clang__
 #   define getfp() ({ usqIntptr_t fpval;							\
 					  __asm volatile ("mov %0, fp" : "=r"(fpval) );	\
 					  fpval; })
@@ -127,7 +130,7 @@
 	/* http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0041c/Cegbidie.html
 	 * ARM DUI 0041C Page 9-7
 	 */
-#  if __GNUC__
+#  if __GNUC__ || __clang__
 #   define getfp() ({ usqIntptr_t fp;								\
 					 asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
@@ -176,8 +179,16 @@
 # define getsp() ceGetSP() /* provided by Cogit */
 #endif
 #define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
+#if defined(FRAME_ALIGN_BYTES)
+# define FRAME_ALIGN_MASK (FRAME_ALIGN_BYTES-1)
+#else
+# define FRAME_ALIGN_MASK STACK_ALIGN_MASK
+#endif
 #if !defined(STACK_SP_ALIGNMENT)
 #	define STACK_SP_ALIGNMENT 0
+#endif
+#if !defined(FRAME_SP_ALIGNMENT)
+#	define FRAME_SP_ALIGNMENT 0
 #endif
 
 #if !defined(assertStackPointersWellAligned)
@@ -189,7 +200,7 @@
 #	if cFramePointerInUse
 #	  define assertStackPointersWellAligned(fpa,spa,fn,ln) do {			\
 		usqInt spv = (usqInt)(spa); usqInt fpv = (usqInt)(fpa);			\
-		assertfnl((fpv & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
+		assertfnl((fpv & FRAME_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
 		assertfnl((spv & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT,fn,ln);\
 	  } while (0)
 #	else
@@ -203,7 +214,7 @@
 		extern sqInt cFramePointerInUse;									\
 		usqInt spv = (usqInt)(spa); usqInt fpv = (usqInt)(fpa);				\
 		if (cFramePointerInUse)												\
-			assertfnl((fpv & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
+			assertfnl((fpv & FRAME_ALIGN_MASK) == STACK_FP_ALIGNMENT,fn,ln);\
 		assertfnl((spv & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT,fn,ln);	\
 	  } while (0)
 # endif

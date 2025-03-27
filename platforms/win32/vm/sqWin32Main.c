@@ -39,6 +39,8 @@
 #include "sqWin32Backtrace.h"
 #include "sqSCCSVersion.h"
 
+extern int vmIsInitialized();
+
 
 /************************************************************************************************************/
 /* few addtional definitions for those having older include files especially #include <fileextd.h>          */
@@ -204,7 +206,8 @@ squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
 {
 	DWORD code = exp->ExceptionRecord->ExceptionCode;
 
-	if (inFatalException)
+	if (!vmIsInitialized()
+	 || inFatalException)
 		return EXCEPTION_CONTINUE_SEARCH;
 
   // #1: Try to handle any FP problems
@@ -257,7 +260,8 @@ squeakExceptionHandler(PEXCEPTION_POINTERS exp)
 #endif
 
 #if _WIN64
-	if (inFatalException)
+	if (!vmIsInitialized()
+	 || inFatalException)
 		return EXCEPTION_CONTINUE_SEARCH;
 #endif
 
@@ -1120,9 +1124,7 @@ void SetupStderr()
 static void
 dumpSmalltalkStackIfInMainThread(FILE *file)
 {
-	extern sqInt nilObject(void);
-
-	if (!nilObject()) // If no nilObject the image hasn't been loaded yet...
+	if (!vmIsInitialized())
 		return;
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -1512,8 +1514,8 @@ enumImageResources(HMODULE hModule, LPCSTR lpType, LPSTR lpName, LONG_PTR ign)
 		imageResourceName = malloc(strlen(lpName) + 1);
 		strcpy(imageResourceName,lpName);
 		sqFilePluginNoteImageResourceData(data,dataSize);
-		imageResourceFormat =  ((char *)data)[0] == GZIPMagic0
-							&& ((char *)data)[1] == GZIPMagic1
+		imageResourceFormat =  ((unsigned char *)data)[0] == GZIPMagic0
+							&& ((unsigned char *)data)[1] == GZIPMagic1
 								? ImageIsACompressedResource
 								: ImageIsAResource;
 		return false; // found resource, so stop enumerating
@@ -2390,4 +2392,48 @@ osCogStackPageHeadroom()
 		stackPageHeadroom = getRedzoneSize() + 1024;
 	return stackPageHeadroom;
 }
+
+# if (defined(_M_ARM64) || defined(__aarch64__)) && 0
+// Determine the line lengths of the instruction and data caches for arm64.
+// Alas Windows doesn't allow us to execute any of the cache flush instructions,
+// so the below is not used, and we have to defer to FlushInstructionCache.
+void
+getCacheDimensions(sqInt *dataLineLength, sqInt *instLineLength)
+{
+	PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX info = 0;
+	int numInfos = 0, retrieved = 0;
+	DWORD size, err;
+
+	do {
+		if (!(info = realloc(info, size = ++numInfos * sizeof(*info)))) {
+			fprintf(stderr,"getCacheDimensions realloc out of memory\n");
+			exit(1);
+		}
+		if (!(retrieved = GetLogicalProcessorInformationEx(RelationCache,info,&size))
+		 && (err = GetLastError()) != ERROR_INSUFFICIENT_BUFFER) {
+			fprintf(stderr,"GetLogicalProcessorInformationEx(RelationCache... => %lu\n", err);
+			exit(err);
+		}
+	}
+	while(!retrieved);
+	assert(!*dataLineLength && !*instLineLength);
+	for (int i = 0; i < numInfos; i++) {
+		if (info[i].Cache.Type == CacheInstruction
+		 && !*instLineLength)
+			*instLineLength = info[i].Cache.LineSize;
+		if (info[i].Cache.Type == CacheData
+		 && !*dataLineLength)
+			*dataLineLength = info[i].Cache.LineSize;
+	}
+	free(info);
+	if (!*dataLineLength && *instLineLength)
+		*dataLineLength = *instLineLength;
+	if (!*instLineLength && *dataLineLength)
+		*instLineLength = *dataLineLength;
+	if (!*dataLineLength && !*instLineLength) {
+		fprintf(stderr,"getCacheDimensions failed. Guessing cache line length\n");
+		*dataLineLength = *instLineLength = 128;
+	}
+}
+# endif // (defined(_M_ARM64) || defined(__aarch64__)) && 0
 #endif // COGVM

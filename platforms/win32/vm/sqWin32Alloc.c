@@ -179,9 +179,8 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 											sqInt *codeToDataDelta)
 {
 	DWORD previous;
-  SIZE_T size;
+	SIZE_T size = endAddr - startAddr;
 
-  size = endAddr - startAddr;
 	if (!VirtualProtect((void *)startAddr,
 						size,
 						PAGE_EXECUTE_READWRITE,

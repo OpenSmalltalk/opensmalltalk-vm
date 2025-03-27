@@ -54,7 +54,7 @@
 # endif
 #elif defined(__SUNPRO_C)
 #	 define sqLowLevelMFence() asm volatile ("mfence")
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && !defined(_WIN64)
   /* # define sqLowLevelMFence() _asm { mfence } */
   /* could use mfence here but */ \
   /* See http://shipilev.net/blog/2014/on-the-fence-with-dependencies/ */ \
