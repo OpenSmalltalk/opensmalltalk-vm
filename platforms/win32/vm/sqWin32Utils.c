@@ -49,18 +49,20 @@ abortMessage(TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
-	va_start(args, fmt);
 	if (fIsConsole) {
+		va_start(args, fmt);
 #if _UNICODE
 		vfwprintf(stderr, fmt, args);
 #else
 		vfprintf(stderr, fmt, args);
 #endif
+		va_end(args);
 		exit(-1);
 	}
-	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	buf = (TCHAR *)calloc(sizeof(TCHAR), _tcslen(fmt) + 1024);
 	if (fmt[_tcslen(fmt)-1] == '\n')
 		fmt[_tcslen(fmt)-1] = 0;
+	va_start(args, fmt);
 #if _UNICODE
 	wvsprintf(buf, fmt, args);
 #else

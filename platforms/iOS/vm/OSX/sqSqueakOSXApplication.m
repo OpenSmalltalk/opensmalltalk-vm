@@ -577,7 +577,14 @@ printOptionStrings()
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
-	option("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
+	option("  "VMOPTION("leakcheck")"=flags      check for leaks in the heap\n");
+	extern const char *leakCheckFlagsMeanings[];
+	i = 0;
+	while (leakCheckFlagsMeanings[i]) {
+		extendOption("    ");
+		extendOption(leakCheckFlagsMeanings[i++]);
+		extendOption("\n");
+	}
 	option("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	option("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	option("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");

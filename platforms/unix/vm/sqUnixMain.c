@@ -522,8 +522,23 @@ getAttributeString(sqInt id)
 		return imageName;
 	case 1001: // OS type: "unix", "win32", "mac", ...
 		return OS_TYPE;
-	case 1002: // OS name: e.g. "solaris2.5" on unix, "win95" on win32, ...
+	case 1002: { // OS name: e.g. "solaris2.5" on unix, "win95" on win32, ...
+#if OLD_1002_ATTRIBUTE
 		return VM_TARGET_OS;
+#else
+		static char *osName = 0;
+		struct utsname info;
+		if (osName)
+			return osName;
+		if (uname(&info) < 0)
+			return VM_TARGET_OS;
+		osName = malloc(strlen(info.sysname) + strlen(info.release) + 2);
+		strcpy(osName,info.sysname);
+		osName[strlen(info.sysname)] = ' ';
+		strcat(osName,info.release);
+		return osName;
+#endif
+	}
 	case 1003: // processor architecture: e.g. "68k", "x86", "PowerPC", ...
 		return VM_TARGET_CPU;
 	case 1004: // Interpreter version string
@@ -1823,7 +1838,15 @@ vm_printUsage(void)
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     use given eden size\n");
-	option("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
+	option("  "VMOPTION("leakcheck")"=flags      check for leaks in the heap\n");
+	{ extern const char *leakCheckFlagsMeanings[];
+		i = 0;
+		while (leakCheckFlagsMeanings[i]) {
+			extendOption("    ");
+			extendOption(leakCheckFlagsMeanings[i++]);
+			extendOption("\n");
+		}
+	}
 	option("  "VMOPTION("stackpages")" <num>     use given number of stack pages\n");
 #endif
 	option("  "VMOPTION("noevents")"             disable event-driven input support\n");

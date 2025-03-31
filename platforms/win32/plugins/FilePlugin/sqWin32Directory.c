@@ -10,12 +10,13 @@
 *   UPDATES:
 *     1) Support for long path names added by using UNC prefix in that case
 *        (Marcel Taeumel, Hasso Plattner Institute, Postdam, Germany)
+*     2) Moved to platforms/win32/plugins/FilePlugin (eem)
 *
 *****************************************************************************/
 #include <Windows.h>
 
 #include "sq.h"
-#include "../plugins/FilePlugin/sqWin32File.h"
+#include "sqWin32File.h"
 # include <sys/types.h>
 # include <sys/stat.h>
 
@@ -31,6 +32,7 @@
 #endif
 
 extern struct VirtualMachine *interpreterProxy;
+IMPORT(DWORD) convertToSqueakTime(SYSTEMTIME st);
 
 #define FAIL() { return interpreterProxy->primitiveFail(); }
 
@@ -50,8 +52,9 @@ extern struct VirtualMachine *interpreterProxy;
 #define DEFAULT_DRIVE_PERMISSIONS (S_IRUSR | (S_IRUSR>>3) | (S_IRUSR>>6) | \
                                    S_IWUSR | (S_IWUSR>>3) | (S_IWUSR>>6) | \
                                    S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6))
-  
-static void read_permissions(sqInt *posixPermissions, WCHAR* path, sqInt pathLength, sqInt attr)
+
+static void
+read_permissions(sqInt *posixPermissions, WCHAR* path, sqInt pathLength, sqInt attr)
 {
   *posixPermissions |= S_IRUSR | (S_IRUSR>>3) | (S_IRUSR>>6);
   if (!(attr & FILE_ATTRIBUTE_READONLY)) {
@@ -77,7 +80,8 @@ static void read_permissions(sqInt *posixPermissions, WCHAR* path, sqInt pathLen
   }
 }
 
-static int findFileFallbackOnSharingViolation(WCHAR *win32Path, WIN32_FILE_ATTRIBUTE_DATA* winAttrs) {
+static int
+findFileFallbackOnSharingViolation(WCHAR *win32Path, WIN32_FILE_ATTRIBUTE_DATA* winAttrs) {
   WIN32_FIND_DATAW findData;
   HANDLE findHandle = FindFirstFileW(win32Path,&findData);
 
@@ -97,7 +101,8 @@ static int findFileFallbackOnSharingViolation(WCHAR *win32Path, WIN32_FILE_ATTRI
    useful for trying to stay in sync with case-sensitive platforms. */
 int caseSensitiveFileMode = 0;
 
-int hasCaseSensitiveDuplicate(WCHAR *path) {
+int
+hasCaseSensitiveDuplicate(WCHAR *path) {
   WCHAR *src, *dst, *prev;
   WCHAR* findPath = NULL;
   WIN32_FIND_DATAW findData; /* cached find data */
@@ -157,27 +162,8 @@ typedef union {
   squeakFileOffsetType offset;
 } win32FileOffset;
 
-DWORD convertToSqueakTime(SYSTEMTIME st)
-{ DWORD secs;
-  DWORD dy;
-  static DWORD nDaysPerMonth[14] = { 
-    0,  0,  31,  59,  90, 120, 151,
-      181, 212, 243, 273, 304, 334, 365 };
-  /* Squeak epoch is Jan 1, 1901 */
-  dy = st.wYear - 1901; /* compute delta year */
-  secs = dy * 365 * 24 * 60 * 60       /* base seconds */
-         + (dy >> 2) * 24 * 60 * 60;   /* seconds of leap years */
-  /* check if month > 2 and current year is a leap year */
-  if (st.wMonth > 2 && (dy & 0x0003) == 0x0003)
-    secs += 24 * 60 * 60; /* add one day */
-  /* add the days from the beginning of the year */
-  secs += (nDaysPerMonth[st.wMonth] + st.wDay - 1) * 24 * 60 * 60;
-  /* add the hours, minutes, and seconds */
-  secs += st.wSecond + 60*(st.wMinute + 60*st.wHour);
-  return secs;
-}
-
-sqInt dir_Create(char *pathString, sqInt pathLength)
+sqInt
+dir_Create(char *pathString, sqInt pathLength)
 {
   WCHAR *win32Path = NULL;
 
@@ -187,9 +173,11 @@ sqInt dir_Create(char *pathString, sqInt pathLength)
   return CreateDirectoryW(win32Path,NULL);
 }
 
-sqInt dir_Delimitor(void) { return '\\'; }
+sqInt
+dir_Delimitor(void) { return '\\'; }
 
-sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
+sqInt
+dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
 /* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 {
@@ -201,11 +189,11 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
      has limited support for paths longer than 260 characters. In the case of
      longer paths, they must not contain syntactic sugar such as ".", "..", or
      "a/b"*:
-     
+
      * DON'T: dir_Lookup("<very long path>\foo\.", ...)
      * DON'T: dir_Lookup("<very long path>\foo\..", ...)
      * DON'T: dir_Lookup("<very long path>\foo/bar", ...)
-     
+
      For more details, see:
      https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#paths
      *) Long paths are automatically converted into UNC paths, which only
@@ -263,18 +251,17 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
     int mask;
 
     mask = GetLogicalDrives();
-    for(i=0;i<26; i++)
+    for(i=0; i<26; i++)
       if (mask & (1 << i))
-	if (--index == 0) {
-	  /* found the drive ! */
+	    if (--index == 0) { // found the drive !
           name[0]           = 'A'+i;
-          name[1]	          = ':';
+          name[1]           = ':';
           *nameLength       = 2;
           *creationDate     = 0;
           *modificationDate = 0;
           *isDirectory      = true;
           *sizeIfFile       = 0;
-	  *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
+          *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
           return ENTRY_FOUND;
         }
     return NO_MORE_ENTRIES;
@@ -301,7 +288,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   } else {
     pattern[patternLength-1] = '*';
   }
-  
+
   /* convert the path name into a null-terminated C string */
   ALLOC_WIN32_PATH(win32Path, pattern, patternLength);
 
@@ -309,7 +296,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
     lastStringLength = 0;
     return BAD_PATH;
   }
-  
+
   /* and go looking for entries */
   findHandle = FindFirstFileW(win32Path,&findData);
   if (findHandle == INVALID_HANDLE_VALUE) {
@@ -362,7 +349,8 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   return ENTRY_FOUND;
 }
 
-sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
+sqInt
+dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
 /* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                     sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 {
@@ -379,12 +367,12 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
      ".", which is also supported for long paths. This convention is provided
      for an efficient existence check of the directory (e.g.,
      FileDirectory>>#exists):
-     
+
      * DON'T: dir_EntryLookup("<very long path>", .., "foo\.", ...)
      * DON'T: dir_EntryLookup("<very long path>", .., "foo\..", ...)
      * DON'T: dir_EntryLookup("<very long path>", .., "foo/bar", ...)
      * DO:    dir_EntryLookup("<very long path>", .., ".", ...)
-     
+
      For more details, see:
      https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#paths
      *) Long paths are automatically converted into UNC paths, which only
@@ -459,10 +447,10 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
     nameStringLength = 0;
   }
   memcpy(fullPath+fullPathLength-nameStringLength,nameString,nameStringLength);
-  
+
   /* convert the path name into a null-terminated C string */
   ALLOC_WIN32_PATH(win32Path, fullPath, fullPathLength);
-  
+
   if (!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
 #ifdef PharoVM
     if (GetLastError() == ERROR_SHARING_VIOLATION) {
@@ -531,21 +519,24 @@ dir_SetPathToWorkingDirAsUTF8(char *pathName)
 }
 
 // Compatibility with the Mac
-sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
+sqInt
+dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   return true;
 }
 
-sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
+sqInt
+dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   FAIL();
 }
 
-sqInt dir_Delete(char *pathString, sqInt pathLength) {
+sqInt
+dir_Delete(char *pathString, sqInt pathLength) {
   /* Delete the existing directory with the given path. */
   WCHAR *win32Path = NULL;
 
