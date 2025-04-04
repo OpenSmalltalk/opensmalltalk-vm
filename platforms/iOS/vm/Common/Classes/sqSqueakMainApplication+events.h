@@ -39,7 +39,7 @@
 #import	"sqSqueakMainApplication.h"
 
 @interface sqSqueakMainApplication (events)
-- (void) ioGetNextEvent: (sqInputEvent *) evt;
+- (sqInt) ioGetNextEvent: (sqInputEvent *) evt;
 - (void) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt;
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal;
 - (void) pumpRunLoop;

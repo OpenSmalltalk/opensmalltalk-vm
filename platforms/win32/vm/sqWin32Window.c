@@ -1490,11 +1490,11 @@ ioSetInputSemaphore(sqInt semaIndex)
 sqInt
 ioGetNextEvent(sqInputEvent *evt)
 {
-  if (eventBufferGet == eventBufferPut)
+  if (eventBufferGet == eventBufferPut) {
     ioProcessEvents();
-  if (eventBufferGet == eventBufferPut)
-    return 1;
-
+	if (eventBufferGet == eventBufferPut)
+      return 0;
+  }
   *evt = eventBuffer[eventBufferGet];
   eventBufferGet = (eventBufferGet+1) % MAX_EVENT_BUFFER;
   return 1;

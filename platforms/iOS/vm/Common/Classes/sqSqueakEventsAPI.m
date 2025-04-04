@@ -132,7 +132,6 @@ sqInt
 ioSetInputSemaphore(sqInt semaIndex)
 {
 	//API Documented
-
 	gDelegateApp.squeakApplication.inputSemaphoreIndex = semaIndex;
 	return 0;
 }
@@ -141,11 +140,7 @@ sqInt
 ioGetNextEvent( sqInputEvent *evt)
 {
 	//API Documented
-	[gDelegateApp.squeakApplication ioGetNextEvent: evt];
-/*	if (evt->type != 0) {
-		NSLog(@"evt.type %i keyboard pc %i cc %i uc %i m %i",evt->type,((sqKeyboardEvent *)evt)->pressCode,((sqKeyboardEvent *) evt)->charCode,((sqKeyboardEvent *) evt)->utf32Code,((sqKeyboardEvent *) evt)->modifiers);
-	} */
-	return 0;
+	return [gDelegateApp.squeakApplication ioGetNextEvent: evt];
 }
 
 #if NewspeakVM

@@ -68,7 +68,7 @@
 #pragma unused(result)
 }
 
-- (void) ioGetNextEvent: (sqInputEvent *) evt {
+- (sqInt) ioGetNextEvent: (sqInputEvent *) evt {
 	
 	ioProcessEvents();
 	id event = [eventQueue returnAndRemoveOldest];
@@ -77,8 +77,9 @@
             [self processAsOldEventOrComplexEvent: event placeIn: evt];
         }
         RELEASEOBJ(event);
+		return 1;
 	}
-	
+	return 0;
 }
 
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
