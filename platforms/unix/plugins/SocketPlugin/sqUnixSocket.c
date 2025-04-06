@@ -1070,7 +1070,7 @@ sqSocketLocalAddress(SocketPtr s)
   if (!socketValid(s))
 	return -1;
   if (getsockname(SOCKET(s), (struct sockaddr *)&saddr, &saddrSize)
-	  || (AF_INET != saddr.sin_family))
+         || ((AF_INET != saddr.sin_family) && (AF_INET6 != saddr.sin_family)))
 	return 0;
   return ntohl(saddr.sin_addr.s_addr);
 }
@@ -1110,7 +1110,7 @@ sqSocketLocalPort(SocketPtr s)
   if (!socketValid(s))
 	return -1;
   if (getsockname(SOCKET(s), (struct sockaddr *)&saddr, &saddrSize)
-	  || (AF_INET != saddr.sin_family))
+         || ((AF_INET != saddr.sin_family) && (AF_INET6 != saddr.sin_family)))
 	return 0;
   return ntohs(saddr.sin_port);
 }
