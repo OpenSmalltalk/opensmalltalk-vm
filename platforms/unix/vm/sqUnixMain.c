@@ -535,7 +535,7 @@ getAttributeString(sqInt id)
 		osName = malloc(strlen(info.sysname) + strlen(info.release) + 2);
 		strcpy(osName,info.sysname);
 		osName[strlen(info.sysname)] = ' ';
-		strcat(osName,info.release);
+		strcpy(osName + strlen(info.sysname) + 1,info.release);
 		return osName;
 #endif
 	}
