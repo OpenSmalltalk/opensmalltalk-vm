@@ -38,6 +38,70 @@ typedef struct ffiTestBiggerStruct {
   	long long t;
   	long long u;
 } ffiTestBiggerStruct;
+
+// testing of ARM64 homogenous floating-point aggregate argument passing
+typedef struct ffiSmallFloatStruct2 {
+	float a;
+	float b;
+} ffiSmallFloatStruct2;
+
+typedef struct ffiSmallDoubleStruct2 {
+	double a;
+	double b;
+} ffiSmallDoubleStruct2;
+
+typedef struct ffiMediumFloatStruct4 {
+	float a;
+	float b;
+	float c;
+	float d;
+} ffiMediumFloatStruct4;
+
+typedef struct ffiMediumDoubleStruct4 {
+	double a;
+	double b;
+	double c;
+	double d;
+} ffiMediumDoubleStruct4;
+
+typedef struct ffiLargeFloatStruct16 {
+	float a;
+	float b;
+	float c;
+	float d;
+	float e;
+	float f;
+	float g;
+	float h;
+	float i;
+	float j;
+	float k;
+	float l;
+	float m;
+	float n;
+	float o;
+	float p;
+} ffiLargeFloatStruct16;
+
+typedef struct ffiLargeDoubleStruct16 {
+	double a;
+	double b;
+	double c;
+	double d;
+	double e;
+	double f;
+	double g;
+	double h;
+	double i;
+	double j;
+	double k;
+	double l;
+	double m;
+	double n;
+	double o;
+	double p;
+} ffiLargeDoubleStruct16;
+
 /*
  * test returning struct by value
  * clang --shared -Os -o libalientest.dylib alientest.c
@@ -483,7 +547,37 @@ EXPORT(ffiTestBiggerStruct) ffiTestStructBigger(ffiTestPoint4 pt1, ffiTestPoint4
 	result.t = pt2.z;
 	result.u = pt2.w;
 	
-	return( result );
+	return result;
+}
+
+EXPORT(float) ffiTestPassSmallFloatStruct(ffiSmallFloatStruct2 s)
+{
+	return s.a + s.b;
+}
+
+EXPORT(float) ffiTestPassMediumFloatStruct(ffiMediumFloatStruct4 s)
+{
+	return s.a + s.b + s.c + s.d;
+}
+
+EXPORT(float) ffiTestPassLargeFloatStruct(ffiLargeFloatStruct16 s)
+{
+	return s.a + s.b + s.c + s.d + s.e + s.f + s.g + s.h + s.i + s.j + s.k + s.l + s.m + s.n + s.o + s.p;
+}
+
+EXPORT(double) ffiTestPassSmallDoubleStruct(ffiSmallDoubleStruct2 s)
+{
+	return s.a + s.b;
+}
+
+EXPORT(double) ffiTestPassMediumDoubleStruct(ffiMediumDoubleStruct4 s)
+{
+	return s.a + s.b + s.c + s.d;
+}
+
+EXPORT(double) ffiTestPassLargeDoubleStruct(ffiLargeDoubleStruct16 s)
+{
+	return s.a + s.b + s.c + s.d + s.e + s.f + s.g + s.h + s.i + s.j + s.k + s.l + s.m + s.n + s.o + s.p;
 }
 
 /* test passing and returning pointers */
