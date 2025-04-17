@@ -134,6 +134,12 @@ dropRequestURI(sqInt dropIndex)	// in st coordinates
 	return uxDropFileNames[dropIndex - 1];
 }
 
+static usqIntptr_t
+fileRecordSize(void)
+{
+	return sizeof(SQFile);
+}
+
 sqInt
 dropRequestFileHandle(sqInt dropIndex)
 {
