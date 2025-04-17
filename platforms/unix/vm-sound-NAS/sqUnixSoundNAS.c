@@ -566,9 +566,9 @@ static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 
 
 /* mixer settings */
-static sqInt sound_SetRecordLevel(int level)
+static void sound_SetRecordLevel(int level)
 {
-  return level;
+  return;
 }
 
 
@@ -584,9 +584,9 @@ static void sound_SetVolume(double left, double right)
   return;
 }
 
-static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) FAIL(-1)
-static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel) FAIL(-1)
-static sqInt sound_SetDevice(sqInt id, char *arg) FAIL(-1)
+static sqInt sound_SetSwitch(int id, int captureFlag, int parameter) FAIL(-1)
+static sqInt sound_GetSwitch(int id, int captureFlag, int channel) FAIL(-1)
+static sqInt sound_SetDevice(int id, char *arg) FAIL(-1)
 
 
 #include "SqSound.h"

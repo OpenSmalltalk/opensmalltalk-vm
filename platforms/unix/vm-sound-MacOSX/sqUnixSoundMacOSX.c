@@ -1,23 +1,23 @@
 /* sqUnixSoundMacOSX.c -- sound support for CoreAudio on Mac OS 10
  *
  * Author: Ian.Piumarta@squeakland.org
- * 
+ *
  * Last edited: 2005-03-17 21:36:05 by piumarta on squeak.hpl.hp.com
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -45,9 +45,9 @@
 //
 #define OBEY_LEAD_TIME	0
 
-/// 
+///
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!
-/// 
+///
 
 
 #include <CoreAudio/CoreAudio.h>
@@ -108,7 +108,7 @@ static void EPRINTF(const char *fmt, ...)
 
 // Apple error codes are really (rather contrived) 4-byte chars with
 // (almost) meaningful content.
-// 
+//
 static char *str4(UInt32 chars)
 {
   static char str[5];
@@ -128,9 +128,9 @@ static inline int checkError(OSStatus err, char *op, char *param)
 }
 
 
-/// 
+///
 /// (ring) Buffer -- a FIFO of bytes
-/// 
+///
 
 
 typedef struct
@@ -144,7 +144,7 @@ typedef struct
 
 
 // allocate a new, empty buffer
-// 
+//
 Buffer *Buffer_new(int size)
 {
   Buffer *b= (Buffer *)malloc(sizeof(Buffer));
@@ -163,7 +163,7 @@ Buffer *Buffer_new(int size)
 }
 
 // deallocate a buffer
-// 
+//
 void Buffer_delete(Buffer *b)
 {
   assert(b && b->data);
@@ -172,14 +172,14 @@ void Buffer_delete(Buffer *b)
 }
 
 // answer how many bytes are available for reading
-// 
+//
 inline int Buffer_avail(Buffer *b)
 {
   return b->avail;
 }
 
 // answer how many bytes can be written
-// 
+//
 inline int Buffer_free(Buffer *b)
 {
   return b->size - Buffer_avail(b);
@@ -187,7 +187,7 @@ inline int Buffer_free(Buffer *b)
 
 // set outputs to address and size of zero (empty), one (contiguous) or two
 // (wrapped, fragmented) populated regions in the buffer
-// 
+//
 inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, int *n2)
 {
   int optr=     b->optr;
@@ -215,7 +215,7 @@ inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, in
 
 // set the output to the current read position and answer the amount of
 // data at that location
-// 
+//
 inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
 {
   int optr=     b->optr;
@@ -229,7 +229,7 @@ inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
 
 // set the output to the current write location and answer the number of
 // bytes that can be written to that location
-// 
+//
 inline int Buffer_getInputPointer(Buffer *b, char **ptr)
 {
   int iptr=     b->iptr;
@@ -242,7 +242,7 @@ inline int Buffer_getInputPointer(Buffer *b, char **ptr)
 }
 
 // increment the output pointer over a contiguous section of buffer
-// 
+//
 inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 {
   int optr=  b->optr;
@@ -257,7 +257,7 @@ inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 }
 
 // advance the input pointer over a contiguous section of buffer
-// 
+//
 inline void Buffer_advanceInputPointer(Buffer *b, int size)
 {
   int iptr= b->iptr;
@@ -273,7 +273,7 @@ inline void Buffer_advanceInputPointer(Buffer *b, int size)
 
 // clear the given number of bytes at the input position and advance the
 // input pointer past them
-// 
+//
 inline void Buffer_prefill(Buffer *b, int bytes)
 {
   char *ptr;
@@ -285,7 +285,7 @@ inline void Buffer_prefill(Buffer *b, int bytes)
 
 // write at most nbytes from buf into the buffer, wrapping in the middle if
 // necessary.  answer the actual number of bytes written.
-// 
+//
 inline int Buffer_write(Buffer *b, char *buf, int nbytes)
 {
   int iptr= b->iptr;
@@ -314,7 +314,7 @@ inline int Buffer_write(Buffer *b, char *buf, int nbytes)
 
 // read at most nbytes from the buffer into buf, wrapping in the middle if
 // necessary.  answer the actual number of bytes read.
-// 
+//
 inline int Buffer_read(Buffer *b, char *buf, int nbytes)
 {
   int optr= b->optr;
@@ -347,9 +347,9 @@ inline int Buffer_read(Buffer *b, char *buf, int nbytes)
 }
 
 
-/// 
+///
 /// Stream -- abstraction over CoreAudio devices and streams
-/// 
+///
 
 
 typedef struct Stream
@@ -417,7 +417,7 @@ static OSStatus bufferDataProc(AudioConverterRef inAudioConverter, UInt32 *ioDat
 
 // shipout to device (usually 512 frames at 44k1 for builtin audio and
 // USB).  this is asynchronous and runs (implicitly) in its own thread.
-// 
+//
 static OSStatus ioProcOutput(AudioDeviceID	    device,
 			     const AudioTimeStamp  *currentTime,
 			     const AudioBufferList *inputData,
@@ -438,7 +438,7 @@ static OSStatus ioProcOutput(AudioDeviceID	    device,
 
 // shipin from device (usually 512 frames at 44k1).  this is asynchronous and
 // runs (implicitly) in its own thread.
-// 
+//
 static OSStatus ioProcInput(AudioDeviceID	    device,
 			    const AudioTimeStamp  *currentTime,
 			    const AudioBufferList *inputData,
@@ -540,7 +540,7 @@ static int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stere
       sz= sizeof(s->cvtBufSize);
       s->cvtBufSize= 512 * devFmt.mBytesPerFrame;
       if (checkError(AudioConverterGetProperty(s->converter, kAudioConverterPropertyCalculateOutputBufferSize,
-					       &sz, &s->cvtBufSize), 
+					       &sz, &s->cvtBufSize),
 		     "GetProperty", "OutputBufferSize"))
 	return 0;
     }
@@ -565,13 +565,13 @@ static int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stere
 
 
 // start the device attached to the stream.
-// 
+//
 static int Stream_startSema(Stream *s, int semaIndex)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
 
   DPRINTF("stream %p[%d] startSema: %d\n", s, s->direction, semaIndex);
-  
+
   s->semaphore= semaIndex;	// can be zero
   if (checkError(AudioDeviceAddIOProc(s->id, ioProc, (void *)s),
 		 "Add", "ioProcOut"))
@@ -588,7 +588,7 @@ static int Stream_startSema(Stream *s, int semaIndex)
 
 
 // stop the device attached to a stream.
-// 
+//
 static int Stream_stop(Stream *s)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
@@ -601,9 +601,9 @@ static int Stream_stop(Stream *s)
 }
 
 
-/// 
+///
 /// sound output primitives
-/// 
+///
 
 
 static sqInt sound_AvailableSpace(void)
@@ -616,7 +616,7 @@ static sqInt sound_AvailableSpace(void)
 
 
 // mix nFrames of samples into an output buffer.
-// 
+//
 static void mixFrames(short *out, short *in, int nFrames)
 {
   while (nFrames--)
@@ -634,11 +634,11 @@ static void mixFrames(short *out, short *in, int nFrames)
 // intact before starging the insertion.  (this last parameter is
 // meaningless for us and could be reduced to zero, but ignoring it causes
 // strange things to happen.  time to rething the image code, methinks.)
-// 
+//
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
-// 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt framesOfLeadTime)
+//
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt framesOfLeadTime)
 {
   Stream *s= output;
 
@@ -724,8 +724,8 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, 
 
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
-// 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+//
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
 {
   if (output)
     {
@@ -733,7 +733,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, s
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
-		       pointerForOop(arrayIndex) + (startIndex * SqueakFrameSize),
+		       buf + (startIndex * SqueakFrameSize),
 		       byteCount);
 	  return frameCount;
 	}
@@ -745,7 +745,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, s
 
 
 // play a buffer's worth of silence (as quietly as possible).
-// 
+//
 static sqInt sound_PlaySilence(void)
 {
   success(false);
@@ -754,11 +754,11 @@ static sqInt sound_PlaySilence(void)
 
 
 // shut down sound output.
-// 
+//
 static sqInt sound_Stop(void)
 {
   DPRINTF("snd_Stop\n");
-  
+
   if (output)
     {
       Stream_stop(output);
@@ -770,14 +770,14 @@ static sqInt sound_Stop(void)
 
 
 // start up sound output.
-// 
+//
 static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
   DPRINTF("snd_Start frames: %d samplesPerSec: %d stereo: %d semaIndex: %d\n",
 	   frameCount, samplesPerSec, stereo, semaIndex);
-  
+
   if (output)	// there might be a change of sample rate
     sound_Stop();
 
@@ -795,14 +795,14 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
 }
 
 
-/// 
+///
 /// sound input
-/// 
+///
 
 
 // answer the input sample rate.  (this is guaranteed to be the same
 // as the sample rate that was requested.)
-// 
+//
 static double sound_GetRecordingSampleRate(void)
 {
   if (input)
@@ -828,14 +828,14 @@ static sqInt sound_StopRecording(void)
 
 
 // start up sound input.
-// 
+//
 static sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
   DPRINTF("snd_StartRecording rate: %d stereo: %d semaIndex: %d\n",
 	   samplesPerSec, stereo, semaIndex);
-  
+
   if (input)	// there might be a change of sample rate
     sound_StopRecording();
 
@@ -855,7 +855,7 @@ static sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaI
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
@@ -864,7 +864,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 	  int    start= startSliceIndex * SqueakFrameSize / 2;
 	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
-								&count, pointerForOop(buf) + start))
+								&count, buf + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
 	}
       return 0;
@@ -874,9 +874,9 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 }
 
 
-/// 
+///
 /// mixer
-/// 
+///
 
 
 static int getVolume(int dir, double *left, double *right)
@@ -900,7 +900,7 @@ static int getVolume(int dir, double *left, double *right)
 					&sz, &chan2),
 		 "GetProperty", "VolumeScalar"))
     chan2= chan1;
-  
+
   *left=  chan1;
   *right= chan2;
 
@@ -937,7 +937,7 @@ static int setVolume(int dir, double dleft, double dright)
 
 
 // get output gain, 0.0 <= { left, right } <= 1.0
-// 
+//
 static void sound_Volume(double *left, double *right)
 {
   getVolume(0, left, right);
@@ -945,7 +945,7 @@ static void sound_Volume(double *left, double *right)
 
 
 // set output gain, 0.0 <= { left, right } <= 1.0
-// 
+//
 static void sound_SetVolume(double left, double right)
 {
   extern int noSoundMixer;	//xxx FIXME: this should not be a global option
@@ -958,21 +958,22 @@ static void sound_SetVolume(double left, double right)
 
 
 // set recording gain, 0 <= level <= 1000
-// 
-static sqInt sound_SetRecordLevel(sqInt level)
+//
+static void sound_SetRecordLevel(sqInt level)
 {
   extern int noSoundMixer;
 
   if (noSoundMixer)
-    return 0;
+    return;
 
-  return setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
+  if (!setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L)) 
+	primitiveFail();
 }
 
 
-/// 
+///
 /// debugging
-/// 
+///
 
 
 #if (DEBUG)

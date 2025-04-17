@@ -145,13 +145,13 @@ void
 snd_SetRecordLevel(sqInt level)          { snd->snd_SetRecordLevel(level); }
 
 sqInt
-snd_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)   { return snd->snd_GetSwitch(id, captureFlag, channel); }
+snd_GetSwitch(int id, int captureFlag, int channel)   { return snd->snd_GetSwitch(id, captureFlag, channel); }
 
 sqInt
-snd_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) { return snd->snd_SetSwitch(id, captureFlag, parameter); }
+snd_SetSwitch(int id, int captureFlag, int parameter) { return snd->snd_SetSwitch(id, captureFlag, parameter); }
 
 sqInt
-snd_SetDevice(sqInt id, char *name)      { return snd->snd_SetDevice(id, name); }
+snd_SetDevice(int id, char *name)      { return snd->snd_SetDevice(id, name); }
 
 /* Terf SqSoundVersion 1.2 improvements */
 

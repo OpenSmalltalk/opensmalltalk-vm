@@ -22,9 +22,9 @@ void snd_Volume(double *left, double *right);  /* johnmci@smalltalkconsulting.co
 void snd_SetVolume(double left, double right); /* johnmci@smalltalkconsulting.com Nov 6th 2000 */
 
 /* mixer interface */
-sqInt snd_GetSwitch(sqInt identifier, sqInt captureFlag, sqInt channel);
-sqInt snd_SetSwitch(sqInt identifier, sqInt captureFlag, sqInt parameter);
-sqInt snd_SetDevice(sqInt identifier, char *name);
+sqInt snd_GetSwitch(int identifier, int captureFlag, int channel);
+sqInt snd_SetSwitch(int identifier, int captureFlag, int parameter);
+sqInt snd_SetDevice(int identifier, char *name);
 
 /* Terf SqSoundVersion 1.2 improvements */
 sqInt snd_SetRecordBufferFrameCount(sqInt frameCount);

@@ -13,7 +13,7 @@ struct SqSound
   /* output */
   sqInt  (*snd_AvailableSpace)(void);
   sqInt  (*snd_InsertSamplesFromLeadTime)(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime);
-  sqInt  (*snd_PlaySamplesFromAtLength)(sqInt frameCount, void *arrayIndex, sqInt startIndex);
+  sqInt  (*snd_PlaySamplesFromAtLength)(sqInt frameCount, void *buf, sqInt startIndex);
   sqInt  (*snd_PlaySilence)(void);
   sqInt  (*snd_Start)(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
   sqInt  (*snd_Stop)(void);
