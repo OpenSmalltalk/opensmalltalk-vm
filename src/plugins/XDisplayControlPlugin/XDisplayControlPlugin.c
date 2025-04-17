@@ -34,6 +34,10 @@ static char __buildInfo[] = "XDisplayControlPlugin VMConstruction-Plugins-XDispl
 # define INT_EXT "(e)"
 #endif
 
+extern void openXDisplay(void);
+extern void disconnectXDisplay(void);
+extern void synchronizeXDisplay(void);
+extern void forgetXDisplay(void);
 
 /*** Function Prototypes ***/
 EXPORT(const char*) getModuleName(void);
