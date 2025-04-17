@@ -86,7 +86,7 @@ Then cd to the build directory of your choice, e.g.
 	building/linux64x64/squeak.cog.spur/build
 Then execute
 	./mvm
-	
+
 answering "y" to perform a clean build or "n" to rebuild without reconfiguring.
 Again, if the configure step fails when "checking for C compiler default output
 file name", you have yet to install all the necessary support (e.g. lubuuid).
@@ -156,7 +156,7 @@ your choice.  To find the full set of options via
 	../../platforms/unix/config/configure --help
 
 You can see the use of configure in the various mvm scripts in each build
-directory.  
+directory.
 
 e.g.
      ../../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
@@ -176,7 +176,7 @@ sudo yum -y install libuuid-devel
 Debugging configuration failures
 --------------------------------
 If your development system does not have the required libraries installed then
-the configure step run by the mvm script will fail cryptically.  You will see 
+the configure step run by the mvm script will fail cryptically.  You will see
 something like
 	checking sanity of generated src directory... okay
 	checking build system type... i686-pc-linux-gnu
@@ -245,7 +245,7 @@ CentOS
 	sudo yum install -y pango-devel
 	sudo yum install -y libuuid-devel
 	sudo yum install -y libX11-devel
-	sudo yum install -y mesa-libGL-devel 
+	sudo yum install -y mesa-libGL-devel
 	sudo yum install -y openssl-devel
 	sudo yum install -y cmake
 	sudo yum install -y gcc-c++
@@ -254,9 +254,12 @@ N.B. if you get failures due to version conflicts try
 and then retry.
 
 Ubuntu
+	sudo apt install clang
 	sudo apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev
-	sudo apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+	sudo apt install libssl-dev libevdev-dev m4 libpulse-dev
 	sudo apt install libxrandr-dev
+	sudo apt install libgl1-mesa-glx # before Ubuntu 18.04
+	sudo apt install libgl1 libglx-mesa0 # since Ubuntu 18.04
 	(gcc-multilib libgl1-mesa-glx:i386 for 32-bit builds on on 64-bit installations)
 
 More advice and examples for other distros gratefully received.
