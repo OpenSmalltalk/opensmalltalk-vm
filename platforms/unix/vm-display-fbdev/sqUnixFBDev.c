@@ -515,7 +515,7 @@ static void display_winImageNotFound(void)								{ return  ; }
 // OSPP
 
 void openXDisplay(void)		{}
-void closeXDisplay(void)	{}
+void disconnectXDisplay(void)	{}
 void synchronizeXDisplay(void)	{}
 void forgetXDisplay(void)	{}
 

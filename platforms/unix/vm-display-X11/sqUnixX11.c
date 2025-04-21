@@ -481,11 +481,11 @@ static inline int min(int x, int y) { return (x < y) ? x : y; }
 
 /* Called prior to forking a squeak session.
  */
-int synchronizeXDisplay(void)
+void
+synchronizeXDisplay(void)
 {
   if (isConnectedToXServer)
     XSync(stDisplay, False);
-  return 0;
 }
 
 static Bool timestampPredicate(Display *dpy, XEvent *evt, XPointer arg)
@@ -6784,7 +6784,8 @@ display_winSetName(char *imageName)
 /*** display connection ***/
 
 
-int openXDisplay(void)
+void
+openXDisplay(void)
 {
   /* open the Squeak window. */
   if (!isConnectedToXServer)
@@ -6816,7 +6817,6 @@ int openXDisplay(void)
       aioEnable(stXfd, 0, AIO_EXT);
       aioHandle(stXfd, xHandler, AIO_RX);
     }
-  return 0;
 }
 
 
@@ -6841,7 +6841,8 @@ static void clearXDisplayVariables()
  * is expected to continue as a headless image, and the parent continues
  * its normal execution.
  */
-int forgetXDisplay(void)
+void
+forgetXDisplay(void)
 {
   if (isConnectedToXServer)
     {
@@ -6850,11 +6851,11 @@ int forgetXDisplay(void)
       close(stXfd);
       clearXDisplayVariables();
     }
-  return 0;
 }
 
 
-int disconnectXDisplay(void)
+void
+disconnectXDisplay(void)
 {
   if (isConnectedToXServer)
     {
@@ -6876,7 +6877,6 @@ int disconnectXDisplay(void)
       XCloseDisplay(stDisplay);
       clearXDisplayVariables();
     }
-  return 0;
 }
 
 
