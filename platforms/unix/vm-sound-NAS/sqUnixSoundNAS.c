@@ -129,7 +129,7 @@ static sqInt sound_Stop(void)
 {
   if(server != NULL) {
     aioDisable(AuServerConnectionNumber(server));
-		
+
     AuCloseServer(server);
     server = NULL;
   }
@@ -187,7 +187,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt
 	}
     }
 
-	
+
   DPRINTF("writing %d bytes (%d frames)\n", bytesToPlay, framesToPlay);
   AuWriteElement(server, flow, 0,
 		 bytesToPlay,
@@ -319,7 +319,7 @@ static AuDeviceID choose_nas_device(AuServer *server, int samplesPerSec, int ste
   return AuNone;
 }
 
-static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* first is a client element, second is
 			     a device output element */
@@ -375,7 +375,7 @@ static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int sem
 			    2*frameCount,   /* max: 2 buffers */
 			    frameCount,   /* low */
 			    0, NULL);
-	
+
   AuMakeElementExportDevice(&elements[1],
 			    0,
 			    device,
@@ -415,7 +415,7 @@ static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int sem
    XXX this routine is almost identical to snd_Start().  The two should
    be factored into a single function!
 */
-static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* elements for the NAS flow to assemble:
    			        element 0 = physical input
@@ -481,7 +481,7 @@ static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo0, int sem
 			    1000000,  /* was AuUnlimitedSamples */
 			    1000, /* water mark: go ahead and send frequently! */
 			    0, NULL);
-	
+
 
 
   /* set up the flow with these elements */
@@ -521,8 +521,8 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(void *buf, int startSliceIndex,
-				  int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex,
+	sqInt bufferSizeInBytes)
 {
   int bytesToRead;
   int sliceSize= (stereo ? 4 : 2);   /* a "slice" seems to be a "frame": one sample from each channel */
