@@ -1,25 +1,25 @@
 /* sqUnixSoundOSS.c -- sound module for Open Sound System
  *
  * Author: Ian.Piumarta@squeakland.org
- * 
+ *
  * Last edited: 2008-04-21 14:51:45 by piumarta on emilia
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -40,7 +40,7 @@
  * even an entire fragment) either.  Disabling the Semaphore entirely
  * increases audio performace noticably and Squeak idles for almost
  * all of the time (consuming < 1% CPU) when only playing sound.
- * 
+ *
  * If you turn the play Semaphore back on then you should at least
  * consider also turning on `soundStopWhenDone' in the image
  * preferences, otherwise Squeak WILL eat ALL of your CPU from the
@@ -342,7 +342,7 @@ static void dspClose(struct dsp *dsp)
  * If full-duplex is not supported (or if the current sample format is
  * incompatible) then stop recording before opening for playback.
  * Answer whether we successfully opened the device for output.
- * 
+ *
  * NOTE: for full-duplex operation we simply attempt to open the
  * device twice (O_RDONLY and O_WRONLY) which is NOT supported by all
  * versions of OSS [1].  If this fails we should try at least two
@@ -352,7 +352,7 @@ static void dspClose(struct dsp *dsp)
  * 2) find and open a shadow device /dev/dspN (N > 0).
  * Unfortunately I'm feeling too lazy to implement all that nonsense
  * today.
- * 
+ *
  * [1] http://www.opensound.com/readme/README.fullduplex.html
  */
 static struct dsp *dspOpen(struct dsp *dsp, int mode)
@@ -750,16 +750,16 @@ static sqInt sound_AvailableSpace(void)
 }
 
 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   return success(false);
 }
 
 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
 {
   assert(out->write != 0);
-  return out->write(out, pointerForOop(arrayIndex) + startIndex * out->sq.bpf, frameCount);
+  return out->write(out, buf + startIndex * out->sq.bpf, frameCount);
 }
 
 
@@ -828,7 +828,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   /*PRINTF(("record %d %d %d\n", buf, startSliceIndex, bufferSizeInBytes));*/
 
@@ -854,7 +854,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
       frameCount= min(frameCount, framesAvail);
       /*PRINTF(("<%d", frameCount * in->hw.bpf));*/
       return in->read(in,
-		      pointerForOop(buf) + startSliceIndex * 2,
+		      buf + startSliceIndex * 2,
 		      frameCount)
 	* in->sq.channels;
     }
@@ -866,10 +866,10 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 
 
 /* NOTES:
- * 
+ *
  *   - output volume is connected to PCM unless there is no such
  *     device, in which case we try master VOLUME instead.
- * 
+ *
  *   - input volume is connected to RECLEVEL unless there is no such
  *     device, in which case we try IGAIN instead.
  */
@@ -1026,9 +1026,9 @@ static int sound_RecordLevel(int *level)
 #endif
 
 
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
-  if (noSoundMixer) return 1;
+  if (noSoundMixer) { success(false); return; }
   if (mixer || (mixer= mixerOpen(&dev_mixer)))
     {
       level= level * LEVEL_MAX / 1000;
@@ -1037,10 +1037,9 @@ static sqInt sound_SetRecordLevel(sqInt level)
       else if (level > 255)
 	level= 255;
 
-      if (mixerSetLevel(mixer, SOUND_MIXER_RECLEV, level, level)) return 1;
-      if (mixerSetLevel(mixer, SOUND_MIXER_IGAIN,  level, level)) return 1;
+      if (mixerSetLevel(mixer, SOUND_MIXER_RECLEV, level, level)) { success(false); return; }
+      if (mixerSetLevel(mixer, SOUND_MIXER_IGAIN,  level, level)) { success(false); return; }
     }
-  return 0;
 }
 
 static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)

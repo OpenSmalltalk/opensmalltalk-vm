@@ -638,7 +638,7 @@ static void mixFrames(short *out, short *in, int nFrames)
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
 // 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt framesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt framesOfLeadTime)
 {
   Stream *s= output;
 
@@ -709,9 +709,9 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, 
 
       if ((frontFrames + backFrames) >= (frameCount / 2))
 	{
-	  mixFrames((short *)frontData, (short *)pointerForOop(srcBufPtr), frontFrames);
+	  mixFrames((short *)frontData, (short *)srcBufPtr, frontFrames);
 	  srcBufPtr += frontFrames * SqueakFrameSize;
-	  mixFrames((short *)backData,  (short *)pointerForOop(srcBufPtr), backFrames);
+	  mixFrames((short *)backData,  (short *)srcBufPtr, backFrames);
 	  framesDone= frontFrames + backFrames;
 	}
       return framesDone;
@@ -725,7 +725,7 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, 
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
 {
   if (output)
     {
@@ -733,7 +733,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, s
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
-		       pointerForOop(arrayIndex) + (startIndex * SqueakFrameSize),
+		       buf + (startIndex * SqueakFrameSize),
 		       byteCount);
 	  return frameCount;
 	}
@@ -855,7 +855,7 @@ static sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaI
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
@@ -864,7 +864,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 	  int    start= startSliceIndex * SqueakFrameSize / 2;
 	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
-								&count, pointerForOop(buf) + start))
+								&count, buf + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
 	}
       return 0;
@@ -959,14 +959,14 @@ static void sound_SetVolume(double left, double right)
 
 // set recording gain, 0 <= level <= 1000
 // 
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
   extern int noSoundMixer;
 
   if (noSoundMixer)
-    return 0;
+    return;
 
-  return setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
+  setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
 }
 
 
@@ -1064,7 +1064,7 @@ int main()
       if (n)
 	{
 	  warble(n);
-	  sound_PlaySamplesFromAtLength(n, (int)sound, 0);
+	  sound_PlaySamplesFromAtLength(n, sound, 0);
 #        if (DEBUG)
 	  putchar('.');  fflush(stdout);
 #        endif

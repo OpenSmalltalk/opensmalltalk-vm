@@ -154,9 +154,9 @@ static int sound_AvailableSpace(void)
 }
 
 
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static int sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt startIndex)
 {
-  short *src= (short *) (arrayIndex + 4*startIndex);
+  short *src= (short *) (srcBuf + 4*startIndex);
   short buf[2*frameCount];
   int i;
   int bytes;
@@ -198,8 +198,8 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 }
 
 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static int sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   return 0;
 }
@@ -212,10 +212,9 @@ static int sound_PlaySilence(void)
 
 
 /** recording not supported **/
-static int sound_SetRecordLevel(int level)
+static void sound_SetRecordLevel(sqInt level)
 {
   success(false);
-  return;
 }
 
 
@@ -239,7 +238,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+static int sound_RecordSamplesIntoAtLength(void *buf, int startSliceIndex, int bufferSizeInBytes)
 {
   success(false);
   return 0;

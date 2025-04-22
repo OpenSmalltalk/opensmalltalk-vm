@@ -195,7 +195,7 @@ static void trace();
 
 static sqInt sound_AvailableSpace(void);
 static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime);
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex);
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex);
 static sqInt sound_PlaySilence(void);
 static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
 static sqInt sound_Stop(void);
@@ -213,7 +213,7 @@ static int mixer_setSwitch(char *name, int captureFlag, int parameter);
 static int mixer_getSwitch(char *name, int captureFlag, int channel);
 static void sound_Volume(double *left, double *right);
 static void sound_SetVolume(double left, double right);
-static sqInt sound_SetRecordLevel(sqInt level);
+static void sound_SetRecordLevel(sqInt level);
 static sqInt sound_SetDevice(sqInt id, char *arg);
 static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel);
 static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter);
@@ -1093,10 +1093,8 @@ static void sound_SetVolume(double left, double right) {
   trace();
 }
 
-static sqInt sound_SetRecordLevel(sqInt level) {
+static void sound_SetRecordLevel(sqInt level) {
   trace();
-  return 1;
-  return level;
 }
 
 static sqInt sound_SetDevice(sqInt id, char *arg) {

@@ -116,8 +116,8 @@ static sqInt sound_AvailableSpace(void)
   return bytesAvail;
 }
 
-static sqInt sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   /* not possible, I don't think using NAS */
   success(false);
@@ -141,15 +141,15 @@ static sqInt sound_Stop(void)
 
 
 
-static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt startIndex)
 {
   int bytesToPlay;
   int framesToPlay;
-  char *buf;   /* buffer to play from; it may not be arrayIndex if a
+  char *buf;   /* buffer to play from; it may not be srcBuf if a
                   conversion is necessary */
 
-  DPRINTF("PlaySamples(frameCount=%d, arrayIndex=%d, startIndex=%d\n",
-	  frameCount, arrayIndex, startIndex);
+  DPRINTF("PlaySamples(frameCount=%d, srcBuf=%d, startIndex=%d\n",
+	  frameCount, (int)srcBuf, startIndex);
 
   /* figure out how much to play */
   bytesToPlay = frameCount * bytesPerPlayFrame();
@@ -163,7 +163,7 @@ static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int s
      ignored */
   if(stereo)
     {
-      buf= (char *) (arrayIndex + 4*startIndex);
+      buf= (char *) (srcBuf + 4*startIndex);
     }
   else
     {
@@ -183,7 +183,7 @@ static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int s
 
       for(i=0; i<frameCount; i++)
 	{
-	  sbuf[i]= ((short *) (arrayIndex + 4*startIndex)) [2*i];
+	  sbuf[i]= ((short *) (srcBuf + 4*startIndex)) [2*i];
 	}
     }
 
@@ -521,7 +521,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, int startSliceIndex,
 				  int bufferSizeInBytes)
 {
   int bytesToRead;
@@ -529,7 +529,7 @@ static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 
 
   DPRINTF("RecordSamplesIntoAtLength(buf=%d, startSliceIndex=%d, bufferSizeInBytes=%d\n",
-	  buf, startSliceIndex, bufferSizeInBytes);
+	  (int)buf, startSliceIndex, bufferSizeInBytes);
 
 
   /* sanity checks */
@@ -566,9 +566,9 @@ static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 
 
 /* mixer settings */
-static sqInt sound_SetRecordLevel(int level)
+static void sound_SetRecordLevel(sqInt level)
 {
-  return level;
+  return;
 }
 
 
