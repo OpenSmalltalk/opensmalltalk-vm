@@ -116,8 +116,8 @@ static sqInt sound_AvailableSpace(void)
   return bytesAvail;
 }
 
-static sqInt sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   /* not possible, I don't think using NAS */
   success(false);
@@ -129,7 +129,7 @@ static sqInt sound_Stop(void)
 {
   if(server != NULL) {
     aioDisable(AuServerConnectionNumber(server));
-		
+
     AuCloseServer(server);
     server = NULL;
   }
@@ -141,15 +141,15 @@ static sqInt sound_Stop(void)
 
 
 
-static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt startIndex)
 {
   int bytesToPlay;
   int framesToPlay;
-  char *buf;   /* buffer to play from; it may not be arrayIndex if a
+  char *buf;   /* buffer to play from; it may not be srcBuf if a
                   conversion is necessary */
 
-  DPRINTF("PlaySamples(frameCount=%d, arrayIndex=%d, startIndex=%d\n",
-	  frameCount, arrayIndex, startIndex);
+  DPRINTF("PlaySamples(frameCount=%d, srcBuf=%d, startIndex=%d\n",
+	  frameCount, (int)srcBuf, startIndex);
 
   /* figure out how much to play */
   bytesToPlay = frameCount * bytesPerPlayFrame();
@@ -163,7 +163,7 @@ static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int s
      ignored */
   if(stereo)
     {
-      buf= (char *) (arrayIndex + 4*startIndex);
+      buf= (char*)srcBuf + 4*startIndex;
     }
   else
     {
@@ -183,11 +183,11 @@ static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int s
 
       for(i=0; i<frameCount; i++)
 	{
-	  sbuf[i]= ((short *) (arrayIndex + 4*startIndex)) [2*i];
+	  sbuf[i]= ((short *) ((char*)srcBuf + 4*startIndex)) [2*i];
 	}
     }
 
-	
+
   DPRINTF("writing %d bytes (%d frames)\n", bytesToPlay, framesToPlay);
   AuWriteElement(server, flow, 0,
 		 bytesToPlay,
@@ -319,7 +319,7 @@ static AuDeviceID choose_nas_device(AuServer *server, int samplesPerSec, int ste
   return AuNone;
 }
 
-static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* first is a client element, second is
 			     a device output element */
@@ -375,7 +375,7 @@ static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int sem
 			    2*frameCount,   /* max: 2 buffers */
 			    frameCount,   /* low */
 			    0, NULL);
-	
+
   AuMakeElementExportDevice(&elements[1],
 			    0,
 			    device,
@@ -415,7 +415,7 @@ static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo0, int sem
    XXX this routine is almost identical to snd_Start().  The two should
    be factored into a single function!
 */
-static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* elements for the NAS flow to assemble:
    			        element 0 = physical input
@@ -481,7 +481,7 @@ static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo0, int sem
 			    1000000,  /* was AuUnlimitedSamples */
 			    1000, /* water mark: go ahead and send frequently! */
 			    0, NULL);
-	
+
 
 
   /* set up the flow with these elements */
@@ -521,15 +521,15 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
-				  int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex,
+	sqInt bufferSizeInBytes)
 {
   int bytesToRead;
   int sliceSize= (stereo ? 4 : 2);   /* a "slice" seems to be a "frame": one sample from each channel */
 
 
   DPRINTF("RecordSamplesIntoAtLength(buf=%d, startSliceIndex=%d, bufferSizeInBytes=%d\n",
-	  buf, startSliceIndex, bufferSizeInBytes);
+	  (int)buf, startSliceIndex, bufferSizeInBytes);
 
 
   /* sanity checks */
@@ -554,7 +554,7 @@ static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 		flow,
 		1,     /* element 1 is the client export */
 		bytesToRead,
-		(char *) (buf + startSliceIndex*sliceSize),
+		((char*)buf + startSliceIndex*sliceSize),
 		NULL);
 
   bytesAvail -= bytesToRead;
@@ -566,9 +566,9 @@ static sqInt sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 
 
 /* mixer settings */
-static sqInt sound_SetRecordLevel(int level)
+static void sound_SetRecordLevel(sqInt level)
 {
-  return level;
+  return;
 }
 
 

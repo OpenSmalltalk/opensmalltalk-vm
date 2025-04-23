@@ -3,19 +3,19 @@
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *   DEALINGS IN THE SOFTWARE.
  *
  * Authors: Ian.Piumarta@inria.fr and Lex Spoon <lex@cc.gatech.edu>
- * 
+ *
  * This support is rudimentary and is implemented largely by reading
  * header files and guessing what to do.
  */
@@ -90,13 +90,13 @@ static int sound_Stop(void)
 }
 
 
-static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   int bytesPerFrame=	(stereo ? 4 : 2);
   int bufferBytes=	((frameCount * bytesPerFrame) / 8) * 8;
   struct audio_info info;
   int err;
-     
+
   if (auFd != -1) sound_Stop();
   auPlaySemaIndex= semaIndex;
   fmtStereo= stereo;
@@ -131,7 +131,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIn
   aioEnable(auFd, 0, 0);
   aioHandle(auFd, auHandle, AIO_RX);
   return true;
-  
+
  closeAndFail:
   close(auFd);
   auFd= -1;
@@ -154,9 +154,9 @@ static int sound_AvailableSpace(void)
 }
 
 
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static int sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt startIndex)
 {
-  short *src= (short *) (arrayIndex + 4*startIndex);
+  short *src= (short *) ((char*)srcBuf + 4*startIndex);
   short buf[2*frameCount];
   int i;
   int bytes;
@@ -180,7 +180,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
     {
       int len;
       char *pos= (char *) buf;
-	  
+
       len= write(auFd, pos, bytes);
       if (len < 0)
 	{
@@ -193,13 +193,13 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
   /* add an eof marker */
   write(auFd, buf, 0);
   auBuffersPlayed += 1;
-  
+
   return frameCount;
 }
 
 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static int sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   return 0;
 }
@@ -212,14 +212,13 @@ static int sound_PlaySilence(void)
 
 
 /** recording not supported **/
-static int sound_SetRecordLevel(int level)
+static void sound_SetRecordLevel(sqInt level)
 {
   success(false);
-  return;
 }
 
 
-static int sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   success(false);
   return;
@@ -239,7 +238,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   success(false);
   return 0;

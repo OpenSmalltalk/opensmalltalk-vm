@@ -873,7 +873,7 @@ dx_snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt sample
 }
 
 static sqInt
-dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex)
+dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
 {
   HRESULT hRes;
   int bytesWritten;
@@ -903,7 +903,7 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIn
   /* mix in stuff */
   { 
     DWORD i;
-    short *shortSrc = (short*)((char *)arrayIndex+startIndex);
+    short *shortSrc = (short*)((char*)buf+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /= 2;
     DSPRINTF(("|%d", dstLen));
@@ -1369,8 +1369,8 @@ snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOf
 }
 
 sqInt
-snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex) {
-    return dx_snd_PlaySamplesFromAtLength(frameCount, arrayIndex, startIndex);
+snd_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex) {
+    return dx_snd_PlaySamplesFromAtLength(frameCount, buf, startIndex);
 }
 
 sqInt

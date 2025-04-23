@@ -14,16 +14,16 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero) { return success(false); }
 
 #ifdef NO_SOUND
 int snd_AvailableSpace(void) { return success(false); }
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) { return success(false); }
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) { return success(false); }
+int snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime) { return success(false); }
+int snd_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex) { return success(false); }
 int snd_PlaySilence(void) { return success(false); }
 int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) { return success(false); }
 int snd_Stop(void) { return 1; }
-int snd_SetRecordLevel(int level) { return success(false); }
+void snd_SetRecordLevel(sqInt level) { success(false); }
 int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) { return success(false); }
 int snd_StopRecording(void) { return success(false); }
 double snd_GetRecordingSampleRate(void) { return success(false); }
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) { return success(false); }
+int snd_RecordSamplesIntoAtLength(void *buf, int startSliceIndex, int bufferSizeInBytes) { return success(false); }
 #endif
 
 #ifdef NO_JOYSTICK

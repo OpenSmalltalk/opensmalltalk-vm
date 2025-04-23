@@ -285,7 +285,7 @@ sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt sam
 	return 0;
 }
 
-sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex) {
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex) {
 // Output a frameCount sound samplesfrom the passed in array, starting from startIndex.
 // return the number actually 'played'; though no one uses it
 	if (!sound_initialised) {
@@ -293,8 +293,8 @@ sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt star
 		PRINTF(("snd_PlatSamplesFrom failed - sound not initialised\n"));
 		return false;
 	}
-	PRINTF(("snd_PlaySamplesFrom: %d At: %d Length: %d", arrayIndex, startIndex, frameCount));
-	sm_addblock(sound_stream, (unsigned char *)((int)arrayIndex + startIndex), BYTESFROMSAMPLES(frameCount));
+	PRINTF(("snd_PlaySamplesFrom: %d At: %d Length: %d", buf, startIndex, frameCount));
+	sm_addblock(sound_stream, (unsigned char *)((int)buf + startIndex), BYTESFROMSAMPLES(frameCount));
 	ssb_pause(sound_handle, false);
 	return frameCount;
 }
