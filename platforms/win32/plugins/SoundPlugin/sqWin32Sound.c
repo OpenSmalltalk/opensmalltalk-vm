@@ -903,7 +903,7 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
   /* mix in stuff */
   { 
     DWORD i;
-    short *shortSrc = (short*)(buf+startIndex);
+    short *shortSrc = (short*)((char*)buf+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /= 2;
     DSPRINTF(("|%d", dstLen));

@@ -845,7 +845,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sq
 	
 	samples = MIN(audioOut.maxSamples, frameCount);
 	
-	if (0 == (sampleBytes = ioAddPlayBuffer(srcBufPtr + startIndex * 2 * audioOut.pa_spec.channels, samples)))
+	if (0 == (sampleBytes = ioAddPlayBuffer((char*)srcBufPtr + startIndex * 2 * audioOut.pa_spec.channels, samples)))
 		DBGMSG("sound_PlaySamplesFromAtLength(): No free buffers!");
 	
 	sigSignal(&audioOut.sigRun);
@@ -1037,7 +1037,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
 	/*   ioGetRecordBuffer() frees the buffer after single visit. Needs more work */
 	
 	bufferNext = audioIn.bufferNext; /* preserved for debug output */
-	sampleBytes = ioGetRecordBuffer((void *)(buf + (startSliceIndex * 2)), bufferBytes);
+	sampleBytes = ioGetRecordBuffer((void *)((char*)buf + (startSliceIndex * 2)), bufferBytes);
 /*
 	if (0 < sampleBytes)
 		printf("   sound_RecordSamplesIntoAtLength(%d, %d, %d) %d, %d\n", buf, startSliceIndex, bufferSizeInBytes, bufferNext, sampleBytes);

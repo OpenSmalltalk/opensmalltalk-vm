@@ -163,7 +163,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt
      ignored */
   if(stereo)
     {
-      buf= (char *) (srcBuf + 4*startIndex);
+      buf= (char*)srcBuf + 4*startIndex;
     }
   else
     {
@@ -183,7 +183,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt
 
       for(i=0; i<frameCount; i++)
 	{
-	  sbuf[i]= ((short *) (srcBuf + 4*startIndex)) [2*i];
+	  sbuf[i]= ((short *) ((char*)srcBuf + 4*startIndex)) [2*i];
 	}
     }
 
@@ -554,7 +554,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex,
 		flow,
 		1,     /* element 1 is the client export */
 		bytesToRead,
-		(char *) (buf + startSliceIndex*sliceSize),
+		((char*)buf + startSliceIndex*sliceSize),
 		NULL);
 
   bytesAvail -= bytesToRead;

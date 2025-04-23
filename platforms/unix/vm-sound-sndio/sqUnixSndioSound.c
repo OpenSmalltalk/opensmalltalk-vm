@@ -42,7 +42,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt st
 {
   size_t bytes_played;
   trace();
-  bytes_played = sio_write(snd, buf + startIndex * (par.bps * par.pchan), frameCount * par.bps * par.pchan);
+  bytes_played = sio_write(snd, (char*)buf + startIndex * (par.bps * par.pchan), frameCount * par.bps * par.pchan);
   if (bytes_played < 0)
     return 0;
   return bytes_played / (par.bps * par.pchan);

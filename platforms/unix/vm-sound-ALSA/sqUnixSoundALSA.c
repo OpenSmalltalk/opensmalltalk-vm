@@ -284,7 +284,7 @@ static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt s
 {
   if (playback_handle)
     {
-      void *samples= buf + startIndex * output_channels * 2;
+      void *samples= (char*)buf + startIndex * output_channels * 2;
       int   count=   snd_pcm_writei(playback_handle, samples, frameCount);
       if (count < 0)
 	{
@@ -388,7 +388,7 @@ protected_sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqIn
 	 *		AudioStreamInALSA.cpp: AudioStreamInALSA::read
 	 */
 	if (capture_handle) {
-		void *samples=    buf + (startSliceIndex * 2);
+		void *samples=    (char*)buf + (startSliceIndex * 2);
 # if 1
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 # else
@@ -429,7 +429,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
 #if 0
   if (capture_handle)
     {
-      void *samples=    buf + (startSliceIndex * 2);
+      void *samples=    (char*)buf + (startSliceIndex * 2);
       int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
       int   count=      snd_pcm_readi(capture_handle, samples, frameCount);
       if (count < 0)
@@ -446,7 +446,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
   return 0;
 #elif 1
 	if (capture_handle) {
-		void *samples=    buf + (startSliceIndex * 2);
+		void *samples=    (char*)buf + (startSliceIndex * 2);
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 		int   count;
 
@@ -474,7 +474,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
 	 *		AudioStreamInALSA.cpp: AudioStreamInALSA::read
 	 */
 	if (capture_handle) {
-		void *samples=    buf + (startSliceIndex * 2);
+		void *samples=    (char*)buf + (startSliceIndex * 2);
 # if 0
 		int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
 # else

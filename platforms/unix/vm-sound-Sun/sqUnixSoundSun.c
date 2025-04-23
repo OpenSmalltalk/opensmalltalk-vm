@@ -156,7 +156,7 @@ static int sound_AvailableSpace(void)
 
 static int sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBuf, sqInt startIndex)
 {
-  short *src= (short *) (srcBuf + 4*startIndex);
+  short *src= (short *) ((char*)srcBuf + 4*startIndex);
   short buf[2*frameCount];
   int i;
   int bytes;

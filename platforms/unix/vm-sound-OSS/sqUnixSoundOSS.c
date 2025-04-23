@@ -759,7 +759,7 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, 
 static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt startIndex)
 {
   assert(out->write != 0);
-  return out->write(out, buf + startIndex * out->sq.bpf, frameCount);
+  return out->write(out, (char*)buf + startIndex * out->sq.bpf, frameCount);
 }
 
 
@@ -854,7 +854,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
       frameCount= min(frameCount, framesAvail);
       /*PRINTF(("<%d", frameCount * in->hw.bpf));*/
       return in->read(in,
-		      buf + startSliceIndex * 2,
+		      (char*)buf + startSliceIndex * 2,
 		      frameCount)
 	* in->sq.channels;
     }

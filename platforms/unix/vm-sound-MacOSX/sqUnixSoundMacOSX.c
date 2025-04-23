@@ -710,7 +710,7 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, 
       if ((frontFrames + backFrames) >= (frameCount / 2))
 	{
 	  mixFrames((short *)frontData, srcBufPtr, frontFrames);
-	  srcBufPtr += frontFrames * SqueakFrameSize;
+	  (char*)srcBufPtr += frontFrames * SqueakFrameSize;
 	  mixFrames((short *)backData,  srcBufPtr, backFrames);
 	  framesDone= frontFrames + backFrames;
 	}
@@ -733,7 +733,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *buf, sqInt st
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
-		       buf + (startIndex * SqueakFrameSize),
+		       (char*)buf + (startIndex * SqueakFrameSize),
 		       byteCount);
 	  return frameCount;
 	}
@@ -864,7 +864,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
 	  int    start= startSliceIndex * SqueakFrameSize / 2;
 	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
-								&count, buf + start))
+								&count, (char*)buf + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
 	}
       return 0;
