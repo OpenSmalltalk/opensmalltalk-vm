@@ -709,9 +709,9 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, 
 
       if ((frontFrames + backFrames) >= (frameCount / 2))
 	{
-	  mixFrames((short *)frontData, (short *)srcBufPtr, frontFrames);
+	  mixFrames((short *)frontData, srcBufPtr, frontFrames);
 	  srcBufPtr += frontFrames * SqueakFrameSize;
-	  mixFrames((short *)backData,  (short *)srcBufPtr, backFrames);
+	  mixFrames((short *)backData,  srcBufPtr, backFrames);
 	  framesDone= frontFrames + backFrames;
 	}
       return framesDone;
