@@ -76,6 +76,68 @@ typedef struct ffiTestBiggerStruct {
   	long long u;
 } ffiTestBiggerStruct;
 
+typedef struct ffiSmallFloatStruct2 {
+	float a;
+	float b;
+} ffiSmallFloatStruct2;
+
+typedef struct ffiSmallDoubleStruct2 {
+	double a;
+	double b;
+} ffiSmallDoubleStruct2;
+
+typedef struct ffiMediumFloatStruct4 {
+	float a;
+	float b;
+	float c;
+	float d;
+} ffiMediumFloatStruct4;
+
+typedef struct ffiMediumDoubleStruct4 {
+	double a;
+	double b;
+	double c;
+	double d;
+} ffiMediumDoubleStruct4;
+
+typedef struct ffiLargeFloatStruct16 {
+	float a;
+	float b;
+	float c;
+	float d;
+	float e;
+	float f;
+	float g;
+	float h;
+	float i;
+	float j;
+	float k;
+	float l;
+	float m;
+	float n;
+	float o;
+	float p;
+} ffiLargeFloatStruct16;
+
+typedef struct ffiLargeDoubleStruct16 {
+	double a;
+	double b;
+	double c;
+	double d;
+	double e;
+	double f;
+	double g;
+	double h;
+	double i;
+	double j;
+	double k;
+	double l;
+	double m;
+	double n;
+	double o;
+	double p;
+} ffiLargeDoubleStruct16;
+
 typedef struct Sd2 {double a,b;} ffiTestSd2;
 typedef struct Sf2 {float a,b;} ffiTestSf2;
 typedef struct Sl2 {long long a,b;} ffiTestSl2;
@@ -195,6 +257,12 @@ double ffiTestDoubles(double d1, double d2);
 ffiTestPoint2 ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
 ffiTestPoint4 ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
 ffiTestBiggerStruct ffiTestStructBigger(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
+float ffiTestPassSmallFloatStruct(ffiSmallFloatStruct2 s);
+float ffiTestPassMediumFloatStruct(ffiMediumFloatStruct4 s);
+float ffiTestPassLargeFloatStruct(ffiLargeFloatStruct16 s);
+double ffiTestPassSmallDoubleStruct(ffiSmallDoubleStruct2 s);
+double ffiTestPassMediumDoubleStruct(ffiMediumDoubleStruct4 s);
+double ffiTestPassLargeDoubleStruct(ffiLargeDoubleStruct16 s);
 ffiTestPoint4* ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2);
 ffiSmallStruct1 ffiTestSmallStructReturn(void);
 int ffiTestMixedIntAndStruct(int i1, ffiTestPoint2 pt1, ffiTestPoint2 pt2);

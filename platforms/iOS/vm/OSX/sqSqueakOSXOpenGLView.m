@@ -275,9 +275,8 @@ static unsigned int allocatedExtraLayers = 0;
 - (void) viewDidEndLiveResize {
     //NSLog(@"viewDidEndLiveResize");
 	[gDelegateApp runBlockAsyncOnMainThread:^{
-        [((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor  set];
-     });
-
+        [((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor set];
+     }];
 }
 
 #pragma mark Drawing
