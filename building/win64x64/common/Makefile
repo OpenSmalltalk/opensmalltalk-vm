@@ -331,12 +331,12 @@ $(BUILD)/fdlibm/libm.a:
 include ../common/Makefile.rules
 
 $(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) -i $(VM).rc -o $(OBJDIR)/$@
+	$(RC) $(RCFLAGS) -i $(VM).rc -o $@
 	$(CP) $(VM).exe.manifest $(OBJDIR)
 	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 resource.o:	$(VMRES)
-	$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
+	$(RC) $(RCFLAGS) -i $< -o $@
 
 #############################################################################
 # Extra specific dependencies
