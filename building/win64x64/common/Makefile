@@ -256,13 +256,13 @@ vm:	$(VMEXE)
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
 
 ifneq ($STRIPEXE,)
