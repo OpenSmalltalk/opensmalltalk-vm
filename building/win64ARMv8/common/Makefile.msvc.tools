@@ -58,6 +58,12 @@ WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
 NOBUILTIN:=-D_MT
 MACHINE:=arm64
 
+# Several versions of clang (all versions from 14 through 18 as of this writing)
+# generate incorrect code for spur segment storage
+#	(return:restoringObjectsIn:savedFirstFields:and:savedHashes:)
+# unless USE_INLINE_MEMORY_ACCESSORS is set.
+MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+
 #!#! UNICODE applies to API calls, _UNICODE to string representation, so one
 #!#! must define both.
 DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \

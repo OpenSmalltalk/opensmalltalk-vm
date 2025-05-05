@@ -4,7 +4,7 @@
 [MCMcmUpdater default doUpdate: false] on: Warning do: [:ex | ex resume: true].
 
 "Disable underscore as assignment, allowing underscores in method names."
-Scanner allowUnderscoreAsAssignment: false.
+Scanner allowUnderscoreAsAssignment: false.TranscriptStream characterLimit: 1000000.
 
 manifest := #(	
 	squeak	'FFI'

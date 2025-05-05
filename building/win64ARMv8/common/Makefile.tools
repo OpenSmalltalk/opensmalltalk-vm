@@ -61,8 +61,14 @@ NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
+# Several versions of clang (all versions from 14 through 18 as of this writing)
+# generate incorrect code for spur segment storage
+#	(return:restoringObjectsIn:savedFirstFields:and:savedHashes:)
+# unless USE_INLINE_MEMORY_ACCESSORS is set.
+MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+
 TZ:=$(shell date +%Z)
-DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(WINVER) \
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
 		-DWIN64=1 -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
