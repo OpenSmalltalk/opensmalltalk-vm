@@ -153,10 +153,6 @@ typedef unsigned long long usqIntptr_t;
   static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= val; }
   static inline sqLong long64AtPointer(char *ptr)			{ return *(sqLong *)ptr; }
   static inline sqLong long64AtPointerput(char *ptr, sqLong val)	{ return *(sqLong *)ptr= val; }
-  static inline float singleFloatAtPointer(char *ptr)			{ return *(float *)ptr; }
-  static inline float singleFloatAtPointerput(char *ptr, float val)	{ return *(float *)ptr= val; }
-  static inline double floatAtPointer(char *ptr)			{ return *(double *)ptr; }
-  static inline double floatAtPointerput(char *ptr, double val)	{ return *(double *)ptr= val; }  
   static inline sqInt oopAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
   static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= val); }
 # if defined(sqMemoryBase) && !sqMemoryBase
@@ -202,6 +198,14 @@ typedef unsigned long long usqIntptr_t;
   static inline usqLong uint64AtPointer(char *ptr)			    { return (*((usqLong *)ptr)); }
   static inline usqLong uint64AtPointerput(char *ptr, usqLong val)	{ return (*((usqLong *)ptr)= val); }
 
+  static inline float  singleFloatAtPointer(char *ptr)				{ return *(float *)ptr; }
+  static inline float  singleFloatAtPointerput(char *ptr, float val)	{ return *(float *)ptr= val; }
+  static inline double floatAtPointer(char *ptr)					{ return *(double *)ptr; }
+  static inline double floatAtPointerput(char *ptr, double val)		{ return *(double *)ptr= val; }  
+  static inline float  singleFloatAt(sqInt oop)						{ return *(float *)oop; }
+  static inline float  singleFloatAtput(sqInt oop, float val)		{ return *(float *)oop= val; }
+  static inline double floatAt(sqInt oop)							{ return *(double *)oop; }
+  static inline double floatAtput(sqInt oop, double val)			{ return *(double *)oop= val; }  
 #else /* USE_INLINE_MEMORY_ACCESSORS */
   /* Use macros when static inline functions aren't efficient. */
 # define byteAtPointer(ptr)			((sqInt)(*((unsigned char *)(ptr))))
@@ -214,12 +218,8 @@ typedef unsigned long long usqIntptr_t;
 # define longAtPointerput(ptr,val)	(*(sqInt *)(ptr)= (sqInt)(val))
 # define long64AtPointer(ptr)			(*(sqLong *)(ptr))
 # define long64AtPointerput(ptr,val)	(*(sqLong *)(ptr)= (sqLong)(val))
-# define singleFloatAtPointer(ptr)		(*(float*)(ptr))
-# define singleFloatAtPointerput(ptr, val)		(*(float*)(ptr) = val)
-# define floatAtPointer(ptr)		        (*(double*)(ptr))
-# define floatAtPointerput(ptr, val)		(*(double*)(ptr) = val)
 # define pointerAtPointer(ptr)		        (*(char**)(ptr))
-# define pointerAtPointerput(ptr, val)		(*(char**)(ptr) = val)
+# define pointerAtPointerput(ptr, val)		(*(char**)(ptr) = (val))
 # define oopAtPointer(ptr)			(*(sqInt *)(ptr))
 # define oopAtPointerput(ptr,val)	(*(sqInt *)(ptr)= (sqInt)(val))
 # if defined(sqMemoryBase) && !sqMemoryBase
@@ -245,24 +245,33 @@ typedef unsigned long long usqIntptr_t;
 # define oopAtput(oop,val)			oopAtPointerput(atPointerArg(oop), val)
 
 # define int8AtPointer(ptr)          (*(signed char*)(ptr))
-# define int8AtPointerput(ptr, val)  (*(signed char*)(ptr) = val)
+# define int8AtPointerput(ptr, val)  (*(signed char*)(ptr) = (val))
 # define uint8AtPointer(ptr)          (*(unsigned char*)(ptr))
-# define uint8AtPointerput(ptr, val)  (*(unsigned char*)(ptr) = val)
+# define uint8AtPointerput(ptr, val)  (*(unsigned char*)(ptr) = (val))
 
 # define int16AtPointer(ptr)          (*(signed short*)(ptr))
-# define int16AtPointerput(ptr, val)  (*(signed short*)(ptr) = val)
+# define int16AtPointerput(ptr, val)  (*(signed short*)(ptr) = (val))
 # define uint16AtPointer(ptr)          (*(unsigned short*)(ptr))
-# define uint16AtPointerput(ptr, val)  (*(unsigned short*)(ptr) = val)
+# define uint16AtPointerput(ptr, val)  (*(unsigned short*)(ptr) = (val))
 
 # define int32AtPointer(ptr)          (*(signed int*)(ptr))
-# define int32AtPointerput(ptr, val)  (*(signed int*)(ptr) = val)
+# define int32AtPointerput(ptr, val)  (*(signed int*)(ptr) = (val))
 # define uint32AtPointer(ptr)          (*(unsigned int*)(ptr))
-# define uint32AtPointerput(ptr, val)  (*(unsigned int*)(ptr) = val)
+# define uint32AtPointerput(ptr, val)  (*(unsigned int*)(ptr) = (val))
 
 # define int64AtPointer(ptr)          (*(sqLong*)(ptr))
-# define int64AtPointerput(ptr, val)  (*(sqLong*)(ptr) = val)
+# define int64AtPointerput(ptr, val)  (*(sqLong*)(ptr) = (val))
 # define uint64AtPointer(ptr)          (*(usqLong*)(ptr))
-# define uint64AtPointerput(ptr, val)  (*(usqLong*)(ptr) = val)
+# define uint64AtPointerput(ptr, val)  (*(usqLong*)(ptr) = (val))
+
+# define singleFloatAt(oop)					(*(float*)(oop))
+# define singleFloatAtPointer(ptr)			(*(float*)(ptr))
+# define singleFloatAtput(oop, val)			(*(float*)(oop) = (val))
+# define singleFloatAtPointerput(ptr, val)	(*(float*)(ptr) = (val))
+# define floatAt(oop)		        		(*(double*)(oop))
+# define floatAtPointer(ptr)		        (*(double*)(ptr))
+# define floatAtput(oop, val)				(*(double*)(oop) = (val))
+# define floatAtPointerput(ptr, val)		(*(double*)(ptr) = (val))
 #endif /* USE_INLINE_MEMORY_ACCESSORS */
 
 static inline sqLong asIEEE64BitWord(double val)
@@ -289,6 +298,8 @@ static inline unsigned int asIEEE32BitWord(float val)
 
 #define long32At	intAt
 #define long32Atput	intAtput
+#define long32AtPointer	intAtPointer
+#define long32AtPointerput	intAtPointerput
 
 /* platform-dependent float conversion macros.
  * Note: Second argument must be a variable name, not an expression!
