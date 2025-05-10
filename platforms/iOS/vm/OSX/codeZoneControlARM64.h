@@ -1,6 +1,7 @@
 // defines for controlling the memory permissions of the Cogit's code zone on arm64
 
-#include <libkern/OSCacheControl.h> // for sys_dcache_flush et al
+#include <libkern/OSCacheControl.h>	// for sys_dcache_flush et al
+#include <pthread.h>				// for pthread_jit_write_protect_np
 
 // variables to debug set/clear mismatches
 int PJWPNChange = 0;
