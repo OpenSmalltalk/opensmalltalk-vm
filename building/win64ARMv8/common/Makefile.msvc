@@ -182,22 +182,22 @@ init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe build deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
 
 cleanmt:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmt deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
 
 cleanast:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
 
 cleanmtast:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
 
 cleandbg:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe builddbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
 
 cleanmtdbg:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtdbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
 
 nukelibs:
 	$(RM) $(LIBS)
