@@ -144,10 +144,10 @@ typedef unsigned long long usqIntptr_t;
   // These are preferred because static type checking will prevent inadvertent confusion of pointers and oops.
 
 # if defined(sqMemoryBase)
-  static inline void *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
+  static inline char *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
   static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)((char *)ptr - sqMemoryBase); }
 # else
-  static inline void *pointerForOop(usqInt oop)			{ return (void *)oop; }
+  static inline char *pointerForOop(usqInt oop)			{ return (char *)oop; }
   static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)ptr; }
 # endif
 
@@ -198,7 +198,7 @@ typedef unsigned long long usqIntptr_t;
 #else // USE_INLINE_MEMORY_ACCESSORS
   // Use macros if and when static inline functions aren't efficient.
 # if defined(sqMemoryBase)
-#  define pointerForOop(oop)	((void *)((char *)((sqMemoryBase) + (usqInt)(oop))))
+#  define pointerForOop(oop)	((sqMemoryBase) + (usqInt)(oop))
 #  define oopForPointer(ptr)	((sqInt)((char *)(ptr) - (sqMemoryBase)))
 # else
 #  define pointerForOop(oop)	((char *)(oop))
