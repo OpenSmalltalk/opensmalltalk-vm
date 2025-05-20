@@ -2,6 +2,9 @@
 # Compilation rules for 32-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
+ARCH:=x86
+export ARCH
+
 TOOLPREFIX:=i686-w64-mingw32-
 export TOOLPREFIX
 

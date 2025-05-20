@@ -1,6 +1,9 @@
 #############################################################################
 # Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
-#
+# and arm64
+
+ARCH:=arm64
+export ARCH
 
 TOOLPREFIX:=x86_64-w64-mingw32-
 export TOOLPREFIX
