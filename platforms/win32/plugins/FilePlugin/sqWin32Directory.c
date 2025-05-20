@@ -32,7 +32,32 @@
 #endif
 
 extern struct VirtualMachine *interpreterProxy;
+// This is a mess. On cygwin/mingw with clang 8 EXPORT(foo) (declspec(dllexport)) is
+// ignored and so the FilePlugin can't get convertToSqueakTime from sqWin32Time.c
+#if __clang__ && (__MINGW32__ || __MINGW64__)
+static DWORD
+convertToSqueakTime(SYSTEMTIME st)
+{ DWORD secs;
+  DWORD dy;
+  static DWORD nDaysPerMonth[14] = { 
+    0,  0,  31,  59,  90, 120, 151,
+      181, 212, 243, 273, 304, 334, 365 };
+  /* Squeak epoch is Jan 1, 1901 */
+  dy = st.wYear - 1901; /* compute delta year */
+  secs = dy * 365 * 24 * 60 * 60       /* base seconds */
+         + (dy >> 2) * 24 * 60 * 60;   /* seconds of leap years */
+  /* check if month > 2 and current year is a leap year */
+  if (st.wMonth > 2 && (dy & 0x0003) == 0x0003)
+    secs += 24 * 60 * 60; /* add one day */
+  /* add the days from the beginning of the year */
+  secs += (nDaysPerMonth[st.wMonth] + st.wDay - 1) * 24 * 60 * 60;
+  /* add the hours, minutes, and seconds */
+  secs += st.wSecond + 60 * (st.wMinute + 60 * st.wHour);
+  return secs;
+}
+#else
 IMPORT(DWORD) convertToSqueakTime(SYSTEMTIME st);
+#endif
 
 #define FAIL() { return interpreterProxy->primitiveFail(); }
 
