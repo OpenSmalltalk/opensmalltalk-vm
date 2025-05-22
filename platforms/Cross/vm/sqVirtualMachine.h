@@ -533,7 +533,13 @@ sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 sqInt vmEndianness(void);	
 sqInt getInterruptPending(void);
+#if defined(SQUEAK_EXTERNAL_PLUGIN) && defined(IMPORT)
+IMPORT(void) error(const char *);
+#elif !defined(SQUEAK_BUILTIN_PLUGIN) && defined(EXPORT)
+EXPORT(void) error(const char *);
+#else
 void  error(const char *);
+#endif
 
 /* InterpreterProxy methodsFor: 'FFI support' */
 sqInt classExternalAddress(void);

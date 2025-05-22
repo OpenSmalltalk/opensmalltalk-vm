@@ -18,24 +18,21 @@
 #include "sqPlatformSpecific.h" // for EXPORT()
 
 #pragma auto_inline(off)
-#if defined(IMPORT) && defined(SQUEAK_EXTERNAL_PLUGIN)
+#if defined(SQUEAK_EXTERNAL_PLUGIN) && defined(IMPORT)
 IMPORT(void) error(const char *);
 IMPORT(void) warning(const char *);
 IMPORT(void) warningat(const char *,int);
 IMPORT(void) warninginat(const char *, const char *,int);
-#elif defined(SQUEAK_BUILTIN_PLUGIN)
-void error(const char *);
-void warning(const char *);
-void warningat(const char *,int);
-void warninginat(const char *, const char *,int);
-#else
-# if !defined(EXPORT)
-#	define EXPORT(returnType) returnType
-# endif
+#elif !defined(SQUEAK_BUILTIN_PLUGIN) && defined(EXPORT)
 EXPORT(void) error(const char *);
 EXPORT(void) warning(const char *);
 EXPORT(void) warningat(const char *,int);
 EXPORT(void) warninginat(const char *, const char *,int);
+#else
+void error(const char *);
+void warning(const char *);
+void warningat(const char *,int);
+void warninginat(const char *, const char *,int);
 #endif
 #pragma auto_inline(on)
 

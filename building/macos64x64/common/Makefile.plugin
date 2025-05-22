@@ -88,17 +88,6 @@ LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
 
 #############################################################################
-# bundle settings
-#
-# Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
-# but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
-#
-DLLTOOL:=	dlltool
-DLLWRAP:=	dllwrap -mno-cygwin
-#OPTSTRIP:=	strip # for production
-OPTSTRIP:=	echo not doing strip
-
-#############################################################################
 # Plugin settings
 #
 OBJDIR:=    $(BUILD)/$(LIBNAME)
