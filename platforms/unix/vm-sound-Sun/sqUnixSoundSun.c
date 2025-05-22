@@ -40,10 +40,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+/* support for HAVE_SUN_AUDIOIO_H <sun/audioio.h> dropped, only support <sys/audioio.h> */
 #ifdef HAVE_SYS_AUDIOIO_H
 # include <sys/audioio.h>
-#else
-# include <sun/audioio.h>
 #endif
 #include <errno.h>
 
