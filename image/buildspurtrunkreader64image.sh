@@ -18,8 +18,15 @@ cp -p ${BASE64}.image ${READER}.image
 cp -p ${BASE64}.changes ${READER}.changes
 
 if [ "$1" = FFI ]; then
+	shift
 	echo $VM ${READER}.image LoadFFI.st
 	$VM ${READER}.image LoadFFI.st
+fi
+
+if [ "$1" = VMProfiler ]; then
+	shift
+	echo $VM ${READER}.image LoadVMProfiler.st
+	$VM ${READER}.image LoadVMProfiler.st
 fi
 
 echo $VM ${READER}.image LoadReader.st
