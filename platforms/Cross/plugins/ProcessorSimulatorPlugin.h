@@ -55,8 +55,8 @@ extern void (*prevInterruptCheckChain)();
  * Disassemble the instruction at address in memory, writing the output to the
  * log. Answer the number of bytes in the instruction disassembled.
  */
-extern long disassembleForAtInSize(void *cpu, uintptr_t laddr,
-									void *memory, uintptr_t byteSize);
+extern long disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
+								void *memory, uintptr_t byteSize, int printAddress);
 /*
  * The saved error if the previous singleStepIn failed.
  */

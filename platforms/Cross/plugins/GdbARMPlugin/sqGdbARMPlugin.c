@@ -170,8 +170,8 @@ gdb_log_printf(void *stream, const char *format, ...)
 }
 
 long
-disassembleForAtInSize(void *cpu, uintptr_t laddr,
-			void *memory, uintptr_t byteSize)
+disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
+			void *memory, uintptr_t byteSize, int printAddress)
 {
 	gdblog_index = 0;
 	// ignore the cpu
@@ -192,8 +192,8 @@ disassembleForAtInSize(void *cpu, uintptr_t laddr,
 	dis->buffer = memory;
 	dis->buffer_length = byteSize;
 
-	// first print the address
-	gdb_log_printf( NULL, "%08lx: ", laddr);
+	if (printAddress)
+		gdb_log_printf( NULL, "%08lx: ", laddr);
 	//other possible functions are listed in opcodes/dissassemble.c
 	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
 

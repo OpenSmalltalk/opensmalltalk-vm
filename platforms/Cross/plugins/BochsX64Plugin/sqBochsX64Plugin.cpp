@@ -193,8 +193,8 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	}
 
 	long
-	disassembleForAtInSize(void *cpu, uintptr_t laddr,
-							void *memory, uintptr_t byteSize)
+	disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
+				void *memory, uintptr_t byteSize, int printAddress)
 	{
 		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
@@ -211,7 +211,8 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		}
 
 		memcpy(instr_buf, (char *)memory + laddr, min(15,byteSize - laddr));
-		i = sprintf(bochs_log, "%08lx: ", laddr);
+		if (printAddress)
+			i = sprintf(bochs_log, "%08lx: ", laddr);
 		bx_disassemble.set_syntax_att();
 		unsigned isize = bx_disassemble.disasm(
 							anx64->sregs[BX_SEG_REG_CS].cache.u.segment.d_b,
