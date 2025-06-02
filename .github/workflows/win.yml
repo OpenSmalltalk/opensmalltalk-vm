@@ -58,7 +58,7 @@ jobs:
           - debug
           - assert
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}

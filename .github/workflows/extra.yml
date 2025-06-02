@@ -17,8 +17,8 @@ jobs:
       fail-fast: false # let them finish bc. different platforms
       matrix:
         arch: 
-          - { name: win64x64, os: windows-2019 }
-          - { name: win32x86, os: windows-2019 }
+          - { name: win64x64, os: windows-2022 }
+          - { name: win32x86, os: windows-2022 }
           - { name: linux64x64, os: ubuntu-20.04 }
           - { name: linux32x86, os: ubuntu-20.04 }
           - { name: macos64x64, os: macos-11 }
@@ -31,15 +31,15 @@ jobs:
           - pharo.cog.spur
 
         include:
-          - arch: { name: win32x86, os: windows-2019 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.cog.v3
-          - arch: { name: win32x86, os: windows-2019 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.stack.v3
-          - arch: { name: win32x86, os: windows-2019 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.cog.spur.lowcode
-          # - arch: { name: win64x64, os: windows-2019 }
+          # - arch: { name: win64x64, os: windows-2022 }
           #   flavor: pharo.stack.spur # third-party not yet working
-          # - arch: { name: win32x86, os: windows-2019 }
+          # - arch: { name: win32x86, os: windows-2022 }
           #   flavor: pharo.cog.spur.lowcode
 
           - arch: { name: linux32x86, os: ubuntu-20.04 }
@@ -63,9 +63,9 @@ jobs:
             flavor: pharo.stack.spur.lowcode
 
         exclude:
-          - arch: { name: win32x86, os: windows-2019 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: pharo.cog.spur # third-party not yet working
-          - arch: { name: win64x64, os: windows-2019 }
+          - arch: { name: win64x64, os: windows-2022 }
             flavor: pharo.cog.spur # third-party not yet working
 
     runs-on: ${{ matrix.arch.os }}
