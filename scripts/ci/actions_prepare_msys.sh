@@ -11,10 +11,17 @@
 [[ -z "${MSYS_SYS}" ]] && exit 2
 [[ -z "${MSYS_ENV}" ]] && exit 2
 
+echo /c/msys64/
 cd /c/msys64/
 ls -lisa
+echo /c/msys64/${MSYS_SYS}/
+cd /c/msys64/${MSYS_SYS}/
+ls -lisa
+echo /c/msys64/${MSYS_SYS}/bin/
 cd /c/msys64/${MSYS_SYS}/bin/
 ls -lisa
+
+pacman -Q
 
 ln -f -s /c/msys64/${MSYS_SYS}/bin/clang /c/msys64/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-clang
 ln -f -s /c/msys64/${MSYS_SYS}/bin/clang++ /c/msys64/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-clang++
