@@ -3,7 +3,7 @@ set -e
 trap 'exit 2' HUP INT PIPE TERM
 for d in *.spur *.v3; do
 	if test -d "$d"; then
-		(cd ./$d;./makeallclean "$@")
+		(cd ./$d; if test -x makeallclean; then ./makeallclean "$@"; else ./makeclean "$@"; fi)
 	else
 		echo no $d directory found
 	fi

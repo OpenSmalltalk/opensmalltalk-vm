@@ -173,31 +173,31 @@ long
 disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 			void *memory, uintptr_t byteSize, int printAddress)
 {
+	disassemble_info dis;
+
 	gdblog_index = 0;
 	// ignore the cpu
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	disassemble_info *dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
 	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
-	init_disassemble_info ( dis, NULL, gdb_log_printf);
+	init_disassemble_info( &dis, NULL, gdb_log_printf);
 
-	dis->arch = bfd_arch_arm;
-	dis->mach = bfd_mach_arm_unknown;
+	dis.arch = bfd_arch_arm;
+	dis.mach = bfd_mach_arm_unknown;
 
 	// sets some fields in the structure dis to architecture specific values
-	disassemble_init_for_target( dis );
-
-	dis->buffer_vma = 0;
-	dis->buffer = memory;
-	dis->buffer_length = byteSize;
+	disassemble_init_for_target( &dis );
 
 	if (printAddress)
 		gdb_log_printf( NULL, "%08lx: ", laddr);
-	//other possible functions are listed in opcodes/dissassemble.c
-	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
 
-	free(dis);
+	dis.buffer_vma = 0;
+	dis.buffer = memory;
+	dis.buffer_length = byteSize;
+	//other possible functions are listed in opcodes/dissassemble.c
+	unsigned int size = print_insn_little_arm((bfd_vma) laddr, &dis);
+
 	gdb_log[gdblog_index+1] = 0;
 
 	return size;
