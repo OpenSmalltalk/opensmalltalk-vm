@@ -87,7 +87,7 @@ jobs:
       - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
         uses: msys2/setup-msys2@v2
         with:
-          msystem: matrix.arch.msystem
+          msystem: ${{ matrix.arch.msystem }}
           update: true
           cache: true
           install: |
