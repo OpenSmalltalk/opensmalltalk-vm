@@ -47,8 +47,8 @@ jobs:
       fail-fast: false
       matrix:
         arch: 
-          - { name: win64x64, msystem: MINGW64, msys-env: x86_64 }
-          - { name: win32x86, msystem: MINGW32, msys-env: i686 }
+          - { name: win64x64, msystem: mingw64, msys-env: x86_64 }
+          - { name: win32x86, msystem: mingw32, msys-env: i686 }
         flavor: # for selected pharo.* builds, see extra.yml
           - squeak.cog.spur
           - squeak.stack.spur
@@ -88,20 +88,22 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.arch.msystem }}
+          release: false # use existing MSYS2 installation
           update: true
           cache: true
           install: |
             base-devel
             mingw-w64-${{ matrix.arch.msys-env }}-toolchain
-            mingw-w64-clang-${{ matrix.arch.msys-env }}-toolchain
+            mingw-w64-${{ matrix.arch.msys-env }}-clang
+            mingw-w64-${{ matrix.arch.msys-env }}-clang-libs
 
       - name: Build VM
         shell: bash
         run: ./scripts/ci/actions_build.sh
         # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
         env:
-          MSYS_SYS: ${{ matrix.arch.name == 'win64x64' && 'mingw64' || 'mingw32' }}
-          MSYS_ENV: ${{ matrix.arch.name == 'win64x64' && 'x86_64' || 'i686' }}
+          MSYS_SYS: ${{ matrix.arch.msystem }}
+          MSYS_ENV: ${{ matrix.arch.msys-env }}
 
       - name: Sign VM (not implemented)
         if: false
