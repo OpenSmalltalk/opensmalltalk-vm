@@ -92,13 +92,14 @@ jobs:
           update: true
           cache: true
           install: |
+            git
             base-devel
             mingw-w64-${{ matrix.arch.msys-env }}-toolchain
             mingw-w64-${{ matrix.arch.msys-env }}-clang
             mingw-w64-${{ matrix.arch.msys-env }}-clang-libs
 
       - name: Build VM
-        shell: bash
+        shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
         # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
         env:
