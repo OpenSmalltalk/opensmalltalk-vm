@@ -92,6 +92,7 @@ jobs:
           update: false # faster?
           cache: true
           install: |
+            git
             base-devel
             mingw-w64-${{ matrix.arch.msys-env }}-toolchain
             mingw-w64-${{ matrix.arch.msys-env }}-clang
