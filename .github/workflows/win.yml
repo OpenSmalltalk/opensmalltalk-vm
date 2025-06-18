@@ -58,7 +58,7 @@ jobs:
           - debug
           - assert
 
-    runs-on: windows-2019
+    runs-on: windows-2025
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
@@ -67,22 +67,40 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
       - name: Restore build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3
+
+      - name: Prepare MSYS2/x86_64 build environment
+        if: matrix.arch == 'win64x64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          cache: true
+          install: mingw-w64-x86_64-toolchain # we need clang and gcc
+
+      - name: Prepare MSYS2/i686 build environment
+        if: matrix.arch == 'win32x86'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          cache: true
+          install: mingw-w64-i686-toolchain # we need clang and gcc
 
       - name: Build VM
         shell: bash
