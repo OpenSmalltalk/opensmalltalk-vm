@@ -91,7 +91,10 @@ jobs:
           msystem: MINGW64
           update: true
           cache: true
-          install: mingw-w64-x86_64-toolchain # we need clang and gcc
+          install: |
+            base-devel
+            mingw-w64-x86_64-toolchain
+            mingw-w64-clang-x86_64-toolchain
 
       - name: Prepare MSYS2/i686 build environment
         if: matrix.arch == 'win32x86'
@@ -100,7 +103,10 @@ jobs:
           msystem: MINGW32
           update: true
           cache: true
-          install: mingw-w64-i686-toolchain # we need clang and gcc
+          install: |
+            base-devel
+            mingw-w64-i686-toolchain
+            mingw-w64-clang-x86_64-toolchain
 
       - name: Build VM
         shell: bash
