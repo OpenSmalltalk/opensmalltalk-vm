@@ -89,10 +89,9 @@ jobs:
         with:
           msystem: ${{ matrix.arch.msystem }}
           release: false # use existing MSYS2 installation
-          update: true
+          update: false # faster?
           cache: true
           install: |
-            git
             base-devel
             mingw-w64-${{ matrix.arch.msys-env }}-toolchain
             mingw-w64-${{ matrix.arch.msys-env }}-clang
