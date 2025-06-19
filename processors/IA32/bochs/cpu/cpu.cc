@@ -244,8 +244,8 @@ no_async_event:
 }
 
 #if COG
-// This is a cut=down version of cpu_loop(1) that allows the caller to do the
-// setjmp for error handling, allowing the caller to catch the error.
+// This is a cut-down version of cpu_loop(1) that allows the caller to do the
+// setjmp for error handling, allowing the caller to catch errors.
 void BX_CPU_C::cpu_single_step()
 {
   // Commit the new EIP/ESP, and set up other environmental fields.
@@ -295,7 +295,6 @@ void BX_CPU_C::cpu_single_step()
       BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID, i);
       RIP += i->ilen();
       BX_CPU_CALL_METHOD(i->execute, (i)); // might iterate repeat instruction
-      BX_CPU_THIS_PTR prev_rip = RIP; // commit new RIP
       BX_INSTR_AFTER_EXECUTION(BX_CPU_ID, i);
       BX_TICK1_IF_SINGLE_PROCESSOR();
 

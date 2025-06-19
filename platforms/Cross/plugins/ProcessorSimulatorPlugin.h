@@ -25,20 +25,41 @@ extern void *newCPU();
  * reset the cpu to register contents 0, default mode.
  */
 extern long   resetCPU(void *cpu);
+
+/*
+ * The two execution primitives, single-step, and run, execute (an) instruction(s) at the
+ * processor's program counter (pc) fetched from the memory argument. memory is readable
+ * at or above minReadAddr, writable at or above minWriteMaxExecAddr, and executable
+ * below minWriteMaxExecAddr.
+ *
+ * Normal execution of out-of-range instructions must cause errors that leave the
+ * processor in a valid state:
+ *  reads and writes to/from addresses at or above the size of memory must trap, leaving
+ *	the pc pointing to the read/write instruction.
+ *	Control transfers to addresses at or above the size of memory must trap, leaving
+ *	the pc pointing to the control transfer instruction.
+ *
+ * Other exceptions (reading below minReadAddr, writing below minWriteMaxExecAddr,
+ * trying to execute instructions at or above minWriteMaxExecAddr) should leave the
+ * processor in whatever state the actual processor would if it were to do the same
+ * on an unreadbale, unwritable, or unexecutable page. See CogProcessorSimulatorTests
+ * in the Cog package.
+ */
 /*
  * Single-step *cpu using memory as its memory.
- * Answer 0 on success, or an integer error code if something went awry.
+ * Answer an integer error code if something went awry (as specified above).
+ * Answer 0 on success.
  */
 extern long  singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
-					uintptr_t byteSize, uintptr_t minReadAddr, uintptr_t minWriteAddr);
+					uintptr_t byteSize, uintptr_t minReadAddr, uintptr_t minWriteMaxExecAddr);
 /*
  * Run *cpu using memory as its memory. Use interpreterProxy's
  * interruptCheckChain to cease simulating on an event/interrupt.
- * Answer an integer error code when the processor hits some exception.
+ * Answer an integer error code if and when something went awry (as specified above).
  * Answer 0 when interrupted.
  */
 extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
-			uintptr_t byteSize, uintptr_t minReadAddr, uintptr_t minWriteAddr);
+			uintptr_t byteSize, uintptr_t minReadAddr, uintptr_t minWriteMaxExecAddr);
 /*
  * Flush any icache entries from start to end
  */
@@ -58,11 +79,11 @@ extern void (*prevInterruptCheckChain)();
 extern long disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 								void *memory, uintptr_t byteSize, int printAddress);
 /*
- * The saved error if the previous singleStepIn failed.
+ * The saved error if the previous singleStepCPU/runCPU failed.
  */
 extern long   errorAcorn();
 /*
- * The current log (if singleStep failed with SomethingLoggedError), also
+ * The current log (if singleStepCPU/runCPU failed with SomethingLoggedError), also
  * used for disassembly.
  */
 extern char *getlog(long *len);
@@ -72,3 +93,11 @@ extern char *getlog(long *len);
  * appropriate, the condition code flags, etc.
  */
 extern void storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState);
+
+/*
+ * We should be able to link variables in the plugins into code in the static libraries
+ * implementing the processor simulations. But at least on macos with clang 14 linking
+ * the GdbARMPlugin objects against the gdb arm32 static libraries when producing a bundle
+ * produces duplicate symbols so use this large hammer, setMinAddresses.
+ */
+extern void setMinAddresses(uintptr_t mra, uintptr_t mwa);
