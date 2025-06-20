@@ -26,12 +26,23 @@
 #include "cpu.h"
 #define LOG_THIS BX_CPU_THIS_PTR
 
+#if COG
+extern "C" { void probeIfetch(Bit32u ip); }
+#endif
+
 bx_bool BX_CPU_C::fetchInstruction(bxInstruction_c *iStorage, Bit32u eipBiased)
 {
   unsigned remainingInPage = BX_CPU_THIS_PTR eipPageWindowSize - eipBiased;
   const Bit8u *fetchPtr = BX_CPU_THIS_PTR eipFetchPtr + eipBiased;
   unsigned ret;
 
+#if COG
+# if BX_SUPPORT_X86_64
+  probeIfetch(get_rip());
+# else
+  probeIfetch(get_eip());
+# endif
+#endif
 #if BX_SUPPORT_X86_64
   if (BX_CPU_THIS_PTR cpu_mode == BX_MODE_LONG_64)
     ret = fetchDecode64(fetchPtr, iStorage, remainingInPage);

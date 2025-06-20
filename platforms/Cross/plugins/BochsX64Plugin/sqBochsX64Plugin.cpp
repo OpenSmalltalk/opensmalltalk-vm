@@ -25,11 +25,12 @@ static char           bochs_log[LOGSIZE + 1];
 static int            blidx = 0;
 
 static unsigned char *theMemory = 0;
-static unsigned long  theMemorySize;
-static unsigned long  minReadAddress;
-static unsigned long  minWriteAddress;
+static uintptr_t      theMemorySize;
+static uintptr_t      minReadAddress;
+static uintptr_t      minWriteAddress;
 static int            theErrorAcorn;
-static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
+static bx_address     last_read_address = (bx_address)-1; // for RMW cycles
+static Bit32u         lastValidPC; // for probeIfetch when used by cpu_loop
 
 	   void			(*prevInterruptCheckChain)() = 0;
        long           resetCPU(void *cpu);
@@ -116,11 +117,12 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
 }
 
-#define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
-#define resetInstructionFetch(cpup) do { \
-		(cpup)->eipPageBias = (bx_address)0; \
-		(cpup)->eipPageWindowSize = minWriteMaxExecAddr; } while (0)
+#define resetInstructionFetch(cpup,mem,maxaddr) do {\
+		(cpup)->eipFetchPtr = (const Bit8u *)mem;	\
+		(cpup)->eipPageBias = (bx_address)0;		\
+		(cpup)->eipPageWindowSize = maxaddr; } while (0)
 
+	// See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
 									void *memory, uintptr_t byteSize,
@@ -142,15 +144,22 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		blidx = 0;
 
 		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
-		initEipFetchPtr(anx64);
-		resetInstructionFetch(anx64);
+		resetInstructionFetch(anx64,memory,byteSize);
 
 		anx64->cpu_single_step();
 		anx64->force_flags();
 
+		if (anx64->gen_reg[BX_64BIT_REG_RIP].rrx >= byteSize) {
+			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
+			if (theErrorAcorn == NoError)
+				theErrorAcorn = ExecutionError;
+			return theErrorAcorn;
+		}
+
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
 
+	// See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 	long
 	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, uintptr_t byteSize,
 									uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
@@ -166,14 +175,15 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 
 		blidx = 0;
 		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
-		initEipFetchPtr(anx64);
-		resetInstructionFetch(anx64);
+		resetInstructionFetch(anx64,memory,byteSize);
 
 		bx_pc_system.kill_bochs_request = 0;
 		anx64->cpu_loop(0 /* = "run forever" until exception or interupt */);
 		anx64->force_flags();
 		if (anx64->stop_reason != STOP_NO_REASON) {
-			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
+			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip < byteSize
+													? anx64->prev_rip
+													: lastValidPC;
 			if (theErrorAcorn == NoError)
 				theErrorAcorn = ExecutionError;
 			return theErrorAcorn;
@@ -213,7 +223,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 
 		memcpy(instr_buf, (char *)memory + laddr, min(15,remainsInPage));
 		if (printAddress)
-			i = sprintf(bochs_log, "%08lx: ", laddr);
+			i = snprintf(bochs_log, LOGSIZE, "%08lx: ", laddr);
 		if (!syntax_set) {
 			bx_disassemble.set_syntax_att();
 			syntax_set = 1;
@@ -285,6 +295,17 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		registerState[15] = bx_cpu.gen_reg[BX_64BIT_REG_R15].rrx;
 		registerState[16] = bx_cpu.gen_reg[BX_64BIT_REG_RIP].rrx;
 		registerState[17] = bx_cpu.eflags;
+	}
+
+	void
+	probeIfetch(Bit32u ip)
+	{
+		if (ip >= minWriteAddress) {
+			theErrorAcorn = InstructionPrefetchError;
+			longjmp(bx_cpu.jmp_buf_env,InstructionPrefetchError);
+		}
+		else
+			lastValidPC = ip;
 	}
 } // extern "C"
 

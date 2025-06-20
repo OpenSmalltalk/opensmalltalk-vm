@@ -13,7 +13,16 @@
 */
 #if COG
 # include "GdbARMPlugin.h"
-extern uintptr_t    minReadAddress, minWriteAddress;
+
+// we should be able to link these against sqGdbARMPlugin.c but at least on
+// macos with clang 14 linking the gdbarm32 static libraries against the
+// GdbARMPlugin objects when producing a bundle produces duplicate symbols
+// so use a large hammer, setMinAddresses below.
+
+uintptr_t    minReadAddress, minWriteAddress;
+
+void
+setMinAddresses(uintptr_t mra, uintptr_t mwa) { minReadAddress = mra; minWriteAddress = mwa; }
 #endif
 
 /*  armvirt.c -- ARMulator virtual memory interace:  ARM6 Instruction Emulator.
@@ -123,6 +132,7 @@ ARMul_ReLoadInstr (ARMul_State * state, ARMword address, ARMword isize)
     }
 #endif
 
+#if COG
     /* ignoring strange ARM code above we check for our error conditions here and fake a 
        a special SWI if needed */
   if (address < minReadAddress 
@@ -132,7 +142,8 @@ ARMul_ReLoadInstr (ARMul_State * state, ARMword address, ARMword isize)
   	  return 0xEF000000 | SWI_CogPrefetch;
   	  //      ^ SWIAL         ^ SWI number
   }
-  
+#endif
+ 
   if ((isize == 2) && (address & 0x2))
     {
       /* We return the next two halfwords: */
