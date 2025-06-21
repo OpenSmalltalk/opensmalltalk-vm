@@ -227,6 +227,10 @@ tryLoadingLinked(char *libName)
 #endif
 	if (!handle) {
 		const char *why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+		if (why)
+			fprintf(stderr, "tryLoadingLinked:dlopen(%s):\t%s\n", libName, why);
+#endif
 		// filter out failures due to non-existent libraries
 		if (stat(libName, &buf)) {
 			defprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
@@ -236,9 +240,7 @@ tryLoadingLinked(char *libName)
 			defprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
 			return 0;
 		}
-#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
-		fprintf(stderr, "tryLoadingLinked(%s):\t%s\n", libName, why);
-#else
+#if !PRINT_DL_ERRORS // In practice these reasons are too important to hide
 		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "tryLoadingLinked(%s):\n  %s\n", libName, why);
 		else if (strstr(why,"undefined symbol"))
