@@ -26,6 +26,7 @@
 platforms/unix/config/autom4te.cache/
 
 # Don't track build directory contents (with exceptions)
+# NB: This logic is flawed (but compact). When adding new building scripts, commit them via `git add -f` or change the .gitignore temporarily.
 /building/**/**/*
 # except do track these files
 !/building/**/common*/*
