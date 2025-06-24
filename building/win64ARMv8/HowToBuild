@@ -69,9 +69,10 @@ Building out of the box
 -----------------------
 The standard build configurations are the MinGW tools under Cygwin. Currently
 neither Cygwin nor MinGW provide an arm64 toolchain. We leave the instructions
-here in expectation that they will. Please skip forward to "MSVC".
-The build system also supports Visual Studio Community (tested with 2022), but
-requires Cygwin tools, especially GNU Make, to run.
+here in expectation that they will. More information might be available via the
+MSYS2 project page (https://www.msys2.org/wiki/arm64/). Please skip forward to
+"MSVC". The build system also supports Visual Studio Community (tested with 2022),
+but requires Cygwin tools, especially GNU Make, to run.
 
 Cygwin 1. Install the tools:
 - Install
