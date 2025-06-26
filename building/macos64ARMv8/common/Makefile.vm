@@ -338,8 +338,8 @@ $(OBJDIR)/%.dylib: FORCE
 
 $(BLDDIR)/fdlibm/libm.a:
 	@-mkdir -p $(@D)
-	$(MAKE) CFLAGS="$(OFLAGS) -arch $(TARGET_ARCH) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
-		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+	$(MAKE) CFLAGS="$(OFLAGS) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) -D_IEEE_LIBM -isysroot $(SDK)" \
+		-C $(@D) TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
 FORCE:
 

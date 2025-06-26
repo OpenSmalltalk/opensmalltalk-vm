@@ -1,4 +1,4 @@
 #!/bin/sh
 rm -rf bfd gdb libiberty opcodes sim
-rm exploration/print*64
-rm -i exploration/*.st
+rm -f exploration/print*64
+rm -if exploration/*.st

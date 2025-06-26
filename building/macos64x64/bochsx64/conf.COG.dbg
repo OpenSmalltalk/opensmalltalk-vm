@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Bochs x64 simulator for the BochsX64Alien plugin.
 # this sets up the x64 compile for Cog on Mac OS X.  Disable as much inessential
@@ -12,9 +12,12 @@ set echo
 CFLAGS="-Dlongjmp=_longjmp -Dsetjmp=_setjmp $CFLAGS"
 CFLAGS="-pipe -O0 $CFLAGS"
 CFLAGS="-g3 $CFLAGS"
+CFLAGS="-arch x86_64 -mmacosx-version-min=11.0 $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
+CC=clang
 
+export CC
 export CFLAGS
 export CPATH
 export CPPFLAGS
