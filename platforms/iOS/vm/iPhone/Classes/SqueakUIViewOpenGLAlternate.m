@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -70,9 +70,9 @@ const GLfloat spriteTexcoords[] = {
 									[NSNumber numberWithBool:YES], kEAGLDrawablePropertyRetainedBacking,
 									kEAGLColorFormatRGBA8, kEAGLDrawablePropertyColorFormat,
 									nil];
-	
+
 	//other choice is kEAGLColorFormatRGB565
-	
+
 	context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES1];        
 	if (!context || ![EAGLContext setCurrentContext:context]) {
 		[self release];
@@ -85,7 +85,7 @@ const GLfloat spriteTexcoords[] = {
 
 -(void)setupOpenGL {	
 	// Create system framebuffer object. The backing will be allocated in -reshapeFramebuffer
-	
+
 	glGenFramebuffersOES(1, &viewFramebuffer);glCheckError();
 	glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);glCheckError();
 	glGenRenderbuffersOES(1, &viewRenderbuffer);glCheckError();
@@ -103,9 +103,9 @@ const GLfloat spriteTexcoords[] = {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);glCheckError();
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);glCheckError();
-	
+
 	// http://www.khronos.org/registry/gles/extensions/APPLE/APPLE_texture_2D_limited_npot.txt
-		
+
 	glDisable(GL_DEPTH_TEST);glCheckError();
 	glDisableClientState(GL_COLOR_ARRAY);glCheckError();
 	glEnable(GL_TEXTURE_2D);glCheckError();
@@ -118,7 +118,7 @@ const GLfloat spriteTexcoords[] = {
 - (void)dealloc {        
     if ([EAGLContext currentContext] == context)
         [EAGLContext setCurrentContext:nil];
-    
+
     self.context = nil;
     [super dealloc];
 }
@@ -145,7 +145,7 @@ const GLfloat spriteTexcoords[] = {
 	syncNeeded = YES;
 }
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
 	if (syncNeeded) { 
 		[self drawRect: clippy];
 		syncNeeded = NO;
@@ -167,20 +167,20 @@ const GLfloat spriteTexcoords[] = {
 
 	subRect.origin.y = self.bounds.size.height-subRectSqueak.origin.y-subRectSqueak.size.height;
 	void *span = lastBitsIndex+(NSUInteger)subRect.origin.y*imageWidth + (NSUInteger)subRect.origin.x* 4;
-	
+
 	if (!textureId) {
 		textureId = [self createTextuerUsingWidth: backingWidth Height: backingHeight];
 	} else {
 		glBindTexture(GL_TEXTURE_2D, textureId);glCheckError();
 	}
-	
+
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)subRect.size.width, (GLsizei)subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);glCheckError();
 	for( GLint y = 0; y < (GLint) subRect.size.height; y++ ) {
 		 void *row =  imageWidth*y + span;
 		 glTexSubImage2D( GL_TEXTURE_2D, 0, 0, y, 
 						 (GLsizei)subRect.size.width, 1, GL_BGRA, GL_UNSIGNED_BYTE, row );glCheckError();
 	 }
-		
+
     glViewport( subRect.origin.x, subRectSqueak.origin.y, subRect.size.width, subRect.size.height);glCheckError();	
 	glMatrixMode(GL_PROJECTION);glCheckError();
 	glLoadIdentity();glCheckError();

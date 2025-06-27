@@ -197,7 +197,7 @@ static unsigned int allocatedExtraLayers = 0;
 	displayTexture = 0;
 	displayTextureWidth = 0;
 	displayTextureHeight = 0;
-	
+
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
@@ -293,7 +293,7 @@ static unsigned int allocatedExtraLayers = 0;
 	syncNeeded = YES;
 }
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
     if (syncNeeded) {
 		[self drawRect: NSRectFromCGRect(clippy) flush: NO];
 		syncNeeded = NO;
@@ -322,15 +322,15 @@ static unsigned int allocatedExtraLayers = 0;
 	if(openglInitialized)
 		return;
 	openglInitialized = YES;
-	
+
 //	CGL_MACRO_DECLARE_VARIABLES();
 // Enable the multithreading
     //NSLog(@"setupOpenGL runs");
-	
+
 	// Store the OpenGL context for creating a shared context with the B3D plugin.
 	mainOpenGLContext = [self openGLContext];
 	mainOpenGLView = self;
-	
+
 	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	CGLEnable( ctx, kCGLCEMPEngine);
 	// from gl3.h
@@ -345,13 +345,13 @@ static unsigned int allocatedExtraLayers = 0;
 		const char* oldExtensions = (const char*)glGetString(GL_EXTENSIONS);
 		hasVertexArrayObject = oldExtensions && (strstr(oldExtensions, "GL_APPLE_vertex_array_object") != NULL);
 	}
-	
+
 	// printf("Opengl version: %s\n", glGetString(GL_VERSION));
 	// printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
-	
+
 	[self buildGPUPrograms];
 	[self buildScreenQuad];
-	
+
 	glClearColor(1, 1, 1, 1);
 
 	GLint newSwapInterval = 0; // vsync on (1) or off (0)
@@ -387,11 +387,11 @@ static unsigned int allocatedExtraLayers = 0;
 - (GLuint) compileShader: (const char*)shaderSource type: (GLenum) type {
 	GLint status;
 	GLuint handle;
-	
+
 	handle = glCreateShader(type);
 	glShaderSource(handle, 1, &shaderSource, NULL);
 	glCompileShader(handle);
-	
+
 	// This should never fail.
 	glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE) {
@@ -399,22 +399,22 @@ static unsigned int allocatedExtraLayers = 0;
 		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &logSize);
 		char errorLog[logSize];
 		glGetShaderInfoLog(handle, logSize, &logSize, &errorLog[0]);
-		
+
 		fprintf(stderr, "Failed to compile shader with source: \n%s\nError: %s", shaderSource, errorLog);
 		return NULL;
 	}
-	
+
 	return handle;
 }
 
 - (GLuint) buildProgramVertexShader: (const char *)vertexShaderSource  fragmentShader: (const char *)fragmentShaderSource {
 	GLint status;
 	GLuint program;
-	
+
 	// Create the shaders.
 	GLuint vertexShader = [self compileShader: vertexShaderSource type: GL_VERTEX_SHADER];
 	GLuint fragmentShader = [self compileShader: fragmentShaderSource type: GL_FRAGMENT_SHADER];
-	
+
 	// Create the GPU program.
 	program = glCreateProgram();
 	glAttachShader(program, vertexShader);
@@ -422,7 +422,7 @@ static unsigned int allocatedExtraLayers = 0;
 	glBindAttribLocation(program, 0, "vPosition");
 	glBindAttribLocation(program, 1, "vTexcoord");
 	glLinkProgram(program);
-	
+
 	// This should never fail.
 	glGetProgramiv(program, GL_LINK_STATUS, &status);
 	if(status != GL_TRUE) {
@@ -434,11 +434,11 @@ static unsigned int allocatedExtraLayers = 0;
 
 		return NULL;
 	}
-	
+
 	// Bind the screen texture to the first texture binding point.
 	glUseProgram(program);
 	glUniform1i(glGetUniformLocation(program, "screen"), 0);
-	
+
 	return program;
 }
 
@@ -461,7 +461,7 @@ static unsigned int allocatedExtraLayers = 0;
 	glGenBuffers(1, &screenQuadVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, screenQuadVertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(screenQuadVertices), screenQuadVertices, GL_STATIC_DRAW);
-	
+
 	// Try to use a vertex array object, if available.
 	if(hasVertexArrayObject) {
 		glGenVertexArraysAPPLE(1, &screenQuadVertexArray);
@@ -501,7 +501,7 @@ static unsigned int allocatedExtraLayers = 0;
 		// according to the following document: https://developer.apple.com/library/content/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/opengl_texturedata/opengl_texturedata.html
 		glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
 		//glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_SHARED_APPLE);
-		
+
 		// Prefer copying into VRAM. Shared storage introduce some graphics
 		// glitches. They could be removed calling glFinish instead of glFlush,
 		// however glFinish stalls the CPU and kills the asynchronous rendering
@@ -514,10 +514,10 @@ static unsigned int allocatedExtraLayers = 0;
 	} else {
 		glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);		
 	}
-	
+
 	//printf("updateDisplayTextureStorage %d %d %p\n", displayTextureWidth, displayTextureHeight, currentDisplayStorage);
 	glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, displayTextureWidth*displayTextureHeight*4, currentDisplayStorage);
-	
+
 	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
  	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, displayTextureWidth);
@@ -593,7 +593,7 @@ static unsigned int allocatedExtraLayers = 0;
 		glFlush();
 		[[self openGLContext] flushBuffer];
 	}
-	
+
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
     } else {
@@ -605,18 +605,18 @@ static unsigned int allocatedExtraLayers = 0;
 {	
 	unsigned int drawnExtraLayerMask;
 	unsigned int i;
-	
+
 	glEnable(GL_SCISSOR_TEST);
-	
+
 	glViewport(0, 0, displayTextureWidth, displayTextureHeight);
 	glScissor(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 	if(!displayTexture) {
 		glClearColor(1, 1, 1, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
-	
+
 	[self drawDisplayTexture];
-	
+
 	drawnExtraLayerMask = 0;
 	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraLayerMask != allocatedExtraLayers; ++i) {
 		if(allocatedExtraLayers & (1 << i)) {
@@ -624,11 +624,11 @@ static unsigned int allocatedExtraLayers = 0;
 			drawnExtraLayerMask |= 1 << i;
 		}
 	}
-	
+
 	if(hasVertexArrayObject) {
 		glBindVertexArrayAPPLE(0);
 	}
-	
+
 	//[self dumpDisplayTexture];
 }
 
@@ -636,17 +636,17 @@ static unsigned int allocatedExtraLayers = 0;
 	ExtraLayer *layer = &extraLayers[extraLayerIndex];
 	if(!layer->texture)
 		return;
-		
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, layer->texture);
 	glUseProgram(textureProgram);
-	
+
     NSRect screenRect = [self convertRectToBacking: [self frame]];
 	float scaleX = (float)layer->w / screenRect.size.width;
 	float scaleY = (float)layer->h / screenRect.size.height;
  	float offsetX = (2.0f*layer->x + layer->w) / screenRect.size.width - 1.0f;
 	float offsetY = 1.0f - (2.0f*layer->y + layer->h) / screenRect.size.height;
-	
+
 	glUniform4f(layerScaleAndTranslationUniformLocation, scaleX, scaleY, offsetX, offsetY);
 	[self drawScreenQuad];
 }
@@ -657,7 +657,7 @@ static unsigned int allocatedExtraLayers = 0;
 	static int dumpCount = 0;
 	static char *dumpBuffer = NULL;
 	char dumpName[64];
-	
+
 	struct __attribute__((packed)) TGAHeader
 	{
 		char idLength;
@@ -671,32 +671,32 @@ static unsigned int allocatedExtraLayers = 0;
 		char depth;
 		char descriptor;
 	};
-	
+
 	if(!displayTexture)
 		return;
-		
+
 	sprintf(dumpName, "frame_%04d.tga", dumpCount++);
-	
+
 	struct TGAHeader header;
 	memset(&header, 0, sizeof(header));
 	header.imageType = 2;
 	header.depth = 32;
 	header.width = displayTextureWidth;
 	header.height = displayTextureHeight;
-	
+
 	dumpBuffer = malloc(displayTextureWidth*displayTextureHeight*4);
-	
+
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ROW_LENGTH, displayTextureWidth);
 	//glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
 	//glGetTexImage(GL_TEXTURE_RECTANGLE_ARB, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dumpBuffer);
 	//glReadPixels(0, 0, displayTextureWidth, displayTextureHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dumpBuffer);
-	
+
 	FILE *f = fopen(dumpName, "wb");
 	fwrite(&header, sizeof(header), 1, f);
 	fwrite(dumpBuffer, displayTextureWidth*displayTextureHeight*4, 1, f);
 	fclose(f);
-	
+
 	free(dumpBuffer);
 }
 
@@ -706,10 +706,10 @@ static unsigned int allocatedExtraLayers = 0;
 - (void) clearScreen {
     NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
     [self.openGLContext makeCurrentContext];
-    
+
 	glDisable( GL_SCISSOR_TEST);
 	glClear( GL_COLOR_BUFFER_BIT);
-	
+
 	[self drawScreenRect: [self convertRectToBacking: [self frame]]];
     glFlush();
 	[self.openGLContext flushBuffer];
@@ -754,7 +754,7 @@ destroyOpenGLTextureLayerHandle(unsigned int handle) {
 	if(allocatedExtraLayers & bit) {
 		extraLayers[handle - 1].texture = 0;
 		allocatedExtraLayers &= ~bit;
-		
+
 		// Redraw the screen.
 		if(mainOpenGLView)
 			[mainOpenGLView clearScreen];
@@ -771,7 +771,7 @@ setOpenGLTextureLayerContent(unsigned int handle, GLuint texture, int x, int y, 
 		layer->y = y;
 		layer->w = w;
 		layer->h = h;
-		
+
 		// Swap the buffers
 		if(mainOpenGLView)
 			[mainOpenGLView clearScreen];

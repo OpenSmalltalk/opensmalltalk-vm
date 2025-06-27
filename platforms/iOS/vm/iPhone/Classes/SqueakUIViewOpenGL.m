@@ -145,7 +145,7 @@ const GLfloat spriteTexcoords[] = {
 	syncNeeded = YES;
 }
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
 	if (syncNeeded) { 
 		[self drawRect: clippy];
 		syncNeeded = NO;

@@ -85,9 +85,9 @@ extern sqInt cannotDeferDisplayUpdates;
 - (void)initialize {
 
     // NSLog(@"initialize %@", NSStringFromRect([self frame]));
-	
+
 	cannotDeferDisplayUpdates = 1;
-	
+
 	[self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [self setAutoresizesSubviews:YES];
 
@@ -184,12 +184,12 @@ extern sqInt cannotDeferDisplayUpdates;
 		[self setNeedsDisplayInRect: asNSRect(userClip)];
 //    }
 
-	/* Note that after this, drawThelayers will be called directly.
+	/* Note that after this, drawTheLayers will be called directly.
 	 * See primitiveShowDisplayRect, which will directly call ioForceDisplayUpdate.
 	 */
 }
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
     extern BOOL gSqueakHeadless;
 	if (gSqueakHeadless) {
         firstDrawCompleted = YES;
@@ -286,12 +286,12 @@ extern sqInt cannotDeferDisplayUpdates;
 #pragma mark Fullscreen
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
-	
+
 	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
 		return;
 	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
 		return;
-	
+
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
 		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -305,7 +305,7 @@ extern sqInt cannotDeferDisplayUpdates;
 		extern struct	VirtualMachine* interpreterProxy;
 		interpreterProxy->fullDisplayUpdate();
 	}
-	
+
 	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
 		[self exitFullScreenModeWithOptions: NULL];
 		if ([self.window isKeyWindow] == NO) {

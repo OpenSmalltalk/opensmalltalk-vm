@@ -67,7 +67,7 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 - (void) preDrawThelayers{
 }
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {

@@ -107,7 +107,7 @@ typedef struct LayerTransformation
 	id<MTLDevice> device = MTLCreateSystemDefaultDevice();
 	if(!device)
 		return NO;
-		
+
 	// Try to compile the shader library.
 	id<MTLLibrary> library = [self compileShaderLibraryForDevice: device];
 	if(!library)
@@ -138,11 +138,11 @@ typedef struct LayerTransformation
 
 - (void)initialize {
 	mainMetalView = self;
-	
+
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;
 	cannotDeferDisplayUpdates = 1;
-	
+
 	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
 	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
 		[drawingLayers addObject: [sqSqueakOSXMetalViewExtraDrawingLayer new]];
@@ -156,7 +156,7 @@ typedef struct LayerTransformation
 	displayTexture = nil;
 	displayTextureWidth = 0;
 	displayTextureHeight = 0;
-	
+
 	dragInProgress = NO;
 	dragCount = 0;
 	clippyIsEmpty = YES;
@@ -249,13 +249,13 @@ typedef struct LayerTransformation
 	}
 }
 
-- (void) drawThelayers /* via ioForceDisplayUpdate() */{
+- (void) drawTheLayers /* via ioForceDisplayUpdate() */{
     extern BOOL gSqueakHeadless;
 	if (gSqueakHeadless) {
         firstDrawCompleted = YES;
         return;
     }
-	
+
 	/* Documentation only. DO NOT draw here but rely the application's event
 	 * loop such as through image-side pumping. See ioProcessEvents().
 	 *
@@ -285,7 +285,7 @@ typedef struct LayerTransformation
 	metalInitialized = YES;
 	if(self.device == nil)
 		self.device = MTLCreateSystemDefaultDevice();
-		
+
 	[self buildPipelines];
 	[self createScreenQuad];
 
@@ -337,7 +337,7 @@ typedef struct LayerTransformation
 		attachmentDescriptor.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 		attachmentDescriptor.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 	}
-	
+
 	NSError *pipelineError = NULL;
 	id<MTLRenderPipelineState> pipeline = [self.device newRenderPipelineStateWithDescriptor: pipelineDescriptor error: &pipelineError];
 	RELEASEOBJ(shaderLibrary);
@@ -348,7 +348,7 @@ typedef struct LayerTransformation
 		NSLog(@"Pipeline state creation error: %@", pipelineError.localizedDescription);
 		return nil;
 	}
-	
+
 	return pipeline;
 }
 
@@ -372,24 +372,24 @@ typedef struct LayerTransformation
      */
     if ( !displayBits ) { return; }
     if ( clippyIsEmpty ) { return; }
-    
+
 	// Always try to fill the texture with the pixels.
 	[self loadTexturesSubRectangle: NSRectFromCGRect(clippy)];
 	clippyIsEmpty = YES;
 	syncNeeded = NO;
-	
+
 	MTLRenderPassDescriptor *renderPassDescriptor = self.currentRenderPassDescriptor;
 	if(renderPassDescriptor != nil && self.currentDrawable)
 	{
 		currentCommandBuffer = [graphicsCommandQueue commandBuffer];
 		currentRenderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
-		
+
 		// Set the viewport.
 		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, self.drawableSize.width, self.drawableSize.height}];
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
-		
+
 		unsigned int drawnExtraDrawingLayerMask = 0;
 		for(unsigned int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraDrawingLayerMask != allocatedExtraDrawingLayers; ++i) {
 			if(allocatedExtraDrawingLayers & (1 << i)) {
@@ -397,11 +397,11 @@ typedef struct LayerTransformation
 				drawnExtraDrawingLayerMask |= 1 << i;
 			}
 		}
-		
+
 		[currentRenderEncoder endEncoding];
 		[currentCommandBuffer presentDrawable: self.currentDrawable];
 		[currentCommandBuffer commit];
-		
+
 		currentCommandBuffer = nil;
 		currentRenderEncoder = nil;
 	}
@@ -410,7 +410,7 @@ typedef struct LayerTransformation
 - (void)loadTexturesSubRectangle: (NSRect) subRect {
 	void  *displayStorage = displayBits;
 	CGSize drawableSize = CGSizeMake(displayWidth, displayHeight);
-    
+
     if ( !CGSizeEqualToSize(lastFrameSize,drawableSize)
     	|| !displayTexture
     	|| currentDisplayStorage != displayStorage) {
@@ -419,7 +419,7 @@ typedef struct LayerTransformation
 		currentDisplayStorage = displayStorage;
 		[self updateDisplayTextureStorage: drawableSize];
     }
-	
+
 	// Clip the subrect against the texture bounds, to avoid an edge condition
 	// that ends crashing the VM.
 	subRect = NSIntersectionRect(subRect, NSMakeRect(0, 0, displayTextureWidth, displayTextureHeight));
@@ -428,9 +428,9 @@ typedef struct LayerTransformation
 		// Discard the update of empty texture regions.
 		return;
 	}
-	
+
 	MTLRegion region = MTLRegionMake2D(subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height);
-	
+
 	unsigned int sourcePitch = displayTextureWidth * 4;
 
 	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
@@ -448,7 +448,7 @@ typedef struct LayerTransformation
 		RELEASEOBJ(displayTexture);
 		displayTexture = nil;
 	}
-	
+
 	MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
 		texture2DDescriptorWithPixelFormat: MTLPixelFormatBGRA8Unorm
 		width: displayTextureWidth
@@ -460,12 +460,12 @@ typedef struct LayerTransformation
 -(void)drawScreenRect:(NSRect)rect {
 	if(displayTexture == nil || screenQuadPipelineState == nil || screenQuadVertexBuffer == nil)
 		return;
-	
+
 	[currentRenderEncoder setRenderPipelineState: screenQuadPipelineState];
-	
+
 	[currentRenderEncoder setVertexBuffer: screenQuadVertexBuffer offset: 0 atIndex: 0];
 	[currentRenderEncoder setFragmentTexture: displayTexture atIndex: 0];
-	
+
 	// Draw the the 4 vertices of the of the screen quad.
 	[currentRenderEncoder drawPrimitives: MTLPrimitiveTypeTriangleStrip
 		vertexStart: 0
@@ -476,12 +476,12 @@ typedef struct LayerTransformation
 	sqSqueakOSXMetalViewExtraDrawingLayer *layer = extraDrawingLayers[extraDrawingLayerIndex];
 	if(!layer.texture)
 		return;
-		
+
 	if(layerScreenQuadPipelineState == nil || screenQuadVertexBuffer == nil)
 		return;
-	
+
 	[currentRenderEncoder setRenderPipelineState: layerScreenQuadPipelineState];
-	
+
 	NSRect screenRect = self.frame;
 	LayerTransformation transformation;
 	transformation.scaleX = (float)layer.w / screenRect.size.width;
@@ -492,7 +492,7 @@ typedef struct LayerTransformation
 	[currentRenderEncoder setVertexBuffer: screenQuadVertexBuffer offset: 0 atIndex: 0];
 	[currentRenderEncoder setVertexBytes: &transformation length: sizeof(transformation) atIndex: 1];
 	[currentRenderEncoder setFragmentTexture: layer.texture atIndex: 0];
-	
+
 	// Draw the the 4 vertices of the of the screen quad.
 	[currentRenderEncoder drawPrimitives: MTLPrimitiveTypeTriangleStrip
 		vertexStart: 0
@@ -532,9 +532,9 @@ typedef struct LayerTransformation
 			RELEASEOBJ(layer.texture);
 			layer.texture = nil;
 		}
-		
+
 		allocatedExtraDrawingLayers &= ~bit;
-		
+
 		// Redraw the screen.
 		[self draw];
 	}	
@@ -552,7 +552,7 @@ typedef struct LayerTransformation
 		layer.y = y;
 		layer.w = w;
 		layer.h = h;
-		
+
 		// Swap the buffers
 		if(mainMetalView)
 			[mainMetalView draw];
@@ -588,7 +588,7 @@ void
 setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> texture, int x, int y, int w, int h) {
 	if(!mainMetalView)
 	 	return;
-	
+
 	[ mainMetalView setExtraLayer: handle texture: texture x: x y: y w: w h: h];
 }
 

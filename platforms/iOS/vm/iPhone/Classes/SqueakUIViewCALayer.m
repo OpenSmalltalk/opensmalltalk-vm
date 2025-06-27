@@ -16,10 +16,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +28,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -76,16 +76,16 @@ static void MyProviderReleaseData (
 - (CGImageRef) allocImageFrom: (void *) dispBitsIndex affectedT: (int) affectedT affectedB: (int) affectedB affectedL: (int) affectedL affectedR: (int) affectedR height: (int) height width: (int) width {
 	const size_t depth = 32;
 	size_t 	pitch = ((((width)*(depth) + 31) >> 5) << 2);
-	
+
 	size_t totalSize = pitch * (affectedB-affectedT)-affectedL*4;
 	CGDataProviderRef provider =  CGDataProviderCreateWithData (NULL,(void*)dispBitsIndex+ pitch*affectedT + affectedL*4,(size_t) totalSize,MyProviderReleaseData);
-	
+
 	CGImageRef image = CGImageCreate((size_t) affectedR-affectedL,(size_t) affectedB-affectedT, (size_t) 8 /* bitsPerComponent */,
 									 (size_t) depth /* bitsPerPixel */, 
 									 (size_t) pitch, colorspace, 
 									 (CGBitmapInfo) kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host , 
 									 provider, NULL, (bool) 0, kCGRenderingIntentDefault);
-	
+
 	CGDataProviderRelease(provider);
 	return image;
 }
@@ -103,7 +103,7 @@ static void MyProviderReleaseData (
 - (void) preDrawThelayers { }
 
 
-- (void) drawThelayers {
+- (void) drawTheLayers {
 	[CATransaction begin];
 	[CATransaction setValue: @YES forKey: kCATransactionDisableActions];
 	for (int v=0;v<4;v++) {

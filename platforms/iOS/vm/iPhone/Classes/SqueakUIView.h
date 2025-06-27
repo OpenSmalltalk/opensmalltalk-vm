@@ -15,10 +15,10 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -47,10 +47,10 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 #endif
 	CGColorSpaceRef colorspace;
 	}
-	
+
 	- (void) recordCharEvent:(NSString *) unicodeString;
     - (void) preDrawThelayers;
-	- (void) drawThelayers;
+	- (void) drawTheLayers;
 	- (void) drawImageUsingClip: (CGRect) clip;
 	- (CGRect) sqScreenSize;
 	- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
