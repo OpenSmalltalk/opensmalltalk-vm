@@ -12,7 +12,7 @@ set echo
 CFLAGS="-Dlongjmp=_longjmp -Dsetjmp=_setjmp $CFLAGS"
 CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions $CFLAGS"
 CFLAGS="-g $CFLAGS"
-CFLAGS="-arch x86_64 -mmacosx-version-min=11.0 $CFLAGS"
+CFLAGS="-arch x86_64 -mmacosx-version-min=10.13 $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
 CC=clang
