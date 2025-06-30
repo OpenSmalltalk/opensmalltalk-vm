@@ -1,6 +1,6 @@
 //
 //  sqSqueakAppDelegate.m
-//  
+//
 //
 //  Created by John M McIntosh on 6/14/08.
 //
@@ -30,10 +30,10 @@
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
-"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
-and its contributors", in the same place and form as other third-party acknowledgments. 
-Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+and its contributors", in the same place and form as other third-party acknowledgments.
+Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
 such third-party acknowledgments.
 */
 
@@ -87,14 +87,14 @@ void *runBlock(void *arg) {
 
 	setSavedWindowSize((width << 16) | (height & 0xFFFF));
 	windowBlock->width = width;
-	windowBlock->height = height; 	
+	windowBlock->height = height;
 
 	ioSetFullScreen(getFullScreenFlag());
 }
 
 - (sqSqueakMainApplication *) makeApplicationInstance { return nil; }
 
-- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds { return 0.0333f; }
+- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds { return 0.001f; } // 1ms
 
 - (void) makeMainWindowOnMainThread {};
 
@@ -119,11 +119,11 @@ void *runBlock(void *arg) {
 	// This the carbon logic model described by
 	// http://developer.apple.com/qa/qa2001/qa1061.html
 
-	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
+	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak)
 									  target: self.squeakApplication
-									argument: nil 
-									   order: 1 
-									   modes: @[NSDefaultRunLoopMode]];		
+									argument: nil
+									   order: 1
+									   modes: @[NSDefaultRunLoopMode]];
 }
 
 - (void)runBlockOnMainThread:(void (^)(void))block {
@@ -136,9 +136,16 @@ void *runBlock(void *arg) {
 - (void)runBlockAsyncOnMainThread:(void (^)(void))block {
 	if ([NSThread isMainThread])
 		block(); // If we are already on the main thread, execute the block directly
-	else // If we are not on the main thread, dispatch the block to the main queue
-		dispatch_async(dispatch_get_main_queue(), block);
+	else {
+		// If we are not on the main thread, dispatch the block to the main queue
+		// But create a version of the block with a higher quality of service to
+		// get things done as promptly as possible.
+		dispatch_block_t qosBlock = dispatch_block_create_with_qos_class(0, // No flags
+																		QOS_CLASS_USER_INTERACTIVE,
+																		0, // Relative priority (0 means default)
+																		block);
+		dispatch_async(dispatch_get_main_queue(), qosBlock);
+	}
 }
 
 @end
-

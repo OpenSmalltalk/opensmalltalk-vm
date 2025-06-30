@@ -48,7 +48,9 @@
 extern SqueakOSXAppDelegate *gDelegateApp;
 
 static sqSqueakOSXMetalView *mainMetalView;
+#if !SPURVM
 extern sqInt cannotDeferDisplayUpdates;
+#endif
 
 #define STRINGIFY_SHADER(src) #src
 static const char *squeakMainShadersSrc =
@@ -141,7 +143,9 @@ typedef struct LayerTransformation
 
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;
+#if !SPURVM // Spur VMs pin the display bits and so textures remain valid
 	cannotDeferDisplayUpdates = 1;
+#endif
 
 	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
 	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
@@ -243,9 +247,7 @@ typedef struct LayerTransformation
 	 */
 	if(!syncNeeded) {
 		syncNeeded = YES;
-        [gDelegateApp runBlockOnMainThread:^{
-            [self setNeedsDisplayInRect: [self frame]];
-        }];
+		[self setNeedsDisplayInRect: [self frame]];
 	}
 }
 
@@ -280,8 +282,6 @@ typedef struct LayerTransformation
 
 -(void)setupMetal
 {
-	if(metalInitialized)
-		return;
 	metalInitialized = YES;
 	if(self.device == nil)
 		self.device = MTLCreateSystemDefaultDevice();
@@ -361,7 +361,8 @@ typedef struct LayerTransformation
 
 -(void)drawRect:(NSRect)rect
 {
-	[self setupMetal];
+	if (!metalInitialized)
+		[self setupMetal];
 
     /* Only draw if we have valid access to displayBits and if we have
      * something new communicated via clippy. During window resizing, we can
@@ -370,8 +371,8 @@ typedef struct LayerTransformation
      * Just check clippyIsEmpty to decide whether to update rect, typically
      * the full frame, with something else or not.
      */
-    if ( !displayBits ) { return; }
-    if ( clippyIsEmpty ) { return; }
+    if (!displayBits || clippyIsEmpty)
+		return;
 
 	// Always try to fill the texture with the pixels.
 	[self loadTexturesSubRectangle: NSRectFromCGRect(clippy)];
@@ -408,15 +409,14 @@ typedef struct LayerTransformation
 }
 
 - (void)loadTexturesSubRectangle: (NSRect) subRect {
-	void  *displayStorage = displayBits;
 	CGSize drawableSize = CGSizeMake(displayWidth, displayHeight);
 
     if ( !CGSizeEqualToSize(lastFrameSize,drawableSize)
     	|| !displayTexture
-    	|| currentDisplayStorage != displayStorage) {
+    	|| currentDisplayStorage != displayBits) {
 		// NSLog(@"old %f %f new %f %f", lastFrameSize.width,lastFrameSize.height,drawableSize.width,drawableSize.height);
         lastFrameSize = drawableSize;
-		currentDisplayStorage = displayStorage;
+		currentDisplayStorage = displayBits;
 		[self updateDisplayTextureStorage: drawableSize];
     }
 
@@ -433,8 +433,12 @@ typedef struct LayerTransformation
 
 	unsigned int sourcePitch = displayTextureWidth * 4;
 
-	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
-	char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
+#define BYTES_PER_PIXEL 4
+
+	char *source = (char*)displayBits
+				+ BYTES_PER_PIXEL *
+					(unsigned long)(subRect.origin.x
+								+ displayTextureWidth * (displayTextureHeight - subRect.origin.y - subRect.size.height));
 	[displayTexture replaceRegion: region mipmapLevel: 0 withBytes: source bytesPerRow: sourcePitch];
 }
 
