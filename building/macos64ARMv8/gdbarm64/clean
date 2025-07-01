@@ -1,4 +1,5 @@
 #!/bin/sh
+rm -f THIS_IS_*CONFIG
 rm -rf bfd gdb libiberty opcodes sim
 rm -f exploration/print*64
 rm -if exploration/*.st

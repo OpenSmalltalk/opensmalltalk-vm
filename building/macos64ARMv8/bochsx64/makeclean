@@ -1,4 +1,5 @@
 #!/bin/sh
+rm -f THIS_IS_*CONFIG
 for t in *; do
 	case $t in
 	conf.COG*|makeclean|makeem)	;;
