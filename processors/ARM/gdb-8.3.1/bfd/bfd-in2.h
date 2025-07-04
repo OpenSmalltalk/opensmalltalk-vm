@@ -199,6 +199,20 @@ typedef unsigned long bfd_size_type;
 
 #endif /* not BFD64  */
 
+#if COG // print addresses according to the target, not the host
+# if BFD_DEFAULT_TARGET_SIZE == 64
+#	undef  fprintf_vma
+#	define fprintf_vma(f,x) fprintf (f, "%016" BFD_VMA_FMT "x", x)
+#	undef  sprintf_vma
+#	define sprintf_vma(s,x) sprintf (s, "%016" BFD_VMA_FMT "x", x)
+# elif BFD_DEFAULT_TARGET_SIZE == 32
+#	undef  fprintf_vma
+#	define fprintf_vma(s,x) fprintf (s, "%08" BFD_VMA_FMT "x", x)
+#	undef  sprintf_vma
+#	define sprintf_vma(s,x) sprintf (s, "%08" BFD_VMA_FMT "x", x)
+# endif
+#endif
+
 #define HALF_BFD_SIZE_TYPE \
   (((bfd_size_type) 1) << (8 * sizeof (bfd_size_type) / 2))
 

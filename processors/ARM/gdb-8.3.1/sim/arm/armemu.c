@@ -1243,11 +1243,12 @@ ARMul_Emulate26 (ARMul_State * state)
 	}
 
 #if COG
-// TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
-      if ( instr != (0xEF000000 | SWI_CogPrefetch))
-	{
-	  state->temp = pc;
-	}
+	// TPR: save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
+	// eem: state->temp == priorPc in the GdbARMPlugin alien
+      if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
+	    state->temp = pc;
+	    state->lastInstr = instr; // much more useful to have the last valid instruction
+      }
 #endif
 
       if (state->EventSet)
@@ -1260,7 +1261,11 @@ ARMul_Emulate26 (ARMul_State * state)
 	    fprintf (stderr, "instr: %x\n", instr);
 	}
 
+#if COG // The processor tests use very small memories; don't fail for low addresses
+      if (instr == 0)
+#else
       if (instr == 0 || pc < 0x10)
+#endif
 	{
 	  ARMul_Abort (state, ARMUndefinedInstrV);
 	  state->Emulate = FALSE;

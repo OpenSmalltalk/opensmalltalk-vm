@@ -52,7 +52,6 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"dataSize\r\t^%ld! !\r", m,d,y,h,i, sizeof(ARMul_State));
 
 	print(EndCondition,endCondition);
-	print(ErrorCode,errorCode);
 	print(Cpsr,rawCPSR);
 	print(FPSCR,fpCPSR);
 	print(NFlag,nflag);
@@ -65,6 +64,7 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	print(temp,priorPc);
 	print(instr,instr);
 	print(NextInstr,NextInstr);
+	print(lastInstr,lastInstr);
 
 	return 0;
 }

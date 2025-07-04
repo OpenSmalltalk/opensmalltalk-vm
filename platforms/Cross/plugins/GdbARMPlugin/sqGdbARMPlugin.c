@@ -1,6 +1,6 @@
 // If this doesn't come first then e.g. Manjaro linux on Raspberry Pi
 // complains that config.h has been included too late.
-#include "config.h" 
+#include "config.h"
 
 #define COG 1
 #define FOR_COG_PLUGIN 1
@@ -31,15 +31,8 @@ ARMul_State*	lastCPU = NULL;
 static char	gdb_log[LOGSIZE+1];
 static int	gdblog_index = 0;
 
-// we should be able to link these against the gdbarm32 static libraries but at least on
-// macos with clang 14 linking the GdbARMPlugin objects against the gdbarm32 static libraries
-// when producing a bundle produces duplicate symbols so use a large hammer, setMinAddresses below.
-
+// N.B. these are exported to the gdb arm emulator
 uintptr_t    minReadAddress, minWriteMaxExecuteAddress;
-
-extern void setMinAddresses(uintptr_t mra, uintptr_t mwa);
-
-uintptr_t	minReadAddress, minWriteMaxExecuteAddress;
 
 /* The interrupt check chain is a convention wherein functions wanting to be
  * called on interrupt check chain themselves together by remembering the head
@@ -51,10 +44,11 @@ void	(*prevInterruptCheckChain)() = 0;
 void
 print_state(ARMul_State *state)
 {
-	printf("ErorCode: %u\tNextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n", 
-		state->ErrorCode, state->NextInstr, state->MemDataPtr, 
-		state->NumInstrs, state->Reg[15], 
-		state->Mode, state->EndCondition, 
+	printf("instr: %u\tpc: %u\ttemp: %u\nNextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n",
+		state->instr, state->pc, state->temp,
+		state->NextInstr, state->MemDataPtr,
+		state->NumInstrs, state->Reg[15],
+		state->Mode, state->EndCondition,
 		state->prog32Sig == LOW ? "LOW" : (state->prog32Sig == HIGH ? "HIGH" :
 		(state->prog32Sig == HIGHLOW ? "HIGHLOW" : "???")), state->Emulate);
 }
@@ -100,7 +94,7 @@ resetCPU(void *cpu)
 
 // See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 static inline long
-runOnCPU(ARMul_State *cpu, void *memory, 
+runOnCPU(ARMul_State *cpu, void *memory,
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
 {
 	assert(lastCPU == cpu);
@@ -111,7 +105,6 @@ runOnCPU(ARMul_State *cpu, void *memory,
 	cpu->MemSize = byteSize;
 	minReadAddress = minAddr;
 	minWriteMaxExecuteAddress = minWriteMaxExecAddr;
-	setMinAddresses(minReadAddress,minWriteMaxExecuteAddress);
 
 	gdblog_index = 0;
 
@@ -125,6 +118,9 @@ runOnCPU(ARMul_State *cpu, void *memory,
 
 	if (cpu->EndCondition != NoError)
 		return cpu->EndCondition;
+
+	if (cpu->Reg[15] >= minWriteMaxExecAddr)
+		return InstructionPrefetchError;
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
 }
@@ -140,7 +136,7 @@ ARMul_Emulate26 (ARMul_State * state)
 
 // See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 long
-singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
+singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoInstr);
@@ -148,7 +144,7 @@ singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 
 // See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 long
-runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
+runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoProg);
@@ -181,25 +177,32 @@ gdb_log_printf(void *stream, const char *format, ...)
 	return 0;
 }
 
+static int dis_initialized = 0;
+static disassemble_info dis;
+
 long
 disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 			void *memory, uintptr_t byteSize, int printAddress)
 {
-	disassemble_info dis;
-
 	gdblog_index = 0;
 	// ignore the cpu
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
-	init_disassemble_info( &dis, NULL, gdb_log_printf);
+	if (!dis_initialized) {
+		memset(&dis, 0, sizeof(dis));
 
-	dis.arch = bfd_arch_arm;
-	dis.mach = bfd_mach_arm_unknown;
+		// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
+		init_disassemble_info( &dis, NULL, gdb_log_printf);
 
-	// sets some fields in the structure dis to architecture specific values
-	disassemble_init_for_target( &dis );
+		dis.arch = bfd_arch_arm;
+		dis.mach = bfd_mach_arm_unknown;
+
+		// sets some fields in the structure dis to architecture specific values
+		disassemble_init_for_target( &dis );
+
+		dis_initialized = 1;
+	}
 
 	if (printAddress)
 		gdb_log_printf( NULL, "%08lx: ", laddr);
@@ -216,10 +219,7 @@ disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 }
 
 void
-forceStopRunning()
-{
-	lastCPU->Emulate = STOP;
-}
+forceStopRunning() { lastCPU->Emulate = STOP; }
 
 long
 errorAcorn(void) { return 0; }

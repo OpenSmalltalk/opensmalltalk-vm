@@ -408,7 +408,6 @@ ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
       // during execution, the pc points the next fetch address, which is 8 byte after the current instruction.
       // gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);
       return TRUE; // escape immediately
-      break;
 #endif
 
     case SWI_Read:

@@ -99,32 +99,16 @@ runOnCPU(sim_cpu *cpu, void *memory,
 	gdblog_index = 0;
 
 	if (runOrStep == step) {
-#if 0
-		if (postpc < minWriteMaxExecAddr
-		 && aarch64_step(cpu)
-		 && cpu->nextpc < minWriteMaxExecAddr)
-			cpu->pc = cpu->nextpc;
-#else
 		if (postpc < byteSize
-		 && (prevpc = cpu->pc, aarch64_step(cpu)))
+		 && (prevpc = cpu->pc, aarch64_step(cpu))) {
 			if (cpu->pc >= byteSize)
 				cpu->pc = prevpc;
 			else if (cpu->nextpc < byteSize)
 				cpu->pc = cpu->nextpc;
-#endif
+		}
 	}
 	else {
 		continueRunning = 1;
-#if 0
-		while (continueRunning
-			&& postpc <= minWriteMaxExecAddr
-			&& aarch64_step(cpu)
-			&& !gdblog_index) {
-			if (cpu->nextpc <= minWriteMaxExecAddr)
-				cpu->pc = cpu->nextpc;
-			postpc = cpu->nextpc + sizeof(cpu->instr);
-		}
-#else
 		while (continueRunning
 			&& postpc <= minWriteMaxExecAddr
 			&& (prevpc = cpu->pc, aarch64_step(cpu))
@@ -135,7 +119,6 @@ runOnCPU(sim_cpu *cpu, void *memory,
 				cpu->pc = cpu->nextpc;
 			postpc = cpu->nextpc + sizeof(cpu->instr);
 		}
-#endif
 	}
 	if (postpc >= minWriteMaxExecAddr
 	 || cpu->nextpc >= minWriteMaxExecAddr)
@@ -197,27 +180,34 @@ gdb_log_printf(void *stream, const char * format, ...)
 	return 0;
 }
 
+static int dis_initialized = 0;
+static disassemble_info dis;
+
 long
 disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 			void *memory, uintptr_t byteSize, int printAddress)
 {
-	disassemble_info dis;
-
 	gdblog_index = 0;
 	// ignore the cpu
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
-	init_disassemble_info ( &dis, NULL, gdb_log_printf);
+	if (!dis_initialized) {
+		memset(&dis, 0, sizeof(dis));
 
-	dis.arch = bfd_arch_aarch64;
+		// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
+		init_disassemble_info ( &dis, NULL, gdb_log_printf);
+
+		dis.arch = bfd_arch_aarch64;
 #if 0
-	dis.mach = bfd_mach_aarch64_unknown;
+		dis.mach = bfd_mach_aarch64_unknown;
 #endif
 
-	// sets some fields in the structure dis to architecture specific values
-	disassemble_init_for_target( &dis );
+		// sets some fields in the structure dis to architecture specific values
+		disassemble_init_for_target( &dis );
+
+		dis_initialized = 1;
+	}
 
 	if (printAddress)
 		gdb_log_printf( NULL, "%08lx: ", laddr);

@@ -2,42 +2,34 @@
   This file is a replacement copy of armvirt.c, which is part of the ARMulator distributed
   with gdb.
   Originally altered by Lars Wasserman to replace PutWord & GetWord, with extensive
-  further mangling by tim@rowlwege.org 
-  TPR - changed ReLoadInstr to return a fake SWI_CogPrefetch when fetching an 
+  further mangling by tim@rowlwege.org
+  TPR - changed ReLoadInstr to return a fake SWI_CogPrefetch when fetching an
   instruction would go past our memory bounds; this stops the sim and returns to the
-  Cog development UI. 
-  TPR - changed the errors returned in PutWord & GetWord to discriminate between read & 
+  Cog development UI.
+  TPR - changed the errors returned in PutWord & GetWord to discriminate between read &
   write bounds errors for better simulation
-  TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom 
+  TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom
   two bits are zeros. Without that, fetching bytes becomes... fun
 */
 #if COG
 # include "GdbARMPlugin.h"
 
-// we should be able to link these against sqGdbARMPlugin.c but at least on
-// macos with clang 14 linking the gdbarm32 static libraries against the
-// GdbARMPlugin objects when producing a bundle produces duplicate symbols
-// so use a large hammer, setMinAddresses below.
-
-uintptr_t    minReadAddress, minWriteAddress;
-
-void
-setMinAddresses(uintptr_t mra, uintptr_t mwa) { minReadAddress = mra; minWriteAddress = mwa; }
+extern uintptr_t minReadAddress, minWriteMaxExecuteAddress;
 #endif
 
 /*  armvirt.c -- ARMulator virtual memory interace:  ARM6 Instruction Emulator.
     Copyright (C) 1994 Advanced RISC Machines Ltd.
- 
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
- 
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
- 
+
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA. */
@@ -87,10 +79,10 @@ int SWI_vector_installed = FALSE;
 static ARMword
 GetWord (ARMul_State * state, ARMword address, int check)
 {
-  if (address < minReadAddress || address + 4 > (state->MemSize)) {
+  if (address < minReadAddress || address + 4 > state->MemSize) {
     //raise memory access error
     state->EndCondition = MemoryBoundsError;
-    state->Emulate = FALSE;
+    state->Emulate = FALSE; // a.k.a. STOP
     // gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
     return 0;
   }
@@ -104,11 +96,11 @@ GetWord (ARMul_State * state, ARMword address, int check)
 static void
 PutWord (ARMul_State * state, ARMword address, ARMword data, int check)
 {
-  if (address < minWriteAddress || address + 4 > (state->MemSize)) {
-    state->Emulate = FALSE;
+  if (address < minWriteMaxExecuteAddress || address + 4 > state->MemSize) {
+    state->Emulate = FALSE; // a.k.a. STOP
     state->EndCondition = MemoryBoundsError;
     // gdb_log_printf(NULL, "Illegal memory write at %#p. ", address);
-  } 
+  }
   else
     *((ARMword*) (state->MemDataPtr + (address & ~3))) = data;
 }
@@ -133,17 +125,18 @@ ARMul_ReLoadInstr (ARMul_State * state, ARMword address, ARMword isize)
 #endif
 
 #if COG
-    /* ignoring strange ARM code above we check for our error conditions here and fake a 
-       a special SWI if needed */
-  if (address < minReadAddress 
-  	  || address >= (state->MemSize) 
-  	  || (address >= minWriteAddress && minWriteAddress != 0))
-  {
-  	  return 0xEF000000 | SWI_CogPrefetch;
-  	  //      ^ SWIAL         ^ SWI number
-  }
+    // ignoring strange ARM code above we check for our error conditions here and
+    // fake a special SWI if needed. We do things this way because this emulator has
+    // a pipeline composed of "instr", "decoded", and "loaded" so it does not do a
+    // fetch from pc on every cycle, and hence testing for minWriteMaxExecuteAddress
+    // would cause a premature exit when fetching "loaded".
+  if (address < minReadAddress
+   || address + 4 > state->MemSize
+   || (minWriteMaxExecuteAddress && address >= minWriteMaxExecuteAddress))
+      return 0xEF000000 | SWI_CogPrefetch;
+      //       ^ SWIAL        ^ SWI number
 #endif
- 
+
   if ((isize == 2) && (address & 0x2))
     {
       /* We return the next two halfwords: */

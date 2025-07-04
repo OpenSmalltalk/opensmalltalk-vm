@@ -73,7 +73,7 @@ struct ARMul_State
   ARMword Emulate;		/* to start and stop emulation */
   unsigned EndCondition;	/* reason for stopping */
 #if COG /* This to keep the same offsets as the gdb 7.10 derived plugin. */
-  unsigned ErrorCode;		/* type of illegal instruction */
+  unsigned lastInstr;       /* last legal instruction; was ErrorCode */
 #endif
   ARMword Reg[16];		/* the current register file */
   ARMword RegBank[7][16];	/* all the registers */

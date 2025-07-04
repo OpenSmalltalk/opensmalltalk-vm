@@ -1,12 +1,12 @@
 LIBDEPS=../cpu/libcpu.a
-GDBARM=../../../processors/ARM/gdb-8.3.1
-GDBARMEXP=.
+GDBARM=../../../../processors/ARM/gdb-8.3.1
+GDBARMEXP=../../../../processors/ARM/exploration
 INCLUDES := -I$(GDBARM)/include \
 			-I$(GDBARM)/sim/arm \
 			-I$(GDBARM)/bfd \
 			-I../bfd
 LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/arm \
-           -lbfd -liberty -lopcodes -lopcodes -lsim -lz
+           -lbfd -liberty -lopcodes -lsim -lz
 CFLAGS=-m32 -DMODET $(INCLUDES) $(LIBS)
 
 .PHONY:	$(LIBDEPS)

@@ -6,10 +6,10 @@ PREREQUISITES:= ../gdbarm32/bfd/libbfd.a \
 
 INCFIRST:=$(GDB)/include $(GDB)/sim/arm $(GDB)/bfd ../gdbarm32/bfd $(GDB) ../gdbarm32
 
-EXTRALIBS:= -Wl,-warn_commons,-u,_minReadAddress,-u,_minWriteAddress \
+EXTRALIBS:= -Wl,-warn_commons,-u,_minReadAddress,-u,_minWriteMaxExecuteAddress \
 			-L../gdbarm32/bfd -L../gdbarm32/libiberty \
 			-L../gdbarm32/opcodes -L../gdbarm32/sim/arm \
-			-lbfd -liberty -lopcodes -lopcodes -lsim -lz
+			-lbfd -liberty -lopcodes -lsim -lz
 
 include ../common/Makefile.plugin
 
