@@ -50,7 +50,7 @@ jobs:
         arch:
           - linux32ARMv6
           # - linux32ARMv7 # Newspeak only, see "extra-arm" workflow
-          - linux64ARMv8
+          # - linux64ARMv8 # moved to linux-arm64.yml workflow
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
