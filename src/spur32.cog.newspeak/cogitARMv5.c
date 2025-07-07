@@ -915,7 +915,7 @@ static sqInt genPrimitiveStringAtPut(void);
 static NoDbgRegParms sqInt genRemoveSmallIntegerTagsInScratchReg(sqInt scratchReg);
 static NoDbgRegParms sqInt genShiftAwaySmallIntegerTagsInScratchReg(sqInt scratchReg);
 static NoDbgRegParms sqInt getLiteralCountOfplusOneinBytesintoscratch(sqInt methodReg, sqInt plusOne, sqInt inBytes, sqInt litCountReg, sqInt scratchReg);
-static NoDbgRegParms sqInt inlineCacheTagForInstance(sqInt oop);
+static NoDbgRegParms usqInt inlineCacheTagForInstance(sqInt oop);
 static NoDbgRegParms AbstractInstruction * jumpNotSmallIntegerUnsignedValueInRegister(sqInt reg);
 static NoDbgRegParms sqInt markAndTraceCacheTagLiteralinatpc(sqInt literal, CogMethod *cogMethodOrNil, usqInt address);
 static sqInt numSmallIntegerBits(void);
@@ -8350,7 +8350,7 @@ callCogCodePopReceiverAndClassRegs(void)
 static NoDbgRegParms sqInt
 ceCPICMissreceiver(CogMethod *cPIC, sqInt receiver)
 {
-    sqInt cacheTag;
+    usqInt cacheTag;
     sqInt errorSelectorOrNil;
     sqInt methodOrSelectorIndex;
     sqInt newTargetMethodOrNil;
@@ -8485,7 +8485,7 @@ ceMalloc(size_t size)
 static NoDbgRegParms sqInt
 ceSICMiss(sqInt receiver)
 {
-    sqInt cacheTag;
+    usqInt cacheTag;
     sqInt entryPoint;
     sqInt errorSelectorOrNil;
     sqInt extent;
@@ -13680,7 +13680,7 @@ void
 linkSendAtintooffsetreceiver(sqInt callSiteReturnAddress, CogMethod *sendingMethod, CogMethod *targetMethod, sqInt theEntryOffset, sqInt receiver)
 {
     sqInt extent;
-    sqInt inlineCacheTag;
+    usqInt inlineCacheTag;
 
 	assert((theEntryOffset == cmEntryOffset)
 	 || (theEntryOffset == cmNoCheckEntryOffset));
@@ -23291,7 +23291,7 @@ getLiteralCountOfplusOneinBytesintoscratch(sqInt methodReg, sqInt plusOne, sqInt
 	c.f. getInlineCacheClassTagFrom:into: & inlineCacheTagForClass: */
 
 	/* CogObjectRepresentationFor32BitSpur>>#inlineCacheTagForInstance: */
-static NoDbgRegParms sqInt
+static NoDbgRegParms usqInt
 inlineCacheTagForInstance(sqInt oop)
 {
 	return (isImmediate(oop)

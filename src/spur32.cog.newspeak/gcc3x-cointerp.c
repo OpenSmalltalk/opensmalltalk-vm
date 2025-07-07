@@ -1242,7 +1242,7 @@ extern sqInt numBytesOf(sqInt objOop);
 static NoDbgRegParms usqInt numPointerSlotsOf(sqInt objOop);
 static NoDbgRegParms sqInt numSlotsForBytes(sqInt numBytes);
 static NoDbgRegParms usqInt numSlotsOfAny(sqInt objOop);
-static NoDbgRegParms sqInt numSlotsOfIndexablePointerObj(sqInt objOop);
+static NoDbgRegParms usqInt numSlotsOfIndexablePointerObj(sqInt objOop);
 extern usqInt numSlotsOf(sqInt objOop);
 static NoDbgRegParms sqInt numStrongSlotsOfInephemeral(sqInt objOop);
 static NoDbgRegParms sqInt numStrongSlotsOfWeakling(sqInt objOop);
@@ -56366,7 +56366,7 @@ numSlotsOfAny(sqInt objOop)
  */
 
 	/* SpurMemoryManager>>#numSlotsOfIndexablePointerObj: */
-static NoDbgRegParms sqInt
+static NoDbgRegParms usqInt
 numSlotsOfIndexablePointerObj(sqInt objOop)
 {
     usqInt numSlots;
@@ -63856,7 +63856,7 @@ updatePointersInsavedFirstFieldPointer(sqInt obj, sqInt firstFieldPtr)
 			contextSize = (sp >> 1);
 			/* end fetchStackPointerOf: */
 l2:
-			numPointerSlots = CtxtTempFrameStart + contextSize;
+			numPointerSlots = ((usqInt) (CtxtTempFrameStart + contextSize));
 			goto l3;
 		}
 
@@ -64221,7 +64221,7 @@ bridgeFor(SpurSegmentInfo *aSegment)
 static NoDbgRegParms void
 bridgeFromto(SpurSegmentInfo *aSegment, SpurSegmentInfo *nextSegmentOrNil)
 {
-    sqInt bridgeSpan;
+    int bridgeSpan;
     sqInt clifton;
     usqInt segEnd;
 
