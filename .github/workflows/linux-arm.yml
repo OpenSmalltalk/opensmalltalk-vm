@@ -5,7 +5,7 @@ on:
     paths:
       # This workflow spec and its support scripts
       - '.github/workflows/linux-arm.yml'
-      - 'scripts/ci/*linux_arm.sh'
+      # - 'scripts/ci/*linux_arm.sh' -- not needed because of QEMU, see below
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
@@ -23,7 +23,7 @@ on:
     paths:
       # This workflow spec and its support scripts
       - '.github/workflows/linux-arm.yml'
-      - 'scripts/ci/*linux_arm.sh'
+      # - 'scripts/ci/*linux_arm.sh' -- not needed because of QEMU, see below
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
