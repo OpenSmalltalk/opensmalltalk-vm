@@ -21,7 +21,7 @@ jobs:
           - { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
           - { name: linux64x64, os: ubuntu-22.04 }
           - { name: linux32x86, os: ubuntu-22.04 }
-          - { name: macos64x64, os: macos-14 }
+          - { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
           # - { name: macos32x86, os: macos-latest }
 
         flavor:
@@ -55,11 +55,11 @@ jobs:
 
           # - arch: { name: macos64x64, os: macos-14 }
           #   flavor: pharo.sista.spur # -Werror bc. decl. missing
-          - arch: { name: macos64x64, os: macos-14 }
+          - arch: { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
             flavor: pharo.stack.spur
           # - arch: { name: macos64x64, os: macos-latest }
           #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
-          - arch: { name: macos64x64, os: macos-14 }
+          - arch: { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
             flavor: pharo.stack.spur.lowcode
 
         exclude:
