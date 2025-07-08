@@ -15,6 +15,10 @@
 #ifndef __B3D_H
 #define __B3D_H
 
+#ifdef __OpenBSD__
+# include <math.h>	/* for INT_MAX */
+#endif
+
 /* we need sqInt definition, but we MUST not have interpreter function definitions */
 #ifndef SQ_CONFIG_DONE
 #include "sqConfig.h"

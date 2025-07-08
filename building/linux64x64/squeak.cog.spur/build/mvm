@@ -5,6 +5,13 @@ INSTALLDIR=sqcogspur64linuxht
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
+
+if [ `uname` = "OpenBSD" ]; then
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+else
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+fi
+
 CFLAGS="$OPT -msse2 -DCOGMTVM=0"
 LIBS=""
 LDFLAGS=""

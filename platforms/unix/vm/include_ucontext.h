@@ -16,6 +16,9 @@
 #endif
 #ifdef __OpenBSD__
 # include <sys/signal.h>
+# include <setjmp.h>		/* for register defs */
+# include <math.h>		/* for INT_MAX       */
+# include <sys/syslimits.h>	/* for PATH_MAX      */
 #elif __sun
 /* Single UNIX Specification (SUS), Version 2 specifies <ucontext.h> */
 # include <ucontext.h>
@@ -105,6 +108,11 @@
 # define _PC_IN_UCONTEXT sc_rip
 # define _FP_IN_UCONTEXT sc_rbp
 # define _SP_IN_UCONTEXT sc_rsp
+#elif __OpenBSD__ && (__arm64__ || __aarch64__ || ARM64)
+/* See sys/arch/arm64/include/setjmp.h */
+# define _PC_IN_UCONTEXT sc_x[22]
+# define _FP_IN_UCONTEXT sc_x[21]
+# define _SP_IN_UCONTEXT sc_x[23]
 #endif
 #if !defined(_PC_IN_UCONTEXT)
 # error need to implement extracting pc from a ucontext_t on this system
