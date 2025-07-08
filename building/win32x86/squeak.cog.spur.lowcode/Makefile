@@ -6,7 +6,7 @@
 VM:=Squeak
 VMSRCDIR:=../../../src/spur32.cog.lowcode
 
-COGDEFS:= 
+COGDEFS:= -DLowcodeVM=1
 COMPILER_TO_USE:=clang
 	
 # This variable is set by VS Native Tools Command Prompts, not for cygwin wins

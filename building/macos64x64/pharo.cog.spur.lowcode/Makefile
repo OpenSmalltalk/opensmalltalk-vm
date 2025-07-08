@@ -5,7 +5,7 @@
 
 VMSRCDIR:=../../../src/spur64.cog.lowcode
 VM:=Pharo
-COGDEFS:= -DPharoVM=1
+COGDEFS:= -DPharoVM=1 -DLowcodeVM=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
 APPIDENTIFIER:=org.pharo.$(APPNAME)
