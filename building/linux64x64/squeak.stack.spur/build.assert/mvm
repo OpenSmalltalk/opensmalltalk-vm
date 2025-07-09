@@ -4,6 +4,13 @@ set -e
 INSTALLDIR=assert/sqstkspur64linuxht
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
+
+if [ `uname` = "OpenBSD" ]; then
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+else
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+fi
+
 # Prefer clang over gcc, but use gcc if clang isn't available...
 CC=gcc
 if [ -x /usr/bin/clang ]; then CC=clang; fi
@@ -27,7 +34,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
-	CFLAGS="$OPT -msse2"
+	CFLAGS="$OPT -msse2 DUALMAP"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
