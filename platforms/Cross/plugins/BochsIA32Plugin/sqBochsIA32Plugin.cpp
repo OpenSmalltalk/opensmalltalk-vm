@@ -38,7 +38,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	newCPU()
 	{
 		if (!cpu_has_been_reset) {
-			resetCPU(&bx_cpu);
+			if (resetCPU(&bx_cpu))
+				return 0;
 			cpu_has_been_reset = 1;
 		}
 		return &bx_cpu;
@@ -51,6 +52,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 
 		if (anx86 != &bx_cpu)
 			return BadCPUInstance;
+
+		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0)
+			return theErrorAcorn;
 
 		blidx = 0;
 #define RESET_FROM_COG BX_RESET_HARDWARE + 1

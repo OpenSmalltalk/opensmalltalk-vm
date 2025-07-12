@@ -1,3 +1,4 @@
 Guide to build Bochs support librarires libcpu.a libfpu.a & libdisasm.a for Cog.
-Go to the sibling directory for your platform (../macbochs, ../winbochs etc)
-and read and then run conf.COG there-in. Then run ../bochs/makeem there-in.
+There are bochsx86 and bochsx64 subdirectories in subdirectories of the building
+directory at the root (and if there are not, one can create them by using the
+others as examples). There-in run conf.COG or conf.COG.dbg followed by makeem.

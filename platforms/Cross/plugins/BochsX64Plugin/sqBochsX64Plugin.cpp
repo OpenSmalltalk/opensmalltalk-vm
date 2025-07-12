@@ -39,7 +39,8 @@ static Bit32u         lastValidPC; // for probeIfetch when used by cpu_loop
 	newCPU()
 	{
 		if (!cpu_has_been_reset) {
-			resetCPU(&bx_cpu);
+			if (resetCPU(&bx_cpu))
+				return 0;
 			cpu_has_been_reset = 1;
 		}
 		return &bx_cpu;
@@ -52,6 +53,9 @@ static Bit32u         lastValidPC; // for probeIfetch when used by cpu_loop
 
 		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
+
+		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0)
+			return theErrorAcorn;
 
 		blidx = 0;
 #define RESET_FROM_COG BX_RESET_HARDWARE + 1
