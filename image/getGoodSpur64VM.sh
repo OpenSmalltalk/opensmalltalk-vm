@@ -30,13 +30,15 @@ else
 		VM=$VMDIR/Contents/MacOS/Squeak;;
 	Linux)
 		case $CPU in
-		x86_64)	LATESTVM="squeak.cog.spur_linux64x64.tar.gz";;
-		aarch64)	LATESTVM="squeak.cog.spur_linux64ARMv8.tar.gz";;
+		x86_64)	 LATESTVM="squeak.cog.spur_linux64x64.tar.gz"
+			 VMDIR=sqcogspur64linuxht;;
+
+		aarch64) LATESTVM="squeak.cog.spur_linux64ARMv8.tar.gz"
+			 VMDIR=sqcogspur64ARMv8linuxht;;
 		*)		echo "Don't know what kind of 64-bit linux machine you're running.  I have $CPU" 1>&2
 				echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
 				exit 1
 		esac
-		VMDIR=sqcogspur64linuxht
 		VM=$VMDIR/squeak;;
 	*)	echo do not know how to download a VM for your system 1>&2
 		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
