@@ -10,6 +10,7 @@ esac
 # assert VM with VM profiler and itimer heartbeat
 INSTALLDIR=assert/phstacklowcodelinuxht
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+OPT="$OPT -DPharoVM=1 -DLowcodeVM=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

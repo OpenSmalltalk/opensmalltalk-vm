@@ -13,7 +13,7 @@ esac
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=phstacklowcodelinuxht
 # Some gcc versions create a broken VM using -O2
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DPharoVM"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DPharoVM=1 -DLowcodeVM=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
