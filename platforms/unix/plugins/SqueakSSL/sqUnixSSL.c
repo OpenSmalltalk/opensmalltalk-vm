@@ -11,7 +11,9 @@
 #include "sq.h"
 #include "SqueakSSL.h"
 
-#if defined(__OpenBSD__) || defined(SQSSL_LIBRESSL)
+#if defined(__OpenBSD__)
+#include "sqOBSDOpenSSL.inc"
+#elif defined(SQSSL_LIBRESSL)
 #include "sqUnixLibreSSL.inc"
 #else
 #include "sqUnixOpenSSL.inc"
