@@ -13,11 +13,12 @@ SqueakSSL \
 SurfacePlugin \
 UUIDPlugin \
 SerialPlugin \
-ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
 VectorEnginePlugin \
-# Not working in 64bits (weird)
+# Not compiling anymore on macOS 13
+# ObjectiveCPlugin \
+# Not working in 64bits (weird) \
 # MIDIPlugin \
 # could work, but I don't know if relevant: \
 # TestOSAPlugin \
