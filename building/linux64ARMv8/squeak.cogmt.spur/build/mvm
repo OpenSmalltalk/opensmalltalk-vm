@@ -23,6 +23,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	INTERP=cointerpmt \
+	CC=clang \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
 	LIBS="-lrt"
 ##	--without-vm-display-fbdev --without-npsqueak \

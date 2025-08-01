@@ -24,6 +24,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	--enable-fast-bitblt \
+	CC=clang \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 -DDUAL_MAPPED_CODE_ZONE=1" \
 	LIBS="-lrt"
 ##	--without-vm-display-fbdev --without-npsqueak \
