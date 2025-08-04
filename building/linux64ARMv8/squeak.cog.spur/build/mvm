@@ -16,6 +16,9 @@ else
     FASTBITBLIT="--enable-fast-bitblt"
 fi
 	
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -33,6 +36,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	$FASTBITBLIT \
+	CC=$CC \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
 	LIBS=""
 ##	LIBS="-lrt"  librt is dead @KenD@
