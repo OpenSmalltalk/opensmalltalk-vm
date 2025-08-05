@@ -1,5 +1,0 @@
-# Being arch-independent, the *.sources files must be in the
-# /usr/share directory but the VM requires these files to be in the
-# same directory as itself.
-usr/share/pharo6-vm/PharoV60.sources usr/lib/i386-linux-gnu/pharo6-vm/PharoV60.sources
-usr/share/pharo6-vm/PharoV60.sources usr/lib/x86_64-linux-gnu/pharo6-vm/PharoV60.sources
