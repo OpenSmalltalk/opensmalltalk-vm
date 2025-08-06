@@ -8,12 +8,15 @@ OPT="-g3 -O0 -DDEBUGVM=1 -DAIO_DEBUG=1"
 
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
-#    FASTBITBLIT=""
 else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
-#    FASTBITBLIT="--enable-fast-bitblt"
 fi
-	
+
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
+
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
@@ -29,6 +32,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=src/spur64.cog \
 	--without-vm-display-fbdev --without-npsqueak \
 	--with-scriptname=spur64 \
+	cc=$CC \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP"
 
 rm -f vm/sqUnixMain.o # nuke version info
