@@ -8,15 +8,23 @@ MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
 ##OPT="-g -O3  -DMUSL -DNDEBUG -DDEBUGVM=0"
 
+CC=gcc
+
+# arm64 Linux properly compiles fast bitblt under gcc
+# but compiles, then segfaults with clang.
+# OpenBSD has problems with either, so no fast bitblt there.
+
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+    FASTBITBLT=""
+# Prefer clang over gcc, but use gcc if clang isn't available...
+    if [ -x /usr/bin/clang ]; then CC=clang; fi
 else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+# Linux fast bitblt requires gcc
+    FASTBITBLT=" --enable-fast-bitblt "
 fi
 
-# Prefer clang over gcc, but use gcc if clang isn't available...
-CC=gcc
-if [ -x /usr/bin/clang ]; then CC=clang; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -33,6 +41,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=src/spur64.cog \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
+	$FASTBITBLT \
 	CC=$CC \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
 	LIBS=""
