@@ -24,6 +24,10 @@
 typedef int mode_t;
 #endif
 
+#ifdef __OpenBSD__
+# include <sys/syslimits.h>	/* for PATH_MAX */
+#endif
+
 #include "sqMemoryAccess.h"
 
 /* squeak file record; see sqFilePrims.c for details */

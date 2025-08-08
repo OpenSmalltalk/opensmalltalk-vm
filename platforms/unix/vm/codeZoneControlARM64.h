@@ -3,7 +3,7 @@
 #if DUAL_MAPPED_CODE_ZONE
 // since we're using the DUAL_MAPPED_CODE_ZONE, no machinery is needed.
 // we can defer to the default macro implementations in cogitARMv8.c
-#elif __ANDROID__ || ANDROID
+#elif __ANDROID__ || ANDROID || __OpenBSD__
 // Android allows the use of PROT_READ | PROT_WRITE | PROT_EXEC so nothing need
 // be done and we can defer to the default macro implementations in cogitARMv8.c
 #else

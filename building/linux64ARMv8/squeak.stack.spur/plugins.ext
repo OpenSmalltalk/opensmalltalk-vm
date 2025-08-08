@@ -1,7 +1,6 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
-CameraPlugin \
 ClipboardExtendedPlugin \
 FileAttributesPlugin \
 MIDIPlugin \
@@ -18,3 +17,4 @@ DESPlugin \
 MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin 
+## CameraPlugin \ -- fails on OpenBSD
