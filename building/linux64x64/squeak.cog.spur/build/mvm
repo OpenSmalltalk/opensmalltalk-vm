@@ -5,15 +5,20 @@ INSTALLDIR=sqcogspur64linuxht
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+# but OpenBSD does not.
 
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+    LIBRT=""
 else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+    LIBRT="-lrt"
 fi
 
-CFLAGS="$OPT -msse2 -DCOGMTVM=0"
-LIBS=""
+CFLAGS="$OPT -msse2 -DCOGMTVM=0 $DUALMAP"
+LIBS=$LIBRT
 LDFLAGS=""
 case $(uname -s) in
   OpenBSD)

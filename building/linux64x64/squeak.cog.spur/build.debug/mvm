@@ -12,6 +12,18 @@ if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+# but OpenBSD does not.
+
+if [ `uname` = "OpenBSD" ]; then
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+    LIBRT=""
+else
+    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+    LIBRT="-lrt"
+fi
+
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
@@ -26,7 +38,9 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
-	CFLAGS="$OPT -msse2 -DCOGMTVM=0"
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0 $DUALMAP" \
+	LIBS=$LIBRT
+
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`

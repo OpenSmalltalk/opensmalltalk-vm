@@ -6,10 +6,16 @@ INSTALLDIR=assert/sqcogspur64ARMv8linuxht
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+# but OpenBSD does not.
+
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+    LIBRT=""
 else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+    LIBRT="-lrt"
 fi
 
 # Prefer clang over gcc, but use gcc if clang isn't available...
@@ -33,7 +39,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-scriptname=spur64 \
 	CC=$CC \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
-	LIBS="-lrt"
+	LIBS=$LIBRT
 
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
