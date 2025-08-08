@@ -14,13 +14,19 @@ CC=gcc
 # but compiles, then segfaults with clang.
 # OpenBSD has problems with either, so no fast bitblt there.
 
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+# but OpenBSD does not.
+
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+    LIBRT=""
     FASTBITBLT=""
 # Prefer clang over gcc, but use gcc if clang isn't available...
     if [ -x /usr/bin/clang ]; then CC=clang; fi
 else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+    LIBRT="-lrt"
 # Linux fast bitblt requires gcc
     FASTBITBLT=" --enable-fast-bitblt "
 fi
@@ -44,7 +50,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	$FASTBITBLT \
 	CC=$CC \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
-	LIBS="-lrt"
+	LIBS=$LIBRT
 ##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
