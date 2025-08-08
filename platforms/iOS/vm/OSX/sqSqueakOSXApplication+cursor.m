@@ -109,7 +109,13 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	
 	
 	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode())
-		[gDelegateApp runBlockAsyncOnMainThread:^{ [self.squeakCursor set]; }];
+		[gDelegateApp runBlockAsyncOnMainThread:^{
+				@try {
+					[self.squeakCursor set];
+				}
+				@catch (NSException *exception) {
+				}
+			}];
 	}
 }
 
