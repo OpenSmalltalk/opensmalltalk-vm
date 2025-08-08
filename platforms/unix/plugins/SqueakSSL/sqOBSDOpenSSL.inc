@@ -292,6 +292,9 @@ sqInt sqCreateSSL(void) {
 	sqInt handle = 0;
 	sqSSL *ssl = NULL;
 
+	ssl = calloc(1, sizeof(sqSSL));
+	/*@@KenD@@*/
+	ssl->loglevel = 1;
 	if (!wasInitialized) {
 		if(SSL_library_init() < 0) {
 		  if(ssl->loglevel)
@@ -301,7 +304,6 @@ sqInt sqCreateSSL(void) {
 		wasInitialized = true;
 	}
 
-	ssl = calloc(1, sizeof(sqSSL));
 	ssl->bioRead  = BIO_new(BIO_s_mem());
 	ssl->bioWrite = BIO_new(BIO_s_mem());
 	BIO_set_close(ssl->bioRead,  BIO_CLOSE);
