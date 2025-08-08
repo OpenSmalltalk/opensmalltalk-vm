@@ -35,8 +35,6 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	CC=$CC \
 	CFLAGS="$OPT -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__ $DUALMAP"
 
-### @@	--without-vm-display-fbdev  \
-
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`

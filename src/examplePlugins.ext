@@ -2,11 +2,18 @@
 # Edit plugins.ext in vm build dir to specify the external plugins to be built.
 EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
+BochsX64Plugin \
 CroquetPlugin \
+GdbARMPlugin \
+GdbARMv8Plugin \
 MIDIPlugin \
 SqueakFFIPrims \
 SqueakSSL \
 FloatArrayPlugin \
 FloatMathPlugin \
 Mpeg3Plugin \
-UnixOSProcessPlugin
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
+UnixOSProcessPlugin \
+VectorEnginePlugin

@@ -33,7 +33,8 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-vm-display-fbdev --without-npsqueak \
 	--with-scriptname=spur64 \
 	cc=$CC \
-	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP"
+	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
+	LIBS="-lrt"
 
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

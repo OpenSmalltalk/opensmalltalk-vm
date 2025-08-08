@@ -1,7 +1,0 @@
-ifdef DOCUMENTATION_DIR
--include $(DOCUMENTATION_DIR)documentation.gmk
-endif
-
-.PHONY: testdocs
-testdocs:
-	@echo $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES) | xargs -n 1

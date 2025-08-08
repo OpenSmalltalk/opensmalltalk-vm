@@ -10,7 +10,7 @@ XCFLAGS:=-DWITH_PROFILE=-1
 
 EXTRALIBS:= -L../gdbarm64/bfd -L../gdbarm64/libiberty \
 			-L../gdbarm64/opcodes -L../gdbarm64/sim/aarch64 \
-			-lbfd -liberty -lopcodes -lopcodes -lsim -lz
+			-lbfd -liberty -lopcodes -lsim -lz
 
 include ../common/Makefile.plugin
 

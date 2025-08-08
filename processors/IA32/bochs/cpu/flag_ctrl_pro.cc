@@ -36,7 +36,9 @@ void BX_CPP_AttrRegparmN(1) BX_CPU_C::setEFlags(Bit32u val)
   // VM flag could not be set from long mode
 #if BX_SUPPORT_X86_64
   if (long_mode()) {
+# if !COG
     if (BX_CPU_THIS_PTR get_VM()) BX_PANIC(("VM is set in long mode !"));
+# endif
     val &= ~EFlagsVMMask;
   }
 #endif

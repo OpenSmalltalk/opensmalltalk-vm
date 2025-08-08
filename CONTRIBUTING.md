@@ -235,10 +235,27 @@ This facilitates searching for function definitions by searching for the
 name at the beginning of the line.
 
 
+## C reserved words are _NOT_ functions
+
+So write ```if (expr)``` ***not*** ```if(expr)``` and so on for ```do```, ```for``` and ```while```.
+
+
+## Complex conditionals should be readable
+
+So put ```||``` and ```&&``` at the beginning of lines like this:
+```
+    if (expr1
+     || expr2)
+```
+not at the end of lines where they can be difficult to see, especially on long lines and in sequences of lines with different lengths.
+
+
 ## Tab stops are 4 spaces
 
 In this case, the first rule is to keep the existing formatting within a 
-file - we don't want to pollute the code history with space changes.
+file when making a semantic change - we don't want to confuse the code history
+mixing semantic and space changes. But a reformat that just changes to 4 space tabs
+is perfectly acceptable.
 
 The goal is to use tabs set to 4 spaces.
 
