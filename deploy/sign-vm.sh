@@ -26,18 +26,6 @@ sign_macOS() {
     sign_password="${SQUEAK_SIGN_PASSWORD}"
     cert_password="${SQUEAK_CERT_PASSWORD}"
     sign_identity="${SQUEAK_SIGN_IDENTITY}"
-  elif [[ "${FLAVOR}" == "pharo"* ]]; then
-    cert_filepath_cer="${cert_path}/pharo/pharo.cer"
-    cert_filepath_p12="${cert_path}/pharo/pharo.p12"
-    sign_password="${PHARO_SIGN_PASSWORD}"
-    cert_password="${PHARO_CERT_PASSWORD}"
-    sign_identity="${PHARO_SIGN_IDENTITY}"
-  elif [[ "${FLAVOR}" == "newspeak"* ]]; then
-    cert_filepath_cer="${cert_path}/newspeak/sign.cer"
-    cert_filepath_p12="${cert_path}/newspeak/sign.p12"
-    sign_password="${NEWSPEAK_SIGN_PASSWORD}"
-    cert_password="${NEWSPEAK_CERT_PASSWORD}"
-    sign_identity="${NEWSPEAK_SIGN_IDENTITY}"
   else
     echo "Unsupported VM flavor ${FLAVOR}."
     exit 35

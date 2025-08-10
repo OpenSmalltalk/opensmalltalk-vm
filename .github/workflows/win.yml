@@ -49,7 +49,7 @@ jobs:
         arch: 
           - { name: win64x64, msystem: mingw64, msys-env: x86_64 }
           - { name: win32x86, msystem: mingw32, msys-env: i686 }
-        flavor: # for selected pharo.* builds, see extra.yml
+        flavor:
           - squeak.cog.spur
           - squeak.stack.spur
           - squeak.sista.spur

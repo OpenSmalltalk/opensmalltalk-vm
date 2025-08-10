@@ -23,15 +23,6 @@ case "${FLAVOR}" in
     LINUX_BINARY="squeak"
     MACOS_BINARY="Squeak"
     ;;
-  "Xpharo"*) # disabled until pharo-vm is merged
-    if [[ "${FLAVOR}" = *".spur"* ]]; then
-      SMALLTALK_VERSION="Pharo-5.0"
-    else
-      SMALLTALK_VERSION="Pharo-5.0"
-    fi
-    LINUX_BINARY="pharo"
-    MACOS_BINARY="Pharo"
-    ;;
   *)
     echo "Skipping SUnit testing for ${FLAVOR}..."
     exit 0

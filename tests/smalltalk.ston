@@ -29,7 +29,6 @@ SmalltalkCISpec {
         #GTSpotterStepFilteringTest,
         #GTSpotterTest,
         #NetNameResolverTest,
-        #PharoIssueTest,
         #ReleaseTest,
         #SimulateMouseSpecification,
         #ZnCharacterEncoderTests,

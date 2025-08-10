@@ -21,11 +21,6 @@ jobs:
       fail-fast: false # let them finish bc. mixed platforms
       matrix:
         include:
-          # Only Newspeak is configured for ARMv7
-          - arch: linux32ARMv7
-            flavor: newspeak.cog.spur
-          - arch: linux32ARMv7
-            flavor: newspeak.stack.spur
           # Some other flavors for backwards compatibility
           - arch: linux32ARMv6
             flavor: squeak.cog.v3

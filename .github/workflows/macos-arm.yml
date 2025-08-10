@@ -88,12 +88,6 @@ jobs:
           SQUEAK_SIGN_PASSWORD: ${{ secrets.SQUEAK_SIGN_PASSWORD }}
           SQUEAK_CERT_PASSWORD: ${{ secrets.SQUEAK_CERT_PASSWORD }}
           SQUEAK_SIGN_IDENTITY: ${{ secrets.SQUEAK_SIGN_IDENTITY }}
-          PHARO_SIGN_PASSWORD: ${{ secrets.PHARO_SIGN_PASSWORD }}
-          PHARO_CERT_PASSWORD: ${{ secrets.PHARO_CERT_PASSWORD }}
-          PHARO_SIGN_IDENTITY: ${{ secrets.PHARO_SIGN_IDENTITY }}
-          NEWSPEAK_SIGN_PASSWORD: ${{ secrets.NEWSPEAK_SIGN_PASSWORD }}
-          NEWSPEAK_CERT_PASSWORD: ${{ secrets.NEWSPEAK_CERT_PASSWORD }}
-          NEWSPEAK_SIGN_IDENTITY: ${{ secrets.NEWSPEAK_SIGN_IDENTITY }}
 
       - name: Pack VM
         run: ./deploy/pack-vm.sh

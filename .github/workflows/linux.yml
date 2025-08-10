@@ -52,7 +52,7 @@ jobs:
         arch:
           - linux64x64
           - linux32x86
-        flavor: # for selected pharo.* builds, see extra.yml
+        flavor:
           - squeak.cog.spur
         heartbeat:
           - threaded
