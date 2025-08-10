@@ -17,10 +17,8 @@ fi
 # but OpenBSD does not.
 
 if [ `uname` = "OpenBSD" ]; then
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
     LIBRT=""
 else
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
     LIBRT="-lrt"
 fi
 
@@ -38,7 +36,7 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
-	CFLAGS="$OPT -msse2 -DCOGMTVM=0 $DUALMAP" \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0" \
 	LIBS=$LIBRT
 
 rm -f vm/sqUnixMain.o # nuke version info
