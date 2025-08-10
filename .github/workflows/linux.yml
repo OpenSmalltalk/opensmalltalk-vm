@@ -9,7 +9,7 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*x*/**' # Makefile-based build scripts
+      - 'building/linux[36][24]x*/**' # Makefile-based build scripts
       - 'building/linux32/**' # Makefile-based build scripts
       - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
@@ -28,7 +28,7 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*x*/**' # Makefile-based build scripts
+      - 'building/linux[36][24]x*/**' # Makefile-based build scripts
       - 'building/linux32/**' # Makefile-based build scripts
       - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)

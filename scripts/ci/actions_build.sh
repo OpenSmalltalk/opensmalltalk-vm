@@ -117,12 +117,7 @@ build_macOS() {
     echo "::endgroup::"
 
     echo "::group::Moving build artifacts to ${PRODUCTS_PATH}..."
-    if [[ "${FLAVOR}" == "newspeak"* ]]; then
-        # TODO: Why does the Newspeak flavor have to wrong name? Should be set in its build scripts (or Makefile ...)
-        mv ./*.app "${PRODUCTS_PATH}/Newspeak.app"
-    else
-        mv ./*.app "${PRODUCTS_PATH}/"
-    fi
+    mv ./*.app "${PRODUCTS_PATH}/"
     echo "::endgroup::"
 
     cd "${PRODUCTS_PATH}"
