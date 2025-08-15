@@ -8,29 +8,24 @@ MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
 ##OPT="-g -O3  -DMUSL -DNDEBUG -DDEBUGVM=0"
 
-CC=gcc
-
-# arm64 Linux properly compiles fast bitblt under gcc
-# but compiles, then segfaults with clang.
-# OpenBSD has problems with either, so no fast bitblt there.
-
-# librt and libpthread funs now supplied by libc
-# Many Linux systems supply empty library files 
-# but OpenBSD does not.
-
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+# librt and libpthread functions now supplied by libc.
+# Many Linux systems supply empty library files but
+# OpenBSD does not.
     LIBRT=""
+# OpenBSD has problems with fast-bitblt under gcc and clang
     FASTBITBLT=""
-# Prefer clang over gcc, but use gcc if clang isn't available...
-    if [ -x /usr/bin/clang ]; then CC=clang; fi
-else
+# Prefer clang over gcc if available
+    if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
+else # non-OpenBSD Linux
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
     LIBRT="-lrt"
-# Linux fast bitblt requires gcc
-    FASTBITBLT=" --enable-fast-bitblt "
+# Linux on ARMv8 properly compiles fast-bitblt under gcc
+# but compiles-and-segfaults with clang. Use gcc for now.
+	FASTBITBLT=" --enable-fast-bitblt "
+	CC=gcc
 fi
-
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

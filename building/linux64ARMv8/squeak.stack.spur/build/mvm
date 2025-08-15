@@ -11,9 +11,8 @@ else
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
 fi
 
-# Prefer clang over gcc, but use gcc if clang isn't available...
-CC=gcc
-if [ -x /usr/bin/clang ]; then CC=clang; fi
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

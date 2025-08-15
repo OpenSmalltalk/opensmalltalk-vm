@@ -5,9 +5,8 @@ INSTALLDIR=sqcogspur64linux
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
-# Prefer clang over gcc, but use gcc if clang isn't available...
-CC=gcc
-if [ -x /usr/bin/clang ]; then CC=clang; fi
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

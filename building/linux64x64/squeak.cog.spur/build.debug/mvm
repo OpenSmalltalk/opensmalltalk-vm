@@ -4,22 +4,27 @@ set -e
 INSTALLDIR=debug/sqcogspur64linuxht
 OPT="-g3 -O0 -DDEBUGVM=1"
 
-# Prefer clang over gcc, but use gcc if clang isn't available...
-CC=gcc
-if [ -x /usr/bin/clang ]; then CC=clang; fi
-
-if [ $# -ge 1 ]; then
-	INSTALLDIR="$1"; shift
-fi
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 # librt and libpthread funs now supplied by libc
 # Many Linux systems supply empty library files 
 # but OpenBSD does not.
+if [ `uname` = "OpenBSD" ]; then LIBRT=""; else LIBRT="-lrt"; fi
 
+CFLAGS="$OPT -msse2 -DCOGMTVM=0"
+LIBS=$LIBRT
+LDFLAGS=""
+
+# Special treatment for OpenBSD Linux
 if [ `uname` = "OpenBSD" ]; then
-    LIBRT=""
-else
-    LIBRT="-lrt"
+	CFLAGS="$CFLAGS -I/usr/local/include"
+	LIBS="$LIBS -lexecinfo"
+	LDFLAGS="$LDFLAGS -L/usr/local/lib"
+fi
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
 fi
 
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
@@ -36,8 +41,9 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
-	CFLAGS="$OPT -msse2 -DCOGMTVM=0" \
-	LIBS=$LIBRT
+	CFLAGS="$CFLAGS" \
+	LIBS="$LIBS" \
+	LDFLAGS="$LDFLAGS"
 
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
