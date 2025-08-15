@@ -3246,6 +3246,10 @@ static const arm_regname regnames[] =
     { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "sl",  "fp",  "ip",  "sp",  "lr",  "pc" }},
   { "reg-names-std", N_("Select register names used in ARM's ISA documentation"),
     { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp",  "lr",  "pc" }},
+#if COG
+  { "reg-names-Cog", N_("Select register names desired by Cog"),
+    { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10",  "fp",  "r12",  "sp",  "lr",  "pc" }},
+#endif
   { "force-thumb", N_("Assume all insns are Thumb insns"), {NULL} },
   { "no-force-thumb", N_("Examine preceding label to determine an insn's type"), {NULL} },
   { "reg-names-apcs", N_("Select register names used in the APCS"),
