@@ -5,7 +5,7 @@
 ARCH:=armv8.1-a
 export ARCH
 
-TOOLPREFIX:=aarch64-w64-mingw32-
+TOOLPREFIX:=clang-aarch64-w64-mingw32-
 export TOOLPREFIX
 
 #############################################################################
@@ -61,7 +61,7 @@ WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
-CFLAGS:= -fdeclspec -msse2 -ggdb2 -march=$(ARCH) \
+CFLAGS:= -fdeclspec -ggdb2 -march=$(ARCH) \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 # Several versions of clang (all versions from 14 through 18 as of this writing)
