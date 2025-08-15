@@ -86,7 +86,7 @@ jobs:
       - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
         uses: msys2/setup-msys2@v2
         with:
-          location: C:\
+          location: D:\ # see MSYS_PATH below
           msystem: ${{ matrix.arch.msystem }}
           release: true # no MSYS2 installed in ARM64 runners
           update: false # faster?
@@ -115,6 +115,7 @@ jobs:
         env:
           MSYS_SYS: ${{ matrix.arch.msystem }}
           MSYS_ENV: ${{ matrix.arch.msys-env }}
+          MSYS_PATH: /d/msys64
 
       - name: Sign VM (not implemented)
         if: false
