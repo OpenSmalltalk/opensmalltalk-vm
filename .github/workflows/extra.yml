@@ -16,20 +16,6 @@ jobs:
     strategy:
       fail-fast: false # let them finish bc. different platforms
       matrix:
-        arch: 
-          - { name: win64x64, os: windows-2025, msystem: mingw64, msys-env: x86_64 }
-          - { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
-          - { name: linux64x64, os: ubuntu-22.04 }
-          - { name: linux32x86, os: ubuntu-22.04 }
-          - { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
-          # - { name: macos32x86, os: macos-latest }
-
-        flavor:
-          # Only newsqueak.* and pharo.cog.spur builds are fully prepared for all platforms
-          - newspeak.cog.spur
-          - newspeak.stack.spur
-          - pharo.cog.spur
-
         include:
           - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
             flavor: squeak.cog.v3
@@ -37,36 +23,11 @@ jobs:
             flavor: squeak.stack.v3
           - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
             flavor: squeak.cog.spur.lowcode
-          # - arch: { name: win64x64, os: windows-2025 }
-          #   flavor: pharo.stack.spur # third-party not yet working
-          # - arch: { name: win32x86, os: windows-2025 }
-          #   flavor: pharo.cog.spur.lowcode
 
           - arch: { name: linux32x86, os: ubuntu-22.04 }
             flavor: squeak.cog.v3
           - arch: { name: linux32x86, os: ubuntu-22.04 }
             flavor: squeak.stack.v3
-          - arch: { name: linux32x86, os: ubuntu-22.04 }
-            flavor: pharo.sista.spur
-          - arch: { name: linux32x86, os: ubuntu-22.04 }
-            flavor: pharo.cog.spur.lowcode
-          - arch: { name: linux32x86, os: ubuntu-22.04 }
-            flavor: pharo.stack.spur.lowcode
-
-          # - arch: { name: macos64x64, os: macos-14 }
-          #   flavor: pharo.sista.spur # -Werror bc. decl. missing
-          - arch: { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
-            flavor: pharo.stack.spur
-          # - arch: { name: macos64x64, os: macos-latest }
-          #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
-          - arch: { name: macos64x64, os: macos-13 } # use last x86_64 (i.e. non-ARM) runner for now
-            flavor: pharo.stack.spur.lowcode
-
-        exclude:
-          - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
-            flavor: pharo.cog.spur # third-party not yet working
-          - arch: { name: win64x64, os: windows-2025, msystem: mingw64, msys-env: x86_64 }
-            flavor: pharo.cog.spur # third-party not yet working
 
     runs-on: ${{ matrix.arch.os }}
     name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}
