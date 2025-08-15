@@ -73,7 +73,7 @@ DEFS:=	$(WINVER) -DWIN64=1 -DNO_ISNAN \
 		-DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
-CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -march=$(ARCH) \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
 
 
@@ -153,20 +153,20 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 		$(LIBOBJ) $(JMPOBJ)
 ifneq ($(LINK_WITH_GCC),)
 	$(CC) -shared \
-		-m64 \
+		-march=$(ARCH) \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GCCLINKEXTRAS) \
 		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else ifneq ($(LINK_WITH_GPP),)
 	$(CXX) -shared \
-		-m64 \
+		-march=$(ARCH) \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GPPLINKEXTRAS) \
 		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else
-	$(DLLWRAP) -mwindows -m64 \
+	$(DLLWRAP) -mwindows -march=$(ARCH) \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(DLLWRAPEXTRAS) \

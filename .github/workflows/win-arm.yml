@@ -1,0 +1,154 @@
+name: Build for Windows (ARM)
+
+on:
+  push: # All branches, but appropriate paths only.
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/win-arm.yml'
+      - 'scripts/ci/*msys.sh'
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/win*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/win32/**'
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
+  pull_request:
+    branches:
+      - Cog
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/win-arm.yml'
+      - 'scripts/ci/*msys.sh'
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/win*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/win32/**'
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Build new release candidate for tag"
+        required: true
+        default: YYYYMMDDHHMM
+
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: 
+          - { name: win64ARMv8, msystem: clangarm64, msys-env: clang-aarch64 }
+        flavor:
+          - squeak.cog.spur
+          - squeak.stack.spur
+          - squeak.sista.spur
+        mode:
+          - fast
+          - debug
+          - assert
+
+    runs-on: windows-11-arm
+    name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    env:
+      ARCH: ${{ matrix.arch.name }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout files
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/checkout@v4
+
+      - name: Checkout files for new release candidate
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.inputs.tag }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache-${{ matrix.arch.name }}-${{ matrix.flavor }}
+
+      # - name: Setup tmate debugging session
+        # uses: mxschmitt/action-tmate@v3
+
+      - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.arch.msystem }}
+          release: true # no MSYS2 installed in ARM64 runners
+          update: false # faster?
+          cache: true
+          # note that there is no "toolchain" group yet for aarch64
+          install: |
+            git
+            base-devel
+            mingw-w64-${{ matrix.arch.msys-env }}-clang
+            mingw-w64-${{ matrix.arch.msys-env }}-clang-analyzer
+            mingw-w64-${{ matrix.arch.msys-env }}-clang-tools-extra
+            mingw-w64-${{ matrix.arch.msys-env }}-llvm
+            mingw-w64-${{ matrix.arch.msys-env }}-libmangle-git
+            mingw-w64-${{ matrix.arch.msys-env }}-winpthreads
+            mingw-w64-${{ matrix.arch.msys-env }}-lldb
+            mingw-w64-${{ matrix.arch.msys-env }}-llvm-openmp
+            mingw-w64-${{ matrix.arch.msys-env }}-make
+            mingw-w64-${{ matrix.arch.msys-env }}-pkgconf
+            mingw-w64-${{ matrix.arch.msys-env }}-tools-git
+            mingw-w64-${{ matrix.arch.msys-env }}-winstorecompat-git
+
+      - name: Build VM
+        shell: msys2 {0} #bash
+        run: ./scripts/ci/actions_build.sh
+        # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
+        env:
+          MSYS_SYS: ${{ matrix.arch.msystem }}
+          MSYS_ENV: ${{ matrix.arch.msys-env }}
+
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
+
+      - name: Pack VM
+        shell: bash
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-build
+        uses: ncipollo/release-action@v1
+        if: github.event_name == 'push' && endsWith(github.ref, 'Cog')
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
+
+      - name: Deploy artifact as new release candidate
+        uses: ncipollo/release-action@v1
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          prerelease: true # release candidate
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.event.inputs.tag }}
+          body: ${{ github.event.head_commit.message }}
