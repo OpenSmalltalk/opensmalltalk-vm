@@ -60,11 +60,10 @@ will result in incorrect version stamps in your compiled VMs.
 Overview
 --------
 First, opensmalltalk-vm (a.k.a. the Cog VM) is the virtual machine beneath the
-Cuis, Pharo and Squeak Smalltalk dialects.  For issues related to these systems
+Cuis and Squeak Smalltalk dialects. For issues related to these systems
 that are unrelated to the VM itself, please use their forums:
 * https://cuis.st/community
-* http://pharo.org/community
-* http://squeak.org/community/
+* https://squeak.org/community
 
 Second, the core VM, which comprises the execution engine and garbage collector,
 and the core plugins, is developed in Smalltalk, using the *VM Simulator*.  This
@@ -104,7 +103,7 @@ optimization that does speculative inlining at the bytecode-to-bytecode level.
 
 Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
 object representation for Squeak as described in the back-to-the-future paper.
-Spur, as described on the www.mirandabanda.org blog, and in the paper "A partial read barrier for efficient support of live object-oriented programming" by Miranda & Béra, is a faster object
+Spur, as described on the www.mirandabanda.org blog, and in the paper "A partial read barrier for efficient support of live object-oriented programming" by Miranda & BÃ©ra, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
 become, a single object header format common to 32 and 64 bit versions, and a
 segmented heap that can grow and shrink, releasing memory back to the host OS.
@@ -174,10 +173,14 @@ Platform build directories
 The current "official" build directories are of the form
 building/OS_WordSize_Processor, and include
 ```
-	building/linux32x86	- uses autoconf, gcc and make
-	building/macos32x86	- 32-bit Mac OS X using clang and gmake
-	building/macos64x64	- 64-bit Mac OS X using clang and gmake
-	building/win32x86		- uses cygwin, gcc and gmake
+	building/linux32x86   - uses autoconf, clang (or gcc), and make
+	building/linux64x64   - uses autoconf, clang (or gcc), and make
+	building/linux64ARMv8 - uses autoconf, clang (or gcc), and make
+	building/macos64x64	  - macOS on Intel using clang and gmake (via XCode)
+	building/macos64ARMv8 - macOS on ARM using clang and gmake (via XCode)
+	building/win32x86     - uses msys2, clang, and make; supports Visual Studio Native Tools Command Prompt
+	building/win64x64     - uses msys2, clang, and make; supports Visual Studio Native Tools Command Prompt
+	building/win64ARMv8   - uses msys2, clang, and make; supports Visual Studio Native Tools Command Prompt
 ```
 More can be added as required.  In each there is a HowToBuild that describes
 the necessary steps to compile a VM.
@@ -186,15 +189,12 @@ Within each building/OS_WordSize_Processor directory are a set of build director
 for specific configurations of Cog, and for support code and makefiles.  For
 example, there exist
 ```
-	building/macos32x86/squeak.cog.spur   - A Cog JIT VM with Squeak branding,
+	building/macos64x64/squeak.cog.spur   - A Cog JIT VM with Squeak branding,
                                          using the Spur memory manager.
-	building/macos32x86/squeak.stack.spur - A Stack interpreter VM with Squeak
+	building/macos64x64/squeak.stack.spur - A Stack interpreter VM with Squeak
                                          branding, and the Spur memory manager.
-	building/macos32x86/squeak.cog.v3     - A Cog JIT VM with Squeak branding,
+	building/win32x86/squeak.cog.v3     - A Cog JIT VM with Squeak branding,
                                          using the old Squeak memory manager.
-	building/macos32x86/pharo.cog.spur    - A Cog JIT VM with Pharo branding and
-                                         plugins (not yet implemented) using the
-                                         Spur memory manager.
 ```
     etc.
 
