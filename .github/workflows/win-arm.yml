@@ -114,7 +114,7 @@ jobs:
         env:
           MSYS_SYS: ${{ matrix.arch.msystem }}
           MSYS_ENV: ${{ matrix.arch.msys-env }}
-          MSYS_PATH: ${{ steps.msys2.outputs.msys2-location }}
+          MSYS_PATH: /d/a/_temp/msys64 # hmpf... where to lookup?
 
       - name: Sign VM (not implemented)
         if: false
