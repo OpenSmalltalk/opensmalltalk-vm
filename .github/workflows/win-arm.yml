@@ -85,8 +85,8 @@ jobs:
 
       - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
         uses: msys2/setup-msys2@v2
+        id: msys2
         with:
-          location: \msys64
           msystem: ${{ matrix.arch.msystem }}
           release: true # no MSYS2 installed in ARM64 runners
           update: false # faster?
