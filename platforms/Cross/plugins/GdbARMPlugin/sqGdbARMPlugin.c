@@ -197,6 +197,12 @@ disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 
 		dis.arch = bfd_arch_arm;
 		dis.mach = bfd_mach_arm_unknown;
+		// Choose register names used in disassembly. The default is to use gcc's which uses "sl" for "r10"
+#if 0
+		dis.disassembler_options = "reg-names-std";	// Select register names used in ARM's ISA documentation
+#else
+		dis.disassembler_options = "reg-names-Cog";	// Like std but uses "fp" for "r11"
+#endif
 
 		// sets some fields in the structure dis to architecture specific values
 		disassemble_init_for_target( &dis );
