@@ -9,7 +9,7 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/win*/**' # Makefile-based build scripts
+      - 'building/win[36][24]x*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/win32/**'
