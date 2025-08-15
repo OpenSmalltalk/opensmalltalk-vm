@@ -103,7 +103,7 @@ RM:= rm
 SED:=sed
 NM:= $(TOOLPREFIX)nm
 DLLTOOL:=	$(TOOLPREFIX)dlltool
-DLLWRAP:=	$(TOOLPREFIX)gcc -shared
+DLLWRAP:=	$(TOOLPREFIX)ld -shared
 STRIP:= 	$(TOOLPREFIX)strip
 OBJCOPY:=	$(TOOLPREFIX)objcopy
 

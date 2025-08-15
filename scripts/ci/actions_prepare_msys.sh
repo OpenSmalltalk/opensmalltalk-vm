@@ -20,10 +20,11 @@ ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/dlltool ${MSYS_PATH}/${MSYS_SYS}/bin/${MSY
 ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/as ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-as
 ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/windres ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-windres
 ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/nm ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-nm
+ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/ld ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-ld
 ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/strip ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-strip
 ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/objcopy ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-objcopy
 
-# We now use "gcc -shared" instead of "dllwrap". See Makefile.tools.
+# We now use "gcc -shared" od "ld -shared" instead of "dllwrap". See Makefile.tools.
 #ln -f -s ${MSYS_PATH}/${MSYS_SYS}/bin/dllwrap ${MSYS_PATH}/${MSYS_SYS}/bin/${MSYS_ENV}-w64-mingw32-dllwrap
 
 # Add MinGW tools for build scripts
