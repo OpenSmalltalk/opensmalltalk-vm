@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Bochs x64 simulator for the BochsX64Alien plugin.
-# This sets up the x64 compile for Cog on win32 under cygwin.  Disable as much
+# Bochs x86 simulator for the BochsIA32Alien plugin.
+# This sets up the x86 compile for Cog on win32 under cygwin.  Disable as much
 # inessential stuff as possible leaving only the cpu/fpu & memory interface
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
@@ -9,7 +9,7 @@
 # $ ../../../processors/IA32/bochs/makeem
 
 set echo
-CFLAGS="-m32 $CFLAGS"
+CFLAGS="-m64 $CFLAGS"
 CFLAGS="-Dsetjmp=_setjmp $CFLAGS"
 CFLAGS="-pipe -O0 $CFLAGS"
 CFLAGS="-g3 $CFLAGS"
@@ -28,8 +28,10 @@ export LDFLAGS
 	--enable-sse=2 \
 	--enable-assert-checks \
 	--with-nogui \
-		--enable-x86-64 \
-		--enable-global-pages \
+		--disable-x86-64 \
+		--disable-pae \
+		--disable-large-pages \
+		--disable-global-pages \
 		--disable-mtrr \
 		--disable-sb16 \
 		--disable-ne2000 \

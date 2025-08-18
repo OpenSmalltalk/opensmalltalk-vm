@@ -1,18 +1,19 @@
 #!/bin/sh
 
-# Bochs x64 simulator for the BochsX64Alien plugin.
-# This sets up the x64 compile for Cog on win32 under cygwin.  Disable as much
+# Bochs x86 simulator for the BochsIA32Alien plugin.
+# This sets up the x86 compile for Cog on win32 under cygwin.  Disable as much
 # inessential stuff as possible leaving only the cpu/fpu & memory interface
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
-# $ ./conf.COG.dbg
+# $ ./conf.COG
 # $ ../../../processors/IA32/bochs/makeem
 
 set echo
-CFLAGS="-m32 $CFLAGS"
+# CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
+CFLAGS="-m64 $CFLAGS"
 CFLAGS="-Dsetjmp=_setjmp $CFLAGS"
-CFLAGS="-pipe -O0 $CFLAGS"
-CFLAGS="-g3 $CFLAGS"
+CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions $CFLAGS"
+CFLAGS="-g $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
 
@@ -23,13 +24,16 @@ export CXXFLAGS
 export LDFLAGS
 
 ../../../processors/IA32/bochs/configure \
+	-target=x86_64-w64-mingw32 \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \
 	--enable-assert-checks \
 	--with-nogui \
-		--enable-x86-64 \
-		--enable-global-pages \
+		--disable-x86-64 \
+		--disable-pae \
+		--disable-large-pages \
+		--disable-global-pages \
 		--disable-mtrr \
 		--disable-sb16 \
 		--disable-ne2000 \
