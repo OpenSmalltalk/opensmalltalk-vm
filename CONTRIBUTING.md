@@ -1,13 +1,15 @@
 # How to contribute
 
 First, opensmalltalk-vm (a.k.a. the Cog VM) is the virtual machine beneath the
-Cuis, Pharo and Squeak Smalltalk dialects and one of the VMs beneath the
-Newspeak language.  For issues related to these systems that are unrelated to
+Cuis and Squeak Smalltalk dialects.  For issues related to these systems that are unrelated to
 the VM itself, please use their forums:
 * https://cuis.st/community
-* http://pharo.org/community
 * http://squeak.org/community/
-* http://newspeaklanguage.org
+
+*Note that we dropped support for Newspeak and Pharo VM flavors in August 2025.
+The last working sources can be found in the tags
+[last-support-newspeak](https://github.com/OpenSmalltalk/opensmalltalk-vm/tree/last-support-newspeak) and
+[last-support-pharo](https://github.com/OpenSmalltalk/opensmalltalk-vm/tree/last-support-pharo).*
 
 Second, the core VM, which comprises the execution engine and garbage collector,
 and the core plugins, is developed in Smalltalk, using the *VM Simulator*.  This
