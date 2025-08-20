@@ -15,7 +15,11 @@ CFLAGS="-pipe -O0 $CFLAGS"
 CFLAGS="-g3 $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
+CC=clang
+CXX=clang++
 
+export CC
+export CXX
 export CFLAGS
 export CPATH
 export CPPFLAGS

@@ -8,8 +8,6 @@
 #include <cpu/cpu.h>
 #include <iodev/iodev.h>
 
-#include "sqSetjmpShim.h"
-
 #define min(a,b) ((a)<=(b)?(a):(b))
 
 BOCHSAPI BX_CPU_C bx_cpu;
@@ -54,7 +52,7 @@ static Bit32u         lastValidPC; // for probeIfetch when used by cpu_loop
 		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
 
-		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0)
+		if ((theErrorAcorn = _setjmp(anx64->jmp_buf_env)) != 0)
 			return theErrorAcorn;
 
 		blidx = 0;
@@ -140,7 +138,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
+		if ((theErrorAcorn = _setjmp(anx64->jmp_buf_env)) != 0) {
 			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			return theErrorAcorn;
 		}

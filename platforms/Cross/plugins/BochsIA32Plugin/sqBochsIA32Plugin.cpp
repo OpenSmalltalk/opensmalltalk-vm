@@ -8,8 +8,6 @@
 #include <cpu/cpu.h>
 #include <iodev/iodev.h>
 
-#include "sqSetjmpShim.h"
-
 #define min(a,b) ((a)<=(b)?(a):(b))
 
 BOCHSAPI BX_CPU_C bx_cpu;
@@ -53,7 +51,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		if (anx86 != &bx_cpu)
 			return BadCPUInstance;
 
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0)
+		if ((theErrorAcorn = _setjmp(anx86->jmp_buf_env)) != 0)
 			return theErrorAcorn;
 
 		blidx = 0;
@@ -120,7 +118,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
+		if ((theErrorAcorn = _setjmp(anx86->jmp_buf_env)) != 0) {
 			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
 			return theErrorAcorn;
 		}

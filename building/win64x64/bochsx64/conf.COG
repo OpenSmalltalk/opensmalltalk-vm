@@ -16,7 +16,11 @@ CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions $CFLAGS"
 CFLAGS="-g $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
+CC=clang
+CXX=clang++
 
+export CC
+export CXX
 export CFLAGS
 export CPATH
 export CPPFLAGS
@@ -24,7 +28,6 @@ export CXXFLAGS
 export LDFLAGS
 
 ../../../processors/IA32/bochs/configure \
-	-target=x86_64-w64-mingw32 \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \
