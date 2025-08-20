@@ -1,0 +1,6 @@
+#!/bin/sh -e
+test -d bfd || ./conf.COG
+(cd ./bfd; make COG=1 bfdver.h targmatch.h libbfd.a)
+(cd ./libiberty; make COG=1 libiberty.a)
+(cd ./opcodes; make COG=1 libopcodes.a)
+(cd ./sim/aarch64; make version.c; test -f version.c-tmp && mv version.c-tmp version.c; make COG=1 libsim.a)

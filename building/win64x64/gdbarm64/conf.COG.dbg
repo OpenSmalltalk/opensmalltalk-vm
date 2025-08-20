@@ -1,0 +1,18 @@
+#!/bin/sh
+S=../../../../processors/ARM/gdb-8.3.1
+export CFLAGS="-m64 -g3 -O0 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+CONFFLAGS='CC=clang CXX=clang++ --with-system-zlib=yes'
+mkdir -p bfd gdb libiberty opcodes sim/common sim/aarch64
+for d in bfd gdb libiberty opcodes; do
+	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)
+done
+for d in sim/common sim/aarch64; do
+	(cd $d;
+	 ../$S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS \
+		--disable-sim-trace)
+done
+
+rm -f THIS_IS_A_*
+echo >THIS_IS_A_DEBUG_CONFIG
+
+echo "and don't forget to run ./makeem"
