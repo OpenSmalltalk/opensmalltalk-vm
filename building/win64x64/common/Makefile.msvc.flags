@@ -90,7 +90,7 @@ CFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
 CXXFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	$(CXX_EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
+# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x64.asm
 JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
 
 # Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with

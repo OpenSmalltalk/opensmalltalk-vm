@@ -272,7 +272,7 @@ $(VMDEF) $(VMLIB): $(VMOBJ)
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.msvc ../common/Makefile.msvc.plugin)))
+plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.msvc.plugin ../common/Makefile.msvc.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))

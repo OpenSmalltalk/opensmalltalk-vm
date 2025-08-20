@@ -1,4 +1,4 @@
-BOX:=../bochsx86
+BOX:=../bochsx64
 PREREQUISITES:=$(BOX)/cpu/libcpu.a $(BOX)/disasm/libdisasm.a $(BOX)/fpu/libfpu.a
 
 DLLTOOLEXTRA := $(BOX)/cpu/libcpu.a \
@@ -6,11 +6,11 @@ DLLTOOLEXTRA := $(BOX)/cpu/libcpu.a \
 				$(BOX)/disasm/libdisasm.a
 DLLWRAPEXTRA := $(DLLTOOLEXTRA)
 
-LINK_WITH_GPP := yes
-EXTRALIBS:= -L$(BOX)/cpu -L$(BOX)/fpu -L$(BOX)/disasm \
-			-lcpu -lfpu -ldisasm
+# LINK_WITH_GPP := yes --- Unsupported. See Makefile.msvc.plugin
+EXTRALIBS:= /LIBPATH:$(BOX)/cpu /LIBPATH:$(BOX)/fpu /LIBPATH:$(BOX)/disasm \
+			libcpu.a libfpu.a libdisasm.a
 
-include ../common/Makefile.plugin
+include ../common/Makefile.msvc.plugin
 
 INCLUDES+=-I$(BOX) \
          -I../../../processors/IA32/bochs \
