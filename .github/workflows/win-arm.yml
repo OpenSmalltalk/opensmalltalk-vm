@@ -91,22 +91,10 @@ jobs:
           release: true # no MSYS2 installed in ARM64 runners
           update: false # faster?
           cache: true
-          # note that there is no "toolchain" group yet for aarch64
           install: |
             git
             base-devel
-            mingw-w64-${{ matrix.arch.msys-env }}-clang
-            mingw-w64-${{ matrix.arch.msys-env }}-clang-analyzer
-            mingw-w64-${{ matrix.arch.msys-env }}-clang-tools-extra
-            mingw-w64-${{ matrix.arch.msys-env }}-llvm
-            mingw-w64-${{ matrix.arch.msys-env }}-libmangle-git
-            mingw-w64-${{ matrix.arch.msys-env }}-winpthreads
-            mingw-w64-${{ matrix.arch.msys-env }}-lldb
-            mingw-w64-${{ matrix.arch.msys-env }}-llvm-openmp
-            mingw-w64-${{ matrix.arch.msys-env }}-make
-            mingw-w64-${{ matrix.arch.msys-env }}-pkgconf
-            mingw-w64-${{ matrix.arch.msys-env }}-tools-git
-            mingw-w64-${{ matrix.arch.msys-env }}-winstorecompat-git
+            mingw-w64-${{ matrix.arch.msys-env }}-toolchain
 
       - name: Build VM
         shell: msys2 {0} #bash
