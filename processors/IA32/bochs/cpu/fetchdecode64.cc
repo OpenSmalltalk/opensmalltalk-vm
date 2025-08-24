@@ -3379,6 +3379,10 @@ BX_CPU_C::fetchDecode64(const Bit8u *iptr, bxInstruction_c *i, unsigned remainin
           /*os64*/ 0,  // operand size 64 override defaults to 0
           /*as64*/ 1); // address size 64 override defaults to 1
 
+#if COG
+  BX_CPU_THIS_PTR timeStampCounter += 1;
+#endif
+
 fetch_b1:
   b1 = *iptr++;
   ilen++;

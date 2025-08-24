@@ -2490,6 +2490,10 @@ BX_CPU_C::fetchDecode32(const Bit8u *iptr, bxInstruction_c *i, unsigned remainin
 
   offset = os_32 << 9; // * 512
 
+#if COG
+  BX_CPU_THIS_PTR timeStampCounter += 1;
+#endif
+
 fetch_b1:
   b1 = *iptr++;
   ilen++;

@@ -979,6 +979,9 @@ void BX_CPU_C::reset(unsigned source)
     async_event = 1;
   }
 #endif
+#if COG
+	BX_CPU_THIS_PTR timeStampCounter = 0;
+#endif
 
   // initialize CPUID values - make sure apicbase already initialized
   set_cpuid_defaults();

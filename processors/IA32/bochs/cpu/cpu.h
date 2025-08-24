@@ -963,8 +963,9 @@ public: // for now...
 #endif
 #if COG	// jmp_buf_env moved here to make the member offsets as platform
   jmp_buf jmp_buf_env;
+  Bit64u  timeStampCounter;
 
-#else // we don't need no steenkin paging
+#else // we don't need no steenkin' paging
   // for paging
   struct {
     bx_TLB_entry entry[BX_TLB_SIZE] BX_CPP_AlignN(16);
