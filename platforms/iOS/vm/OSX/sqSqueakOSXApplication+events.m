@@ -46,6 +46,8 @@
 
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakOSXAppDelegate *gDelegateApp;
+extern sqInt getInterruptKeycode(void);
+extern void setInterruptPending(sqInt);
 
 static int buttonState = 0;
 
@@ -235,8 +237,11 @@ yZero()
 		sqIntptr_t keyCodeRemembered = evt.charCode;
 		evt.charCode  = isoCharacter;
 		evt.pressCode = EventKeyChar;
-		evt.modifiers = evt.modifiers;
+		// evt.modifiers = evt.modifiers;
 		evt.utf32Code = unicode;
+
+		if (((evt.modifiers << 8) + isoCharacter) == getInterruptKeycode())
+			setInterruptPending(TRUE);
 
 		[self pushEventToQueue: (sqInputEvent *) &evt];
 
