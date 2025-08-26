@@ -111,6 +111,14 @@ struct ms
   char 		  *msName;
   int		   fd;
   struct libevdev *dev;
+
+  /* Emulation of relative mouse device using absolute device */
+  int touching;
+  int moved;
+  int has_x;
+  int has_y;
+  int curr_x;
+  int curr_y;
 };
 
 static struct ms mouseDev;
@@ -231,6 +239,19 @@ static void updateMouseButtons(struct input_event* evt) {
 	case BTN_LEFT:   buttonState |= LeftMouseButtonBit;  break;
 	case BTN_MIDDLE: buttonState |= MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState |= RightMouseButtonBit; break;
+
+        /* /\* When simulating a 3-button mouse via a multitouch touchpad: *\/ */
+        /* case BTN_TOOL_DOUBLETAP: buttonState |= LeftMouseButtonBit;  break; */
+        /* case BTN_TOOL_TRIPLETAP: buttonState |= RightMouseButtonBit; break; */
+        /* case BTN_TOOL_QUADTAP:   buttonState |= MidMouseButtonBit;   break; */
+
+        case BTN_TOUCH: {
+          mouseDev.touching = 1;
+          mouseDev.moved = 0;
+          mouseDev.has_x = 0;
+          mouseDev.has_y = 0;
+          break;
+        }
 	default: break;
       }
     } else if (evt->value == 0) { /* button up */
@@ -238,6 +259,23 @@ static void updateMouseButtons(struct input_event* evt) {
 	case BTN_LEFT:   buttonState &= ~LeftMouseButtonBit;  break;
 	case BTN_MIDDLE: buttonState &= ~MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState &= ~RightMouseButtonBit; break;
+
+        /* /\* When simulating a 3-button mouse via a multitouch touchpad: *\/ */
+        /* case BTN_TOOL_DOUBLETAP: buttonState &= ~LeftMouseButtonBit;  break; */
+        /* case BTN_TOOL_TRIPLETAP: buttonState &= ~RightMouseButtonBit; break; */
+        /* case BTN_TOOL_QUADTAP:   buttonState &= ~MidMouseButtonBit;   break; */
+
+        case BTN_TOUCH: {
+          if (mouseDev.touching && !mouseDev.moved) {
+            // A tap.
+            enqueueMouseEvent(buttonState | LeftMouseButtonBit, 0, 0);
+            enqueueMouseEvent(buttonState & ~LeftMouseButtonBit, 0, 0);
+          }
+          mouseDev.touching = 0;
+          mouseDev.moved = 0;
+          mouseDev.has_x = 0;
+          mouseDev.has_y = 0;
+        }
 	default: break;
       }
     }
@@ -638,6 +676,37 @@ static void processLibEvdevMouseEvents() {
 	default:
 	  break;
 	}
+      }
+
+      if (type == EV_ABS) {
+        switch (code) {
+          case ABS_X:
+            if (mouseDev.has_x) {
+              if (mouseDev.moved || abs(value - mouseDev.curr_x) > 64) {
+                enqueueMouseEvent(buttonState, (value - mouseDev.curr_x) >> 2, 0);
+                mouseDev.curr_x = value;
+                mouseDev.moved = 1;
+              }
+            } else {
+              mouseDev.has_x = 1;
+              mouseDev.curr_x = value;
+            }
+            break;
+          case ABS_Y:
+            if (mouseDev.has_y) {
+              if (mouseDev.moved || abs(value - mouseDev.curr_y) > 64) {
+                enqueueMouseEvent(buttonState, 0, (value - mouseDev.curr_y) >> 2);
+                mouseDev.curr_y = value;
+                mouseDev.moved = 1;
+              }
+            } else {
+              mouseDev.has_y = 1;
+              mouseDev.curr_y = value;
+            }
+            break;
+          default:
+            break;
+        }
       }
     }
   }
