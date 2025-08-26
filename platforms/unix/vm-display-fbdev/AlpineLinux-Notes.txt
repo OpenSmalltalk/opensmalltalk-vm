@@ -1,5 +1,5 @@
 These are notes on how to get Cuis (or Squeak) Smalltalk IDEs to
-run in a Framebuffer [No wondow system] on Alpine Linux
+run in a Framebuffer [No window system] on Alpine Linux
 
 =================== Get Alpine Linux
 Example here is from the aarch64 download for the Raspberry Pi
