@@ -246,6 +246,21 @@ static void updateMouseButtons(struct input_event* evt) {
 
 /* Translate between libevdev and OpenSmalltalk/Squeak VM view of keystrokes */
 
+
+struct kb
+{
+  char			 *kbName;
+  int			  fd;
+  int			  kbMode;
+  int			  state;
+  struct libevdev	 *dev;
+  int			  altKeyBit;
+  int			  metaKeyBit;
+};
+
+static struct kb kbDev;
+
+
 /*==================*/
 /* Keyboard Key     */
 /*==================*/
@@ -416,14 +431,14 @@ static void updateModifierState(struct input_event* evt)
       printEvtModifierKey(evt);
 #endif
       switch (evt->code) {
-	case KEY_LEFTMETA:   leftAdjuncts  |= CommandKeyBit; break;
-	case KEY_LEFTALT:    leftAdjuncts  |= OptionKeyBit;  break;
-	case KEY_LEFTCTRL:   leftAdjuncts  |= CtrlKeyBit;    break;
-	case KEY_LEFTSHIFT:  leftAdjuncts  |= ShiftKeyBit;   break;
-	case KEY_RIGHTMETA:  rightAdjuncts |= CommandKeyBit; break;
-	case KEY_RIGHTALT:   rightAdjuncts |= OptionKeyBit;  break;
-	case KEY_RIGHTCTRL:  rightAdjuncts |= CtrlKeyBit;    break;
-	case KEY_RIGHTSHIFT: rightAdjuncts |= ShiftKeyBit;   break;
+	case KEY_LEFTMETA:   leftAdjuncts  |= kbDev.metaKeyBit;  break;
+	case KEY_LEFTALT:    leftAdjuncts  |= kbDev.altKeyBit;   break;
+	case KEY_LEFTCTRL:   leftAdjuncts  |= CtrlKeyBit;        break;
+	case KEY_LEFTSHIFT:  leftAdjuncts  |= ShiftKeyBit;       break;
+	case KEY_RIGHTMETA:  rightAdjuncts |= kbDev.metaKeyBit;  break;
+	case KEY_RIGHTALT:   rightAdjuncts |= kbDev.altKeyBit;   break;
+	case KEY_RIGHTCTRL:  rightAdjuncts |= CtrlKeyBit;        break;
+	case KEY_RIGHTSHIFT: rightAdjuncts |= ShiftKeyBit;       break;
 	default: break;
 	}
      } else if (evt->value == 0) { /* button up */
@@ -431,31 +446,20 @@ static void updateModifierState(struct input_event* evt)
        printEvtModifierKey(evt);
 #endif
        switch (evt->code) {
-	case KEY_LEFTMETA:   leftAdjuncts  &= ~CommandKeyBit; break;
-	case KEY_LEFTALT:    leftAdjuncts  &= ~OptionKeyBit;  break;
-	case KEY_LEFTCTRL:   leftAdjuncts  &= ~CtrlKeyBit;    break;
-	case KEY_LEFTSHIFT:  leftAdjuncts  &= ~ShiftKeyBit;   break;
-	case KEY_RIGHTMETA:  rightAdjuncts &= ~CommandKeyBit; break;
-	case KEY_RIGHTALT:   rightAdjuncts &= ~OptionKeyBit;  break;
-	case KEY_RIGHTCTRL:  rightAdjuncts &= ~CtrlKeyBit;    break;
-	case KEY_RIGHTSHIFT: rightAdjuncts &= ~ShiftKeyBit;   break;
+	case KEY_LEFTMETA:   leftAdjuncts  &= ~kbDev.metaKeyBit;  break;
+	case KEY_LEFTALT:    leftAdjuncts  &= ~kbDev.altKeyBit;   break;
+	case KEY_LEFTCTRL:   leftAdjuncts  &= ~CtrlKeyBit;        break;
+	case KEY_LEFTSHIFT:  leftAdjuncts  &= ~ShiftKeyBit;       break;
+	case KEY_RIGHTMETA:  rightAdjuncts &= ~kbDev.metaKeyBit;  break;
+	case KEY_RIGHTALT:   rightAdjuncts &= ~kbDev.altKeyBit;   break;
+	case KEY_RIGHTCTRL:  rightAdjuncts &= ~CtrlKeyBit;        break;
+	case KEY_RIGHTSHIFT: rightAdjuncts &= ~ShiftKeyBit;       break;
 	default: break;
         }
      }
   } 
 }
 
-
-struct kb
-{
-  char			 *kbName;
-  int			  fd;
-  int			  kbMode;
-  int			  state;
-  struct libevdev	 *dev;  
-};
-
-static struct kb kbDev;
 
 
 /* NB: Distinguish (libevdev keycode) -> (squeak keycode)
@@ -488,7 +492,7 @@ static void kb_freeGraphics(struct kb *kbdSelf)
 }
 
 
-void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
+void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock, int kbSwapMeta)
 {
   int rc;
 
@@ -517,6 +521,9 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 	      }*/
 
   /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
+
+  kbDev.altKeyBit = kbSwapMeta ? CommandKeyBit : OptionKeyBit;
+  kbDev.metaKeyBit = kbSwapMeta ? OptionKeyBit : CommandKeyBit;
 }
 
 
