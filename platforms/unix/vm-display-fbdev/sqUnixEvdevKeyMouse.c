@@ -194,40 +194,9 @@ static int wheelDelta = 0;  /* reset in clearMouseButtons() */
 static void clearMouseWheel() {  wheelDelta = 0 ; }
 static int  mouseWheelDelta() { return ( wheelDelta ) ; }
 
-/* this is done by enqueueMouseEvent() 
-static void setSqueakMousePosition( int newX, int newY ) {
-  mousePosition.x = newX;
-  mousePosition.y = newY;
-  } */
-
 static void copyMousePositionInto(SqPoint *mousePt) {
   mousePt->x = mousePosition.x;
   mousePt->y = mousePosition.y;
-}
-
-static void updateSqueakMousePosition(struct input_event* evt) {
-/* Nota Bene: up => deltaY UP is negative; {0,0} at topLeft of screen */
-  if (evt->type == EV_REL) {
-    switch (evt->code) {
-      case REL_X:
-	/* no less than 0 */
-	mousePosition.x = max(0, mousePosition.x + evt->value) ;
-	break;
-      case REL_Y:
-	/* no less than 0 */
-	mousePosition.y = max(0, mousePosition.y + evt->value) ; 
-	break;
-      case REL_WHEEL:
-	wheelDelta += evt->value;
-	DPRINTF( "*** Wheel VALUE: %d; DELTA: %d ",
-		 mouseWheelDelta(),
-		 evt->value ) ;
-		mousePosition.y = max(0, mousePosition.y + evt->value) ;  
-	break;
-      default:
-	break;
-    }
-  }
 }
 
 #ifdef DEBUG_EVENTS
