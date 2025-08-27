@@ -1,81 +1,113 @@
+These are notes on how to get Cuis (or Squeak) Smalltalk IDEs to
+run in a Framebuffer [No window system] on Alpine Linux
+
+=================== Get Alpine Linux
+Example here is from the aarch64 download for the Raspberry Pi
+
 Download raspi aa4ch64 from
   https://alpinelinux.org/downloads/
-file:
-  http://dl-cdn.alpinelinux.org/alpine/v3.12/releases/aarch64/alpine-rpi-3.12.0-aarch64.tar.gz
 Instructions at
   https://wiki.alpinelinux.org/wiki/Classic_install_or_sys_mode_on_Raspberry_Pi
--------------------
-===================
+
+=================== Prerequisites
+To get the needed packages, you must enable the "community" repo
+by editing the file "/etc/apk/repositories".
+
 While easy to use, Alpine Linux packages are needed.  Here is what I added:
 -------------------
-sudo apk add mg bash git lsblk sudo htop 
-sudo apk add binutils build-base perl gdb libtool
-sudo apk add mandoc mandoc-apropos man-pages
-sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
-sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
-sudo apk add linux-rpi-dev linux-rpi4-dev linux-headers
-sudo apk add libevdev-dev glib-dev glu-dev openssl-dev
++ superuser
+# sudo apk add mg bash git lsblk sudo htop 
+# sudo apk add binutils build-base perl gcc gdb libtool make
+# sudo apk add mandoc mandoc-apropos man-pages
+# sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
+# sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
+# sudo apk add linux-rpi-dev linux-rpi4-dev linux-headers
+# sudo apk add libevdev-dev glib-dev glu-dev openssl-dev libevent-dev
 
-===================
-group ownership:
-/dev/shm mem
-/dev/input/event0 input
-/dev/input/event1 input
-/dev/input/fb0 video
+==================== Get OpenSmalltalk-VM and (e.g.) Cuis Smaltalk
++ regular user account <you>
+> git clone https://github.com/OpenSmalltalk/opensmalltalk-vm
+> mkdir Cuis-Smalltalk
+> cd Cuis-Smalltalk
+> git clone https://Cuis-Smalltalk/Cuis-Smalltalk-Dev
+> cd Cuis-Smalltalk-Dev
+> ./clonePackageRepos.sh  ;; populates Cuis-Smalltalk dir with Cuis Packages
 
-chgrp input /dev/input/*
-...
-Your user account should include groups
-  wheel video input
-===================
-VM works in 16 bit mode and in 32 bit mode
+=================== Set up shared memory and group ownership
++ superuser
+# addgroup shmem
+;; Check device ownership
+# ls -lasth /dev/fb0  ;; video
+# addgroup <you> video
+# chown root:shmem /dev/shm
+# ls -lasth /dev/shm  ;; shmem
+# addgroup <you> shmem
+# ls -lasth /dev/input/event* ;; input
+# addgroup <you> input
+# groups <you> ;; groups should include shmem,input,video,wheel
+;; enable mount of /dev/shmem by adding a line to "/etc/fstab"
+# echo "tmpfs /dev/shm tmpfs defaults 0 0" >> /etc/fstab
 
-Check with 'fbset'
+=================== Set framebuffer display depth
+;; as superuser, add file /boot/usercfg.txt [without "s]
+"
+max_framebuffers=2
+framebuffer_depth=32
+"
+# reboot
+;; Check with 'fbset'
+# fbset  ;; geometry last field should be "32"
+;; Check that shared memory /dev/shm is mounted
+# df -h
 
->> fbset
->> sudo fbset -depth 16
->> sudo fbset -depth 32
+=================== Build OpenSmalltalk-VM
++ <you>
+> cd ~/opensmalltalk-vm/building/linux64ARMv8/squeak.cog.spur/build
+;; Check mvm to be sure OPT compiler flags include
+;;   -DUSEEVDEV -DMUSL
+> ./mvm ;; answer "y" to "clean?"
 
-===================
-# in .bashrc
-# to allow    'squeak <image>"
-# rather than 'squeak -vm-display-fbdev -fbdev /dev/fb0 <image>'
-SQUEAK_KBDEV=/dev/input/event0
-SQUEAK_VM=display-fbdev
-SQUEAK_FBDEV=/dev/fb0
-SQUEAK_MSDEV=/dev/input/event1
+;; Check generated libraries for vm-display-fbdev and VectorEnginePlugin
+> ls ~/opensmalltalk-vm/products/sqcogspur64ARMv8linuxht/lib/squeak/5*
 
-===================
-If your HDMI display remains black, you may need to
-play with boot options in 'usercfg.txt'
-Following is for RasPi4
-vvvv----vvvv----vvvv
-# usercfg.txt
-enable_uart=1
-dtparam=audio=on
-gpu_mem=256
-#dtoverlay=vc4-kms-v3d-pi4
+*** If either of these libraries is missing, you have missed a reqired
+*** library or include file.  Find & fix..
 
-#KenD# for my old SAMSUNG HDMI TV
-# https://www.raspberrypi.org/documentation/configuration/config-txt/video.md
-hdmi_force_hotplug=1
-hdmi_ignore_edid=0xa5000080
-framebuffer_width=1024
-framebuffer_height=768
-framebuffer_depth=16
-hdmi_drive=2
-# as above fb 1024x768
-hdmi_group=2
-hdmi_mode=16
-config_hdmi_boost=9
-#eof#
-^^^^----^^^^----^^^^
-========
-'bin/setup' fix reboot lossage:
-vvv---vvv
-#!/bin/bash
-sudo umount /dev/shm
-sudo chmod 777 /dev/shm
-sudo mount /dev/shm
-sudo chgrp input /dev/input/*
-^^^---^^^
+*** Sometimes an unneeded library fails to build and can be commented
+*** out in "building/linux64ARMv8/squeak.cog.spur/plugins.int"
+*** Perhaps "HostWindowPlugin" or "Mpeg3Plugin"; just remove & `./mvm` clean
+
+
+=================== Customize your ".bashrc" file
+;; As root, you can edit your entry in /etc/passwd
+;; so that the last field is "/bin/bash"; then reboot
+
+;; To allow    'squeak <image>"
+;; rather than 'squeak -vm-display-fbdev -fbdev /dev/fb0 <image>'
+export SQUEAK_KBDEV=/dev/input/event0
+export SQUEAK_VM=display-fbdev
+export SQUEAK_FBDEV=/dev/fb0
+export SQUEAK_MSDEV=/dev/input/event1
+;; add your local "bin" directory into $PATH
+export PATH=/home/<you>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*** Invoke utility "evtest" to check for /dev/input/event? bindings
+
+=================== Almost there !
+> mkdir ~/bin
+> cd ~/bin
+> ln -s ~/opensmalltalk-vm/products/sqcogspur64ARMv8linuxht/lib/squeak/5*/squeak squeak
+;; Try it out!
+> squeak Cuis-Smalltalk/Cuis-Smalltalk-Dev/CuisImage/Cuis7.*.image &
+
+*** Note that the VectorEnginePlugin is selected only if the plugin
+*** has the right version AND your display has a 32 bit depth.
+*** If you select a Morph but the halo lacks the blue "Change Scale"
+*** handle on the right side, you are using the BitBltCanvas.
+*** In a Workspace, try
+***	MorphicCanvas activeSubclass: VectorCanvas.
+*** Then check `MorphicCanvas activeSubclass.`
+*** Correct as required.
+
+		=== E O F ===
+
