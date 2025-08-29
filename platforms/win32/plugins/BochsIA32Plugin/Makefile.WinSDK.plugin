@@ -1,0 +1,17 @@
+BOX:=../bochsx86
+PREREQUISITES:=$(BOX)/cpu/libcpu.a $(BOX)/disasm/libdisasm.a $(BOX)/fpu/libfpu.a
+
+DLLTOOLEXTRA := $(BOX)/cpu/libcpu.a \
+				$(BOX)/fpu/libfpu.a \
+				$(BOX)/disasm/libdisasm.a
+DLLWRAPEXTRA := $(DLLTOOLEXTRA)
+
+# LINK_WITH_GPP := yes --- Unsupported. See Makefile.WinSDK.plugin
+EXTRALIBS:= /LIBPATH:$(BOX)/cpu /LIBPATH:$(BOX)/fpu /LIBPATH:$(BOX)/disasm \
+			libcpu.a libfpu.a libdisasm.a
+
+include ../common/Makefile.WinSDK.plugin
+
+INCLUDES+=-I$(BOX) \
+         -I../../../processors/IA32/bochs \
+		 -I../../../processors/IA32/bochs/instrument/stubs

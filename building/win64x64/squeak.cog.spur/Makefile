@@ -10,6 +10,9 @@ VMSRCDIR:=../../../src/spur64.cog
 VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)
 ifeq ($(VSCMD_ARG_HOST_ARCH),)
 include ../common/Makefile
+# TODO
+# else if ???
+# include ../common/Makefile.msvc
 else
-include ../common/Makefile.msvc
+include ../common/Makefile.WinSDK
 endif
