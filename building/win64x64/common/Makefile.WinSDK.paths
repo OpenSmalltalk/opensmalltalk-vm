@@ -9,10 +9,6 @@
 MSYS2=c:/msys64/usr/bin
 MSYS2_MINGW64=c:/msys64/mingw64/bin
 
-
-
-
-
 WindowsSdkMajorVersion:=10
 
 ifeq ($(VCINSTALLDIR),)
@@ -34,11 +30,11 @@ endif
 VCLlvmInstallDir:=$(VCINSTALLDIR)/Tools/Llvm
 
 # Overridable LLVM/Clang location
-# LLVM:=c:/llvm/bin
+LLVM:=c:/llvm/bin
 # LLVM:=$(VCLlvmInstallDir)/bin
-LLVM:=$(VCLlvmInstallDir)/x64/bin
+# LLVM:=$(VCLlvmInstallDir)/x64/bin
 # LLVM:=$(VCLlvmInstallDir)/ARM64/bin
-LLVM:=$(shell echo "$(LLVM)" | sed 's/[() ]/\\&/g')
+# LLVM:=$(shell echo "$(LLVM)" | sed 's/[() ]/\\&/g')
 
 # Path to LINK and LIB
 VCToolsBinDir:=$(VCToolsInstallDir)/bin/HostX64/x64
@@ -81,19 +77,20 @@ MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 INCLUDES:= $(filter-out -I., $(INCLUDES)) $(MSVCINCLUDES) $(XINC) -I.
 
 ifeq ($(LIB),)
-LIB:=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/ucrt;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/um
+LIB:=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/ucrt/x64;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/um/x64
 LIB:=$(subst //,/,$(LIB))
 LIB:=$(subst /,\,$(LIB))
 endif
 # $(info LIB is $(LIB))
 
-ifeq ($(LIBPATH),)
-LIBPATH=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(VCToolsInstallDir)/lib/x86/store/references;$(WindowsSdkDir)/UnionMetadata/$(WindowsSDKVersion);$(WindowsSdkDir)/References/$(WindowsSDKVersion)
-LIBPATH:=$(subst //,/,$(LIBPATH))
-LIBPATH:=$(subst /,\,$(LIBPATH))
-endif
+export LIB
+
+
+# ifeq ($(LIBPATH),)
+# LIBPATH=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(VCToolsInstallDir)/lib/x86/store/references;$(WindowsSdkDir)/UnionMetadata/$(WindowsSDKVersion);$(WindowsSdkDir)/References/$(WindowsSDKVersion)
+# LIBPATH:=$(subst //,/,$(LIBPATH))
+# LIBPATH:=$(subst /,\,$(LIBPATH))
+# endif
 # $(info LIBPATH is $(LIBPATH))
 
-
-
-include ../common/Makefile.WinSDK.paths.extra
+# export LIBPATH

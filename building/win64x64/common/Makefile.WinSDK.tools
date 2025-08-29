@@ -22,9 +22,6 @@ CXX:=$(LLVM)/clang++
 # CC:=$(MSYS2_MINGW64)/clang
 # CXX:=$(MSYS2_MINGW64)/clang++
 
-# CC:=clang
-# CXX:=clang++
-
 AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
 Clang:=Clang # Needed to avoid error "invalid integral value 'd' in '-Od'"
 
