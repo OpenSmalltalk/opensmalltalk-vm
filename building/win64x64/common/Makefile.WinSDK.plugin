@@ -83,7 +83,6 @@ LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
 endif
 #$(info LIBOBJ is $(LIBOBJ))
 
-include ../common/Makefile.WinSDK.flags
 include ../common/Makefile.WinSDK.tools
 include ../common/Makefile.WinSDK.rules
 

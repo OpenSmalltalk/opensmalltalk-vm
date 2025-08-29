@@ -85,6 +85,14 @@ msys2_shell.cmd -%MSYS_ENV% -defterm -no-start -here -c "pacman -Sq --noconfirm^
 REM When using the MSVC toolchain and the WinSDK, we are done here.
 IF "%MSYS_ARCH%"=="base" (
     echo GNU dev tools installed. See installWinSDK.bat to continue.
+
+    REM We require dlltool, even when using the MSVC toolchain. Sigh.
+    msys2_shell.cmd -%MSYS_ENV% -defterm -no-start -here -c^
+        "pacman -Sq --noconfirm^
+        mingw-w64-i686-binutils^
+        mingw-w64-x86_64-binutils^
+        mingw-w64-clang-aarch64-binutils"
+
     exit /b)
 
 REM Always install clang into MSYS2, not GCC.

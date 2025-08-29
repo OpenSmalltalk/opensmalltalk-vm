@@ -9,10 +9,13 @@ VMSRCDIR:=../../../src/spur64.cog
 # This variable is set by VS Native Tools Command Prompts, not for cygwin wins
 VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)
 ifeq ($(VSCMD_ARG_HOST_ARCH),)
-include ../common/Makefile
-# TODO
-# else if ???
-# include ../common/Makefile.msvc
+	# We expect a clang to be in any but the default MSYS2 environment. For
+	MSYS2_CLANG_PATH := $(shell command -v clang)
+	ifeq ($(MSYS2_CLANG_PATH),)
+		include ../common/Makefile.WinSDK
+	else
+		include ../common/Makefile
+	endif
 else
-include ../common/Makefile.WinSDK
+	include ../common/Makefile.msvc
 endif

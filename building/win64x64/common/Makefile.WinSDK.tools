@@ -8,24 +8,68 @@
 ARCH:=x64
 export ARCH
 
-# Overridable location of the MSYS2 installation; used for various build
-# tools such as GNU Make, GNU sed, and GNU grep.
-MSYS2=c:/msys64/usr/bin
-MSYS2_MINGW64=c:/msys64/mingw64/bin
+include ../common/Makefile.WinSDK.paths
 
-# Overridable LLVM/Clang location
-LLVM=c:/llvm/bin
+
 
 #############################################################################
 # C compiler settings (MSVC 2017 Community Edition)
 #
 
-# N.B. Compiler selection is in Makefile.WinSDK.flags.  Alas this is because of
-# ordering issues I'm too lazy to fix now.  If you can fix this, please do.
-include ../common/Makefile.WinSDK.flags
+CC:=$(LLVM)/clang
+CXX:=$(LLVM)/clang++
+
+# CC:=$(MSYS2_MINGW64)/clang
+# CXX:=$(MSYS2_MINGW64)/clang++
+
+# CC:=clang
+# CXX:=clang++
+
+AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
+Clang:=Clang # Needed to avoid error "invalid integral value 'd' in '-Od'"
+
+
+# DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
+# -Z7 debug info in files; -Zi debug info in PDB
+# Turn off BUFFER_SECURITY for functional setjmp/longjmp
+BUFFER_SECURITY:=-fno-stack-protector -D_CRT_SECURE_NO_WARNINGS
+# clang supports both -fno-omit-frame-pointer and -fno-omit-leaf-frame-pointer.
+# for exception handing we require a frame pointer (for unwind etc). So supply
+# -fno-omit-frame-pointer but not -fno-omit-leaf-frame-pointer with the intent
+# that clang does use a frame pointer in all non-leaf functions, but does not
+# use a frame pointer in leaf functions.
+#
+# Alas clang-cl supports only /Oy & /Oy- but ignores /Oy- (!!)
+FRAME_POINTER_FLAGS:=-fno-omit-frame-pointer -DcFramePointerInUse=1
+EXCEPTION_FLAGS:=-fexceptions
+CXX_EXCEPTION_FLAGS:=-fexceptions -fcxx-exceptions
+
+PRODUCTION_OFLAGS:=-O2 -finline-hint-functions $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+ASSERT_OFLAGS:=-Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+
+DASH_O:=-o
+# OFLAGS= -O2 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+CFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
+  -Dalloca=_alloca -Dhuge=my_huge \
+  $(EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
+CXXFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
+  -Dalloca=_alloca -Dhuge=my_huge \
+  $(CXX_EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
+# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x64.asm
+JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
+
+# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
+# MSVC and defining NDEBUG installs a default catch-everything exception handler
+# that effectively disables debugging.
+# XDEFS=  -DSQUEAK_BUILTIN_PLUGIN
+
 
 # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro -Wno-undef
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value \
+  -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros \
+  -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro \
+  -Wno-undef
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
@@ -77,9 +121,9 @@ DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
 #############################################################################
 # Linker settings
 #
-LD:=	LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
-LDCXX:=	LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
-LIBRARIAN:=LIB -nologo
+LD:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
+LDCXX:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
+LIBRARIAN:=$(VCToolsBinDir)/LIB -nologo
 # dlltool is used to create import libraries.  The alternatives are
 # Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)
 DLLTOOL:=$(MSYS2_MINGW64)/dlltool
@@ -120,8 +164,8 @@ MKDIR:=$(MSYS2)/mkdir -p # GNU coreutils
 #
 # Note: RC compiles the .rc files into linkable .o files
 #
-RC:=rc -nologo # Microsoft Resource Compiler
-CVTRES:=cvtres -nologo # Microsoft Resource To Object Converter
+RC:=$(WindowsSDKToolsBinDir)/rc -nologo # Microsoft Resource Compiler
+CVTRES:=$(VCToolsBinDir)/cvtres -nologo # Microsoft Resource To Object Converter
 SED:=$(MSYS2)/sed # GNU
 GREP:=$(MSYS2)/grep # GNU
 BASH:=$(MSYS2)/bash

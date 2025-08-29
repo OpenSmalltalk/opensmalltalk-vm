@@ -231,11 +231,14 @@ print-objects:
 
 print-tools:
 	$(info ---------------- Build tools ------------------------)
+	$(info VCINSTALLDIR       $(VCINSTALLDIR))
 	$(info VCToolsInstallDir  $(VCToolsInstallDir))
+	$(info VCToolsBinDir      $(VCToolsBinDir))
 	$(info WindowsSdkDir      $(WindowsSdkDir))
 	$(info WindowsSDKVersion  $(WindowsSDKVersion))
 	$(info MSYS2              $(MSYS2))
 	$(info MSYS2_MINGW64      $(MSYS2_MINGW64))
+	$(info LLVM               $(LLVM))
 	$(info CC    $(shell which $(CC)))
 	$(info ..    $(shell $(CC) --version 2> /dev/null | head -n 1))
 	$(info CXX   $(shell which $(CXX)))
