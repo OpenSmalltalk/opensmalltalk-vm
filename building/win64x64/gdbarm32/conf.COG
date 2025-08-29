@@ -1,7 +1,7 @@
 #!/bin/sh
 S=../../../../processors/ARM/gdb-8.3.1
-export CFLAGS="-m64 -g -O3 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0 -I../../../../../platforms/Cross/plugins/GdbARMPlugin"
-CONFFLAGS='CC=clang CXX=clang++ --with-system-zlib=yes'
+export CFLAGS="-g -O3 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+CONFFLAGS='--target=arm-linux CC=clang CXX=clang++'
 mkdir -p bfd libiberty opcodes sim/common sim/arm
 for d in bfd libiberty opcodes; do
 	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)

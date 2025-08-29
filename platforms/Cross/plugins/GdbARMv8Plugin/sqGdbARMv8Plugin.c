@@ -22,8 +22,6 @@
 #include <bfd.h>
 #include <disassemble.h>
 
-#include "sqSetjmpShim.h"
-
 struct sim_state *lastCPU = NULL;
 sim_cpu initialSimState = {0,};
 

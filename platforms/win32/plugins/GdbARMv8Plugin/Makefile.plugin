@@ -1,0 +1,28 @@
+BOX:=../gdbarm64
+GDB=../../../processors/ARM/gdb-8.3.1
+
+PREREQUISITES:= $(BOX)/bfd/libbfd.a \
+				$(BOX)/libiberty/libiberty.a \
+				$(BOX)/opcodes/libopcodes.a \
+				$(BOX)/sim/aarch64/libsim.a
+
+DLLTOOLEXTRA:= $(BOX)/bfd/libbfd.a \
+				$(BOX)/libiberty/libiberty.a \
+				$(BOX)/opcodes/libopcodes.a \
+				$(BOX)/sim/aarch64/libsim.a
+DLLWRAPEXTRA := $(DLLTOOLEXTRA)
+
+LINK_WITH_GPP := yes
+EXTRALIBS:= -L$(BOX)/bfd -L$(BOX)/libiberty \
+			-L$(BOX)/opcodes -L$(BOX)/sim/aarch64 \
+			-lbfd -liberty -lopcodes -lsim -lz
+
+include ../common/Makefile.plugin
+
+INCLUDES+=-I$(BOX)/bfd \
+		-I$(BOX)/sim \
+		-I$(GDB)/include \
+		-I$(GDB)/opcodes \
+		-I$(GDB)/sim/aarch64 \
+		-I$(GDB)/sim/common \
+		-I$(GDB)/bfd
