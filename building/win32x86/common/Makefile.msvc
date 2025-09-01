@@ -260,12 +260,6 @@ ifneq ($(EXTERNAL_PLUGINS),)
 endif
 
 #############################################################################
-# The exports for named primitives from Squeak (required by VM)
-#
-$(VMDEF) $(VMLIB): $(VMOBJ)
-	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-lib $(OBJDIR)/$(VMLIB) $(VMOBJ)
-
-#############################################################################
 # Building plugins
 #
 

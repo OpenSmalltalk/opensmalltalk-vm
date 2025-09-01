@@ -76,11 +76,6 @@ DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
 LD:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
 LDCXX:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
 LIBRARIAN:=LIB /nologo
-# dlltool is used to create import libraries.  The alternatives are
-# Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)
-# N.B. cygiconv-2.dll cygintl-8.dll cygwin1.dll must be copied to $(CBD64)
-# for this to work.
-DLLTOOL:=$(CBD)/x86_64-w64-mingw32-dlltool
 
 # The JIT will attempt to alloca up to 1.5Mb by default on x86-64. So set
 # the default stack size to 2Mb to avoid crashes in the JIT's alloca.
