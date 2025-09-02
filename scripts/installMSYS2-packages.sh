@@ -15,6 +15,10 @@ else
     # The toolchain groups include compiler, linker, DLL wrappers, etc.
     PACKAGES="${PACKAGES} ${MINGW_PACKAGE_PREFIX}-toolchain"
 
+    # Apparently, the toolchains only install mingw32-make. So, either
+    # create a symlink or install the make package.
+    PACKAGES="${PACKAGES} make"
+
     if [[ "${MSYSTEM}" == "MINGW32" ]] || [[ "${MSYSTEM}" == "MINGW64" ]]; then
         # The architecture is GCC-based. Install Clang.
         PACKAGES="${PACKAGES} \
