@@ -1,16 +1,24 @@
 #############################################################################
-# Common Makefile for Win64 VM using Clang/MSVC, e.g. 2017 Community, GNU make
-# and the Windows 10 SDK.
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #############################################################################
 
-# Overridable location of the MSYS2 installation; used for various build
+
+#############################################################################
+# Common paths, prefixes, and version numbers. 
 # tools such as GNU Make, GNU sed, and GNU grep.
-MSYS2=c:/msys64/usr/bin
-MSYS2_MINGW64=c:/msys64/mingw64/bin
-
+#
 WindowsSdkMajorVersion:=10
+HostARCH:=HostX64
+MSYS2_BIN=c:/msys64/usr/bin/
 
+
+#############################################################################
+# Set paths to the Windows SDK (and tools) and Visual Studio (and tools)
+#
 ifeq ($(VCINSTALLDIR),)
 	VCINSTALLDIR:=C:/Program\ Files/Microsoft\ Visual\ Studio/*/Community/VC
 	VCINSTALLDIR:=$(wildcard $(VCINSTALLDIR))
@@ -26,21 +34,32 @@ else
 	override VCToolsInstallDir:=$(subst \,/,$(VCToolsInstallDir))
 endif
 
-# Path to LLVM that comes with Visual Studio
+
+#############################################################################
+# Set paths to LLVM, for compilers (and maybe other build tools).
+# Note that Visual Studio ships its own version of LLVM/Clang these days.
+#
+
+LLVM_BIN:=c:/llvm/bin/
+
 VCLlvmInstallDir:=$(VCINSTALLDIR)/Tools/Llvm
+# LLVM_BIN:=$(VCLlvmInstallDir)/$(ARCH)/bin/
 
-# Overridable LLVM/Clang location
-LLVM:=c:/llvm/bin
-# LLVM:=$(VCLlvmInstallDir)/bin
-# LLVM:=$(VCLlvmInstallDir)/x64/bin
-# LLVM:=$(VCLlvmInstallDir)/ARM64/bin
-# LLVM:=$(shell echo "$(LLVM)" | sed 's/[() ]/\\&/g')
+# Must escape whitespace and parentheses for scripts
+LLVM_BIN:=$(shell echo "$(LLVM_BIN)" | sed 's/[() ]/\\&/g')
 
-# Path to LINK and LIB
-VCToolsBinDir:=$(VCToolsInstallDir)/bin/HostX64/x64
+
+#############################################################################
+# Set paths to MSVC linker and library tools, LINK and LIB.
+#
+
+VCToolsBinDir:=$(VCToolsInstallDir)/bin/$(HostARCH)/$(ARCH)
 VCToolsBinDir:=$(shell echo "$(VCToolsBinDir)" | sed 's/[() ]/\\&/g')
-# override PATH:=$(VCToolsBinDir):$(PATH)
 
+
+#############################################################################
+# Set paths to Windows SDK and tools (e.g. RC and CVTRES).
+#
 ifeq ($(WindowsSdkDir),)
 	WindowsSdkDir:=C:/Program Files (x86)/Windows Kits/$(WindowsSdkMajorVersion)/
 else
@@ -54,12 +73,14 @@ ifeq ($(WindowsSDKVersion),)
 endif
 override WindowsSDKVersion:=$(subst \,,$(WindowsSDKVersion))
 
-
-# Path to resource compiler
-WindowsSDKToolsBinDir:=$(WindowsSdkDir)/bin/$(WindowsSDKVersion)/x64
+WindowsSDKToolsBinDir:=$(WindowsSdkDir)/bin/$(WindowsSDKVersion)/$(ARCH)
 WindowsSDKToolsBinDir:=$(shell echo "$(WindowsSDKToolsBinDir)" | sed 's/[() ]/\\&/g')
 
 
+#############################################################################
+# Set paths to INCLUDE headers from Visual Studio (e.g., COM stuff) and
+# Windows SDK (e.g., standard C library).
+#
 ifeq ($(INCLUDE),)
 INCLUDE:=$(VCToolsInstallDir)/ATLMFC/include;$(VCToolsInstallDir)/include;$(VCINSTALLDIR)/Auxiliary/VS/include;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/shared;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/ucrt;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/um;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/winrt;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/cppwinrt
 INCLUDE:=$(subst //,/,$(INCLUDE))
@@ -69,28 +90,20 @@ endif
 MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 #$(info MSVCINCLUDES is $(MSVCINCLUDES))
 
-# Include the Microsoft headers and any extras.
 # Put -I. last because boost includes bizarreness such as
 # include <list> which will include a local file called list if -I. comes
 # early in the include path.  Fragile.
-# override INCLUDES:= $(filter-out -I., $(INCLUDES)) $(MSVCINCLUDES) $(XINC) -I.
 INCLUDES:= $(filter-out -I., $(INCLUDES)) $(MSVCINCLUDES) $(XINC) -I.
 
+
+#############################################################################
+# Set paths to system libraries from Visual Studio (e.g. COM stuff) and
+# Windows SDK (e.g., standard C lib).
+#
 ifeq ($(LIB),)
-LIB:=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/ucrt/x64;$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/um/x64
+LIB:=$(VCToolsInstallDir)/ATLMFC/lib/$(ARCH);$(VCToolsInstallDir)/lib/$(ARCH);$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/ucrt/$(ARCH);$(WindowsSdkDir)/lib/$(WindowsSDKVersion)/um/$(ARCH)
 LIB:=$(subst //,/,$(LIB))
 LIB:=$(subst /,\,$(LIB))
+export LIB
 endif
 # $(info LIB is $(LIB))
-
-export LIB
-
-
-# ifeq ($(LIBPATH),)
-# LIBPATH=$(VCToolsInstallDir)/ATLMFC/lib/x64;$(VCToolsInstallDir)/lib/x64;$(VCToolsInstallDir)/lib/x86/store/references;$(WindowsSdkDir)/UnionMetadata/$(WindowsSDKVersion);$(WindowsSdkDir)/References/$(WindowsSDKVersion)
-# LIBPATH:=$(subst //,/,$(LIBPATH))
-# LIBPATH:=$(subst /,\,$(LIBPATH))
-# endif
-# $(info LIBPATH is $(LIBPATH))
-
-# export LIBPATH

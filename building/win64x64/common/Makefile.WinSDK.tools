@@ -1,30 +1,48 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
-# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
 #
-# Compilation rules for 64-bit MSVC 2017 compiler on Microsoft Windows
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #############################################################################
 
+# Supported architecures: x86, x64, arm64
 ARCH:=x64
+# Export ARCH to be used in plugins such as IA32ABI (i.e. FFI callbacks)
 export ARCH
+
+#############################################################################
+# Set paths to toolchain. Note that $(LLVM_BIN) and $(MSYS2_BIN) may be
+# empty, relying on $(PATH) to find those tools.
+#
 
 include ../common/Makefile.WinSDK.paths
 
+ifeq ($(VCToolsBinDir),)
+  $(error Failed to locate Visual Studio build tools!)
+endif
 
+ifeq ($(WindowsSDKToolsBinDir),)
+  $(error Failed to locate Windows SDK build tools!)
+endif
+
+ifeq ($(LLVM_BIN),)
+  $(info Using clang from PATH...)
+endif
+
+ifeq ($(MSYS2_BIN),)
+  $(info Using GNU tools from PATH...)
+endif
 
 #############################################################################
-# C compiler settings (MSVC 2017 Community Edition)
+# C compiler settings 
 #
 
-CC:=$(LLVM)/clang
-CXX:=$(LLVM)/clang++
-
-# CC:=$(MSYS2_MINGW64)/clang
-# CXX:=$(MSYS2_MINGW64)/clang++
+CC:=$(LLVM_BIN)clang
+CXX:=$(LLVM_BIN)clang++
 
 AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
 Clang:=Clang # Needed to avoid error "invalid integral value 'd' in '-Od'"
-
 
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # -Z7 debug info in files; -Zi debug info in PDB
@@ -101,7 +119,6 @@ WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 #NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 NOBUILTIN:=-D_MT
-MACHINE:=x64
 
 # Several versions of clang (all versions from 14 through 18 as of this writing)
 # generate incorrect code for spur segment storage
@@ -118,12 +135,9 @@ DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
 #############################################################################
 # Linker settings
 #
-LD:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
-LDCXX:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(MACHINE) -INCREMENTAL:NO
+LD:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(ARCH) -INCREMENTAL:NO
+LDCXX:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(ARCH) -INCREMENTAL:NO
 LIBRARIAN:=$(VCToolsBinDir)/LIB -nologo
-# dlltool is used to create import libraries.  The alternatives are
-# Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)
-DLLTOOL:=$(MSYS2_MINGW64)/dlltool
 
 # The JIT will attempt to alloca up to 1.5Mb by default on x86-64. So set
 # the default stack size to 2Mb to avoid crashes in the JIT's alloca.
@@ -149,23 +163,25 @@ STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(EXTRANDLS) $(DL)msvcrt \
          advapi32.lib kernel32.lib secur32.lib shell32.lib shfolder.lib
 
 #############################################################################
-# Tools to use
+# Tools to use (usually all from GNU coreutils). If $(MSYS2_BIN)
+# prefix is empty, rely on $(PATH) to find tools.
 #
-CP:= $(MSYS2)/cp # GNU coreutils
-RM:= $(MSYS2)/rm # GNU coreutils
-MV:= $(MSYS2)/mv # GNU coreutils
-MKDIR:=$(MSYS2)/mkdir -p # GNU coreutils
+CP:= $(MSYS2_BIN)cp
+RM:= $(MSYS2_BIN)rm 
+MV:= $(MSYS2_BIN)mv
+MKDIR:=$(MSYS2_BIN)mkdir -p 
 
 #############################################################################
-# RC settings
+# RC settings, Microsoft Resource Compiler
+# CVTRES settings, Microsoft Resource To Object Converter
 #
 # Note: RC compiles the .rc files into linkable .o files
 #
-RC:=$(WindowsSDKToolsBinDir)/rc -nologo # Microsoft Resource Compiler
-CVTRES:=$(VCToolsBinDir)/cvtres -nologo # Microsoft Resource To Object Converter
-SED:=$(MSYS2)/sed # GNU
-GREP:=$(MSYS2)/grep # GNU
-BASH:=$(MSYS2)/bash
+RC:=$(WindowsSDKToolsBinDir)/rc -nologo
+CVTRES:=$(VCToolsBinDir)/cvtres -nologo
+SED:=$(MSYS2_BIN)sed
+GREP:=$(MSYS2_BIN)grep
+BASH:=$(MSYS2_BIN)bash
 SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
 
 ifneq ($(shell $(GREP) 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)

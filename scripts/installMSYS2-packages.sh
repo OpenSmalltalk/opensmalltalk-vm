@@ -4,28 +4,13 @@ set -e
 # ----------------------------------------------------------------------------
 # Download, install, and update MSYS2 packages (e.g. compilers, linkers)
 # ----------------------------------------------------------------------------
-# binutils ... dlltool.exe for x86_64, GCC-based, generic MSYS2 environment
-# mingw-w64-i686-binutils ... dlltool.exe for i686, GCC-based
-#    -> via mingw-w64-i686-toolchain
-# mingw-w64-x86_64-binutils ... dlltool.exe for x86_64, GCC-based
-#    -> via mingw-w64-x86_64-toolchain
-# mingw-w64-clang-x86_64-llvm-tools ... dlltool.exe for x86_64, Clang-based
-#    -> via mingw-w64-clang-x86_64-toolchain
-# mingw-w64-clang-aarch64-llvm-tools ... dlltool.exe for ARM64, Clang-based
-#    -> via mingw-w64-clang-aarch64-toolchain
-# ----------------------------------------------------------------------------
 
-
-# Common GNU dev tools (e.g., git, make ... GNU coreutils and GNU binutils)
-PACKAGES="git base-devel"
+# Common GNU dev tools (e.g., git, sed, grep)
+PACKAGES="git base"
 
 if [[ "${MSYSTEM}" == "MSYS" ]]; then
-    # We require dlltool, even when using the MSVC toolchain.
-    PACKAGES="${PACKAGES} \
-        mingw-w64-i686-binutils \
-        mingw-w64-x86_64-binutils \
-        mingw-w64-clang-x86_64-llvm-tools \
-        mingw-w64-clang-aarch64-llvm-tools"
+    # We require make, because we do not use NMAKE from the MSVC toolchain.
+    PACKAGES="${PACKAGES} make"
 else
     # The toolchain groups include compiler, linker, DLL wrappers, etc.
     PACKAGES="${PACKAGES} ${MINGW_PACKAGE_PREFIX}-toolchain"

@@ -1,8 +1,11 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and GNU make
-# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
 #
-# Compilation rules for Microsoft x64 Native Tools for Visual Studio Community
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compilation rules
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.

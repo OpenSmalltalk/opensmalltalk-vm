@@ -1,6 +1,12 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# RECOMMENDED: Start plain MSYS2 shell, run "mvm" script.
+# Alternative: Start Native Tools Command Prompt, run SETPATH then MAKE*.BAT.
+#
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #
 # Do make init to allow make -n to function.
 #############################################################################
@@ -83,7 +89,7 @@ VMSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 VPATH:= $(VMSRCDIR) $(WIN32DIR) $(CROSSDIR)
 
 #############################################################################
-# Toolchain
+# Toolchain (incl. paths to tools and flags for tools)
 #
 include ../common/Makefile.WinSDK.tools
 
@@ -137,8 +143,8 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
-JMPASM:=_setjmp-x64.asm
-JMPOBJ:=$(OBJDIR)/_setjmp-x64.o
+JMPASM:=_setjmp-$(ARCH).asm
+JMPOBJ:=$(OBJDIR)/_setjmp-$(ARCH).o
 
 .PRECIOUS: mkNamedPrims.exe
 
@@ -231,14 +237,12 @@ print-objects:
 
 print-tools:
 	$(info ---------------- Build tools ------------------------)
-	$(info VCINSTALLDIR       $(VCINSTALLDIR))
-	$(info VCToolsInstallDir  $(VCToolsInstallDir))
-	$(info VCToolsBinDir      $(VCToolsBinDir))
+	$(info VCToolsBinDir          $(VCToolsBinDir))
+	$(info WindowsSDKToolsBinDir  $(WindowsSDKToolsBinDir))
 	$(info WindowsSdkDir      $(WindowsSdkDir))
 	$(info WindowsSDKVersion  $(WindowsSDKVersion))
-	$(info MSYS2              $(MSYS2))
-	$(info MSYS2_MINGW64      $(MSYS2_MINGW64))
-	$(info LLVM               $(LLVM))
+	$(info MSYS2_BIN          $(MSYS2_BIN))
+	$(info LLVM_BIN           $(LLVM_BIN))
 	$(info CC    $(shell which $(CC)))
 	$(info ..    $(shell $(CC) --version 2> /dev/null | head -n 1))
 	$(info CXX   $(shell which $(CXX)))
@@ -247,7 +251,6 @@ print-tools:
 	$(info RC    $(shell which $(RC) 2> /dev/null))
 	$(info LD    $(shell which $(LD) 2> /dev/null))
 	$(info LIBRARIAN  $(shell which $(LIBRARIAN) 2> /dev/null))
-	$(info DLLTOOL    $(shell which $(DLLTOOL) 2> /dev/null))
 	$(info CVTRES     $(shell which $(CVTRES) 2> /dev/null))
 	$(info -----------------------------------------------------)
 
@@ -268,7 +271,7 @@ $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
 
 vm:	$(VMEXE) $(LIBS) $(DLLS)
 
-TZ:=$(shell $(MSYS2)/date +%Z)
+TZ:=$(shell $(MSYS2_BIN)date +%Z)
 
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
@@ -290,11 +293,6 @@ ifneq ($(EXTERNAL_PLUGINS),)
 	$(MKDIR) $(addprefix $(BUILD)/, $(EXTERNAL_PLUGINS))
 endif
 
-#############################################################################
-# The exports for named primitives from Squeak (required by VM)
-#
-$(VMDEF) $(VMLIB): $(VMOBJ)
-	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-lib $(OBJDIR)/$(VMLIB) $(VMOBJ)
 
 #############################################################################
 # Building plugins

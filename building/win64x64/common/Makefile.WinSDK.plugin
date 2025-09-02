@@ -1,8 +1,11 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
-# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
 #
-# Generic Makefile for plugins using MSVC
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Generic Makefile for plugins
 #############################################################################
 #
 # The following variables can be overridden in the platform Makefile, e.g.
@@ -42,7 +45,6 @@ MAKERVMDIR:= $(SRCDIR)/vm
 #############################################################################
 # Standard include sources
 #
-
 INCLUDES:= -I. \
 			-I$(VMSRCDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
 			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
@@ -50,7 +52,6 @@ INCLUDES:= -I. \
 #############################################################################
 # If no source files were given, use standard set
 #
-
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
 MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
@@ -61,12 +62,11 @@ endif
 
 #############################################################################
 # Standard Commands
-LIBRARIAN:= lib -nologo # Can't use LIB because it conflicts with the env var
-# Overridable location of the MSYS2 installation used for GNU binutils
-MSYS2=c:/msys64/usr/bin
-CP:= $(MSYS2)/cp
-RM:= $(MSYS2)/rm
-MKDIR:=$(MSYS2)/mkdir -p
+#
+LIBRARIAN:=$(VCToolsBinDir)/LIB -nologo
+CP:=$(MSYS2_BIN)cp
+RM:=$(MSYS2_BIN)rm
+MKDIR:=$(MSYS2_BIN)mkdir -p
 
 #############################################################################
 # Plugin settings
@@ -81,9 +81,15 @@ LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
 ifdef BIT_IDENTICAL_FLOATING_POINT
 LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
 endif
-#$(info LIBOBJ is $(LIBOBJ))
 
+#############################################################################
+# Toolchain (incl. paths to tools and flags for tools)
+#
 include ../common/Makefile.WinSDK.tools
+
+#############################################################################
+# Basic rules
+#
 include ../common/Makefile.WinSDK.rules
 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
@@ -137,7 +143,4 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(JMPOBJ) $(LIBSRC)
 	$(LD) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(VMLIB) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
 	-NOIMPLIB \
 	-LIBPATH:$(BUILD)/vm \
-	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/$(MACHINE)" \
-	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/$(MACHINE)" \
-	-LIBPATH:"$(VCToolsInstallDir)/lib/$(MACHINE)/" $(EXTRALIBPATH) \
 	-OUT:$(subst /,\\,$(PLUGINDLL))
