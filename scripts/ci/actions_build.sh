@@ -133,11 +133,11 @@ build_Windows() {
     echo "::group::Building ${BUILD_PATH}..."
     skip_BochsPlugins
     if [[ "${MODE}" == "debug" ]]; then
-        bash -e ./mvm -d || exit 1
+        bash -e ./mvm -d -- TOOLPREFIX='' || exit 1
     elif [[ "${MODE}" == "assert" ]]; then
-        bash -e ./mvm -a || exit 1
+        bash -e ./mvm -a -- TOOLPREFIX='' || exit 1
     else
-        bash -e ./mvm -f || exit 1
+        bash -e ./mvm -f -- TOOLPREFIX='' || exit 1
     fi
     echo "::endgroup::"
 
