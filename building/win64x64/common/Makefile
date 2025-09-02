@@ -1,5 +1,18 @@
 #############################################################################
-# Common Makefile for Win32 VM using gcc, cygwin and gnu make
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Visit: https://www.msys2.org/
+# Visit: https://www.mingw-w64.org/
+#
+# Make sure to install Clang via MSYS2 pacman to get a compiler that targets
+# *-w64-windows-gnu . Other pre-built Clang bundles for Windows will target
+# *-pc-windows-msvc . See Makefile.WinSDK for the MSVC toolchain.
+#
+# RECOMMENDED: Start MSYS2/MINGW64 environment, run "mvm" script.
+#
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
 # Do make init to allow make -n to function.
 #############################################################################
 

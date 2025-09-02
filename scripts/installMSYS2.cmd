@@ -35,7 +35,7 @@ IF NOT "%MSYS_ARCH%"=="i686" (
 IF NOT "%MSYS_ARCH%"=="x86_64" (
 IF NOT "%MSYS_ARCH%"=="clang-x86_64" (
 IF NOT "%MSYS_ARCH%"=="clang-aarch64" (
-    echo ERROR: Unkown environment: %MSYS_ARCH% && exit /b )))))
+    echo ERROR: Unkown architecture: %MSYS_ARCH% && exit /b )))))
 
 IF "%MSYS_ARCH%"=="base" (SET MSYS_ENV=msys)
 IF "%MSYS_ARCH%"=="i686" (SET MSYS_ENV=mingw32)

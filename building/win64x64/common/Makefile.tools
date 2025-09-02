@@ -1,6 +1,9 @@
 #############################################################################
-# Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
-# and x64/x86_64
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
 
 ARCH:=x64
 export ARCH
@@ -11,17 +14,8 @@ export TOOLPREFIX
 #############################################################################
 # C compiler settings (Use clang for having a working FFI)
 #
-ifeq ($(COMPILER_TO_USE),)
-COMPILER_TO_USE:=clang
-endif
-
-ifeq ($(COMPILER_TO_USE),clang)
 CC:= $(TOOLPREFIX)clang
 CXX:= $(TOOLPREFIX)clang++
-else
-CC:= $(TOOLPREFIX)gcc
-CXX:= $(TOOLPREFIX)g++
-endif
 
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-function 
 
@@ -82,8 +76,8 @@ DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
 #       The switch '-mwindows' gives us a GUI app instead of a console app.
 #		Newer cygwins want --export-all-symbols in place of --export-dynamic.
 #
-LD:=	 $(CC)
-LDCXX := $(TOOLPREFIX)clang++ # For linking c++ bundles
+LD:=$(CC)
+LDCXX:=$(CXX) # For linking c++ bundles
 
 EXPORT:=--export-all-symbols
 BASELDFLAGS:=-m64 -mthreads -Wl,--stack -Xlinker 2097152,2097152 -Wl,$(EXPORT)
@@ -103,7 +97,7 @@ RM:= rm
 SED:=sed
 NM:= $(TOOLPREFIX)nm
 DLLTOOL:=	$(TOOLPREFIX)dlltool
-DLLWRAP:=	$(TOOLPREFIX)gcc -shared
+DLLWRAP:=	$(CC) -shared
 STRIP:= 	$(TOOLPREFIX)strip
 OBJCOPY:=	$(TOOLPREFIX)objcopy
 

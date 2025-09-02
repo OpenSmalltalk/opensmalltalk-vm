@@ -1,8 +1,14 @@
 #############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
 # Compilation rules for Microsoft Windows
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
+#############################################################################
 
 ifeq ($(findstring /vm,$(OBJDIR)),/vm)
 BD:=$(BUILD)/vm
