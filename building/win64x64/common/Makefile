@@ -221,6 +221,7 @@ print-settings:
 	$(info VPATH=$(VPATH))
 	$(info INCLUDES=$(INCLUDES))
 	$(info CFLAGS=$(CFLAGS))
+	$(info DEFS=$(DEFS))
 	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
 	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
 	$(info OBJDIR=$(OBJDIR))

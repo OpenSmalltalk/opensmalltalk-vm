@@ -16,6 +16,7 @@ else
 BD:=$(BUILD)/$(LIBNAME)/vm
 endif
 ALLFLAGS = $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(CXXFLAGS) $(INCLUDES) $(DEFS)
 
 $(OBJDIR)/%.o: %.c
 	$(CC) -x c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
@@ -24,7 +25,7 @@ $(OBJDIR)/%.o: %.m
 	$(CC) -x objective-c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+	$(CXX) -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLCXXFLAGS) -c $< -o $@
 
 %res: %.rc
 	$(RC) $(RCFLAGS) -i $< -o $@

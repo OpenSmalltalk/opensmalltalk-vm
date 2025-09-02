@@ -1,0 +1,73 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compiler flags (incl. OFLAGS and DEFS) for LLVM/Clang
+#############################################################################
+
+# Enable all but several warnings
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label \
+  -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations \
+  -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic \
+  -Wno-reserved-id-macro -Wno-undef
+
+
+#############################################################################
+# OFLAGS
+#
+
+# Turn off BUFFER_SECURITY for functional setjmp/longjmp
+BUFFER_SECURITY:=-fno-stack-protector -D_CRT_SECURE_NO_WARNINGS
+
+# For exception handing we require a frame pointer (e.g. for unwind).
+# Clang supports both
+#   -fno-omit-frame-pointer
+#   -fno-omit-leaf-frame-pointer
+# We assume that when when not omitting the frame pointer, Clang will still
+# omit the leaf frame pointers, which is fine.
+FRAME_POINTER_FLAGS:=-fno-omit-frame-pointer -DcFramePointerInUse=1
+
+# For fast/production builds, use -O2 optimization
+PRODUCTION_OFLAGS:=-O2 -finline-hint-functions $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+# For assert builds, use -Os optimization, which is similar to -O2
+ASSERT_OFLAGS:=-Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+# For debug builds, minimize optimization, even has leaf-frame-pointers
+DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+
+
+#############################################################################
+# CFLAGS
+#
+
+# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
+NOBUILTIN?= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+
+# Include extra debugging information.
+DEBUG_LEVEL?=-g3
+
+# Enable exceptions for debugging purposes.
+EXCEPTION_FLAGS?=-fexceptions
+CXX_EXCEPTION_FLAGS?=-fexceptions -fcxx-exceptions
+
+# No __STDCALL calling convention by default. Stick to __CDECL.
+CALLING_CONVENTION?=-mno-rtd
+
+# Keep default structure layout compatible with Microsoft standards.
+BITFIELD_LAYOUT?=-mms-bitfields
+
+# Allow __declspec keyword.
+# See https://learn.microsoft.com/cpp/cpp/declspec
+DECLSPEC?=-fdeclspec
+
+CFLAGS:= $(DECLSPEC) -msse2 $(DEBUG_LEVEL) -m64 \
+  $(CALLING_CONVENTION) $(BITFIELD_LAYOUT) \
+  $(OFLAGS) $(NOBUILTIN) $(WARNINGS) \
+  $(EXCEPTION_FLAGS) $(XCFLAGS)
+
+CXXFLAGS:= $(DECLSPEC) -msse2 $(DEBUG_LEVEL) -m64 \
+  $(CALLING_CONVENTION) $(BITFIELD_LAYOUT) \
+  $(OFLAGS) $(NOBUILTIN) $(WARNINGS) \
+  $(CXX_EXCEPTION_FLAGS) $(XCFLAGS)
+

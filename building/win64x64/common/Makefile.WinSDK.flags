@@ -1,0 +1,42 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compiler flags (e.g., OFLAGS, CFLAGS) for LLVM/Clang
+#############################################################################
+
+NOBUILTIN=-D_MT
+CALLING_CONVENTION=
+BITFIELD_LAYOUT=
+DECLSPEC=
+
+include ../common/Makefile.flags
+
+#############################################################################
+
+# Enable the LLP64 data model, where only pointers expand to 64-bits
+# https://learn.microsoft.com/en-us/windows/win32/winprog64/abstract-data-models
+POINTER_MODEL:=-DLLP64=1
+CFLAGS:=$(POINTER_MODEL) $(CFLAGS)
+CXXFLAGS:=$(POINTER_MODEL) $(CXXFLAGS)
+
+# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x64.asm
+JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
+DEFS:= $(DEFS) $(JMPDEFS)
+
+# ???
+FUNDEFS:=-Dalloca=_alloca -Dhuge=my_huge
+DEFS:= $(DEFS) $(FUNDEFS)
+
+
+
+
+
+
+
+# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
+# MSVC and defining NDEBUG installs a default catch-everything exception handler
+# that effectively disables debugging.
+# XDEFS=  -DSQUEAK_BUILTIN_PLUGIN

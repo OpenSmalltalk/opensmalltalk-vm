@@ -44,47 +44,7 @@ CXX:=$(LLVM_BIN)clang++
 AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
 Clang:=Clang # Needed to avoid error "invalid integral value 'd' in '-Od'"
 
-# DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
-# -Z7 debug info in files; -Zi debug info in PDB
-# Turn off BUFFER_SECURITY for functional setjmp/longjmp
-BUFFER_SECURITY:=-fno-stack-protector -D_CRT_SECURE_NO_WARNINGS
-# clang supports both -fno-omit-frame-pointer and -fno-omit-leaf-frame-pointer.
-# for exception handing we require a frame pointer (for unwind etc). So supply
-# -fno-omit-frame-pointer but not -fno-omit-leaf-frame-pointer with the intent
-# that clang does use a frame pointer in all non-leaf functions, but does not
-# use a frame pointer in leaf functions.
-#
-# Alas clang-cl supports only /Oy & /Oy- but ignores /Oy- (!!)
-FRAME_POINTER_FLAGS:=-fno-omit-frame-pointer -DcFramePointerInUse=1
-EXCEPTION_FLAGS:=-fexceptions
-CXX_EXCEPTION_FLAGS:=-fexceptions -fcxx-exceptions
-
-PRODUCTION_OFLAGS:=-O2 -finline-hint-functions $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-ASSERT_OFLAGS:=-Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-
-DASH_O:=-o
-# OFLAGS= -O2 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-CFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
-  -Dalloca=_alloca -Dhuge=my_huge \
-  $(EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-CXXFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
-  -Dalloca=_alloca -Dhuge=my_huge \
-  $(CXX_EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x64.asm
-JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
-
-# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
-# MSVC and defining NDEBUG installs a default catch-everything exception handler
-# that effectively disables debugging.
-# XDEFS=  -DSQUEAK_BUILTIN_PLUGIN
-
-
-# https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value \
-  -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros \
-  -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro \
-  -Wno-undef
+include ../common/Makefile.WinSDK.flags
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
@@ -113,24 +73,7 @@ ifeq ($(IS_PREPARING),false)
   endif
 endif # IS_PREPARING
 
-# Set minimum version to Windows XP
-WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x0501 -DWINVER=0x0501
-
-# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
-#NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
-NOBUILTIN:=-D_MT
-
-# Several versions of clang (all versions from 14 through 18 as of this writing)
-# generate incorrect code for spur segment storage
-#	(return:restoringObjectsIn:savedFirstFields:and:savedHashes:)
-# unless USE_INLINE_MEMORY_ACCESSORS is set.
-MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
-
-#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
-#!#! must define both.
-DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
-		-DWIN32=1 -DUNICODE=1 -D_UNICODE=1 -DNO_ISNAN -DNO_SERVICE \
-		$(NDEBUG) -DLSB_FIRST -DVM_NAME='"$(VM_NAME)"' $(XDEFS) $(CROQUET)
+include ../common/Makefile.WinSDK.defs.mk
 
 #############################################################################
 # Linker settings
@@ -146,8 +89,6 @@ DEFAULT_STACK_SIZE:=2097152
 endif
 STACK_LD_FLAG=-STACK:$(DEFAULT_STACK_SIZE),$(DEFAULT_STACK_SIZE)
 
-#EXPORT:=--export-all-symbols
-#BASELDFLAGS:=-m32 -mthreads -Wl,--large-address-aware,--dynamicbase,--nxcompat,$(EXPORT)
 BASELDFLAGS:= $(STACK_LD_FLAG) -DYNAMICBASE -LARGEADDRESSAWARE -NXCOMPAT -DEBUG:FULL
 LDFLAGS:= -subsystem:windows $(BASELDFLAGS) $(EXTRALDFLAGS)
 CONSOLELDFLAGS:= -subsystem:console $(BASELDFLAGS) $(EXTRALDFLAGS)
