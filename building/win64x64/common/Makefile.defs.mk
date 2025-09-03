@@ -13,6 +13,14 @@
 #  Windows 10  ... 0x0A00
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
+# Every clang for Windows (i.e. *-pc-windows-msvc or *-w64-windows-gnu) already
+# defines WIN32, WIN64, etc. So, this might just be historical overhead.
+WINBIT:=-DWIN32=1 -D_WIN32=1 -DWIN64=1 -D_WIN64=1
+
+#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
+#!#! must define both.
+WINUNI:=-DUNICODE=1 -D_UNICODE=1
+
 #############################################################################
 # DEFS
 #
@@ -23,15 +31,10 @@ WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 # unless USE_INLINE_MEMORY_ACCESSORS is set.
 MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
 
-DEFS:=-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
-		-DNO_ISNAN -DNO_SERVICE \
+# Multi-threaded environment. Might in case use multi-threading specific
+# versions of API calls. Also used to avoid built-in functions.
+MT_ENV?=-D_MT
+
+DEFS:=-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(WINBIT) \
+		$(WINUNI) $(MT_ENV) -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
-
-# Every clang for Windows (i.e. *-pc-windows-msvc or *-w64-windows-gnu) already
-# defines WIN32, WIN64, etc. So, this might just be historical overhead.
-DEFS:=$(DEFS) -DWIN32=1 -D_WIN32=1 -DWIN64=1 -D_WIN64=1
-
-#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
-#!#! must define both.
-DEFS:=$(DEFS) -DUNICODE=1 -D_UNICODE=1
-

@@ -42,7 +42,6 @@ CC:=$(LLVM_BIN)clang
 CXX:=$(LLVM_BIN)clang++
 
 AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
-Clang:=Clang # Needed to avoid error "invalid integral value 'd' in '-Od'"
 
 include ../common/Makefile.WinSDK.flags
 
@@ -50,8 +49,8 @@ include ../common/Makefile.WinSDK.flags
 ifeq ($(CONFIGURATION),product)
 # -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
 OFLAGS:=$(PRODUCTION_OFLAGS)
-NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
+NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 else ifeq ($(CONFIGURATION),assert)
 OFLAGS:=$(ASSERT_OFLAGS)
 DEBUGVM=0
