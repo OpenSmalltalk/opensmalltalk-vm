@@ -754,24 +754,6 @@ static void processLibEvdevMouseEvents() {
       }
 
       if (type == EV_ABS) {
-        fprintf(stderr, "touching=%d ox=%d oy=%d nx=%d ny=%d ty=%d pri=%d cur=%d code=%d value=%d",
-                mouseDev.touching,
-                mouseDev.old_x,
-                mouseDev.old_y,
-                mouseDev.new_x,
-                mouseDev.new_y,
-                mouseDev.abs_type,
-                mouseDev.primary_tracking_id,
-                mouseDev.current_slot,
-                code,
-                value);
-        {
-          int i;
-          for (i = 0; i < NUM_SUPPORTED_SLOTS; i++) {
-            if (mouseDev.slots[i] != -1) fprintf(stderr, " %d=%d", i, mouseDev.slots[i]);
-          }
-          fprintf(stderr, "\n");
-        }
         switch (code) {
           case ABS_MT_SLOT:
             mouseDev.abs_type = 2;
