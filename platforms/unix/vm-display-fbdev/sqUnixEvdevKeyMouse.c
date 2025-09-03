@@ -69,6 +69,9 @@ extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd *
 #define FALSE 0
 #define TRUE (!FALSE)
 
+/* These identifiers were present in linux/input.h since at least kernel version 3.7 (released
+   in 2012), and probably earlier: It may make sense to remove these definitions now
+   -- tonyg 2025-09-03 */
 #ifndef EV_SYN
 #define EV_SYN 0
 #endif
@@ -106,19 +109,30 @@ static void setSqueakModifierState();
 
 /* Mouse */
 
+#define NUM_SUPPORTED_SLOTS 32 /* We need to use EVIOCGABS to discover the actual number of
+                                  slots on a device, so this hardcoded limit is lazy */
 struct ms
 {
   char 		  *msName;
   int		   fd;
   struct libevdev *dev;
 
-  /* Emulation of relative mouse device using absolute device */
-  int touching;
-  int moved;
-  int has_x;
-  int has_y;
-  int curr_x;
-  int curr_y;
+  /*
+    Emulation of a relative mouse device using a (multi- or single-touch!) absolute device.
+    See Multitouch.md.
+  */
+
+  int touching;         /* tracks BTN_TOUCH; we use this in tap detection. */
+  int moved;            /* movement hysteresis for tap detection */
+  int old_x;            /* -1 for none */
+  int old_y;            /* -1 for none */
+  int new_x;
+  int new_y;
+
+  int abs_type;         /* 0 => simple (singletouch), 1 => type A, 2 => type B */
+  int slots[NUM_SUPPORTED_SLOTS];
+  int primary_slot;     /* -1 for none */
+  int current_slot;     /* -1 for none */
 };
 
 static struct ms mouseDev;
@@ -183,8 +197,8 @@ static void ms_close(struct ms *mouseSelf)
 
 static struct ms *ms_new(void)
 {
+  memset(&mouseDev, 0, sizeof(mouseDev));
   mouseDev.fd= -1;
-  mouseDev.dev= 0;
   return &mouseDev;
 }
 
@@ -240,18 +254,21 @@ static void updateMouseButtons(struct input_event* evt) {
 	case BTN_MIDDLE: buttonState |= MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState |= RightMouseButtonBit; break;
 
-        /* /\* When simulating a 3-button mouse via a multitouch touchpad: *\/ */
-        /* case BTN_TOOL_DOUBLETAP: buttonState |= LeftMouseButtonBit;  break; */
+        /* When simulating a 3-button mouse via a multitouch touchpad: */
+        case BTN_TOOL_DOUBLETAP: buttonState |= LeftMouseButtonBit;  break;
         /* case BTN_TOOL_TRIPLETAP: buttonState |= RightMouseButtonBit; break; */
         /* case BTN_TOOL_QUADTAP:   buttonState |= MidMouseButtonBit;   break; */
 
-        case BTN_TOUCH: {
-          mouseDev.touching = 1;
-          mouseDev.moved = 0;
-          mouseDev.has_x = 0;
-          mouseDev.has_y = 0;
+        case BTN_TOUCH:
+          if (!mouseDev.touching) {
+            mouseDev.touching = 1;
+            mouseDev.moved = 0;
+            mouseDev.old_x = -1;
+            mouseDev.old_y = -1;
+            mouseDev.new_x = -1;
+            mouseDev.new_y = -1;
+          }
           break;
-        }
 	default: break;
       }
     } else if (evt->value == 0) { /* button up */
@@ -260,8 +277,8 @@ static void updateMouseButtons(struct input_event* evt) {
 	case BTN_MIDDLE: buttonState &= ~MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState &= ~RightMouseButtonBit; break;
 
-        /* /\* When simulating a 3-button mouse via a multitouch touchpad: *\/ */
-        /* case BTN_TOOL_DOUBLETAP: buttonState &= ~LeftMouseButtonBit;  break; */
+        /* When simulating a 3-button mouse via a multitouch touchpad: */
+        case BTN_TOOL_DOUBLETAP: buttonState &= ~LeftMouseButtonBit;  break;
         /* case BTN_TOOL_TRIPLETAP: buttonState &= ~RightMouseButtonBit; break; */
         /* case BTN_TOOL_QUADTAP:   buttonState &= ~MidMouseButtonBit;   break; */
 
@@ -273,8 +290,10 @@ static void updateMouseButtons(struct input_event* evt) {
           }
           mouseDev.touching = 0;
           mouseDev.moved = 0;
-          mouseDev.has_x = 0;
-          mouseDev.has_y = 0;
+          mouseDev.old_x = -1;
+          mouseDev.old_y = -1;
+          mouseDev.new_x = -1;
+          mouseDev.new_y = -1;
         }
 	default: break;
       }
@@ -638,8 +657,46 @@ static void processLibEvdevMouseEvents() {
 #ifdef DEBUG_EVENTS
       /*      printMouseState(); */
 #endif
-    } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
-      continue; /* skip me, keep looking */
+    } else if (type == EV_SYN) {
+      switch (code) {
+        case SYN_MT_REPORT:
+          mouseDev.abs_type = 1;
+          mouseDev.current_slot++;
+          break;
+        case SYN_REPORT:
+          if (mouseDev.abs_type == 1) {
+            mouseDev.current_slot = -1;
+          }
+          if (mouseDev.old_x == -1) mouseDev.old_x = mouseDev.new_x;
+          if (mouseDev.old_y == -1) mouseDev.old_y = mouseDev.new_y;
+          if (!mouseDev.moved && (mouseDev.new_x != -1) && (mouseDev.new_y != -1)) {
+            int dx = mouseDev.new_x - mouseDev.old_x;
+            int dy = mouseDev.new_y - mouseDev.old_y;
+            if ((dx*dx + dy*dy) > 4096 /* 64 squared */) {
+              mouseDev.moved = 1;
+            }
+          }
+          if (mouseDev.moved) {
+            enqueueMouseEvent(buttonState,
+                              (mouseDev.new_x - mouseDev.old_x) >> 2,
+                              (mouseDev.new_y - mouseDev.old_y) >> 2);
+            mouseDev.old_x = mouseDev.new_x;
+            mouseDev.old_y = mouseDev.new_y;
+          }
+          break;
+        case SYN_DROPPED:
+          buttonState = 0;
+          mouseDev.touching = 0;
+          mouseDev.moved = 0;
+          mouseDev.old_x = mouseDev.old_y = mouseDev.new_x = mouseDev.new_y = -1;
+          memset(&mouseDev.slots[0], 0, sizeof(mouseDev.slots));
+          mouseDev.primary_slot = mouseDev.current_slot = -1;
+          break;
+        default:
+          break;
+      }
+    } else if (type == EV_MSC) {
+      /* skip me, keep looking */
     } else {
       updateMouseButtons(&evt[i]); 
       setSqueakModifierState();
@@ -679,30 +736,52 @@ static void processLibEvdevMouseEvents() {
       }
 
       if (type == EV_ABS) {
+        fprintf(stderr, "touching=%d moved=%d ox=%d oy=%d nx=%d ny=%d ty=%d pri=%d cur=%d code=%d value=%d\n",
+                mouseDev.touching,
+                mouseDev.moved,
+                mouseDev.old_x,
+                mouseDev.old_y,
+                mouseDev.new_x,
+                mouseDev.new_y,
+                mouseDev.abs_type,
+                mouseDev.primary_slot,
+                mouseDev.current_slot,
+                code,
+                value);
         switch (code) {
-          case ABS_X:
-            if (mouseDev.has_x) {
-              if (mouseDev.moved || abs(value - mouseDev.curr_x) > 64) {
-                enqueueMouseEvent(buttonState, (value - mouseDev.curr_x) >> 2, 0);
-                mouseDev.curr_x = value;
-                mouseDev.moved = 1;
+          case ABS_MT_SLOT:
+            mouseDev.abs_type = 2;
+            if (mouseDev.primary_slot == -1) mouseDev.primary_slot = value;
+            mouseDev.current_slot = value;
+            break;
+          case ABS_MT_TRACKING_ID:
+            if (mouseDev.current_slot < NUM_SUPPORTED_SLOTS) {
+              mouseDev.slots[mouseDev.current_slot] = value;
+            }
+            {
+              int i;
+              int finger_count = 0;
+              for (i = 0; i < NUM_SUPPORTED_SLOTS; i++) {
+                if (mouseDev.slots[i] != -1) {
+                  finger_count++;
+                }
               }
-            } else {
-              mouseDev.has_x = 1;
-              mouseDev.curr_x = value;
+              if (finger_count == 0) {
+                mouseDev.primary_slot = -1;
+              }
             }
             break;
+          case ABS_MT_POSITION_X:
+            if (mouseDev.primary_slot == mouseDev.current_slot) mouseDev.new_x = value;
+            break;
+          case ABS_X:
+            if (mouseDev.abs_type == 0) mouseDev.new_x = value;
+            break;
+          case ABS_MT_POSITION_Y:
+            if (mouseDev.primary_slot == mouseDev.current_slot) mouseDev.new_y = value;
+            break;
           case ABS_Y:
-            if (mouseDev.has_y) {
-              if (mouseDev.moved || abs(value - mouseDev.curr_y) > 64) {
-                enqueueMouseEvent(buttonState, 0, (value - mouseDev.curr_y) >> 2);
-                mouseDev.curr_y = value;
-                mouseDev.moved = 1;
-              }
-            } else {
-              mouseDev.has_y = 1;
-              mouseDev.curr_y = value;
-            }
+            if (mouseDev.abs_type == 0) mouseDev.new_y = value;
             break;
           default:
             break;
