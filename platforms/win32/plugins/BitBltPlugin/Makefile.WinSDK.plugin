@@ -1,6 +1,9 @@
 #############################################################################
-# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Plugin Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #############################################################################
 
 # Override to avoid files in platforms/Cross/plugins/BitBltPlugin.
