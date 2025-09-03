@@ -46,6 +46,7 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <signal.h>
+#include <time.h>
 #include <limits.h> /* PATH_MAX */
 #include <linux/input.h>   /* /usr/include/linux/input.h */
 /* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
@@ -134,9 +135,13 @@ struct ms
   int slots[NUM_SUPPORTED_SLOTS];
   int primary_tracking_id; /* -1 for none */
   int current_slot;     /* -1 for none */
+
+  double tap_release_deadline;
+  int tap_bit;
 };
 
 #define TAP_START_TIMEOUT 0.18
+#define TAP_END_TIMEOUT 0.3
 
 static struct ms mouseDev;
 
@@ -260,11 +265,23 @@ static void printMouseState() {
 static void clearMouseButtons() { buttonState = 0 ; wheelDelta = 0; }
 
 static void register_touch(int touch_count, double timestamp) {
-  if (mouseDev.touching < touch_count) {
+  if (mouseDev.tap_bit != 0) {
+    mouseDev.touching = mouseDev.tap_bit;
+    mouseDev.tap_release_deadline = 0;
+  } else if (mouseDev.touching < touch_count) {
     mouseDev.touching = touch_count;
   }
   mouseDev.touch_change_time = timestamp;
   mouseDev.moved = 0;
+}
+
+static double timestamp(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
+    perror("clock_gettime");
+    abort();
+  }
+  return ts.tv_sec + ((double) ts.tv_nsec / 1000000000.0);
 }
 
 static void updateMouseButtons(struct input_event* evt) {
@@ -291,7 +308,10 @@ static void updateMouseButtons(struct input_event* evt) {
 
         case BTN_TOUCH:
           if (mouseDev.touching > 0) {
-            if ((now - mouseDev.touch_change_time) <= TAP_START_TIMEOUT) {
+            if (mouseDev.tap_bit != 0) {
+              // Release of a previous drag lock.
+              mouseDev.tap_release_deadline = timestamp() + TAP_END_TIMEOUT;
+            } else if ((now - mouseDev.touch_change_time) <= TAP_START_TIMEOUT) {
               // A tap.
               int bit = LeftMouseButtonBit;
               if (mouseDev.touching == 2) bit = 0;
@@ -299,7 +319,8 @@ static void updateMouseButtons(struct input_event* evt) {
               if (mouseDev.touching == 4) bit = MidMouseButtonBit;
               if (bit != 0) {
                 enqueueMouseEvent(buttonState | bit, 0, 0);
-                enqueueMouseEvent(buttonState & ~bit, 0, 0);
+                mouseDev.tap_bit = bit;
+                mouseDev.tap_release_deadline = timestamp() + TAP_END_TIMEOUT;
               }
             }
           }
@@ -645,6 +666,12 @@ static void processLibEvdevMouseEvents() {
   struct input_event evt[64];
   int i, read_size;
   int arrowCode, modifierBits; /* for Wheel delta sent as arrow keys */
+
+  if ((mouseDev.tap_release_deadline != 0) && (timestamp() >= mouseDev.tap_release_deadline)) {
+    enqueueMouseEvent(buttonState & ~mouseDev.tap_bit, 0, 0);
+    mouseDev.tap_bit = 0;
+    mouseDev.tap_release_deadline = 0;
+  }
 
   read_size = read(mouseDev.fd, evt, sizeof(evt));
   if (read_size < (int) sizeof(struct input_event)) {
