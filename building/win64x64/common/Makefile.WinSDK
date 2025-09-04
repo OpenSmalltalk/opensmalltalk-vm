@@ -14,6 +14,7 @@
 # RECOMMENDED: Start plain MSYS2 shell, run "mvm" script.
 # Alternative: Start Native Tools Command Prompt, run SETPATH then MAKE*.BAT.
 #
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 # Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #

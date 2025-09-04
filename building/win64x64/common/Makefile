@@ -11,6 +11,7 @@
 #
 # RECOMMENDED: Start MSYS2/MINGW64 environment, run "mvm" script.
 #
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
 # Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
 #
 # Do make init to allow make -n to function.
