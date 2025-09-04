@@ -258,10 +258,10 @@ print-tools:
 	$(info ..    $(shell $(CC) --version 2> /dev/null | head -n 1))
 	$(info CXX   $(shell which $(CXX)))
 	$(info ..    $(shell $(CXX) --version 2> /dev/null | head -n 1))
-	$(info AS    $(shell which $(AS) 2> /dev/null))
-	$(info RC    $(shell which $(RC) 2> /dev/null))
-	$(info LD    $(shell which $(LD) 2> /dev/null))
+	$(info LD         $(shell which $(LD) 2> /dev/null))
+	$(info LDXX       $(shell which $(LD) 2> /dev/null))
 	$(info LIBRARIAN  $(shell which $(LIBRARIAN) 2> /dev/null))
+	$(info RC         $(shell which $(RC) 2> /dev/null))
 	$(info CVTRES     $(shell which $(CVTRES) 2> /dev/null))
 	$(info -----------------------------------------------------)
 
@@ -345,13 +345,15 @@ $(BUILD)/fdlibm/libm.a:
 #
 include ../common/Makefile.WinSDK.rules
 
-$(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) -Fo $@ $(VM).rc
-	$(CP) $(VM).exe.manifest $(OBJDIR)
-	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
+# Microsoft (R) Windows (R) Resource Compiler
+%.res: %.rc
+	$(RC) $(RCFLAGS) -Fo $@ $<
 
+# Microsoft (R) Windows Resource To Object Converter
 resource.o:	$(VMRES)
 	$(CVTRES) -MACHINE:$(ARCH) -OUT:resource.o $(VMRES)
+	$(CP) $(VM).exe.manifest $(OBJDIR)
+	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 #############################################################################
 # Extra specific dependencies

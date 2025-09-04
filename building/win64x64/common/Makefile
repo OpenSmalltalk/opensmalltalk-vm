@@ -245,7 +245,7 @@ print-tools:
 	$(info LD	$(shell which $(LD))	$(shell $(LD) --version 2> /dev/null | head -n 1))
 	$(info CP	$(shell which $(CP))		$(shell $(CP) --version 2> /dev/null | head -n 1))
 	$(info RM	$(shell which $(RM))		$(shell $(RM) --version 2> /dev/null | head -n 1))
-	$(info AR	$(shell which $(ARX))		$(shell $(ARX) --version 2> /dev/null | head -n 1))
+	$(info AR	$(shell which $(AR))		$(shell $(AR) --version 2> /dev/null | head -n 1))
 	$(info NM	$(shell which $(NM))		$(shell $(NM) --version 2> /dev/null | head -n 1))
 	$(info DLLTOOL	$(shell $(DLLTOOL) --version 2> /dev/null | head -n 1))
 	$(info DLLWRAP	$(shell $(DLLWRAP) --version 2> /dev/null | head -n 1))
@@ -345,13 +345,15 @@ $(BUILD)/fdlibm/libm.a:
 #
 include ../common/Makefile.rules
 
-$(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) -i $(VM).rc -o $@
-	$(CP) $(VM).exe.manifest $(OBJDIR)
-	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
+# GNU windres (GNU Binutils)
+%.res: %.rc
+	$(RC) $(RCFLAGS) -i $< -o $@
 
+# GNU windres (GNU Binutils)
 resource.o:	$(VMRES)
 	$(RC) $(RCFLAGS) -i $< -o $@
+	$(CP) $(VM).exe.manifest $(OBJDIR)
+	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 #############################################################################
 # Extra specific dependencies

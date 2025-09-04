@@ -42,7 +42,8 @@ endif
 CC:=$(LLVM_BIN)clang
 CXX:=$(LLVM_BIN)clang++
 
-AS:=$(VCToolsBinDir)/ml64 # Microsoft Macro Assembler
+# Microsoft Macro Assembler; not needed, use LLVM/Clang; see Makefile.WinSDK
+# AS:=$(VCToolsBinDir)/ml64 
 
 include ../common/Makefile.WinSDK.flags
 
