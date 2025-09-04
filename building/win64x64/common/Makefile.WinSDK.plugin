@@ -62,14 +62,6 @@ LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
 
 #############################################################################
-# Standard Commands
-#
-LIBRARIAN:=$(VCToolsBinDir)/LIB -nologo
-CP:=$(MSYS2_BIN)cp
-RM:=$(MSYS2_BIN)rm
-MKDIR:=$(MSYS2_BIN)mkdir -p
-
-#############################################################################
 # Plugin settings
 #
 OBJDIR:=    $(BUILD)/$(LIBNAME)

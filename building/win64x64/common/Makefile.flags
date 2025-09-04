@@ -14,7 +14,6 @@ WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label \
   -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic \
   -Wno-reserved-id-macro -Wno-undef
 
-
 #############################################################################
 # OFLAGS (VM and Plugins)
 #
@@ -30,12 +29,20 @@ BUFFER_SECURITY:=-fno-stack-protector -D_CRT_SECURE_NO_WARNINGS
 # omit the leaf frame pointers, which is fine.
 FRAME_POINTER_FLAGS:=-fno-omit-frame-pointer -DcFramePointerInUse=1
 
-# For fast/production builds, use -O2 optimization
-PRODUCTION_OFLAGS:=-O2 -finline-hint-functions $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-# For assert builds, use -Os optimization, which is similar to -O2
-ASSERT_OFLAGS:=-Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-# For debug builds, minimize optimization, even has leaf-frame-pointers
-DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+ifeq ($(CONFIGURATION),product)
+  # For fast/production builds, use -O2 optimization
+  OFLAGS= -O2 -finline-hint-functions -funroll-loops $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+else ifeq ($(CONFIGURATION),assert)
+  # For assert builds, use -Os optimization, which is similar to -O2
+  OFLAGS= -Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+else
+  # For debug builds, minimize optimization, even has leaf-frame-pointers
+  OFLAGS= -O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+endif
+
+# FYI
+# -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
+
 
 #############################################################################
 # CFLAGS

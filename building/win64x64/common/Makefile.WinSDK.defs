@@ -8,7 +8,7 @@
 # Compiler flags (e.g., OFLAGS, CFLAGS) for LLVM/Clang
 #############################################################################
 
-include ../common/Makefile.defs.mk
+include ../common/Makefile.defs
 
 #############################################################################
 

@@ -46,35 +46,7 @@ CXX:=$(LLVM_BIN)clang++
 # AS:=$(VCToolsBinDir)/ml64 
 
 include ../common/Makefile.WinSDK.flags
-
-# VM config flags.
-ifeq ($(CONFIGURATION),product)
-# -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
-OFLAGS:=$(PRODUCTION_OFLAGS)
-DEBUGVM=0
-NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
-else ifeq ($(CONFIGURATION),assert)
-OFLAGS:=$(ASSERT_OFLAGS)
-DEBUGVM=0
-NDEBUG:=-D'VM_LABEL(foo)=0'
-else
-OFLAGS:=$(DEBUG_OFLAGS)
-DEBUGVM=1
-NDEBUG:=-D'VM_LABEL(foo)=0'
-endif
-
-ifeq ($(IS_PREPARING),false)
-  ifeq ($(THREADING),multi)
-    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
-  else
-    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
-  endif
-  ifdef BIT_IDENTICAL_FLOATING_POINT
-    COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
-  endif
-endif # IS_PREPARING
-
-include ../common/Makefile.WinSDK.defs.mk
+include ../common/Makefile.WinSDK.defs
 
 #############################################################################
 # Linker settings

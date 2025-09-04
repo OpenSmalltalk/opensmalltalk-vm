@@ -25,6 +25,27 @@ WINUNI:=-DUNICODE=1 -D_UNICODE=1
 #############################################################################
 # DEFS
 #
+ifeq ($(CONFIGURATION),product)
+DEBUGVM= 0
+NDEBUG:= -DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+else ifeq ($(CONFIGURATION),assert)
+DEBUGVM= 0
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else
+DEBUGVM= 1
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+endif
+
+ifeq ($(IS_PREPARING),false)
+  ifeq ($(THREADING),multi)
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+  else
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+  endif
+  ifdef BIT_IDENTICAL_FLOATING_POINT
+    COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+  endif
+endif # IS_PREPARING
 
 # Several versions of clang (all versions from 14 through 18 as of this writing)
 # generate incorrect code for spur segment storage
