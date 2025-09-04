@@ -1,3 +1,12 @@
+##########################################################################################################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
 # Override to avoid files in platforms/Cross/plugins/BitBltPlugin.
 # Fails if one redefines VPATH and then includes ../common/Makefile.plugin.  Grrr...
 

@@ -77,7 +77,7 @@ endif
 #############################################################################
 # Toolchain (incl. paths to tools and flags for tools)
 #
-include ../common/Makefile.WinSDK.tools
+include ../common/Makefile.tools
 
 #############################################################################
 # Basic rules
