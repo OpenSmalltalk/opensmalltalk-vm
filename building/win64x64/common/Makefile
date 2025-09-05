@@ -69,6 +69,7 @@ else
 	endif
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
+
 PLUGINSRCDIR:= ../../../src
 export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
@@ -85,13 +86,18 @@ WIN32UTILDIR:=$(PLATDIR)/win32/util
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
 ifeq ($(THREADING),multi)
-MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interpmt.c $(VMSRCDIR)/cogit.c)
+MAKERSRC:= $(wildcard $(VMSRCDIR)/[ci]*terpmt.c $(VMSRCDIR)/cogit.c)
 else
-MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
+MAKERSRC:= $(wildcard $(VMSRCDIR)/[ci]*terp.c $(VMSRCDIR)/cogit.c)
 endif
 VMSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 
 VPATH:= $(VMSRCDIR) $(WIN32DIR) $(CROSSDIR)
+
+#############################################################################
+# Toolchain
+#
+include ../common/Makefile.tools
 
 #############################################################################
 # The internal (.lib) and external (.dll) plugins
@@ -149,11 +155,6 @@ JMPOBJ:=$(OBJDIR)/_setjmp-x64.o
 
 .PRECIOUS: mkNamedPrims.exe
 
-#############################################################################
-# Toolchain
-#
-include ../common/Makefile.tools
-
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
@@ -164,7 +165,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #
 
 default: product # ensure two-pass initialization, see below
-defaultBuild: print-tools print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs $(APPPOST)
+defaultBuild: print-tools print-settings init libs $(VMEXE) $(CONSOLEVMEXE) dlls $(STRIPEXE) $(STRIPCONSOLEEXE) $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -193,25 +194,28 @@ init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
 
 cleanmt:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
 
 cleanast:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
 
 cleanmtast:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
 
 cleandbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
 
 cleanmtdbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
 
 nukelibs:
-	rm $(LIBS)
+	$(RM) $(LIBS)
+
+nukedlls:
+	$(RM) $(DLLS)
 
 .PHONY : print-settings
 
@@ -291,13 +295,13 @@ $(STRIPCONSOLEEXE): $(CONSOLEVMEXE)
 endif
 
 $(OBJDIR):
-	@-mkdir $(BUILD)
-	mkdir $(OBJDIR)
+	@-$(MKDIR) $(BUILD)
+	$(MKDIR) $(OBJDIR)
 ifneq ($(INTERNAL_PLUGINS),)
-	mkdir $(addprefix $(BUILD)/, $(INTERNAL_PLUGINS))
+	$(MKDIR) $(addprefix $(BUILD)/, $(INTERNAL_PLUGINS))
 endif
 ifneq ($(EXTERNAL_PLUGINS),)
-	mkdir $(addprefix $(BUILD)/, $(EXTERNAL_PLUGINS))
+	$(MKDIR) $(addprefix $(BUILD)/, $(EXTERNAL_PLUGINS))
 endif
 
 #############################################################################
@@ -318,7 +322,7 @@ plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Make
 # Internal plugin.  Build as lib then link in lib
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	@-mkdir -p $(BUILD)/$(*F)
-	rm -f $(BUILD)/vm/$(*F).ignore
+	$(RM) -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) INTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
@@ -327,7 +331,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-mkdir -p $(BUILD)/$(*F)
-	rm -f $(BUILD)/$(*F).ignore
+	$(RM) -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) EXTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \

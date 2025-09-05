@@ -57,6 +57,11 @@ MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
 # versions of API calls. Also used to avoid built-in functions.
 MT_ENV?=-D_MT
 
+# Use fdlibm for floating-point, which is cross-platform, or 
+# platform-specific floating point.
+# BIT_IDENTICAL_FLOATING_POINT=1
+
+
 DEFS:=-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(WINBIT) \
 		$(WINUNI) $(MT_ENV) -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)

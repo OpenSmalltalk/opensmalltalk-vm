@@ -26,10 +26,6 @@ TZ:=$(shell date +%Z)
 #############################################################################
 # Linker settings
 #
-# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
-#       The switch '-mwindows' gives us a GUI app instead of a console app.
-#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
-#
 LD:=$(CC)
 LDCXX:=$(CXX) # For linking c++ bundles
 
@@ -43,9 +39,10 @@ STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 
 #############################################################################
 # Tools to use
+# - Note that "dllwrap" is replaced by "clang -shared"
+# - Note that "ar" produces thin archives (-T) to allow mising .o and .a
 #
-AR:= $(TOOLPREFIX)ar rc
-ARX:= $(TOOLPREFIX)ar # must not change $(AR) bc. implicit usage
+AR:= $(TOOLPREFIX)ar crUuT
 CP:= cp
 RM:= rm
 SED:=sed
@@ -60,7 +57,7 @@ OBJCOPY:=	$(TOOLPREFIX)objcopy
 #
 # Note: RC compiles the .rc files into linkable .o files
 #
-RC:=	 $(TOOLPREFIX)windres
+RC:=$(TOOLPREFIX)windres
 SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
 
 ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
