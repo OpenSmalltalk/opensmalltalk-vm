@@ -113,6 +113,11 @@ LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
 export BIT_IDENTICAL_FLOATING_POINT
 endif
 
+.PHONY: libs dlls
+
+libs: $(LIBS)
+dlls: $(DLLS)
+
 #############################################################################
 # The third-party libraries
 #
