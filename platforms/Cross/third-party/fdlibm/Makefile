@@ -101,7 +101,7 @@ obj = 	k_standard.o k_rem_pio2.o \
 all: libm.a 
 
 libm.a : $(obj) 
-	ar cru libm.a $(obj)
+	ar crUu libm.a $(obj)
 	ranlib libm.a
 
 source: $(src) README
