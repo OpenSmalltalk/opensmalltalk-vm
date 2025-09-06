@@ -114,10 +114,10 @@ print-settings:
 	$(info -----------------------------------------------------)
 
 $(OBJDIR):
-	mkdir $(OBJDIR)
+	$(MKDIR) $(OBJDIR)
 
 $(VMDIR):
-	mkdir $(VMDIR)
+	$(MKDIR) $(VMDIR)
 
 # If any prerequisites are declared all must exist to continue
 ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))

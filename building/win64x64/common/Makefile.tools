@@ -18,10 +18,10 @@ export TOOLPREFIX
 CC:= $(TOOLPREFIX)clang
 CXX:= $(TOOLPREFIX)clang++
 
+TZ:=$(shell date +%Z)
+
 include ../common/Makefile.flags
 include ../common/Makefile.defs
-
-TZ:=$(shell date +%Z)
 
 #############################################################################
 # Linker settings

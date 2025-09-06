@@ -42,6 +42,8 @@ endif
 CC:=$(LLVM_BIN)clang
 CXX:=$(LLVM_BIN)clang++
 
+TZ:=$(shell $(MSYS2_BIN)date +%Z)
+
 # Microsoft Macro Assembler; not needed, use LLVM/Clang; see Makefile.WinSDK
 # AS:=$(VCToolsBinDir)/ml64 
 

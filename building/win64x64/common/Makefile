@@ -68,7 +68,6 @@ else
 		BUILD:=builddbg
 	endif
 endif
-$(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 
 PLUGINSRCDIR:= ../../../src
 export PLUGINSRCDIR
@@ -95,9 +94,12 @@ VMSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 VPATH:= $(VMSRCDIR) $(WIN32DIR) $(CROSSDIR)
 
 #############################################################################
-# Toolchain
+# Toolchain (incl. paths to tools and flags for tools)
 #
 include ../common/Makefile.tools
+
+#############################################################################
+$(shell $(MKDIR) deps >/dev/null) # deps is the dependencies directory
 
 #############################################################################
 # The internal (.lib) and external (.dll) plugins
@@ -155,8 +157,8 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
-JMPASM:=_setjmp-x64.asm
-JMPOBJ:=$(OBJDIR)/_setjmp-x64.o
+JMPASM:=_setjmp-$(ARCH).asm
+JMPOBJ:=$(OBJDIR)/_setjmp-$(ARCH).o
 
 .PRECIOUS: mkNamedPrims.exe
 
@@ -267,24 +269,24 @@ mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(CC) -o $@ -mconsole -m64 $<
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
 	$(CC) -c $< -o $@
 
-vm:	$(VMEXE)
+vm:	$(VMEXE) libs dlls
 
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o $(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
-$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
+$(CONSOLEVMEXE): $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o $(OBJDIR)/version.o $(ALLCLFAGS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
@@ -320,31 +322,33 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 #
 
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
-
+.PHONY: always
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
 plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
-	@-mkdir -p $(BUILD)/$(*F)
+$(OBJDIR)/%.lib: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
+	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) INTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
-	@-mkdir -p $(BUILD)/$(*F)
+$(OBJDIR)/%.dll: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
+	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) EXTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
 		JMPOBJ=$(JMPOBJ) VMLIB=$(OBJDIR)/$(VMLIB) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
 $(BUILD)/fdlibm/libm.a:
-	@-mkdir -p $(@D)
+	@-$(MKDIR) $(@D)
 	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 

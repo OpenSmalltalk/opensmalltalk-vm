@@ -81,7 +81,6 @@ PLATDIR:=../../../platforms
 export PLATDIR
 CROSSDIR:=$(PLATDIR)/Cross/vm
 TPDIR:=$(PLATDIR)/Cross/third-party
-export TPDIR
 WIN32DIR:=$(PLATDIR)/win32/vm
 WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
@@ -272,25 +271,23 @@ mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(LD) -out:$@ mkNamedPrims.obj -subsystem:console -defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c $< -fomit-frame-pointer -Os -o$@
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c $< -fomit-frame-pointer -Os -o$@
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
-	$(CC) -c $< -o$@
+	$(CC) -c $< -o $@
 
-vm:	$(VMEXE) $(LIBS) $(DLLS)
-
-TZ:=$(shell $(MSYS2_BIN)date +%Z)
+vm:	$(VMEXE) libs dlls
 
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) -o $(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
 			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
 $(CONSOLEVMEXE): $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) -o$(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
 			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
@@ -316,6 +313,7 @@ plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Make
 
 # Internal plugin.  Build as lib then link in lib
 $(OBJDIR)/%.lib: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
@@ -335,7 +333,7 @@ $(OBJDIR)/%.dll: always
 		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
 $(BUILD)/fdlibm/libm.a:
-	@-mkdir -p $(@D)
+	@-$(MKDIR) $(@D)
 	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
