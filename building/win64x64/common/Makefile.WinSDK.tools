@@ -17,7 +17,7 @@ export ARCH
 # empty, relying on $(PATH) to find those tools.
 #
 
-include ../common/Makefile.WinSDK.paths
+include ../common/Makefile.WinSDK.tools.paths
 
 ifeq ($(VCToolsBinDir),)
   $(error Failed to locate Visual Studio build tools!)
@@ -46,9 +46,6 @@ TZ:=$(shell $(MSYS2_BIN)date +%Z)
 
 # Microsoft Macro Assembler; not needed, use LLVM/Clang; see Makefile.WinSDK
 # AS:=$(VCToolsBinDir)/ml64 
-
-include ../common/Makefile.WinSDK.flags
-include ../common/Makefile.WinSDK.defs
 
 #############################################################################
 # Linker settings

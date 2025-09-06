@@ -20,9 +20,6 @@ CXX:= $(TOOLPREFIX)clang++
 
 TZ:=$(shell date +%Z)
 
-include ../common/Makefile.flags
-include ../common/Makefile.defs
-
 #############################################################################
 # Linker settings
 #

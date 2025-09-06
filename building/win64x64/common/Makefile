@@ -17,6 +17,10 @@
 # Do make init to allow make -n to function.
 #############################################################################
 
+# Use SDKPREFIX configure custom build environments (e.g., .WinSDK). There
+# are customization hooks for .rules, .rules.*, .tools, .tools.*, and .plugin
+SDKPREFIX?=
+
 #############################################################################
 # Parameters:
 # VM the name of the exe to build, defaults to Squeak (=> Squeak.exe)
@@ -96,7 +100,10 @@ VPATH:= $(VMSRCDIR) $(WIN32DIR) $(CROSSDIR)
 #############################################################################
 # Toolchain (incl. paths to tools and flags for tools)
 #
-include ../common/Makefile.tools
+include ../common/Makefile$(SDKPREFIX).tools
+include ../common/Makefile$(SDKPREFIX).tools.print
+include ../common/Makefile$(SDKPREFIX).tools.flags
+include ../common/Makefile$(SDKPREFIX).tools.defs
 
 #############################################################################
 $(shell $(MKDIR) deps >/dev/null) # deps is the dependencies directory
@@ -124,7 +131,7 @@ dlls: $(DLLS)
 # The third-party libraries
 #
 ifneq ($(THIRDPARTYLIBS),)
-include ../common/Makefile.lib.extra
+include ../common/Makefile$(SDKPREFIX).lib.extra
 THIRDPARTYPREREQS:=$(THIRDPARTYCACHEDIR) $(THIRDPARTYOUTDIR) 
 endif
 
@@ -137,19 +144,9 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 #############################################################################
 # SqueakVM definitions
 #
-ifeq ($(CONFIGURATION),product)
-VMEXE:=  $(OBJDIR)/$(VM)Unstripped.exe
-CONSOLEVMEXE:=  $(OBJDIR)/$(VM)ConsoleUnstripped.exe
-STRIPEXE:=  $(OBJDIR)/$(VM).exe
-STRIPCONSOLEEXE:=  $(OBJDIR)/$(VM)Console.exe
-else
 VMEXE:=  $(OBJDIR)/$(VM).exe
 CONSOLEVMEXE:=  $(OBJDIR)/$(VM)Console.exe
-STRIPEXE:=
-STRIPCONSOLEEXE:=
-endif
 VMDEF:=	$(VM).def
-VMEXP:=	$(OBJDIR)/$(VM).exp
 VMMAP:=	$(OBJDIR)/$(VM).map
 CONSOLEVMMAP:=	$(OBJDIR)/$(VM)Console.map
 VMLIB:=	$(VM).lib
@@ -170,9 +167,13 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #############################################################################
 # Common build rules
 #
+include ../common/Makefile$(SDKPREFIX).rules
+include ../common/Makefile$(SDKPREFIX).rules.vm
 
 default: product # ensure two-pass initialization, see below
-defaultBuild: print-tools print-settings init libs $(VMEXE) $(CONSOLEVMEXE) dlls $(STRIPEXE) $(STRIPCONSOLEEXE) $(APPPOST)
+defaultBuild: print-tools print-settings init vm vm-extra $(APPPOST)
+
+vm:	libs $(VMEXE) $(CONSOLEVMEXE) dlls
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -248,25 +249,7 @@ print-objects:
 	$(info VMOBJ=$(VMOBJ))
 	$(info -----------------------------------------------------)
 
-.PHONY : print-tools
-
-print-tools:
-	$(info ---------------- Build tools ------------------------)
-	$(info CC	$(shell which $(CC))	$(shell $(CC) --version 2> /dev/null | head -n 1))
-	$(info LD	$(shell which $(LD))	$(shell $(LD) --version 2> /dev/null | head -n 1))
-	$(info CP	$(shell which $(CP))		$(shell $(CP) --version 2> /dev/null | head -n 1))
-	$(info RM	$(shell which $(RM))		$(shell $(RM) --version 2> /dev/null | head -n 1))
-	$(info AR	$(shell command -v $(AR))		$(shell $(AR) --version 2> /dev/null | head -n 1))
-	$(info NM	$(shell which $(NM))		$(shell $(NM) --version 2> /dev/null | head -n 1))
-	$(info DLLTOOL	$(shell command -v $(DLLTOOL))	$(shell $(DLLTOOL) --version 2> /dev/null | head -n 1))
-	$(info DLLWRAP	$(shell command -v $(DLLWRAP))	$(shell $(DLLWRAP) --version 2> /dev/null | head -n 1))
-	$(info RC	$(shell which $(RC))	$(shell $(RC) --version 2> /dev/null | head -n 1))
-	$(info -----------------------------------------------------)
-
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
-
-mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
-	$(CC) -o $@ -mconsole -m64 $<
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
 	$(CC) -c $< -fomit-frame-pointer -Os -o $@
@@ -276,30 +259,6 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
 	$(CC) -c $< -o $@
-
-vm:	$(VMEXE) libs dlls
-
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
-	$(LD) $(LDFLAGS) -o $(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
-
-$(CONSOLEVMEXE): $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(ALLCLFAGS) -c $(WIN32DIR)/version.c
-	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
-
-ifneq ($STRIPEXE,)
-$(STRIPEXE): $(VMEXE)
-	$(STRIP) --strip-unneeded -o $(STRIPEXE) $(VMEXE)
-	$(OBJCOPY) --add-gnu-debuglink=$(VMEXE) $(STRIPEXE)
-
-$(STRIPCONSOLEEXE): $(CONSOLEVMEXE)
-	$(STRIP) --strip-unneeded -o $(STRIPCONSOLEEXE) $(CONSOLEVMEXE)
-	$(OBJCOPY) --add-gnu-debuglink=$(CONSOLEVMEXE) $(STRIPCONSOLEEXE)
-endif
 
 $(OBJDIR):
 	@-$(MKDIR) $(BUILD)
@@ -312,19 +271,13 @@ ifneq ($(EXTERNAL_PLUGINS),)
 endif
 
 #############################################################################
-# The exports for named primitives from Squeak (required by VM)
-#
-$(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
-	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(VMOBJ)
-
-#############################################################################
 # Building plugins
 #
 
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 .PHONY: always
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
+plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile$(SDKPREFIX).plugin ../common/Makefile$(SDKPREFIX).plugin)))
 
 # Internal plugin.  Build as lib then link in lib
 $(OBJDIR)/%.lib: always
@@ -352,21 +305,6 @@ $(BUILD)/fdlibm/libm.a:
 	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
-
-#############################################################################
-# Basic rules
-#
-include ../common/Makefile.rules
-
-# GNU windres (GNU Binutils)
-%.res: %.rc
-	$(RC) $(RCFLAGS) -i $< -o $@
-
-# GNU windres (GNU Binutils)
-resource.o:	$(VMRES)
-	$(RC) $(RCFLAGS) -i $< -o $@
-	$(CP) $(VM).exe.manifest $(OBJDIR)
-	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 #############################################################################
 # Extra specific dependencies

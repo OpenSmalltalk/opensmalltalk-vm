@@ -78,6 +78,8 @@ endif
 # Toolchain (incl. paths to tools and flags for tools)
 #
 include ../common/Makefile.tools
+include ../common/Makefile.tools.flags
+include ../common/Makefile.tools.defs
 
 #############################################################################
 # Basic rules
