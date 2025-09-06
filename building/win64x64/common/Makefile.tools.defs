@@ -59,8 +59,7 @@ MT_ENV?=-D_MT
 
 # Use fdlibm for floating-point, which is cross-platform, or 
 # platform-specific floating point. See COGDEFS.
-# BIT_IDENTICAL_FLOATING_POINT=1
-
+BIT_IDENTICAL_FLOATING_POINT=1
 
 DEFS:=-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(WINBIT) \
 		$(WINUNI) $(MT_ENV) -D'TZ="$(TZ)"' -DNO_ISNAN -DNO_SERVICE \
