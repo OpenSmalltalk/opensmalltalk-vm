@@ -21,11 +21,6 @@ set -e
 # - APP_NAME (e.g., "vm" or "sqcogspur64linuxht" or "Squeak.app")
 
 
-
-if [[ "${RUNNER_OS}" == "Windows" ]]; then
-    source ./scripts/ci/actions_prepare_msys.sh
-fi
-
 echo "$(cat platforms/Cross/vm/sqSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/vm/sqSCCSVersion.h
 echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/plugins/sqPluginsSCCSVersion.h
 
