@@ -21,16 +21,23 @@ MSYS2_BIN=c:/msys64/usr/bin/
 # Set paths to the Windows SDK (and tools) and Visual Studio (and tools)
 #
 ifeq ($(VCINSTALLDIR),)
-	VCINSTALLDIR:=C:/Program\ Files/Microsoft\ Visual\ Studio/*/Community/VC
+	# ../[2017 2022]/[Community Enterprise]/VC
+	VCINSTALLDIR:=C:/Program\ Files/Microsoft\ Visual\ Studio/*/*/VC
 	VCINSTALLDIR:=$(wildcard $(VCINSTALLDIR))
 else
 	override VCINSTALLDIR:=$(subst \,/,$(VCINSTALLDIR))
 endif
 
 ifeq ($(VCToolsInstallDir),)
+	# ../MSVC/[14.29.30133  14.44.35207]
 	VCToolsInstallDir:=$(VCINSTALLDIR)/Tools/MSVC/*
 	VCToolsInstallDir:=$(shell echo "$(VCToolsInstallDir)" | sed 's/ /\\ /g')
 	VCToolsInstallDir:=$(wildcard $(VCToolsInstallDir))
+	# To make sort and lastword work, mask space-ridden VCINSTALLDIR
+	VCToolsInstallDir:=$(subst $(VCINSTALLDIR),%MAKETMP123%,$(VCToolsInstallDir))
+	VCToolsInstallDir:=$(sort $(VCToolsInstallDir))
+	VCToolsInstallDir:=$(lastword $(VCToolsInstallDir))
+	VCToolsInstallDir:=$(subst %MAKETMP123%,$(VCINSTALLDIR),$(VCToolsInstallDir))
 else
 	override VCToolsInstallDir:=$(subst \,/,$(VCToolsInstallDir))
 endif
@@ -71,6 +78,9 @@ ifeq ($(WindowsSDKVersion),)
 	WindowsSDKVersion:=$(shell echo "$(WindowsSDKVersion)" | sed 's/ /\\ /g')
 	WindowsSDKVersion:=$(wildcard $(WindowsSDKVersion))
 	WindowsSDKVersion:=$(subst $(WindowsSdkDir)/include/,,$(WindowsSDKVersion))
+	# Use only newest SDK version
+	WindowsSDKVersion:=$(sort $(WindowsSDKVersion))
+	WindowsSDKVersion:=$(lastword $(WindowsSDKVersion))
 endif
 override WindowsSDKVersion:=$(subst \,,$(WindowsSDKVersion))
 
