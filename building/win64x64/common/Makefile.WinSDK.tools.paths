@@ -41,10 +41,10 @@ endif
 # Note that Visual Studio ships its own version of LLVM/Clang these days.
 #
 
-LLVM_BIN:=c:/llvm/bin/
+# LLVM_BIN:=c:/llvm/bin/
 
 VCLlvmInstallDir:=$(VCINSTALLDIR)/Tools/Llvm
-# LLVM_BIN:=$(VCLlvmInstallDir)/$(ARCH)/bin/
+LLVM_BIN:=$(VCLlvmInstallDir)/$(ARCH)/bin/
 
 # Must escape whitespace and parentheses for scripts
 LLVM_BIN:=$(shell echo "$(LLVM_BIN)" | sed 's/[() ]/\\&/g')
