@@ -51,12 +51,12 @@ jobs:
           # - win32x86
         flavor:
           - squeak.cog.spur
-          # - squeak.stack.spur
-          # - squeak.sista.spur
+          - squeak.stack.spur
+          - squeak.sista.spur
         mode:
           - fast
-          # - debug
-          # - assert
+          - debug
+          - assert
 
     runs-on: windows-2025
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
@@ -81,8 +81,8 @@ jobs:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
-      - name: Setup tmate debugging session
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate debugging session
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
