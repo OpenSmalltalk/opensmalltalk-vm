@@ -7184,7 +7184,7 @@ static long display_hostWindowCreate(long w, long h, long x, long y, char *list,
 											    { return 0; }
 static long display_hostWindowClose(long index)                                               { return 0; }
 static long display_hostWindowCloseAll(void)                                                 { return 0; }
-static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
+static long display_hostWindowShowDisplay(unsigned char *dispBitsIndex, long width, long height, long depth,
 					 long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)
 											    { return 0; }
 
