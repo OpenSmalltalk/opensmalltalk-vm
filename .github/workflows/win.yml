@@ -81,8 +81,8 @@ jobs:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
-      # - name: Setup tmate debugging session
-        # uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate debugging session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
