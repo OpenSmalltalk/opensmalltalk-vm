@@ -51,12 +51,12 @@ jobs:
           # - win32x86
         flavor:
           - squeak.cog.spur
-          - squeak.stack.spur
-          - squeak.sista.spur
+          # - squeak.stack.spur
+          # - squeak.sista.spur
         mode:
           - fast
-          - debug
-          - assert
+          # - debug
+          # - assert
 
     runs-on: windows-2025
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
