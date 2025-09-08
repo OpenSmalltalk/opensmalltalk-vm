@@ -51,7 +51,7 @@ endif # IS_PREPARING
 # generate incorrect code for spur segment storage
 #	(return:restoringObjectsIn:savedFirstFields:and:savedHashes:)
 # unless USE_INLINE_MEMORY_ACCESSORS is set.
-MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+MEMACCESS?=-DUSE_INLINE_MEMORY_ACCESSORS=1
 
 # Multi-threaded environment. Might in case use multi-threading specific
 # versions of API calls. Also used to avoid built-in functions.
