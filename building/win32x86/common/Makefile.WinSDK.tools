@@ -1,0 +1,98 @@
+#############################################################################
+# Common Makefile for Win32 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
+# Supported architecures: x86, x64, arm64
+ARCH:=x86
+# Export ARCH to be used in plugins such as IA32ABI (i.e. FFI callbacks)
+export ARCH
+
+#############################################################################
+# Set paths to toolchain. Note that $(LLVM_BIN) and $(MSYS2_BIN) may be
+# empty, relying on $(PATH) to find those tools.
+#
+
+include ../common/Makefile.WinSDK.tools.paths
+
+ifeq ($(VCToolsBinDir),)
+  $(error Failed to locate Visual Studio build tools!)
+endif
+
+ifeq ($(WindowsSDKToolsBinDir),)
+  $(error Failed to locate Windows SDK build tools!)
+endif
+
+ifeq ($(LLVM_BIN),)
+  $(info Using clang from PATH...)
+endif
+
+ifeq ($(MSYS2_BIN),)
+  $(info Using GNU tools from PATH...)
+endif
+
+#############################################################################
+# C compiler settings 
+#
+
+CC:=$(LLVM_BIN)clang
+CXX:=$(LLVM_BIN)clang++
+
+TZ:=$(shell $(MSYS2_BIN)date +%Z)
+
+#############################################################################
+# Linker settings
+#
+LD:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(ARCH) -INCREMENTAL:NO
+LDCXX:=$(VCToolsBinDir)/LINK -nologo -MACHINE:$(ARCH) -INCREMENTAL:NO
+LIBRARIAN:=$(VCToolsBinDir)/LIB -nologo
+
+BASELDFLAGS:= -DYNAMICBASE -LARGEADDRESSAWARE -NXCOMPAT -DEBUG:FULL
+LDFLAGS:= -subsystem:windows $(BASELDFLAGS) $(EXTRALDFLAGS)
+CONSOLELDFLAGS:= -subsystem:console $(BASELDFLAGS) $(EXTRALDFLAGS)
+DL:=-DEFAULTLIB:
+NDL:=-NODEFAULTLIB:
+
+ifdef BIT_IDENTICAL_FLOATING_POINT
+EXTRANDLS:=-NODEFAULTLIB:libm
+endif
+STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(EXTRANDLS) $(DL)msvcrt \
+         dinput8.lib dsound.lib ws2_32.lib comdlg32.lib ole32.lib winmm.lib \
+         version.lib wininet.lib user32.lib gdi32.lib psapi.lib \
+         advapi32.lib kernel32.lib secur32.lib shell32.lib shfolder.lib
+
+#############################################################################
+# Tools to use (usually all from GNU coreutils). If $(MSYS2_BIN)
+# prefix is empty, rely on $(PATH) to find tools.
+#
+CP:= $(MSYS2_BIN)cp
+RM:= $(MSYS2_BIN)rm 
+MV:= $(MSYS2_BIN)mv
+MKDIR:=$(MSYS2_BIN)mkdir -p 
+
+#############################################################################
+# RC settings, Microsoft Resource Compiler
+# CVTRES settings, Microsoft Resource To Object Converter
+#
+# Note: RC compiles the .rc files into linkable .o files
+#
+RC:=$(WindowsSDKToolsBinDir)/rc -nologo
+CVTRES:=$(VCToolsBinDir)/cvtres -nologo
+SED:=$(MSYS2_BIN)sed
+GREP:=$(MSYS2_BIN)grep
+BASH:=$(MSYS2_BIN)bash
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell $(GREP) 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell $(BASH) -c "cd ../../../scripts; ./updateSCCSVersions")
+endif
+SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNREV := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNBUILD := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+
+RCFLAGS:= -i $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) -DFILEVERSIONSTRING="\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\""

@@ -1,32 +1,51 @@
 #############################################################################
-# Compilation rules for Microsoft Windows
+# Common Makefile for Win32 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
 #
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compilation rules
+#############################################################################
+
+.SUFFIXES:	.c .cpp .o .s .rc .res .dep
+
+#############################################################################
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
-
+#
+$(info OBJDIR is $(OBJDIR))
 
 ifeq ($(findstring /vm,$(OBJDIR)),/vm)
 BD:=$(BUILD)/vm
 else
-BD:=$(BUILD)/$(LIBNAME)/vm
+BD:=$(BUILD)/$(LIBNAME)
 endif
-ALLFLAGS = $(CFLAGS) $(INCLUDES) $(DEFS)
+
+# Not interested in recording system header dependencies. *must* use " = "
+DEPFLAGS = -MMD -MT '$(BD)/$(*F).o' -MF deps/$(*F).d
+#############################################################################
+
+ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
+
+#############################################################################
+# Rules for automated builds using LLVM/Clang
+#
 
 $(OBJDIR)/%.o: %.c
-	$(CC) -x c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
-
-$(OBJDIR)/%.o: %.m
-	$(CC) -x objective-c -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+	$(CC) -o $@ $(ALLCFLAGS) -c $<
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) -MMD -MT $(BD)/$(*F).o -MF deps/$(*F).d $(ALLFLAGS) -c $< -o $@
+	$(CC) -o $@ $(ALLCXXFLAGS) -c $<
 
-%res: %.rc
-	$(RC) $(RCFLAGS) -i $< -o $@
-
+# GNU windres (GNU Binutils); see Makefile
+# %.res: %.rc
+# 	$(RC) $(RCFLAGS) -i $< -o $@
 
 deps/%.d: ;
 
 .PRECIOUS: deps/%.d
 
--include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))
