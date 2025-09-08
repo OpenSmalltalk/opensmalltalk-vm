@@ -48,7 +48,7 @@ jobs:
       matrix:
         arch: 
           - win64x64
-          # - win32x86
+          - win32x86
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
@@ -81,6 +81,7 @@ jobs:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
+      # Set your personal SSH key via GitHub to login securely into tmate shell
       # - name: Setup tmate debugging session
       #   uses: mxschmitt/action-tmate@v3
 
@@ -96,9 +97,6 @@ jobs:
       - name: Build VM
         shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
-        # env:
-          # MSYSTEM: MSYS
-          # MSYS_ENV: ${{ matrix.arch.msys-env }}
 
       - name: Sign VM (not implemented)
         if: false
