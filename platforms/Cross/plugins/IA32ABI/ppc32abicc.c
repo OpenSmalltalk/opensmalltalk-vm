@@ -219,7 +219,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 
 	case retint64: {
 		long vhigh = rs->rvs.valint64.high;
-#if _MSC_VER
+#if _MSC_VER && !__clang__
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
 #warning ASSEMBLER
@@ -232,7 +232,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 
 	case retdouble: {
 		double valflt64 = rs->rvs.valflt64;
-#if _MSC_VER
+#if _MSC_VER && !__clang__
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
 #warning ASSEMBLER
