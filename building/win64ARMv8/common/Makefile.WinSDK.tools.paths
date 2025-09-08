@@ -80,7 +80,7 @@ ifeq ($(WindowsSDKVersion),)
 	WindowsSDKVersion:=$(subst $(WindowsSdkDir)/include/,,$(WindowsSDKVersion))
 	# Use only newest SDK version
 	WindowsSDKVersion:=$(sort $(WindowsSDKVersion))
-	WindowsSDKVersion:=$(lastword $(WindowsSDKVersion))
+	WindowsSDKVersion:=$(firstword $(WindowsSDKVersion))
 endif
 override WindowsSDKVersion:=$(subst \,,$(WindowsSDKVersion))
 

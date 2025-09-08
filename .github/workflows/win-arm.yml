@@ -96,6 +96,8 @@ jobs:
       - name: Build VM
         shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
+        env:
+          MSYS2_BIN: ${{ steps.msys2.outputs.msys2-location }}/usr/bin/
 
       - name: Sign VM (not implemented)
         if: false
