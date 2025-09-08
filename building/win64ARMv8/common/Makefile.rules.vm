@@ -1,0 +1,70 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Rules for building the VM binary itself
+#############################################################################
+
+ifeq ($(CONFIGURATION),product)
+VMEXE:=  $(OBJDIR)/$(VM)Unstripped.exe
+CONSOLEVMEXE:=  $(OBJDIR)/$(VM)ConsoleUnstripped.exe
+STRIPEXE:=  $(OBJDIR)/$(VM).exe
+STRIPCONSOLEEXE:=  $(OBJDIR)/$(VM)Console.exe
+else
+VMEXE:=  $(OBJDIR)/$(VM).exe
+CONSOLEVMEXE:=  $(OBJDIR)/$(VM)Console.exe
+STRIPEXE:=
+STRIPCONSOLEEXE:=
+endif
+
+#############################################################################
+# The exports for named primitives from Squeak (required by VM)
+#
+VMEXP:=	$(OBJDIR)/$(VM).exp
+$(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
+	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(VMOBJ)
+
+#############################################################################
+
+mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
+	$(CC) -o $@ -mconsole -m64 $<
+
+.PHONY: vm-extra
+vm-extra: $(STRIPEXE) $(STRIPCONSOLEEXE)
+
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o $(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
+	$(LD) $(LDFLAGS) -o $(VMEXE) \
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
+
+$(CONSOLEVMEXE): $(VMOBJ) libs $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o $(OBJDIR)/version.o $(ALLCLFAGS) -c $(WIN32DIR)/version.c
+	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
+
+ifneq ($STRIPEXE,)
+$(STRIPEXE): $(VMEXE)
+	$(STRIP) --strip-unneeded -o $(STRIPEXE) $(VMEXE)
+	$(OBJCOPY) --add-gnu-debuglink=$(VMEXE) $(STRIPEXE)
+
+$(STRIPCONSOLEEXE): $(CONSOLEVMEXE)
+	$(STRIP) --strip-unneeded -o $(STRIPCONSOLEEXE) $(CONSOLEVMEXE)
+	$(OBJCOPY) --add-gnu-debuglink=$(CONSOLEVMEXE) $(STRIPCONSOLEEXE)
+endif
+
+#############################################################################
+
+# GNU windres (GNU Binutils)
+%.res: %.rc
+	$(RC) $(RCFLAGS) -i $< -o $@
+
+# GNU windres (GNU Binutils)
+resource.o:	$(VMRES)
+	$(RC) $(RCFLAGS) -i $< -o $@
+	$(CP) $(VM).exe.manifest $(OBJDIR)
+	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest

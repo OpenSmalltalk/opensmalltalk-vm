@@ -1,0 +1,25 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# -> https://github.com/llvm/llvm-project/releases
+# -> https://developer.microsoft.com/de-de/windows/downloads/windows-sdk/
+# -> https://visualstudio.microsoft.com/de/vs/community/
+# -> https://www.msys2.org/
+#
+# Make sure to either use a Clang from MS Visual Studio or a pre-built
+# clang that targets *-pc-windows-msvc. The Clang from MSYS2 pacman will
+# target *-w64-windows-gnu . See Makefile for the MSYS2 toolchain.
+#
+# RECOMMENDED: Start plain MSYS2 shell, run "mvm" script.
+# Alternative: Start Native Tools Command Prompt, run SETPATH then MAKE*.BAT.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Do make init to allow make -n to function.
+#############################################################################
+
+SDKPREFIX:=.WinSDK
+include ../common/Makefile

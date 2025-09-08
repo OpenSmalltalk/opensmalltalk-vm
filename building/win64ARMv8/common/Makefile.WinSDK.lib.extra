@@ -1,0 +1,12 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+# 
+# THIRDPARTYLIBS			The libraries to build (you define them in ./third-party/LIB/Makefile.lib)
+# THIRDPARTYDIR				Where to build libraries
+# THIRDPARTYOUTDIR 			Where to first install libraries (output place)
+# THIRDPARTYCACHEDIR 		Where to download thirdparty libraries
+# 
+#############################################################################
+
+# Under construction. See Makefile.lib.extra for a template.
