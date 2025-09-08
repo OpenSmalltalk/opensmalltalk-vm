@@ -14,7 +14,7 @@
 #
 WindowsSdkMajorVersion:=10
 HostARCH:=HostARM64
-MSYS2_BIN=c:/msys64/usr/bin/
+MSYS2_BIN?=c:/msys64/usr/bin/
 
 
 #############################################################################
@@ -74,13 +74,13 @@ else
 	override WindowsSdkDir:=$(subst \,/,$(WindowsSdkDir))
 endif
 ifeq ($(WindowsSDKVersion),)
-	WindowsSDKVersion:=$(WindowsSdkDir)/include/*
+	WindowsSDKVersion:=$(WindowsSdkDir)/include/$(WindowsSdkMajorVersion)*
 	WindowsSDKVersion:=$(shell echo "$(WindowsSDKVersion)" | sed 's/ /\\ /g')
 	WindowsSDKVersion:=$(wildcard $(WindowsSDKVersion))
 	WindowsSDKVersion:=$(subst $(WindowsSdkDir)/include/,,$(WindowsSDKVersion))
 	# Use only newest SDK version
 	WindowsSDKVersion:=$(sort $(WindowsSDKVersion))
-	WindowsSDKVersion:=$(firstword $(WindowsSDKVersion))
+	WindowsSDKVersion:=$(lastword $(WindowsSDKVersion))
 endif
 override WindowsSDKVersion:=$(subst \,,$(WindowsSDKVersion))
 

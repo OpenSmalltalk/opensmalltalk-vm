@@ -75,7 +75,7 @@ else
 	override WindowsSdkDir:=$(subst \,/,$(WindowsSdkDir))
 endif
 ifeq ($(WindowsSDKVersion),)
-	WindowsSDKVersion:=$(WindowsSdkDir)/include/*
+	WindowsSDKVersion:=$(WindowsSdkDir)/include/$(WindowsSdkMajorVersion)*
 	WindowsSDKVersion:=$(shell echo "$(WindowsSDKVersion)" | sed 's/ /\\ /g')
 	WindowsSDKVersion:=$(wildcard $(WindowsSDKVersion))
 	WindowsSDKVersion:=$(subst $(WindowsSdkDir)/include/,,$(WindowsSDKVersion))
