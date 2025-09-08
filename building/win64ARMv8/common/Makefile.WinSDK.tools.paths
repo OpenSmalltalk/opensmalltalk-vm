@@ -14,8 +14,12 @@
 #
 WindowsSdkMajorVersion:=10
 HostARCH:=HostARM64
-MSYS2_BIN?=c:/msys64/usr/bin/
 
+ifeq ($(MSYS2_BIN),)
+	MSYS2_BIN:=c:/msys64/usr/bin/
+else
+	override MSYS2_BIN:=$(subst \,/,$(MSYS2_BIN))
+endif
 
 #############################################################################
 # Set paths to the Windows SDK (and tools) and Visual Studio (and tools)
