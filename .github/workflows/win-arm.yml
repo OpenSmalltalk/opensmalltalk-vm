@@ -91,7 +91,7 @@ jobs:
           release: true # no MSYS2 installed in ARM64 runners
           update: false # faster?
           cache: true
-          install: git base make binutils
+          install: git base make mingw-w64-clang-aarch64-llvm-tools
 
       - name: Build VM
         shell: msys2 {0} #bash
