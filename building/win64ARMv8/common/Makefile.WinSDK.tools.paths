@@ -21,7 +21,7 @@ endif
 
 # For llvm-tools (e.g., ar or ranlib), expand $PATH to clangarm64 env
 # Make sure to have the package mingw-w64-clang-aarch64-llvm-tools installed
-override PATH:=$(MSYS2_BIN)../../clangarm64/bin:$(PATH)
+export PATH:=$(MSYS2_BIN)../../clangarm64/bin:$(PATH)
 
 #############################################################################
 # Set paths to the Windows SDK (and tools) and Visual Studio (and tools)
