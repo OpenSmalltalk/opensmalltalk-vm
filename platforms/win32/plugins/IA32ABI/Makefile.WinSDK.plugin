@@ -1,0 +1,16 @@
+#############################################################################
+# Plugin Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
+ifeq ($(ARCH),x64)
+LIBSRC:=xabicc.c IA32ABI.c x64win64stub.c
+else
+LIBSRC:=xabicc.c IA32ABI.c
+endif
+
+include ../common/Makefile.WinSDK.plugin

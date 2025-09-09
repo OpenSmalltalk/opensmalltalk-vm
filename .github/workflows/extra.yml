@@ -17,11 +17,11 @@ jobs:
       fail-fast: false # let them finish bc. different platforms
       matrix:
         include:
-          - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
+          - arch: { name: win32x86, os: windows-2025 }
             flavor: squeak.cog.v3
-          - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
+          - arch: { name: win32x86, os: windows-2025 }
             flavor: squeak.stack.v3
-          - arch: { name: win32x86, os: windows-2025, msystem: mingw32, msys-env: i686 }
+          - arch: { name: win32x86, os: windows-2025 }
             flavor: squeak.cog.spur.lowcode
 
           - arch: { name: linux32x86, os: ubuntu-22.04 }
@@ -36,8 +36,6 @@ jobs:
       FLAVOR: ${{ matrix.flavor }}
       MODE: fast # no assert or debug here
       HEARTBEAT: threaded # linux only; no itimer here
-      MSYS_SYS: ${{ matrix.arch.msystem }}
-      MSYS_ENV: ${{ matrix.arch.msys-env }}
     steps:
       - name: Checkout files
         uses: actions/checkout@v4
@@ -58,18 +56,20 @@ jobs:
         if: startsWith(matrix.arch.name, 'win')
         uses: msys2/setup-msys2@v2
         with:
-          msystem: ${{ matrix.arch.msystem }}
+          msystem: MSYS
           release: false # use existing MSYS2 installation
           update: false # faster builds
           cache: true
-          install: |
-            base-devel
-            mingw-w64-${{ matrix.arch.msys-env }}-toolchain
-            mingw-w64-${{ matrix.arch.msys-env }}-clang
-            mingw-w64-${{ matrix.arch.msys-env }}-clang-libs
+          install: git base make
 
-      - name: Build VM
+      - name: Build VM (Linux)
+        if: startsWith(matrix.arch.name, 'linux')
         shell: bash
+        run: ./scripts/ci/actions_build.sh
+
+      - name: Build VM (Windows)
+        if: startsWith(matrix.arch.name, 'win')
+        shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
 
       - name: Sign VM (not implemented)

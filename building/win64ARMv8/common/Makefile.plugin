@@ -1,4 +1,10 @@
 #############################################################################
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
 # Generic Makefile for plugins on Win64
 #############################################################################
 #
@@ -48,45 +54,12 @@ LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
 
 #############################################################################
-# C compiler settings (gcc 4.x)
-#
-include ../common/Makefile.tools
-
-# overrides of default toolchain settings
-
-ifeq ($(CONFIGURATION),product)
-OFLAGS:= -O1 -momit-leaf-frame-pointer -funroll-loops 
-NDEBUG:=-DNDEBUG
-DEBUGVM=0
-else ifeq ($(CONFIGURATION),assert)
-OFLAGS:= -O1 -fno-omit-frame-pointer
-DEBUGVM=0
-NDEBUG:=
-else
-OFLAGS:= -O0 -fno-omit-frame-pointer
-DEBUGVM=1
-NDEBUG:=
-endif
-
-XDEFS:=	
-DEFS:=	$(WINVER) -DWIN64=1 -DNO_ISNAN \
-		-DNO_SERVICE \
-		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
-
-CFLAGS:= -fdeclspec -msse2 -ggdb2 -march=$(ARCH) \
-	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
-
-
-#############################################################################
 # DLL settings
 #
 # Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
 # but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
 #
 OPTSTRIP:=	echo not doing strip
-
-
-.SUFFIXES:	.c .cpp .o .s .rc .res .dep
 
 #############################################################################
 # Plugin settings
@@ -98,9 +71,20 @@ PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
 LIBOBJ ?= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
 LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
+LIBOBJ+=$(BUILD)/fdlibm/$(LIBM_LIB) $(LIBS)
 endif
 
+#############################################################################
+# Toolchain (incl. paths to tools and flags for tools)
+#
+include ../common/Makefile.tools
+include ../common/Makefile.tools.flags
+include ../common/Makefile.tools.defs
+
+#############################################################################
+# Basic rules
+#
+include ../common/Makefile.rules
 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 
@@ -132,10 +116,10 @@ print-settings:
 	$(info -----------------------------------------------------)
 
 $(OBJDIR):
-	mkdir $(OBJDIR)
+	$(MKDIR) $(OBJDIR)
 
 $(VMDIR):
-	mkdir $(VMDIR)
+	$(MKDIR) $(VMDIR)
 
 # If any prerequisites are declared all must exist to continue
 ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
@@ -153,20 +137,20 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 		$(LIBOBJ) $(JMPOBJ)
 ifneq ($(LINK_WITH_GCC),)
 	$(CC) -shared \
-		-march=$(ARCH) \
+		-m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GCCLINKEXTRAS) \
 		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else ifneq ($(LINK_WITH_GPP),)
 	$(CXX) -shared \
-		-march=$(ARCH) \
+		-m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GPPLINKEXTRAS) \
 		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else
-	$(DLLWRAP) -mwindows -march=$(ARCH) \
+	$(DLLWRAP) -mwindows -m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(DLLWRAPEXTRAS) \
@@ -175,11 +159,6 @@ else
 endif
 	$(OPTSTRIP) --strip-all $(VMDIR)/$(LIBNAME).dll
 	-$(RM) $(OBJDIR)/$(LIBNAME).lib
-
-#############################################################################
-# Rules for automated builds
-#
-include ../common/Makefile.rules
 
 else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
 # If any prerequisites are missing simply create a .ignore file

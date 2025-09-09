@@ -47,8 +47,8 @@ jobs:
       fail-fast: false
       matrix:
         arch: 
-          - { name: win64x64, msystem: mingw64, msys-env: x86_64 }
-          - { name: win32x86, msystem: mingw32, msys-env: i686 }
+          - win64x64
+          - win32x86
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
@@ -59,9 +59,9 @@ jobs:
           - assert
 
     runs-on: windows-2025
-    name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
-      ARCH: ${{ matrix.arch.name }}
+      ARCH: ${{ matrix.arch }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
     steps:
@@ -79,32 +79,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-${{ matrix.arch.name }}-${{ matrix.flavor }}
+          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
+      # Set your personal SSH key via GitHub to login securely into tmate shell
       # - name: Setup tmate debugging session
-        # uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@v3
 
-      - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
+      - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
         with:
-          msystem: ${{ matrix.arch.msystem }}
+          msystem: MSYS
           release: false # use existing MSYS2 installation
           update: false # faster?
           cache: true
-          install: |
-            git
-            base-devel
-            mingw-w64-${{ matrix.arch.msys-env }}-toolchain
-            mingw-w64-${{ matrix.arch.msys-env }}-clang
-            mingw-w64-${{ matrix.arch.msys-env }}-clang-libs
+          install: git base make
 
       - name: Build VM
         shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
-        # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
-        env:
-          MSYS_SYS: ${{ matrix.arch.msystem }}
-          MSYS_ENV: ${{ matrix.arch.msys-env }}
 
       - name: Sign VM (not implemented)
         if: false

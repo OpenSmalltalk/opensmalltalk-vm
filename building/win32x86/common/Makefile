@@ -1,7 +1,25 @@
 #############################################################################
-# Common Makefile for Win32 VM using gcc, cygwin and gnu make
+# Common Makefile for Win32 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Visit: https://www.msys2.org/
+# Visit: https://www.mingw-w64.org/
+#
+# Make sure to install Clang via MSYS2 pacman to get a compiler that targets
+# *-w64-windows-gnu . Other pre-built Clang bundles for Windows will target
+# *-pc-windows-msvc . See Makefile.WinSDK for the MSVC toolchain.
+#
+# RECOMMENDED: Start MSYS2/MINGW64 environment, run "mvm" script.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
 # Do make init to allow make -n to function.
 #############################################################################
+
+# Use SDKPREFIX configure custom build environments (e.g., .WinSDK). There
+# are customization hooks for .rules, .rules.*, .tools, .tools.*, and .plugin
+SDKPREFIX?=
 
 #############################################################################
 # Parameters:
@@ -54,7 +72,7 @@ else
 		BUILD:=builddbg
 	endif
 endif
-$(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
+
 PLUGINSRCDIR:= ../../../src
 export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
@@ -71,13 +89,24 @@ WIN32UTILDIR:=$(PLATDIR)/win32/util
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
 ifeq ($(THREADING),multi)
-MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interpmt.c $(VMSRCDIR)/cogit.c)
+MAKERSRC:= $(wildcard $(VMSRCDIR)/[ci]*terpmt.c $(VMSRCDIR)/cogit.c)
 else
-MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
+MAKERSRC:= $(wildcard $(VMSRCDIR)/[ci]*terp.c $(VMSRCDIR)/cogit.c)
 endif
 VMSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 
 VPATH:= $(VMSRCDIR) $(WIN32DIR) $(CROSSDIR)
+
+#############################################################################
+# Toolchain (incl. paths to tools and flags for tools)
+#
+include ../common/Makefile$(SDKPREFIX).tools
+include ../common/Makefile$(SDKPREFIX).tools.print
+include ../common/Makefile$(SDKPREFIX).tools.flags
+include ../common/Makefile$(SDKPREFIX).tools.defs
+
+#############################################################################
+$(shell $(MKDIR) deps >/dev/null) # deps is the dependencies directory
 
 #############################################################################
 # The internal (.lib) and external (.dll) plugins
@@ -89,15 +118,22 @@ LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+LIBM_LIB?=libm.a
+export LIBM_LIB
+LIBS:=$(BUILD)/fdlibm/$(LIBM_LIB) $(LIBS)
 export BIT_IDENTICAL_FLOATING_POINT
 endif
+
+.PHONY: libs dlls
+
+libs: $(LIBS)
+dlls: $(DLLS)
 
 #############################################################################
 # The third-party libraries
 #
 ifneq ($(THIRDPARTYLIBS),)
-include ../common/Makefile.lib.extra
+include ../common/Makefile$(SDKPREFIX).lib.extra
 THIRDPARTYPREREQS:=$(THIRDPARTYCACHEDIR) $(THIRDPARTYOUTDIR) 
 endif
 
@@ -110,19 +146,9 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 #############################################################################
 # SqueakVM definitions
 #
-ifeq ($(CONFIGURATION),product)
-VMEXE:=  $(OBJDIR)/$(VM)Unstripped.exe
-CONSOLEVMEXE:=  $(OBJDIR)/$(VM)ConsoleUnstripped.exe
-STRIPEXE:=  $(OBJDIR)/$(VM).exe
-STRIPCONSOLEEXE:=  $(OBJDIR)/$(VM)Console.exe
-else
 VMEXE:=  $(OBJDIR)/$(VM).exe
 CONSOLEVMEXE:=  $(OBJDIR)/$(VM)Console.exe
-STRIPEXE:=
-STRIPCONSOLEEXE:=
-endif
 VMDEF:=	$(VM).def
-VMEXP:=	$(OBJDIR)/$(VM).exp
 VMMAP:=	$(OBJDIR)/$(VM).map
 CONSOLEVMMAP:=	$(OBJDIR)/$(VM)Console.map
 VMLIB:=	$(VM).lib
@@ -130,15 +156,10 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
-JMPASM:=_setjmp-x86.asm
-JMPOBJ:=$(OBJDIR)/_setjmp-x86.o
+JMPASM:=_setjmp-$(ARCH).asm
+JMPOBJ:=$(OBJDIR)/_setjmp-$(ARCH).o
 
 .PRECIOUS: mkNamedPrims.exe
-
-#############################################################################
-# Toolchain
-#
-include ../common/Makefile.tools
 
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
@@ -148,9 +169,13 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #############################################################################
 # Common build rules
 #
+include ../common/Makefile$(SDKPREFIX).rules
+include ../common/Makefile$(SDKPREFIX).rules.vm
 
 default: product # ensure two-pass initialization, see below
-defaultBuild: print-tools print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs $(APPPOST)
+defaultBuild: print-tools print-settings init vm vm-extra $(APPPOST)
+
+vm:	libs $(VMEXE) $(CONSOLEVMEXE) dlls
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -179,25 +204,28 @@ init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
 
 cleanmt:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
 
 cleanast:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
 
 cleanmtast:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
 
 cleandbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
 
 cleanmtdbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
 
 nukelibs:
-	rm $(LIBS)
+	$(RM) $(LIBS)
+
+nukedlls:
+	$(RM) $(DLLS)
 
 .PHONY : print-settings
 
@@ -208,6 +236,7 @@ print-settings:
 	$(info VPATH=$(VPATH))
 	$(info INCLUDES=$(INCLUDES))
 	$(info CFLAGS=$(CFLAGS))
+	$(info DEFS=$(DEFS))
 	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
 	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
 	$(info OBJDIR=$(OBJDIR))
@@ -222,121 +251,64 @@ print-objects:
 	$(info VMOBJ=$(VMOBJ))
 	$(info -----------------------------------------------------)
 
-.PHONY : print-tools
-
-print-tools:
-	$(info ---------------- Build tools ------------------------)
-	$(info CC	$(shell which $(CC))	$(shell $(CC) --version 2> /dev/null | head -n 1))
-	$(info LD	$(shell which $(LD))	$(shell $(LD) --version 2> /dev/null | head -n 1))
-	$(info CP	$(shell which $(CP))		$(shell $(CP) --version 2> /dev/null | head -n 1))
-	$(info RM	$(shell which $(RM))		$(shell $(RM) --version 2> /dev/null | head -n 1))
-	$(info AR	$(shell which $(ARX))		$(shell $(ARX) --version 2> /dev/null | head -n 1))
-	$(info NM	$(shell which $(NM))		$(shell $(NM) --version 2> /dev/null | head -n 1))
-	$(info DLLTOOL	$(shell $(DLLTOOL) --version 2> /dev/null | head -n 1))
-	$(info DLLWRAP	$(shell $(DLLWRAP) --version 2> /dev/null | head -n 1))
-	$(info RC	$(shell which $(RC))	$(shell $(RC) --version 2> /dev/null | head -n 1))
-	$(info -----------------------------------------------------)
-
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
-mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
-	$(CC) -o $@ -mconsole -m32 $<
-
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
+	$(CC) -c $< -fomit-frame-pointer -Os -o $@
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
-	$(AS) -o $@ $<
-
-vm:	$(VMEXE)
-
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
-	$(LD) $(LDFLAGS) -o $(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
-
-$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
-	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
-
-ifneq ($STRIPEXE,)
-$(STRIPEXE): $(VMEXE)
-	$(STRIP) --strip-unneeded -o $(STRIPEXE) $(VMEXE)
-	$(OBJCOPY) --add-gnu-debuglink=$(VMEXE) $(STRIPEXE)
-
-$(STRIPCONSOLEEXE): $(CONSOLEVMEXE)
-	$(STRIP) --strip-unneeded -o $(STRIPCONSOLEEXE) $(CONSOLEVMEXE)
-	$(OBJCOPY) --add-gnu-debuglink=$(CONSOLEVMEXE) $(STRIPCONSOLEEXE)
-endif
+	$(CC) -c $< -o $@
 
 $(OBJDIR):
-	@-mkdir $(BUILD)
-	mkdir $(OBJDIR)
+	@-$(MKDIR) $(BUILD)
+	$(MKDIR) $(OBJDIR)
 ifneq ($(INTERNAL_PLUGINS),)
-	mkdir $(addprefix $(BUILD)/, $(INTERNAL_PLUGINS))
+	$(MKDIR) $(addprefix $(BUILD)/, $(INTERNAL_PLUGINS))
 endif
 ifneq ($(EXTERNAL_PLUGINS),)
-	mkdir $(addprefix $(BUILD)/, $(EXTERNAL_PLUGINS))
+	$(MKDIR) $(addprefix $(BUILD)/, $(EXTERNAL_PLUGINS))
 endif
-
-#############################################################################
-# The exports for named primitives from Squeak (required by VM)
-#
-$(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
-	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(VMOBJ)
 
 #############################################################################
 # Building plugins
 #
 
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
-
+.PHONY: always
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
+plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile$(SDKPREFIX).plugin ../common/Makefile$(SDKPREFIX).plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
-	@-mkdir -p $(BUILD)/$(*F)
-	rm -f $(BUILD)/vm/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+$(OBJDIR)/%.lib: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
+	@-$(MKDIR) $(BUILD)/$(*F)
+	$(RM) -f $(BUILD)/vm/$(*F).ignore
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) INTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
-	@-mkdir -p $(BUILD)/$(*F)
-	rm -f $(BUILD)/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+$(OBJDIR)/%.dll: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
+	@-$(MKDIR) $(BUILD)/$(*F)
+	$(RM) -f $(BUILD)/$(*F).ignore
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) EXTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
 		JMPOBJ=$(JMPOBJ) VMLIB=$(OBJDIR)/$(VMLIB) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
+# Build fdlibm with GNU ar and GNU ranlib. Override $(LIBM_LIB) and add
+# custom rule to choose, e.g., different librarian method.
 $(BUILD)/fdlibm/libm.a:
-	@-mkdir -p $(@D)
+	@-$(MKDIR) $(@D)
 	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
-		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote libm.a
 
-
-#############################################################################
-# Basic rules
-#
-include ../common/Makefile.rules
-
-$(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) -i $(VM).rc -o $@
-	$(CP) $(VM).exe.manifest $(OBJDIR)
-	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
-
-resource.o:	$(VMRES)
-	$(RC) $(RCFLAGS) -i $< -o $@
 
 #############################################################################
 # Extra specific dependencies

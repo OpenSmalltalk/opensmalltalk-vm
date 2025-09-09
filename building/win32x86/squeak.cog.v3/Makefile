@@ -1,15 +1,27 @@
-#############################################################################
-# Makefile for Win32 Cog Squeak VM using gcc-3.4.x and cygwin
+####################################################################################
+# Makefile for Win32 Cog Spur Squeak VM using LLVM/Clang
 # Do make init to allow make -n to function.
-#############################################################################
+####################################################################################
 
 VM:=Squeak
 VMSRCDIR:=../../../src/v3.cog
 
-# This variable is set by VS Native Tools Command Prompts, not for cygwin wins
-VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)
+# No inlining for v3 because VM sources are missing a pointer cast, which is
+# an error in recent Clang. (as of VMMaker.oscog-eem.3613)
+MEMACCESS:=
+export MEMACCESS
+
+# This variable is set by VS Native Tools Command Prompts
 ifeq ($(VSCMD_ARG_HOST_ARCH),)
-include ../common/Makefile
+	ifeq ($(MSYSTEM),MSYS)
+		# In a generic MSYS2 environment, compile against WinSDK
+		include ../common/Makefile.WinSDK
+	else
+		# In other envs (e.g. MINGW32 or CLANG32), compile against MinGW
+		include ../common/Makefile
+	endif
 else
-include ../common/Makefile.msvc
+	# Legacy. All *.msvc.* makefiles should be removed at some point.
+	include ../common/Makefile.msvc
+# 	include ../common/Makefile.WinSDK
 endif

@@ -21,11 +21,6 @@ set -e
 # - APP_NAME (e.g., "vm" or "sqcogspur64linuxht" or "Squeak.app")
 
 
-
-if [[ "${RUNNER_OS}" == "Windows" ]]; then
-    source ./scripts/ci/actions_prepare_msys.sh
-fi
-
 echo "$(cat platforms/Cross/vm/sqSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/vm/sqSCCSVersion.h
 echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/plugins/sqPluginsSCCSVersion.h
 
@@ -133,11 +128,11 @@ build_Windows() {
     echo "::group::Building ${BUILD_PATH}..."
     skip_BochsPlugins
     if [[ "${MODE}" == "debug" ]]; then
-        bash -e ./mvm -d || exit 1
+        bash -e ./mvm -d -- TOOLPREFIX='' || exit 1
     elif [[ "${MODE}" == "assert" ]]; then
-        bash -e ./mvm -a || exit 1
+        bash -e ./mvm -a -- TOOLPREFIX='' || exit 1
     else
-        bash -e ./mvm -f || exit 1
+        bash -e ./mvm -f -- TOOLPREFIX='' || exit 1
     fi
     echo "::endgroup::"
 

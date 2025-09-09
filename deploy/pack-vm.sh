@@ -40,7 +40,7 @@ pack_macOS() {
 pack_Windows() {
   readonly ASSET_EXTENSION="zip"
   cd "${APP_NAME}"
-  rm -f *.def *.exp *.lib *.map *.o *.res *Unstripped* *.ignore # remove temporary build files
+  rm -f *.def *.exp *.lib *.pdb *.map *.o *.res *Unstripped* *.ignore # remove temporary build files
   7z a -tzip -r "${PRODUCTS_PATH}/${ASSET_NAME}.${ASSET_EXTENSION}" "./"
 }
 

@@ -53,7 +53,7 @@ struct VirtualMachine* interpreterProxy;
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
-#if __GNUC__
+#if __GNUC__ || __clang__
 # define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "m"(sp))
 # define getsp() ({ void *sp; __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
 #endif
@@ -165,9 +165,9 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
   { void *sp = getsp();
     int offset = (unsigned long)sp & (STACK_ALIGN_BYTES - 1);
 	if (offset) {
-# if _MSC_VER
+# if _MSC_VER && !__clang__
 		_asm sub esp, dword ptr offset;
-# elif __GNUC__
+# elif __GNUC__ || __clang__
 		__asm__ ("sub %0,%%esp" : : "m"(offset));
 # else
 #  error need to subtract offset from esp
@@ -205,9 +205,9 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 
 	case retword64: {
 		long vhigh = vmcc.rvs.valleint64.high;
-#if _MSC_VER
+#if _MSC_VER && !__clang__
 				_asm mov edx, dword ptr vhigh;
-#elif __GNUC__  || __SUNPRO_C
+#elif __GNUC__  || __SUNPRO_C || __clang__
 				__asm__ ("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
@@ -217,9 +217,9 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 
 	case retdouble: {
 		double valflt64 = vmcc.rvs.valflt64;
-#if _MSC_VER
+#if _MSC_VER && !__clang__
 				_asm fld qword ptr valflt64;
-#elif __GNUC__ || __SUNPRO_C
+#elif __GNUC__ || __SUNPRO_C || __clang__
 				__asm__ ("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with vmcc.rvs.valflt64 on this compiler

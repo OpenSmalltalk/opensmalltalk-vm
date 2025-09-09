@@ -1,3 +1,12 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
 # On Cog we use the ThreadedFFIPlugin and need no platform-dependent code
 ifdef COGDEFS
 CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)

@@ -1,0 +1,37 @@
+#############################################################################
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compiler flags (e.g., OFLAGS, CFLAGS) for LLVM/Clang
+#############################################################################
+
+include ../common/Makefile.tools.defs
+
+#############################################################################
+
+# Enable the LLP64 data model, where only pointers expand to 64-bits
+# https://learn.microsoft.com/en-us/windows/win32/winprog64/abstract-data-models
+POINTER_MODEL:=-DLLP64=1
+DEFS:=$(POINTER_MODEL) $(DEFS)
+
+# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x64.asm
+JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
+DEFS:= $(JMPDEFS) $(DEFS) 
+
+# ???
+FUNDEFS:=-Dalloca=_alloca -Dhuge=my_huge
+DEFS:= $(FUNDEFS) $(DEFS) 
+
+
+
+
+
+
+
+# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
+# MSVC and defining NDEBUG installs a default catch-everything exception handler
+# that effectively disables debugging.
+# XDEFS=  -DSQUEAK_BUILTIN_PLUGIN

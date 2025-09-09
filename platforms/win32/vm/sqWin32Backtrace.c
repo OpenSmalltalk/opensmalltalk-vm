@@ -70,15 +70,22 @@ backtrace(void **retpcs, int nrpcs)
 	__fp = (void **)((usqInt)_AddressOfReturnAddress() - sizeof(void *));
 
 #elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-# if defined(__GNUC__)
+# if defined(__GNUC__) || defined(__clang__)
 	asm volatile ("movl %%ebp, %0" : "=r"(__fp) : );
 # else
 #	  error "don't know how to derive ebp with this compiler"
 # endif
 
 #elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-#	if defined(__GNUC__)
+#	if defined(__GNUC__) || defined(__clang__)
 	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
+# else
+#	error "don't know how to derive rbp with this compiler"
+# endif
+
+#elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64) || defined(_M_ARM64) || defined(_M_ARM64)
+#	if defined(__GNUC__) || defined(__clang__)
+#		error "ARMv8 support for MinGW-w64 not yet implemented. Use WinSDK toolchain."
 # else
 #	error "don't know how to derive rbp with this compiler"
 # endif

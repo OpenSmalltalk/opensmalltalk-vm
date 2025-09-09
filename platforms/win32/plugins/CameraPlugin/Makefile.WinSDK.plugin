@@ -1,0 +1,18 @@
+#############################################################################
+# Plugin Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
+# CameraPlugin build assumes it's external.
+# Further it must be built using the MSVC++ toolchain because of lack of COM
+# support in the mingw toolchain.
+
+EXTRALIBS:=strmbase.lib strmiids.lib
+
+include ../common/Makefile.WinSDK.plugin
+
+INCLUDES:=-I$(WIN32MISCDIR) $(INCLUDES)

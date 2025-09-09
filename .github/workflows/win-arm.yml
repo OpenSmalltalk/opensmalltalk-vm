@@ -47,20 +47,20 @@ jobs:
       fail-fast: false
       matrix:
         arch: 
-          - { name: win64ARMv8, msystem: clangarm64, msys-env: clang-aarch64 }
+          - win64ARMv8
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
-          - squeak.sista.spur
+          # - squeak.sista.spur # Not yet compiling as of VMMaker.oscog-eem.3617
         mode:
           - fast
           - debug
           - assert
 
     runs-on: windows-11-arm
-    name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
-      ARCH: ${{ matrix.arch.name }}
+      ARCH: ${{ matrix.arch }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
     steps:
@@ -83,27 +83,21 @@ jobs:
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3
 
-      - name: Prepare MSYS2/${{ matrix.arch.msys-env }} build environment
+      - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
         id: msys2
         with:
-          msystem: ${{ matrix.arch.msystem }}
+          msystem: MSYS
           release: true # no MSYS2 installed in ARM64 runners
           update: false # faster?
           cache: true
-          install: |
-            git
-            base-devel
-            mingw-w64-${{ matrix.arch.msys-env }}-toolchain
+          install: git base make
 
       - name: Build VM
         shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
-        # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
         env:
-          MSYS_SYS: ${{ matrix.arch.msystem }}
-          MSYS_ENV: ${{ matrix.arch.msys-env }}
-          MSYS_PATH: ${{ steps.msys2.outputs.msys2-location }}
+          MSYS2_BIN: ${{ steps.msys2.outputs.msys2-location }}/usr/bin/
 
       - name: Sign VM (not implemented)
         if: false

@@ -4,3 +4,7 @@ TP:=../../platforms/Cross/third-party
 FDLIBM:=fdlibm
 VPATH=$(TP)/$(FDLIBM):.
 include $(TP)/$(FDLIBM)/Makefile
+
+# Extra rule for Windows builds using Microsoft VS build tools (i.e., "LIB")
+libm.lib : $(obj) 
+	$(LIBRARIAN) $(obj) -out:libm.lib

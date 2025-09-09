@@ -1,0 +1,66 @@
+#############################################################################
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+#############################################################################
+
+# See sdkddkver.h from Windows SDK or w32api.h from mingw-w64
+#  Windows XP  ... 0x0501
+#  Windows 7   ... 0x0601
+#  Windows 8   ... 0x0602
+#  Windows 10  ... 0x0A00
+WINVER:=-D_WIN32_WINNT=0x0A00 -DWINVER=0x0A00
+
+# Every clang for Windows (i.e. *-pc-windows-msvc or *-w64-windows-gnu) already
+# defines WIN32, WIN64, etc. So, this might just be historical overhead.
+WINBIT:=-DWIN32=1 -D_WIN32=1 -DWIN64=1 -D_WIN64=1
+
+#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
+#!#! must define both.
+WINUNI:=-DUNICODE=1 -D_UNICODE=1
+
+#############################################################################
+# DEFS
+#
+ifeq ($(CONFIGURATION),product)
+DEBUGVM= 0
+NDEBUG:= -DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+else ifeq ($(CONFIGURATION),assert)
+DEBUGVM= 0
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else
+DEBUGVM= 1
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+endif
+
+ifeq ($(IS_PREPARING),false)
+  ifeq ($(THREADING),multi)
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+  else
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+  endif
+  ifdef BIT_IDENTICAL_FLOATING_POINT
+    COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+  endif
+endif # IS_PREPARING
+
+# Several versions of clang (all versions from 14 through 18 as of this writing)
+# generate incorrect code for spur segment storage
+#	(return:restoringObjectsIn:savedFirstFields:and:savedHashes:)
+# unless USE_INLINE_MEMORY_ACCESSORS is set.
+MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+
+# Multi-threaded environment. Might in case use multi-threading specific
+# versions of API calls. Also used to avoid built-in functions.
+MT_ENV?=-D_MT
+
+# Use fdlibm for floating-point, which is cross-platform, or 
+# platform-specific floating point. See COGDEFS.
+BIT_IDENTICAL_FLOATING_POINT=1
+
+DEFS:=-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(WINBIT) \
+		$(WINUNI) $(MT_ENV) -D'TZ="$(TZ)"' -DNO_ISNAN -DNO_SERVICE \
+		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)

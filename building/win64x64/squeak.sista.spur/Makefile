@@ -1,17 +1,22 @@
 #############################################################################
-# Makefile for Win32 Sista Spur Squeak VM using either gcc and cygwin or MSVC and LLVM
+# Makefile for Win64 Sista Spur Squeak VM using LLVM/Clang
 # Do make init to allow make -n to function.
 #############################################################################
 
 VM:=Squeak
 VMSRCDIR:=../../../src/spur64.sista
 
-COMPILER_TO_USE:=clang
-
-# This variable is set by VS Native Tools Command Prompts, not for cygwin wins
-VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)
+# This variable is set by VS Native Tools Command Prompts
 ifeq ($(VSCMD_ARG_HOST_ARCH),)
-include ../common/Makefile
+	ifeq ($(MSYSTEM),MSYS)
+		# In a generic MSYS2 environment, compile against WinSDK
+		include ../common/Makefile.WinSDK
+	else
+		# In other envs (e.g. MINGW64 or CLANG64), compile against MinGW
+		include ../common/Makefile
+	endif
 else
-include ../common/Makefile.msvc
+	# Legacy. All *.msvc.* makefiles should be removed at some point.
+	include ../common/Makefile.msvc
+# 	include ../common/Makefile.WinSDK
 endif

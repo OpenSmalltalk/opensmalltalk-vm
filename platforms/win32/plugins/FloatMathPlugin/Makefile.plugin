@@ -1,11 +1,23 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
 include ../common/Makefile.plugin
 
 # Special OFLAGS for some files
-k_tan.o: k_tan.c
-	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
+# k_tan.o: k_tan.c
+# 	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
 
-acos.o: acos.c
-	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
+# acos.o: acos.c
+# 	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
 
-tanh.o: tanh.c
-	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
+# tanh.o: tanh.c
+# 	$(MAKE) -f ../common/Makefile.plugin OFLAGS="-O0" $*.o
+
+# There is need to disable optimization when using recent clang.
+# OFLAGS= -O0

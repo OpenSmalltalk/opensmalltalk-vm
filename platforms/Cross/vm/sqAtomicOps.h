@@ -106,7 +106,7 @@ AtomicGet(uint64_t *target)
 #	define set64(variable,value) AtomicSet(&(variable),value)
 
 	/* Currently we provide definitions for x86 and GCC only.  But see below. */
-# elif (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
+# elif (defined(__GNUC__) || defined(__SUNPRO_C) || defined(__clang__)) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
 
 /* atomic read & write of 64-bit values using SSE2 movq to/from sse register.
  * 64-bit reads & writes are only guaranteed to be atomic if aligned on a 64-bit
@@ -169,7 +169,7 @@ AtomicGet(uint64_t *target)
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
 
-# elif defined(_MSC_VER) &&	(defined(_M_IX86) || defined(_X86_) || defined(i386))
+# elif (defined(_MSC_VER) && !defined(__clang__)) && (defined(_M_IX86) || defined(_X86_) || defined(i386)) 
 
 #	pragma message(" TODO: verify thoroughly")
 /* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
@@ -203,13 +203,13 @@ AtomicGet(__int64 *target)
 
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
-#if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
+#  if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
  * We'll experimentally trust in our MMU to keep 64bit accesses atomic */
 # define get64(variable) variable
 # define set64(variable,value) (variable = value)
 
-#else
+#  else 
 
 /* Dear implementor, you have choices.  For example consider defining get64 &
  * set64 thusly
@@ -218,12 +218,12 @@ AtomicGet(__int64 *target)
  * and get the JIT to generate read64 & write64 above atomic 64-bit read/write.
  */
 #	error atomic access of 64-bit variables not yet defined for this platform
-#endif
-# endif
+#  endif
+# endif /* TARGET_OS_IS_IPHONE */
 
 #else /* neither IS_64_BIT_ARCH nor IS_32_BIT_ARCH */
 # error Could not infer if architecture is 32 or 64 bits. Please modify sqAtomicOps.h inference rules.
-#endif
+#endif /* IS_64_BIT_ARCH */
 
 #if defined(__GNUC__)
 # define GCC_HAS_BUILTIN_SYNC \

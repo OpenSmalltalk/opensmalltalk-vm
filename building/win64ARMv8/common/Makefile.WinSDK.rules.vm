@@ -1,0 +1,38 @@
+#############################################################################
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSVC build tools,
+# GNU make/sed/grep, and the Windows 10 SDK.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#
+# Compilation rules
+#############################################################################
+
+mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
+	$(CC) -c $< -o mkNamedPrims.obj
+	$(LD) -out:$@ mkNamedPrims.obj -subsystem:console -defaultlib:libcmt
+
+.PHONY: vm-extra
+vm-extra:
+	$(info No extra things to do for the VM.)
+
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o $(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
+	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+
+$(CONSOLEVMEXE): $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+	$(CC) -o$(OBJDIR)/version.o $(ALLCFLAGS) -c $(WIN32DIR)/version.c
+	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+
+# Microsoft (R) Windows (R) Resource Compiler
+%.res: %.rc
+	$(RC) $(RCFLAGS) -Fo $@ $<
+
+# Microsoft (R) Windows Resource To Object Converter
+resource.o:	$(VMRES)
+	$(CVTRES) -MACHINE:$(ARCH) -OUT:resource.o $(VMRES)
+	$(CP) $(VM).exe.manifest $(OBJDIR)
+	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest

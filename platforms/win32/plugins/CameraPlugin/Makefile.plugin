@@ -1,11 +1,20 @@
+#############################################################################
+# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# and mingw-w64 for building a native Windows application.
+#
+# Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+# Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
+#############################################################################
+
 # CameraPlugin build assumes it's external.
 # Further it must be built using the MSVC++ toolchain because of lack of COM
 # support in the mingw toolchain.  Hence this Makefile.plugin exists only to
-# exclude CameraPlugin on the cygwin/mingw build (sadly).
+# exclude CameraPlugin on the mingw-w64 build (sadly).
 
 EXTRALIBS:=strmbase.lib strmiids.lib
 
-PREREQUISITES:=$(WIN32MISCDIR)/atlbase.h # no atlbase.h for cygwin
+PREREQUISITES:=$(WIN32MISCDIR)/atlbase.h # no atlbase.h for mingw-w64
 
 include ../common/Makefile.plugin
 
