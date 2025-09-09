@@ -8,7 +8,6 @@ Contents:
 	- Building out of the box
 	- Building a Specific Plugin Dll
 	- Building the VM Simulator Support Libraries
-	- Building an MSI installer (Newspeak)
 	- Optimization level and gcc version (please read!)
 	- Debugging with gdb
 	- Debugging with Visual Studio
@@ -17,14 +16,14 @@ Contents:
 Overview
 --------
 The "Cog" VM comes in a bewildering variety of forms.  The first distinction
-is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
-and their ilk, and between Newspeak VMs that run Newspeak.
+is between Squeak/Croquet VMs that run Squeak, Cuis, Croquet images
+and their ilk.
 
 Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
 with context-to-stack mapping that optimise message sending by keeping method
 activations on a stack instead of in contexts.  These are pure interpreters but
 significantly faster than the standard context-based Interpreter VM.  Cog VMs
-add a JIT to the mix, compiling methods used more than once to maxchine code on
+add a JIT to the mix, compiling methods used more than once to maschine code on
 the fly.  Sista VMs, as yet unrealised and in development, add support for
 adaptive optimization that does speculative inlining at the bytecode-to-bytecode
 level.  These are targeted for release in 2015.
@@ -53,8 +52,8 @@ whereas debug VMs are compiled with no optimization at all, providing maximum
 debuggability with minimum performance.
 
 This directory tree provides build directories for some of this matrix.  For
-example, newspeak.stack.spur contains a build directory
-for Newspeak Stack VMs using the Spur object representation.  Build as desired.
+example, squeak.stack.spur contains a build directory
+for Smalltalk Stack VMs using the Spur object representation.  Build as desired.
 
 
 Checking out sources to build out-of-the-box
@@ -67,21 +66,31 @@ Check-out the repository from github:
 
 Building out of the box
 -----------------------
-The standard build configurations are the MinGW tools under Cygwin.
-The build system also supports Visual Studio Community (tested with 2017), but
-requires Cygwin tools, especially GNU Make, to run.
+The standard build configurations are for LLVM/Clang and an MSYS2 shell. You can
+either build against the WinSDK directly, which is the recommended way, or
+against mingw-w64.
 
-Cygwin 1. Install the tools:
-- Install
-  either cygwin 64bits version from www.cygwin.com.
-  either mingw 64bits version and msys from www.mingw.com.
-list of packages called "mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-headers,mingw64-x86_64-runtime".
+If you do not know about any of these technologies, here are the resources
+to get started:
+  - LLVM/Clang: https://clang.llvm.org/
+  - MSYS2: https://www.msys2.org/
+  - Mingw-w64: https://www.mingw-w64.org/
+  - Windows SDK: https://developer.microsoft.com/de-de/windows/downloads/windows-sdk/
 
-Cygwin 2. Build
-Then cd to the build directory of your choice, e.g.
-	building/win64x64/squeak.stack.spur/
-Then execute
-	./mvm
+Option A - WinSDK
+  1. Install MSYS2 via "scripts/installMSYS2.cmd base"
+  2. Install "Visual Studio Community Edition" (incl. Windows 10 SDK)
+       - https://visualstudio.microsoft.com/de/vs/community/
+       - Note that recent versions come with own Clang besides MSVCC
+       - Note that "C++ ATL Support" is required for the CameraPlugin
+  3. [optional] Install another LLVM/Clang that targets *-pc-windows-msvc
+       - https://github.com/llvm/llvm-project/releases
+  4. Open MSYS2 shell with default MSYS environment
+       - Typically "c:/msys64/msys2.exe" or "c:/msys64/msys2_shell.cmd -msys2"
+  5. Change to the vm flavor of your choice, e.g. squeak.cog.spur, and 
+     execute "./mvm"
+       - Use another LLVM/Clang via "./mvm -- LLVM_BIN=c:/llvm/bin/ "
+       - Use LLVM/Clang from $PATH via "./mvm -- LLVM_BIN='' "
 
 This builds debug, assert and production versions of the VM in builddbg/vm,
 buildast/vm and build/vm.  If the configuration includes multi-threaded builds
@@ -93,35 +102,31 @@ to access standard i/o.
 In order to only build the production vm, you can launch the command:
 	./mvm -f
 
-For building with clang instead of gcc, it is possible to pass options to make via mvm after --:
-	./mvm -f -- CC=x86_64-w64-mingw32-clang
 
-If building from mingw64, it may be necessary to omit the tool prefix:
-	./mvm -f -- TOOLPREFIX=''
+Option B - mingw-w64
+  1. Install MSYS2 via "scripts/installMSYS2.cmd x86_64"
+  2. Open MSYS2 shell with MINGW64 environment
+       - Typically "c:/msys64/mingw64.exe" or "c:/msys64/msys2_shell.cmd -mingw64"
+  3. Change to the vm flavor of your choice, e.g. squeak.cog.spur, and 
+     execute "./mvm -- TOOLPREFIX='' "
 
+Note that any other version of Clang must be installed only through
+MSYS2 and target *-w64-windows-gnu to produce the correct .o files.
+  
 
-MSVC 1. Install the tools:
-- follow step Cygwin 1. Install the tools
-- Make sure that the tools directory (e.g., C:\cygwin\bin) is in your PATH environment variable
-- Install Visual Studio Community from https://visualstudio.microsoft.com/downloads/
-- Install a Windows Kit from https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/
-
-MSVC 2. Build
-Open a x64 Native Tools Command Prompt from Visual Studio.
-Then cd to the build directory of your choice, e.g.
-	building/win64x64\squeak.cog.spur\
-Then execute
-	..\common\SETPATH.BAT
-to add the cygwin tools to your path (edit SETPATH if they are not installed in
-c:\cygwin64)
-Then execute
-	..\common\MAKEDEBUG.BAT
-	..\common\MAKEASSERT.BAT
-	..\common\MAKEFAST.BAT
-to make each of the three VMs.
+Option C - WinSDK via x64 Native Tools Command Prompt
+  1. Do steps 1 to 3 from option A.
+  2. Open an x64 Native Tools Command Prompt
+       - Needs "MSVC v143 - VS 2022 C++ x64/86 Buildtool" for "Native Tools Command Prompt"
+  3. Change to the vm flavor of your choice, e.g. squeak.cog.spur, and
+     execute "..\common\SETPATH_MSYS2.BAT "
+  4. Then execute the other batch files to build the VM
+  	   ..\common\MAKEDEBUG.BAT
+       ..\common\MAKEASSERT.BAT
+       ..\common\MAKEFAST.BAT
 
 
-Both Builds
+
 Each build directory contains two files
 	plugins.int
 	plugins.ext
@@ -129,8 +134,6 @@ that determine the set of plugins to be taken from the supplied plugins
 directory (which defaults to ../../src/plugins), and which are to be linked
 into the VM (plugins.int) or compiled as external dlls to be dynamically
 linked at run-time (plugins.ext). Tailor these files as you wish.
-
-The Newspeak builds include an installer.  See Building an MSI installer below.
 
 Finally, at the building/win64x64 level the makeall script will run all the
 mvm scripts it can find.
@@ -149,13 +152,13 @@ Building the VM Simulator Support Libraries
 If you want to get the Cog VM simulator working you'll need to build one or more
 of the processor simulator plugins, each of which has support libraries that
 must be built:
-	Processor   Plugin           Support Library
-	x86         BochsIA32Plugin  building/win64x64/bochsx86
-	x86_64/x64  BochsX64Plugin   building/win64x64/bochsx64
-	ARMv5       GdbARMPlugin     building/win64x64/gdbarm32
-	ARMv8       GdbARMv8Plugin   building/win64x64/gdbarm64
+  Processor   Plugin           Support Library
+  x86         BochsIA32Plugin  building/win64x64/bochsx86
+  x86_64/x64  BochsX64Plugin   building/win64x64/bochsx64
+  ARMv5       GdbARMPlugin     building/win64x64/gdbarm32
+  ARMv8       GdbARMv8Plugin   building/win64x64/gdbarm64
 cd to the relevant directories; run conf.COG and then the build script, e.g.
-  $ cd building/linux32x86/bochsx86
+  $ cd building/win64x64/bochsx64
   $ ./conf.COG
   $ ./makeem
 
@@ -163,24 +166,16 @@ Then when Squeak VMs are built they will include the plugin(s) for which support
 libraries have been provided.
 
 
-Building an MSI installer (Newspeak)
-------------------------------------
-The Newspeak builds include an installer subdirectory.  The installer build
-creates an MSI installer that provides a platform-conformat install experience
-for the VM.  First build the VM then cd to the installer and make, e.g.:
-  $ cd newspeak.cog.spur
-  $ ./mvm
-  $ cd installer
-  $ make
-
-
 Optimization level and gcc version
 ----------------------------------
-There used to be issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
--ftree-pre
--fpartial-inlining
--fcaller-saves
-However, with removal of some Undefined Behavior in source code, this list might well be out of date.
+There used to be issues with gcc version > 4.2.1.  Any of the following flags
+may break the build at -O2:
+  -ftree-pre
+  -fpartial-inlining
+  -fcaller-saves
+
+However, with removal of some Undefined Behavior in source code, this list might
+well be out of date.
 
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 
@@ -195,7 +190,7 @@ unstripped VM to provide symbols, e.g.
 	(gdb) file SqueakUnstripped.exe
 	(gdb) run trunk.image
 
-Note that on Cygwin, while cross-compilation works well, cross debugging does
+Note that on MSYS2, while cross-compilation works well, cross debugging does
 not work at all.  One has to debug 32-bit executables on a 32-bit installation
 with a 32-bit gdb, and 64-bit executables on a 64-bit installation with a 64-bit
 gdb.

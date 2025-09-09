@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSVC build tools,
 # GNU make/sed/grep, and the Windows 10 SDK.
 #
 # Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 

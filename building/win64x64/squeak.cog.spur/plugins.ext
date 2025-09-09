@@ -12,3 +12,7 @@ DESPlugin \
 MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin
+#BochsX64Plugin \
+#BochsIA32Plugin \
+#GdbARMPlugin \
+#GdbARMv8Plugin
