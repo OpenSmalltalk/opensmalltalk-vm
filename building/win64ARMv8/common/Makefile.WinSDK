@@ -22,4 +22,12 @@
 #############################################################################
 
 SDKPREFIX:=.WinSDK
+LIBM_LIB:=libm.lib
+
 include ../common/Makefile
+
+$(BUILD)/fdlibm/$(LIBM_LIB):
+	@-$(MKDIR) $(@D)
+	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
+		LIBRARIAN='$(LIBRARIAN)' \
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote $(LIBM_LIB)

@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win64 VM using LLVM/Clang compiler, MSYS2 toolchain,
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSYS2 toolchain,
 # and mingw-w64 for building a native Windows application.
 #
 # Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
@@ -71,7 +71,7 @@ PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
 LIBOBJ ?= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
 LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
+LIBOBJ+=$(BUILD)/fdlibm/$(LIBM_LIB) $(LIBS)
 endif
 
 #############################################################################

@@ -92,7 +92,7 @@ jobs:
           release: false # use existing MSYS2 installation
           update: false # faster?
           cache: true
-          install: git base make binutils
+          install: git base make
 
       - name: Build VM
         shell: msys2 {0} #bash

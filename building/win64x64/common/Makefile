@@ -118,7 +118,9 @@ LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+LIBM_LIB?=libm.a
+export LIBM_LIB
+LIBS:=$(BUILD)/fdlibm/$(LIBM_LIB) $(LIBS)
 export BIT_IDENTICAL_FLOATING_POINT
 endif
 
@@ -300,11 +302,12 @@ $(OBJDIR)/%.dll: always
 		JMPOBJ=$(JMPOBJ) VMLIB=$(OBJDIR)/$(VMLIB) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
+# Build fdlibm with GNU ar and GNU ranlib. Override $(LIBM_LIB) and add
+# custom rule to choose, e.g., different librarian method.
 $(BUILD)/fdlibm/libm.a:
 	@-$(MKDIR) $(@D)
 	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
-		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
-
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote libm.a
 
 #############################################################################
 # Extra specific dependencies

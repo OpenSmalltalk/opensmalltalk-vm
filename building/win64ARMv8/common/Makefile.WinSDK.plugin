@@ -72,7 +72,7 @@ LIBOBJ?=    $(LIBSRC:.c=.o)
 LIBOBJ:=    $(LIBOBJ:.cpp=.o)
 LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
+LIBOBJ+=$(BUILD)/fdlibm/$(LIBM_LIB) $(LIBS)
 endif
 
 #############################################################################
