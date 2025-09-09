@@ -11,9 +11,6 @@ PACKAGES="git base"
 if [[ "${MSYSTEM}" == "MSYS" ]]; then
     # We require make, because we do not use NMAKE from the MSVC toolchain.
     PACKAGES="${PACKAGES} make"
-    # If you want to use BIT_IDENTICAL_FLOATING_POINT, you need ar and ranlib
-    # to bundle the third-party library fdlibm
-    PACKAGES="${PACKAGES} binutils"
 else
     # The toolchain groups include compiler, linker, DLL wrappers, etc.
     PACKAGES="${PACKAGES} ${MINGW_PACKAGE_PREFIX}-toolchain"
