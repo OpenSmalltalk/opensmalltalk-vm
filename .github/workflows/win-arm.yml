@@ -51,7 +51,7 @@ jobs:
         flavor:
           - squeak.cog.spur
           - squeak.stack.spur
-          - squeak.sista.spur
+          # - squeak.sista.spur # Not yet compiling as of VMMaker.oscog-eem.3617
         mode:
           - fast
           - debug
