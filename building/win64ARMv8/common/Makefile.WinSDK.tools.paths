@@ -1,17 +1,15 @@
 #############################################################################
-# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSVC build tools,
 # GNU make/sed/grep, and the Windows 10 SDK.
 #
 # Copyright (c) Andreas Raab, Eliot Miranda, Marcel Taeumel, et al. 
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 # Copyright (c) 2025 Hasso Plattner Institute, University of Potsdam, Germany
-#############################################################################
-
-
-#############################################################################
-# Common paths, prefixes, and version numbers. 
-# tools such as GNU Make, GNU sed, and GNU grep.
 #
+# Check or lookup paths to the compiler, other build tools (e.g., GNU make or
+# MS Link), and the Windows SDK.
+#############################################################################
+
 WindowsSdkMajorVersion:=10
 HostARCH:=HostARM64
 

@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win64 VM using LLVM/Clang compiler, MSVC build tools,
+# Common Makefile for Win64ARMv8 VM using LLVM/Clang compiler, MSVC build tools,
 # GNU make/sed/grep, and the Windows 10 SDK.
 # 
 # THIRDPARTYLIBS			The libraries to build (you define them in ./third-party/LIB/Makefile.lib)
