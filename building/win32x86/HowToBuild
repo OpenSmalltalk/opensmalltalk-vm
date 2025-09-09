@@ -24,7 +24,7 @@ Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
 with context-to-stack mapping that optimise message sending by keeping method
 activations on a stack instead of in contexts.  These are pure interpreters but
 significantly faster than the standard context-based Interpreter VM.  Cog VMs
-add a JIT to the mix, compiling methods used more than once to maschine code on
+add a JIT to the mix, compiling methods used more than once to machine code on
 the fly.  Sista VMs, as yet unrealised and in development, add support for
 adaptive optimization that does speculative inlining at the bytecode-to-bytecode
 level.  These are targeted for release in 2015.
