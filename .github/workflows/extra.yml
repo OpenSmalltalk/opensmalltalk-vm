@@ -60,10 +60,16 @@ jobs:
           release: false # use existing MSYS2 installation
           update: false # faster builds
           cache: true
-          install: git base make binutils
+          install: git base make
 
-      - name: Build VM
+      - name: Build VM (Linux)
+        if: startsWith(matrix.arch.name, 'linux')
         shell: bash
+        run: ./scripts/ci/actions_build.sh
+
+      - name: Build VM (Windows)
+        if: startsWith(matrix.arch.name, 'win')
+        shell: msys2 {0} #bash
         run: ./scripts/ci/actions_build.sh
 
       - name: Sign VM (not implemented)
