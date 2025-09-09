@@ -19,9 +19,11 @@ else
 	override MSYS2_BIN:=$(subst \,/,$(MSYS2_BIN))
 endif
 
-# For llvm-tools (e.g., ar or ranlib), expand $PATH to clangarm64 env
-# Make sure to have the package mingw-w64-clang-aarch64-llvm-tools installed
-export PATH:=$(MSYS2_BIN)../../clangarm64/bin:$(PATH)
+# For llvm-tools ar and ranlib, make both available in the MSYS environment.
+# Do not install binutils but the package mingw-w64-clang-aarch64-llvm-tools.
+$(shell ln -f -s ${MSYS2_BIN}../../clangarm64/bin/ar ${MSYS2_BIN}ar)
+$(shell ln -f -s ${MSYS2_BIN}../../clangarm64/bin/ranlib ${MSYS2_BIN}ranlib)
+
 
 #############################################################################
 # Set paths to the Windows SDK (and tools) and Visual Studio (and tools)
