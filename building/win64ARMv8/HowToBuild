@@ -6,6 +6,7 @@ Contents:
 	- Overview
 	- Checking out sources to build out-of-the-box
 	- Building out of the box
+	- Tailoring the VM build
 	- Building a Specific Plugin Dll
 	- Building the VM Simulator Support Libraries
 	- Optimization level and gcc version (please read!)
@@ -126,7 +127,15 @@ Option C - WinSDK via arm64 Native Tools Command Prompt
        ..\common\MAKEFAST.BAT
 
 
+Option C' - WinSDK via x86 Native Tools Command Prompt substitutes Cygwin for MSYS.
+	Follow the instructions for Option C but
+	install Cygwin instead of MSYS2, and use "..\common\SETPATH_CYGWIN.BAT"
+	instead of "..\common\SETPATH_MSYS2.BAT"
 
+
+
+Tailoring the VM build
+----------------------
 Each build directory contains two files
 	plugins.int
 	plugins.ext
