@@ -80,10 +80,7 @@ jobs:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch.name }}-${{ matrix.flavor }}
 
-      # - name: Setup tmate debugging session
-        # uses: mxschmitt/action-tmate@v3
-
-      - name: Install custom LLVM/Clang
+      - name: Install LLVM/Clang (${{ matrix.arch.clang }})
         if: ${{ !startsWith(matrix.arch.clang, 'msvc') }}
         shell: pwsh
         run: |
@@ -100,6 +97,9 @@ jobs:
           update: false # faster?
           cache: true
           install: git base make
+
+      - name: Setup tmate debugging session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Build VM
         shell: msys2 {0} #bash
