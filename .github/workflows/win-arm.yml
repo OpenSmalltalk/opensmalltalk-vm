@@ -88,8 +88,8 @@ jobs:
         shell: pwsh
         run: |
           Start-BitsTransfer -Source "https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ matrix.arch.clang }}/LLVM-${{ matrix.arch.clang }}-woa64.exe" -Destination "LLVM-${{ matrix.arch.clang }}-woa64.exe"
-          Start-Process -FilePath "LLVM-${{ matrix.arch.clang }}-woa64.exe" -ArgumentList "/S /D=C:\\LLVM-${{ matrix.arch.clang }}" -Wait
-          echo "LLVM_BIN=C:/LLVM-${{ matrix.arch.clang }}/bin/" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          Start-Process -FilePath "LLVM-${{ matrix.arch.clang }}-woa64.exe" -ArgumentList "/S" -Wait
+          echo "LLVM_BIN=C:/Program Files/LLVM/bin/" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
