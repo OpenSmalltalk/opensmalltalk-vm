@@ -47,21 +47,21 @@ jobs:
       fail-fast: false
       matrix:
         arch: 
-          - win64x64
-          - win32x86
+          - { name: win64x64, clang: 21.1.0, clang-arch: win64 }
+          # - { name: win32x86, clang: msvc, clang-arch: win32 }
         flavor:
           - squeak.cog.spur
-          - squeak.stack.spur
-          - squeak.sista.spur
+          # - squeak.stack.spur
+          # - squeak.sista.spur
         mode:
           - fast
-          - debug
-          - assert
+          # - debug
+          # - assert
 
     runs-on: windows-2025
-    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
-      ARCH: ${{ matrix.arch }}
+      ARCH: ${{ matrix.arch.name }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
     steps:
@@ -79,11 +79,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
+          key: thirdparty-cache-${{ matrix.arch.name }}-${{ matrix.flavor }}
+
+     - name: Install LLVM/Clang (${{ matrix.arch.clang }})
+        if: ${{ !startsWith(matrix.arch.clang, 'msvc') }}
+        shell: pwsh
+        run: |
+          Start-BitsTransfer -Source "https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ matrix.arch.clang }}/LLVM-${{ matrix.arch.clang }}-${{ matrix.arch.clang-arch }}.exe" -Destination "LLVM-${{ matrix.arch.clang }}-${{ matrix.arch.clang-arch }}.exe"
+          Start-Process -FilePath "LLVM-${{ matrix.arch.clang }}-${{ matrix.arch.clang-arch }}.exe" -ArgumentList "/S /D=C:\LLVM-${{ matrix.arch.clang }}" -Wait
+          echo "LLVM_BIN=C:/LLVM-${{ matrix.arch.clang }}/bin/" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       # Set your personal SSH key via GitHub to login securely into tmate shell
-      # - name: Setup tmate debugging session
-      #   uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate debugging session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Prepare MSYS2 environment
         uses: msys2/setup-msys2@v2
