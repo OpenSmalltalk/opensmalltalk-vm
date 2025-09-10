@@ -7,7 +7,7 @@
  *
  *	All rights reserved.
  *   
- *   This file is part of Squeak.
+ *   This file is part of OpenSmalltalk-VM.
  * 
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
