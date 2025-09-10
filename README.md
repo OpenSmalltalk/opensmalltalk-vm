@@ -8,10 +8,13 @@ This is the README for the Cog Git source tree:
 [![Download latestAssertBuild](https://img.shields.io/badge/download-latest%20assert%20build-lightgrey.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/latest-assert-build)
 [![Download latestDebugBuild](https://img.shields.io/badge/download-latest%20debug%20build-lightgrey.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/latest-debug-build)
 
-[![Build for macOS](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml)
-[![Build for Windows](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml)
+[![Build for macOS (x86)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml)
+[![Build for macOS (ARM)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos-arm.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos-arm.yml)
+[![Build for Windows (x86)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml)
+[![Build for Windows (ARM)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win-arm.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win-arm.yml)
 [![Build for Linux (x86)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux.yml)
 [![Build for Linux (ARM)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm.yml)
+[![Build for Linux (ARMv8)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm64.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm64.yml)
 
 [![DOI](https://zenodo.org/badge/59481716.svg)](https://zenodo.org/badge/latestdoi/59481716)
 
