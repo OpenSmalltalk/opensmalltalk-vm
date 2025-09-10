@@ -6,11 +6,6 @@
 VM:=Squeak
 VMSRCDIR:=../../../src/v3.cog
 
-# No inlining for v3 because VM sources are missing a pointer cast, which is
-# an error in recent Clang. (as of VMMaker.oscog-eem.3613)
-MEMACCESS:=
-export MEMACCESS
-
 # This variable is set by VS Native Tools Command Prompts
 ifeq ($(VSCMD_ARG_HOST_ARCH),)
 	ifeq ($(MSYSTEM),MSYS)
