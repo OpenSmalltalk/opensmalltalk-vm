@@ -17,6 +17,7 @@ ifeq ($(MSYS2_BIN),)
 	MSYS2_BIN:=c:/msys64/usr/bin/
 else
 	override MSYS2_BIN:=$(subst \,/,$(MSYS2_BIN))
+	override MSYS2_BIN:=$(shell echo "$(MSYS2_BIN)" | sed 's/[() ]/\\&/g')
 endif
 
 #############################################################################
@@ -50,13 +51,15 @@ endif
 # Note that Visual Studio ships its own version of LLVM/Clang these days.
 #
 
-# LLVM_BIN:=c:/llvm/bin/
-
-VCLlvmInstallDir:=$(VCINSTALLDIR)/Tools/Llvm
-LLVM_BIN:=$(VCLlvmInstallDir)/$(ARCH)/bin/
+ifeq ($(LLVM_BIN),)
+# 	LLVM_BIN:=c:/llvm/bin/
+	VCLlvmInstallDir:=$(VCINSTALLDIR)/Tools/Llvm
+	LLVM_BIN:=$(VCLlvmInstallDir)/$(ARCH)/bin/
+endif
 
 # Must escape whitespace and parentheses for scripts
-LLVM_BIN:=$(shell echo "$(LLVM_BIN)" | sed 's/[() ]/\\&/g')
+override LLVM_BIN:=$(subst \,/,$(LLVM_BIN))
+override LLVM_BIN:=$(shell echo "$(LLVM_BIN)" | sed 's/[() ]/\\&/g')
 
 
 #############################################################################
