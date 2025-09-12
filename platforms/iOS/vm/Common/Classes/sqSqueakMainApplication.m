@@ -204,8 +204,8 @@ extern sqInt interpret(void);  //This is a VM Callback
 	  }];
 
 	[self setupAIO];
-	assert(ioVMThread != guiThread);
-	assert(ioVMThread == ioCurrentOSThread());
+	assert(getVMOSThread() != guiThread);
+	assert(getVMOSThread() == ioCurrentOSThread());
 
 	interpret();
   }
