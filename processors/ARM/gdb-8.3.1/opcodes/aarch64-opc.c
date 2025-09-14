@@ -3404,7 +3404,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	    {
 	      int imm32 = opnd->imm.value;
 #if COG
-	      snprintf (buf, size, "#0x%-8x  // #%d", imm32, imm32);
+	      snprintf (buf, size, "#0x%x  // #%d", imm32, imm32);
 #else
 	      snprintf (buf, size, "#0x%-20x\t// #%d", imm32, imm32);
 #endif
@@ -3412,7 +3412,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	  break;
 	case 8:	/* e.g. MOV Xd, #<imm64>.  */
 #if COG
-	  snprintf (buf, size, "#0x%-16" PRIx64 "  // #%" PRIi64,
+	  snprintf (buf, size, "#0x%" PRIx64 "  // #%" PRIi64,
 		    opnd->imm.value, opnd->imm.value);
 #else
 	  snprintf (buf, size, "#0x%-20" PRIx64 "\t// #%" PRIi64,
