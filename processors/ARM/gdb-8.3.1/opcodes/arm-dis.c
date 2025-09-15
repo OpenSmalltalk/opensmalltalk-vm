@@ -1762,7 +1762,11 @@ static const struct opcode32 arm_opcodes[] =
 {
   /* ARM instructions.  */
   {ARM_FEATURE_CORE_LOW (ARM_EXT_V1),
+#if COG
+    0xe1a00000, 0xffffffff, "nop\t; (mov r0, r0)"},
+#else
     0xe1a00000, 0xffffffff, "nop\t\t\t; (mov r0, r0)"},
+#endif
   {ARM_FEATURE_CORE_LOW (ARM_EXT_V1),
     0xe7f000f0, 0xfff000f0, "udf\t#%e"},
 
