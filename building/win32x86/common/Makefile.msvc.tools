@@ -42,9 +42,9 @@ endif
 
 ifeq ($(IS_PREPARING),false)
   ifeq ($(THREADING),multi)
-    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+    override COGDEFS += -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
   else
-    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+    override COGDEFS += -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
   endif
 endif # IS_PREPARING
 
