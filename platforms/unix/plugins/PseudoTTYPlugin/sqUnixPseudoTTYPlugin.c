@@ -179,7 +179,7 @@ int ptyShutdown(void)
 
 
 int ptyForkAndExec(AsyncFile *f, int semaIndex,
-		   int cmdIndex, int cmdLen, int argIndex, int argLen)
+		   char *cmdIndex, int cmdLen, sqInt *argIndex, int argLen)
 {
   int ptm= -1, pts= -1;
   char tty[32];
@@ -213,14 +213,13 @@ int ptyForkAndExec(AsyncFile *f, int semaIndex,
     char   **argv= (char **)alloca(sizeof(char *) * (argLen + 2));
     int      i= 0;
     SlavePtr slave= 0;
-
-    memcpy((void *)cmd, (void *)cmdIndex, cmdLen);
+    memcpy((void *)cmd, cmdIndex, cmdLen);
     cmd[cmdLen]= '\0';
     DPRINTF(("pty: command: %s\n", cmd));
     argv[0]= cmd;
     for (i= 1;  i <= argLen;  ++i)
       {
-	int argOop= ((int *)argIndex)[i - 1];
+	sqInt argOop= argIndex[i - 1];
 	char *arg= 0;
 	int   len= 0;
 	if (!vm->isBytes(argOop)) goto fail;
@@ -313,7 +312,7 @@ int ptyClose(AsyncFile *f)
 }
 
 
-ptyWindowSize(AsyncFile *f, int cols, int rows)
+int ptyWindowSize(AsyncFile *f, int cols, int rows)
 {
 #if defined(TIOCSWINSZ)
   struct winsize sz;
