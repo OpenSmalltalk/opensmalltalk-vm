@@ -133,6 +133,9 @@ getSize(SQFile *f)
 # if !defined(NO_STD_FILE_SUPPORT)
   struct stat buf;
 
+  // If using fstat it is vital to ensure all output has been written before accessing the size.
+  // An fflush is implicit in the fseeko calls that follow.
+  fflush(file);
   if (!fstat(fileno(file),&buf))
 	return buf.st_size;
 #endif
