@@ -130,6 +130,12 @@ static squeakFileOffsetType
 getSize(SQFile *f)
 {
   FILE *file = getFile(f);
+# if !defined(NO_STD_FILE_SUPPORT)
+  struct stat buf;
+
+  if (!fstat(fileno(file),&buf))
+	return buf.st_size;
+#endif
   squeakFileOffsetType currentPosition = ftello(file);
   fseeko(file, 0, SEEK_END);
   squeakFileOffsetType size = ftello(file);
