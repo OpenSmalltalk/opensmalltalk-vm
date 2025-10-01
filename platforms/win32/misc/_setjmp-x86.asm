@@ -1,3 +1,6 @@
+// A setjmp/longjmp pair that does not check the stack on unwind, hence
+// avoiding issues caused by the JIT executing on the Smalltalk stack
+// which is discontiguous with the C stack.
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -36,14 +39,14 @@
  */
 
 	.text
-#	.globl _setjmp
-#	.globl _setjmp0
+	.globl _setjmp
 	.globl __setjmp
+	.globl _setjmp0
 	.globl __setjmp0
 	.p2align	4, 0x90
-#_setjmp:
-#_setjmp0:
+_setjmp:
 __setjmp:
+_setjmp0:
 __setjmp0:
     movl   0(%esp), %edx	# rta
     movl   4(%esp), %eax	# arg
@@ -58,10 +61,10 @@ __setjmp0:
     xorl    %eax, %eax		# return 0
     ret
 
-#	.globl _longjmp
+	.globl _longjmp
 	.globl __longjmp
 	.p2align	4, 0x90
-#_longjmp:
+_longjmp:
 __longjmp:
     movl    4(%esp), %edx	# arg 1
     movl    8(%esp), %eax	# arg 2

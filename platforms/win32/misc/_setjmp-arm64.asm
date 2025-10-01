@@ -1,10 +1,13 @@
-// A setlmp/longjmp pair that does not check the stack on unwind, hence avoiding
-// issues caused by the JIT executing on the Smalltalk stack which is
-// discontiguous with the C stack.
+// A setjmp/longjmp pair that does not check the stack on unwind, hence
+// avoiding issues caused by the JIT executing on the Smalltalk stack
+// which is discontiguous with the C stack.
+// Based on clang's intrinsics, Apache license: https://releases.llvm.org/14.0.0/LICENSE.TXT 
 	.text
 	.globl _setjmp
+	.globl _setjmp0
 	.p2align	4, 0x90
 _setjmp:
+_setjmp0:
 	stp   x19, x20, [x0, #0<<3]
 	stp   x21, x22, [x0, #2<<3]
 	stp   x23, x24, [x0, #4<<3]
@@ -21,7 +24,7 @@ _setjmp:
 	str    w2, [x0, #(13<<3) + 4]
 	mov    x2,  sp
 	str    x2,  [x0, #12<<3]
-	mov    x0, x31
+	mov    x0, #0
 	ret
 
 	.globl _longjmp
@@ -41,7 +44,7 @@ _longjmp:
     msr    FPCR, x2
     ldr    w2,      [x0, #(13<<3) + 4]
     msr    FPSR, x2
-	ldr    x2,      [x0, #13<<3]
+	ldr    x2,      [x0, #12<<3]
 	mov    sp, x2
 	mov    x0, x1
 	ret

@@ -25,8 +25,6 @@
  * the downward-growing stack.
  */
 
-#include "sqSetjmpShim.h"
-
 // Obsolete Alien call-out API, still used for the exampleCqsort example
 
 #define SIGNATURE	sqInt *argVector/* call args on stack or in array */, \
@@ -39,7 +37,7 @@ extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
 
 
-// Not at all obslete callback thunk facilities.
+// Not at all obsolete callback thunk facilities.
 // A callback is a pairing of a Smalltalk block and an Alien pointing to a
 // thunk (a sequence of machine code) at a unique address, each callback
 // having exactly the same thunk but at a different address.  The thunk calls

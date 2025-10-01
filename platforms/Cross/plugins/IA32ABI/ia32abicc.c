@@ -33,8 +33,9 @@ void *getbaz() { return baz; }
 #endif
 
 #include <string.h> /* for memcpy et al */
-#include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
+
+#include "sqSetjmpShim.h"
 
 #include "objAccess.h"
 #include "vmCallback.h"

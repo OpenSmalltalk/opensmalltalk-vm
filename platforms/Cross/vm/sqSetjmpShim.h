@@ -1,6 +1,6 @@
 /* sqSetjmpShim.h
  *
- *	Defines to ensure we use the most minimal version of setjmp/longjmp
+ *	Defines to ensure the VM uses the most minimal version of setjmp/longjmp
  *	available on the platform to avoid issues with stack unwinding.
  *
  *	Author: Eliot Miranda
@@ -27,22 +27,32 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
-/* Use the most minimal setjmp/longjmp pair available; no signal handling
- * wanted or necessary. On win64 to avoid crashes when unwinding the stack in
- * Kernel32's longjmp we use the pair in platforms/win32/misc/_setjmp-x64.asm.
+#if !defined(__SETJMP_SHIM)
+#define __SETJMP_SHIM
+
+#include <setjmp.h>
+
+/* Use the most minimal setjmp/longjmp pair available; unix signal(3) handling
+ * intentionally avoided. On win64 to avoid crashes when unwinding the stack in
+ * Kernel32's longjmp use the pairs in platforms/win32/misc/_setjmp-???.asm.
  */
-#if !defined(_WIN32)
-# undef setjmp
-# undef longjmp
-# define setjmp _setjmp
-# define longjmp _longjmp
-#endif
-/* clang on mingw redeclares _setjmp so we have to provide an alternative */
-#if __MINGW32__ || __MINGW64__ /* clang on cygwin/mingw */
-int __attribute__((__nothrow__,__returns_twice__)) _setjmp0(jmp_buf);
-# undef _setjmp
+#undef setjmp
+#undef _setjmp
+#undef longjmp
+#undef _longjmp
+#define setjmp(b) _setjmp(b)
+#define longjmp(b,v) _longjmp(b,v)
+
+#if defined(_WIN32) || defined(_WIN64)
+// Windows clang redeclares _setjmp so provide an alternative
 # define _setjmp(b) _setjmp0(b)
-# undef longjmp
-# define longjmp _longjmp
-void _longjmp(_JBTYPE *, int); /* setjmp.h only declares __mingw_longjmp via longjmp */
-#endif
+# if defined(__GNUC__) || defined(__clang__)
+int __attribute__((__nothrow__,__returns_twice__)) __cdecl _setjmp0(jmp_buf jb);
+void __attribute__((_Noreturn)) __cdecl _longjmp(jmp_buf jb,int v);
+# else
+int  __cdecl _setjmp0(jmp_buf jb);
+void __declspec(noreturn) __cdecl _longjmp(jmp_buf jb,int v);
+# endif
+#endif // _WIN32 || _WIN64
+
+#endif // __SETJMP_SHIM

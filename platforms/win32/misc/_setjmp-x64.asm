@@ -1,7 +1,7 @@
-// A setlmp/longjmp pair that does not check the stack on unwind, hence avoiding
-// issues caused by the JIT executing on the Smalltalk stack which is
-// discontiguous with the C stack.
-// Code adapted from Julia, whose license is MIT: https://julialang.org/license
+// A setjmp/longjmp pair that does not check the stack on unwind, hence
+// avoiding issues caused by the JIT executing on the Smalltalk stack
+// which is discontiguous with the C stack.
+// Code adapted from Julia, MIT license: https://julialang.org/license
 	.text
 	.globl _setjmp
 	.globl _setjmp0

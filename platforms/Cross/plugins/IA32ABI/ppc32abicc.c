@@ -60,10 +60,12 @@ void *getbaz() { return baz; }
 #include <string.h>
 #include <unistd.h>
 
-#include "objAccess.h"
-#include "ia32abi.h"
+#include "sqSetjmpShim.h"
 
-#include <setjmp.h>
+#include "objAccess.h"
+#include "vmCallback.h"
+#include "sqAssert.h"
+#include "ia32abi.h"
 
 #if !defined(min)
 # define min(a,b) ((a) < (b) ? (a) : (b))
