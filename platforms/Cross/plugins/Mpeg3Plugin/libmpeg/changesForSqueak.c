@@ -1,10 +1,10 @@
 /****************************************************************************
-*   PROJECT: Changes for Squeak 
+*   PROJECT: Changes for Squeak
 *   FILE:    changesForSqueak.c
-*   CONTENT: 
+*   CONTENT:
 *
 *   AUTHOR:  John McIntosh, and others.
-*   ADDRESS: 
+*   ADDRESS:
 *   EMAIL:   johnmci@smalltalkconsulting.com
 *   RCSID:   $Id$
 *
@@ -13,21 +13,21 @@
 *****************************************************************************/
 /* Squeak on MPEG
    by John M McIntosh johnmci#smalltalkconsulting.com  Sept 2000
-   
-   For the macintosh I've 
+
+   For the macintosh I've
    1) coded up #ifdef for TARGET_OS_MAC
    2) Coded around the pthreads
    3) ignored most of mpeg3io_device
    4) some changes to make CodeWarrior 5 happy
-   
+
    In General
-   
+
    1) Added some casts
    2) had some problems with Mpeg3_stream_coeffs_t
    3) coded up memoryAllocate/memoryFree versus malloc/cmalloc/free
    4) created a mpeg3_generate_toc_for_Squeak
    5) Ignore perror
-   
+
 */
 // Nov 2nd, 2000  JMM changed memoryAllocate, use calloc
 // Sept 7nd, 2001 JMM added carbon logic
@@ -39,72 +39,49 @@
 #include "mpeg3protos.h"
 #include "changesForSqueak.h"
 
-#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-#include <Memory.h>
-#include <QuickDraw.h>
-#include "sq.h"
-#endif
-
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 mpeg3_demuxer_t* mpeg3_new_demuxer(mpeg3_t *file, int do_audio, int do_video, int stream_id);
 mpeg3_title_t* mpeg3_new_title(mpeg3_t *file, char *path);
-mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer, 
-		mpeg3_title_t *title, 
-		long prev_byte, 
-		double prev_time, 
-		long next_byte, 
+mpeg3demux_timecode_t* mpeg3_append_timecode(mpeg3_demuxer_t *demuxer,
+		mpeg3_title_t *title,
+		long prev_byte,
+		double prev_time,
+		long next_byte,
 		double next_time,
 		int dont_store);
-void appendStringToBufferIfPossible(char *buffer,char *append,int bufferSize);
-		
+static void appendStringToBufferIfPossible(char *buffer,char *append,int bufferSize);
+
 
 static long counter = 0;
 
 void * memoryAllocate(int number,unsigned size) {
     void * stuff;
-#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-#if TARGET_API_MAC_CARBON
-    stuff = (void *) NewPtrClear(size*number);
-#else
-    stuff = (void *) NewPtrSysClear(size*number);
-#endif
-//    if (stuff == nil) Debugger();
-#else
     stuff = (void *) calloc(size,number);
-#endif
     counter++;
     return stuff;
 }
 
 void memoryFree(void *stuff) {
     counter--;
-#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-    DisposePtr((char *)stuff);
-#else
     free(stuff);
-#endif
 }
 
 
 
-#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || (defined(_WIN32) && !defined(__GNUC__))
-#define NEEDSTRFUNCS
-#endif
-
-#ifdef NEEDSTRFUNCS
-#ifndef _MSC_VER
+#if defined(_WIN32) && !defined(__GNUC__)
+# ifndef _MSC_VER
 void perror(const char * string) {
 
 }
-#endif
+# endif
 
-int			strncasecmp(const char *str1, const char *str2, size_t nchars);
-int			strcasecmp (const char *str1, const char *str2);
+int	strncasecmp(const char *str1, const char *str2, size_t nchars);
+int	strcasecmp (const char *str1, const char *str2);
 
-int			strncasecmp(const char *s1, const char *s2, size_t len)
+int	strncasecmp(const char *s1, const char *s2, size_t len)
 {
   /* Return true if the two strings are the same, not considering case. */
 	int i, c1, c2;
@@ -123,44 +100,16 @@ int			strncasecmp(const char *s1, const char *s2, size_t len)
 	return 1;
 }
 
-int			strcasecmp (const char *str1, const char *str2) {
+int	strcasecmp (const char *str1, const char *str2) {
 	if (strlen(str1) != strlen(str2)) return 0;
     return strncasecmp(str1,str2,strlen(str1));
 }
+#endif // defined(_WIN32) && !defined(__GNUC__)
 
-
-#endif
-
-#ifdef _WIN32
-int bzero(char* block, long size) {
-	ZeroMemory(block,size);
-}
-#endif
-
-
-#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-int bzero(char *block,long size) {
-    BlockZero(block,size);
-}
-
-int main ()
+static void appendStringToBufferIfPossible(char *buffer,char *append,int bufferSize)
 {
-} 
-
-#endif
-
-#if defined(TARGET_OS_MAC) && defined ( __APPLE__ ) && defined ( __MACH__ )
-int isSystem9_0_or_better(void)
-{
-    return 1;
-}
-#endif 
-
-void appendStringToBufferIfPossible(char *buffer,char *append,int bufferSize) 
-{
-	if (strlen(append) + strlen(buffer) < bufferSize) 
+	if (strlen(append) + strlen(buffer) < bufferSize)
 		strcat(buffer,append);
-
 }
 
 int mpeg3_generate_toc_for_Squeak(mpeg3_t *file, int timecode_search, int print_streams, char *buffer, int bufferSize) {
@@ -176,17 +125,33 @@ int mpeg3_generate_toc_for_Squeak(mpeg3_t *file, int timecode_search, int print_
 		if(print_streams) mpeg3demux_print_streams_for_Squeak(demuxer, buffer,bufferSize);
 
 		sprintf(temp_buffer, "SIZE: %ld\n", demuxer->titles[demuxer->current_title]->total_bytes);
-		appendStringToBufferIfPossible(buffer,temp_buffer,bufferSize);		
+		appendStringToBufferIfPossible(buffer,temp_buffer,bufferSize);
 		sprintf(temp_buffer, "PACKETSIZE: %ld\n", demuxer->packet_size);
-		appendStringToBufferIfPossible(buffer,temp_buffer,bufferSize);		
+		appendStringToBufferIfPossible(buffer,temp_buffer,bufferSize);
 
-		mpeg3demux_print_timecodes(demuxer->titles[demuxer->current_title], buffer);
+		/* inline mpeg3demux_print_timecodes to use sprintf */
+		mpeg3_title_t *title = demuxer->titles[demuxer->current_title];
+		if(title->timecode_table)
+		{
+			for (i = 0; i < title->timecode_table_size; i++)
+			{
+				mpeg3demux_timecode_t *timecode = &title->timecode_table[i];
+
+				sprintf(temp_buffer, "REGION: %ld %ld %f %f\n",
+						timecode->start_byte,
+						timecode->end_byte,
+						timecode->start_time,
+						timecode->end_time);
+				appendStringToBufferIfPossible(buffer,temp_buffer,bufferSize);
+			}
+		}
 
 		mpeg3_delete_demuxer(demuxer);
 		return 0;
 	}
 	return 1;
 }
+
 /* Create a title. */
 /* Build a table of timecodes contained in the program stream. */
 /* If toc is 0 just read the first and last timecode. */
@@ -195,13 +160,13 @@ int mpeg3demux_create_title_for_Squeak(mpeg3_demuxer_t *demuxer, int timecode_se
 	int result = 0, done = 0, counter_start, counter;
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
 	long next_byte=0, prev_byte=0;
-	double next_time, prev_time, absolute_time;
+	double next_time, prev_time;
 	long i;
 	mpeg3_title_t *title;
 	unsigned long test_header = 0;
 	mpeg3demux_timecode_t *timecode = 0;
 	char temp_buffer[256];
-	
+
 	demuxer->error_flag = 0;
 	demuxer->generating_timecode = 1;
 
@@ -220,7 +185,7 @@ int mpeg3demux_create_title_for_Squeak(mpeg3_demuxer_t *demuxer, int timecode_se
 	if(file->is_program_stream)
 	{
 		mpeg3io_seek(title->fs, 4);
-		for(i = 0; i < MPEG3_MAX_PACKSIZE && 
+		for(i = 0; i < MPEG3_MAX_PACKSIZE &&
 			test_header != MPEG3_PACK_START_CODE; i++)
 		{
 			test_header <<= 8;
@@ -245,26 +210,26 @@ int mpeg3demux_create_title_for_Squeak(mpeg3_demuxer_t *demuxer, int timecode_se
 			{
 				next_time = demuxer->time;
 				sprintf(temp_buffer,"%f %f\n", next_time, prev_time);
-	 			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);	
-				if(next_time < prev_time || 
+	 			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);
+				if(next_time < prev_time ||
 					next_time - prev_time > MPEG3_CONTIGUOUS_THRESHOLD ||
 					!title->timecode_table_size)
 				{
 /* Discontinuous */
-					timecode = mpeg3_append_timecode(demuxer, 
-						title, 
-						prev_byte, 
-						prev_time, 
-						next_byte, 
+					timecode = mpeg3_append_timecode(demuxer,
+						title,
+						prev_byte,
+						prev_time,
+						next_byte,
 						next_time,
 						0);
- 
+
   			sprintf(temp_buffer,"timecode: %ld %ld %f %f\n",
    				timecode->start_byte,
    				timecode->end_byte,
    				timecode->start_time,
   				timecode->end_time);
- 			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);	
+ 			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);
 
 
 					counter_start = next_time;
@@ -275,7 +240,7 @@ int mpeg3demux_create_title_for_Squeak(mpeg3_demuxer_t *demuxer, int timecode_se
 			}
 
 /* Just get the first bytes if not building a toc to get the stream ID's. */
-			if(next_byte > 0x100000 && 
+			if(next_byte > 0x100000 &&
 				(!timecode_search || !buffer)) done = 1;
 		}
 
@@ -304,19 +269,19 @@ int mpeg3demux_print_streams_for_Squeak(mpeg3_demuxer_t *demuxer, char *buffer,i
 {
 	int i;
 	char temp_buffer[256];
-	
+
 /* Print the stream information */
 	for(i = 0; i < MPEG3_MAX_STREAMS; i++)
 	{
 		if(demuxer->astream_table[i]) {
 			sprintf(temp_buffer, "ASTREAM: %d %d\n", i, demuxer->astream_table[i]);
-			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);	
-		}	
+			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);
+		}
 
 		if(demuxer->vstream_table[i]) {
 			sprintf(temp_buffer, "VSTREAM: %d %d\n", i, demuxer->vstream_table[i]);
-			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);	
-		}	
+			appendStringToBufferIfPossible(buffer,temp_buffer,buffer_size);
+		}
 	}
 	return 0;
 }
