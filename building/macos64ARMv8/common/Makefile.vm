@@ -139,7 +139,7 @@ INCLUDES:= $(addprefix -I,. $(SRCDIRS))
 #############################################################################
 # Ensure version control info is up-to-date, and extract it from the file.
 #
-SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+SCCSVER:=$(CROSSDIR)/sqSCCSVersion.h
 
 ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
 $(shell bash -c "cd ../../../scripts; ./updateSCCSVersions")
@@ -157,7 +157,7 @@ svnver:
 	@-echo $(SVNREV)
 
 # N.B. getversion is *not* cross compiled; it must run here and now
-getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
+getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqVirtualMachine.h $(SCCSVER)
 	$(CC) -x c -DVERSION_PROGRAM=1 $(INCLUDES) $(DEPFLAGS) $< -o $@
 	$(POSTCOMPILE)
 
