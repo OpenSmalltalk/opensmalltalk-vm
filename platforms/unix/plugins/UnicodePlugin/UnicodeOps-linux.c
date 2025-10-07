@@ -34,10 +34,10 @@
 int unicodeClipboardGet(unsigned short *utf16, int utf16Length);
 void unicodeClipboardPut(unsigned short *utf16, int utf16Length);
 int unicodeClipboardSize(void);
-void unicodeDrawString(char *utf8, int utf8Length, int *wPtr, int *hPtr, unsigned int *bitmapPtr);
+void unicodeDrawString(char *utf8, int utf8Length, long *wPtr, long *hPtr, unsigned int *bitmapPtr);
 int unicodeGetFontList(char *str, int strLength);
 int unicodeGetXRanges(char *utf8, int utf8Length, int *resultPtr, int resultLength);
-void unicodeMeasureString(char *utf8, int utf8Length, int *wPtr, int *hPtr);
+void unicodeMeasureString(char *utf8, int utf8Length, long *wPtr, long *hPtr);
 void unicodeSetColors(int fgRed, int fgGreen, int fgBlue, int bgRed, int bgGreen, int bgBlue, int mapBGToTransparent);
 void unicodeSetFont(char *fontName, int fontSize, int boldFlag, int italicFlag, int antiAliasFlag);
 
@@ -54,7 +54,7 @@ int	g_bgTransparent = 0;
 
 /* helper procedures */
 
-void computeLayout(PangoLayout *layout, char *utf8, int utf8Length, int *wPtr, int *hPtr, int *xOffsetPtr, int *yOffsetPtr, int *layoutDetailsPtr) {
+void computeLayout(PangoLayout *layout, char *utf8, int utf8Length, long int *wPtr, long int *hPtr, int *xOffsetPtr, int *yOffsetPtr, int *layoutDetailsPtr) {
 	PangoRectangle inkRect, logicalRect;
 	int left, top, right, bottom, baseline;
 	PangoLayoutIter *iter;
@@ -152,7 +152,7 @@ int unicodeGetFontList(char *str, int strLength) {
 	return strlen(str);
 }
 
-void unicodeDrawString(char *utf8, int utf8Length, int *wPtr, int *hPtr, unsigned int *bitmapPtr) {
+void unicodeDrawString(char *utf8, int utf8Length, long *wPtr, long *hPtr, unsigned int *bitmapPtr) {
 	int w = *wPtr;
 	int h = *hPtr;
 	int pixelCount = w * h;
@@ -191,7 +191,8 @@ void unicodeDrawString(char *utf8, int utf8Length, int *wPtr, int *hPtr, unsigne
 }
 
 int unicodeGetXRanges(char *utf8, int utf8Length, int *resultPtr, int resultLength) {
-	int w, h, offsetX, offsetY;
+	long int w, h;
+	int offsetX, offsetY;
 	int count, ch, i, j;
 	PangoRectangle rect;
 
@@ -222,7 +223,7 @@ int unicodeGetXRanges(char *utf8, int utf8Length, int *resultPtr, int resultLeng
 	return count;
 }
 
-void unicodeMeasureString(char *utf8, int utf8Length, int *wPtr, int *hPtr) {
+void unicodeMeasureString(char *utf8, int utf8Length, long *wPtr, long *hPtr) {
 	int offsetX, offsetY;
 
 	if (cachedLayout == NULL) {
