@@ -7,9 +7,9 @@
 #include "interp.h"
 
 #if SPURVM
-# define VM_VERSION "7.0rc1"
+# define VM_VERSION "7.0rc2"
 #else
-# define VM_VERSION "4.7rc1"
+# define VM_VERSION "4.7rc2"
 #endif
 
 #ifndef VM_PROXY_MAJOR
