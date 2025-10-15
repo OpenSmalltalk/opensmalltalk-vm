@@ -91,30 +91,6 @@ sqNull_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFl
     return 0;
 }
 
-static char*
-sqNull_getWindowLabel(void)
-{
-    return "";
-}
-
-static sqInt
-sqNull_setWindowLabelOfSize(void *lblIndex, sqInt sz)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_getWindowWidth(void)
-{
-    return currentDisplayWidth;
-}
-
-static sqInt
-sqNull_getWindowHeight(void)
-{
-    return currentDisplayHeight;
-}
-
 static sqInt
 sqNull_setWindowWidthHeight(sqInt w, sqInt h)
 {
@@ -226,10 +202,6 @@ sqWindowSystem sqNullWindowSystem = {
     .showDisplay = sqNull_showDisplay,
     .hasDisplayDepth = sqNull_hasDisplayDepth,
     .setDisplayMode = sqNull_setDisplayMode,
-    .getWindowLabel = sqNull_getWindowLabel,
-    .setWindowLabelOfSize = sqNull_setWindowLabelOfSize,
-    .getWindowWidth = sqNull_getWindowWidth,
-    .getWindowHeight = sqNull_getWindowHeight,
     .setWindowWidthHeight = sqNull_setWindowWidthHeight,
     .isWindowObscured = sqNull_isWindowObscured,
     .getNextEvent = sqNull_getNextEvent,

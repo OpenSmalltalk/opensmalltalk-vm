@@ -846,47 +846,6 @@ sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFl
     return 0;
 }
 
-static char*
-sqSDL2_getWindowLabel(void)
-{
-    return (char*)SDL_GetWindowTitle(window);
-}
-
-static sqInt
-sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt size)
-{
-    char *buffer;
-
-    buffer = (char*)malloc(size + 1);
-    memcpy(buffer, lblIndex, size);
-    buffer[size] = 0;
-
-    SDL_SetWindowTitle(window, buffer);
-
-    free(buffer);
-    return 0;
-}
-
-static sqInt
-sqSDL2_getWindowWidth(void)
-{
-    int width = 0;
-    int height = 0;
-    if(windowRenderer)
-        SDL_GetRendererOutputSize(windowRenderer, &width, &height);
-    return width;
-}
-
-static sqInt
-sqSDL2_getWindowHeight(void)
-{
-    int width = 0;
-    int height = 0;
-    if(windowRenderer)
-        SDL_GetRendererOutputSize(windowRenderer, &width, &height);
-    return height;
-}
-
 static sqInt
 sqSDL2_setWindowWidthHeight(sqInt w, sqInt h)
 {
@@ -1135,10 +1094,6 @@ sqWindowSystem sqSDL2WindowSystem = {
     .showDisplay = sqSDL2_showDisplay,
     .hasDisplayDepth = sqSDL2_hasDisplayDepth,
     .setDisplayMode = sqSDL2_setDisplayMode,
-    .getWindowLabel = sqSDL2_getWindowLabel,
-    .setWindowLabelOfSize = sqSDL2_setWindowLabelOfSize,
-    .getWindowWidth = sqSDL2_getWindowWidth,
-    .getWindowHeight = sqSDL2_getWindowHeight,
     .setWindowWidthHeight = sqSDL2_setWindowWidthHeight,
     .isWindowObscured = sqSDL2_isWindowObscured,
     .getNextEvent = sqSDL2_getNextEvent,

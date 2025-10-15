@@ -101,35 +101,13 @@ int
 backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 {
 	Frame *fp; 
-	NT_TIB *teb = NtCurrentTeb();
+	NT_TIB *tib = (NT_TIB *)NtCurrentTeb();
 	int i = 0;
-
-#if 0 // old code that did the job manually, just in case you're compiling on old support
-# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-#	if defined(_MSC_VER)
-	teb = (NT_TIB *) __readfsdword(0x18); // mov EAX, FS:[18h]; mov [teb], EAX
-#	elif defined(__GNUC__)
-	asm volatile ("movl %%fs:0x18, %0" : "=r" (teb) : );
-#	else
-#	  error "don't know how to derive thread environment block"
-#	endif
-# elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-#	if defined(_MSC_VER)
-	teb = (NT_TIB *) __readgsqword(0x30); // mov RAX, GS:[30h]; mov [teb], RAX
-#	elif defined(__GNUC__)
-	asm volatile ("movq %%gs:0x30, %0" : "=r" (teb) : );
-#	else
-#	  error "don't know how to derive thread environment block"
-#	endif
-# else
-#	error "unknown architecture, cannot derive StackBase from thread environment block"
-# endif
-#endif // 0
 
 #define validfp(fp,sp) (((usqInt)(fp) & (sizeof(fp)-1)) == 0 \
 					 && (char *)(fp) > (char *)(sp) \
-					 && fp < (Frame *)teb->StackBase \
-					 && fp > (Frame *)teb->StackLimit)
+					 && fp < (Frame *)tib->StackBase \
+					 && fp > (Frame *)tib->StackLimit)
 
 	fp = startfp;
 	
@@ -169,7 +147,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 		retpcs[i++] = fp->retpc;
 		savedfp = fp->savedfp;
 
-		if (savedfp >= (Frame *)teb->StackBase
+		if (savedfp >= (Frame *)tib->StackBase
 		 || !validfp(savedfp,startfp)
 		 || savedfp <= fp)
 			break;
@@ -646,7 +624,7 @@ compute_dll_symbols(dll_exports *exports)
     unsigned int i, j, n;
     PWORD ordinals;
     ulong *functions;
-    ulong exportsStartRVA, exportsEndRVA;
+    ulong exportsStartRVA;
 
     PIMAGE_NT_HEADERS dllhdr;
 
@@ -661,7 +639,7 @@ compute_dll_symbols(dll_exports *exports)
 
     exportsStartRVA = dllhdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 
-    exportsEndRVA = exportsStartRVA + dllhdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
+    // exportsEndRVA = exportsStartRVA + dllhdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
 
     pExportDir = (PIMAGE_EXPORT_DIRECTORY) (dllbase + exportsStartRVA);
 

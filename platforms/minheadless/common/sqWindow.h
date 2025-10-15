@@ -35,14 +35,6 @@ typedef struct
 
     sqInt (*setDisplayMode)(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag);
 
-    char* (*getWindowLabel)(void);
-
-    sqInt (*setWindowLabelOfSize)(void *lblIndex, sqInt sz);
-
-    sqInt (*getWindowWidth)(void);
-
-    sqInt (*getWindowHeight)(void);
-
     sqInt (*setWindowWidthHeight)(sqInt w, sqInt h);
 
     sqInt (*isWindowObscured)(void);

@@ -76,12 +76,12 @@
 	positioning operation to be done automatically if needed.
 
 	typedef struct {
-		int		sessionID;
-		File	*file;
-		char	writable;
-		char	lastOp;  		// 0 = uncommitted, 1 = read, 2 = write //
-		char	lastChar;		// one character peek for stdin //
-		char	isStdioStream;
+		int			 sessionID;
+		File		*file;
+		short		 lastChar;		// one character peek for stdin; short to bow down to clang
+		char		 lastOp;  		// 0 = uncommitted, 1 = read, 2 = write
+		unsigned	 writable : 1;
+		unsigned	 isStdioStream : 1;
 	} SQFile;
 
 ***/
@@ -92,9 +92,9 @@
 #define WRITE_OP	2
 
 #ifndef SEEK_SET
-#define SEEK_SET	0
-#define SEEK_CUR	1
-#define SEEK_END	2
+# define SEEK_SET	0
+# define SEEK_CUR	1
+# define SEEK_END	2
 #endif
 
 /*** Variables ***/
@@ -109,17 +109,13 @@ static FILE *
 getFile(SQFile *f)
 {
   FILE *file;
-  void *in= (void *)&f->file;
-  void *out= (void *)&file;
-  memcpy(out, in, sizeof(FILE *));
+  memcpy(&file, &f->file, sizeof(FILE *));
   return file;
 }
 static void
 setFile(SQFile *f, FILE *file)
 {
-  void *in= (void *)&file;
-  void *out= (void *)&f->file;
-  memcpy(out, in, sizeof(FILE *));
+  memcpy(&f->file, &file, sizeof(FILE *));
 }
 #else /* OBJECTS_32BIT_ALIGNED */
 # define getFile(f) ((FILE *)((f)->file))

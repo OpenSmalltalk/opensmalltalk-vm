@@ -244,11 +244,6 @@ sqInt ioHasDisplayDepth(sqInt depth);
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag);
 char* ioGetLogDirectory(void);
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz);
-char* ioGetWindowLabel(void);
-sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz);
-sqInt ioGetWindowWidth(void);
-sqInt ioGetWindowHeight(void);
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);

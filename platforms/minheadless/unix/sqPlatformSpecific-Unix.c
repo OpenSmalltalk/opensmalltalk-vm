@@ -491,7 +491,7 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 	else
 		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
-	printf("\nMost recent primitives\n");
+	printf("\nMost recent primitives (oldest first)\n");
 	dumpPrimTraceLog();
 # if COGVM
 	printf("\n");

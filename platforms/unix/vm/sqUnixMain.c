@@ -663,7 +663,7 @@ emergencyDump(int quit)
   writeImageFile(dataSize);
 
 #if STACKVM
-  printf("\nMost recent primitives\n");
+  printf("\nMost recent primitives (oldest first)\n");
   dumpPrimTraceLog();
 #endif
   fprintf(stderr, "\n");
@@ -829,37 +829,9 @@ sqInt
 ioGetNextEvent(sqInputEvent *evt)
 { return dpy->ioGetNextEvent(evt); }
 
-/*** Window labeling ***/
-char *
-ioGetWindowLabel(void)
-{ return ""; }
-
-sqInt
-ioSetWindowLabelOfSize(void* lbl, sqInt size)
-{ return dpy->hostWindowSetTitle((long)dpy->ioGetWindowHandle(), lbl, size); }
-
-sqInt
-ioIsWindowObscured(void)
-{ return false; }
-
-/** Misplaced Window-Size stubs, so the VM will link. **/
-sqInt
-ioGetWindowWidth()
-{ int wh = dpy->hostWindowGetSize((long)dpy->ioGetWindowHandle());
-  return wh >> 16; } 
-
-sqInt
-ioGetWindowHeight()
-{ int wh = dpy->hostWindowGetSize((long)dpy->ioGetWindowHandle());
-  return (short)wh; } 
-
 void *
 ioGetWindowHandle(void)
 { return dpy->ioGetWindowHandle(); }
-
-sqInt
-ioSetWindowWidthHeight(sqInt w, sqInt h)
-{ return dpy->hostWindowSetSize((long)dpy->ioGetWindowHandle(),w,h); }
 
 /*** Drag and Drop ***/
 
@@ -1018,7 +990,7 @@ reportStackState(FILE *file,const char *msg, char *date, int printAll, ucontext_
 	else
 		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
-	fprintf(file,"\nMost recent primitives\n");
+	fprintf(file,"\nMost recent primitives (oldest first)\n");
 	dumpPrimTraceLogOn(file);
 # if COGVM
 	fprintf(file,"\n");

@@ -230,7 +230,7 @@ reportStackState(FILE *file, const char *msg, char *date, int printAll, ucontext
 	else
 		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM or GUI thread\n");
 # if STACKVM
-	fprintf(file,"\nMost recent primitives\n");
+	fprintf(file,"\nMost recent primitives (oldest first)\n");
 	dumpPrimTraceLogOn(file);
 #	if COGVM
 	fprintf(file,"\n");

@@ -73,15 +73,13 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 			 bytesPerRow: 2
 			 bitsPerPixel: 0]);
 
-    unsigned char*      planes[5];
+	unsigned char *planes[5];
 	[bitmap getBitmapDataPlanes:planes];
 
-	unsigned char*      data;
-    unsigned char*      mask;
-	data=planes[0];
-	mask=planes[1];
+	unsigned char *data = planes[0];
+	unsigned char *mask = planes[1];
 
-	for (int i= 0; i < 16; ++i) {
+	for (int i = 0; i < 16; ++i) {
 		unsigned int word= ((unsigned int *)pointerForOop(cursorBitsIndex))[i];
 		data[i*2 + 0]= 0xFF ^ ((word >> 24) & 0xFF);
 		data[i*2 + 1]= 0xFF ^ ((word >> 16) & 0xFF);
@@ -90,24 +88,17 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 			word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
 		else 
 			word = 0xFFFFFFFF;
-		
+
 		mask[i*2 + 0]= (word >> 24) & 0xFF;
 		mask[i*2 + 1]= (word >> 16) & 0xFF;
 	}
 
 	NSImage *image = AUTORELEASEOBJ([[NSImage alloc] init]);
 	[image addRepresentation: bitmap];
-	
-	
+
 	NSPoint hotSpot= { -offsetX, -offsetY };
 	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
 
-/*	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
-		browserSetCursor(&macCursor);
-*/
-#warning what about browser
-	
-	
 	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode())
 		[gDelegateApp runBlockAsyncOnMainThread:^{
 				@try {
@@ -127,32 +118,31 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 		return 0;
 	
 	@autoreleasepool {
-	
-	NSBitmapImageRep *bitmap= AUTORELEASEOBJ([[NSBitmapImageRep alloc]
-								initWithBitmapDataPlanes: NULL pixelsWide: extentX pixelsHigh: extentY
-								bitsPerSample: 8 samplesPerPixel: 4
-								hasAlpha: YES isPlanar: NO
-								colorSpaceName: NSCalibratedRGBColorSpace
-								bytesPerRow: extentX * 4
-								bitsPerPixel: 0]);
-	unsigned int *planes[5];
-	[bitmap getBitmapDataPlanes: (unsigned char **) planes];
-	unsigned int *src= (unsigned int*) pointerForOop(cursorBitsIndex);
-	unsigned int *dst= planes[0];
-	sqInt i;
-	for (i= 0; i < extentX * extentY; ++i, ++dst, ++src) {
+
+		NSBitmapImageRep *bitmap= AUTORELEASEOBJ([[NSBitmapImageRep alloc]
+									initWithBitmapDataPlanes: NULL pixelsWide: extentX pixelsHigh: extentY
+									bitsPerSample: 8 samplesPerPixel: 4
+									hasAlpha: YES isPlanar: NO
+									colorSpaceName: NSCalibratedRGBColorSpace
+									bytesPerRow: extentX * 4
+									bitsPerPixel: 0]);
+		unsigned int *planes[5];
+		[bitmap getBitmapDataPlanes: (unsigned char **) planes];
+		unsigned int *src= (unsigned int*) pointerForOop(cursorBitsIndex);
+		unsigned int *dst= planes[0];
+		for (sqInt i = 0; i < extentX * extentY; ++i, ++dst, ++src) {
 #if VMENDIANNESS
-		*dst=  ((*src & 0xFF000000) >> 24) | ((*src & 0x00FFFFFF) << 8) ; // ARGB to RGBA
+			*dst=  ((*src & 0xFF000000) >> 24) | ((*src & 0x00FFFFFF) << 8) ; // ARGB to RGBA
 #else
-		*dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16); // BGRA to RGBA
+			*dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16); // BGRA to RGBA
 #endif
+		}
+		NSImage  *image= AUTORELEASEOBJ([[NSImage alloc] init]);
+		[image addRepresentation: bitmap];
+		NSPoint hotSpot= { -offsetX, -offsetY };
+		self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
+		[gDelegateApp runBlockAsyncOnMainThread:^{ [self.squeakCursor set]; }];
 	}
-	NSImage  *image= AUTORELEASEOBJ([[NSImage alloc] init]);
-	[image addRepresentation: bitmap];
-	NSPoint hotSpot= { -offsetX, -offsetY };
-	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
-	[gDelegateApp runBlockAsyncOnMainThread:^{ [self.squeakCursor set]; }];
-    }
 	return 1;
 }
 @end

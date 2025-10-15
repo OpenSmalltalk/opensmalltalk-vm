@@ -67,13 +67,9 @@ sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
 }
 
 double ioScreenScaleFactor(void) {
-	//API Documented
-	__block double answer;
+	//API
 
-	[gDelegateApp runBlockOnMainThread:^{
-		answer = [getMainWindowDelegate() ioScreenScaleFactor];
-	}];
-	return answer;
+	return [getMainWindowDelegate() ioScreenScaleFactor];
 }
 
 sqInt ioScreenSize(void) {
@@ -136,23 +132,6 @@ ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width,
 	 windowIndex:  (int) windowIndex];
 }
 
-
-char *ioGetWindowLabel(void)
-{
-	return [getMainWindowDelegate() ioGetTitle];
-}
-
-sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
-{
-	[getMainWindowDelegate() ioSetTitle: lblIndex length: sz];
-	return 1;
-}
-
-sqInt ioGetWindowWidth(void) { return 0; }
-
-sqInt ioGetWindowHeight(void) { return 0; }
-
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) { return 0; }
 
 sqInt ioIsWindowObscured(void) { return 0; }
 

@@ -138,30 +138,6 @@ ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
     return currentWindowSystem->setDisplayMode(width, height, depth, fullscreenFlag);
 }
 
-char*
-ioGetWindowLabel(void)
-{
-    return currentWindowSystem->getWindowLabel();
-}
-
-sqInt
-ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
-{
-    return currentWindowSystem->setWindowLabelOfSize(lblIndex, sz);
-}
-
-sqInt
-ioGetWindowWidth(void)
-{
-    return currentWindowSystem->getWindowWidth();
-}
-
-sqInt
-ioGetWindowHeight(void)
-{
-    return currentWindowSystem->getWindowHeight();
-}
-
 sqInt
 ioSetWindowWidthHeight(sqInt w, sqInt h)
 {

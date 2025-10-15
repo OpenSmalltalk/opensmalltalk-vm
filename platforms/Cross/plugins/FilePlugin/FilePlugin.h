@@ -32,20 +32,18 @@ typedef int mode_t;
 
 /* squeak file record; see sqFilePrims.c for details */
 typedef struct {
-  int			 sessionID;	/* ikp: must be first */
-  void			*file;
+  int		 sessionID;	/* ikp: must be first */
+  void		*file;
+  short		 lastChar;	// Must be comparable against EOF, which is -1, but
+						// e.g. clang refuses to do this with a char variable
 #if defined(ACORN)
 // ACORN has to have 'lastOp' as at least a 32 bit field in order to work
-  int lastOp; // actually used to save file position
-  char writable;
-  char lastChar;
-  char isStdioStream;
+  int		 lastOp; // actually used to save file position
 #else
-  char			 writable;
-  char			 lastOp; /* 0 = uncommitted, 1 = read, 2 = write */
-  char			 lastChar;
-  char			 isStdioStream;
+  char		 lastOp; /* 0 = uncommitted, 1 = read, 2 = write */
 #endif
+  unsigned	 writable : 1;
+  unsigned	 isStdioStream : 1;
 } SQFile;
 
 /* file i/o */
