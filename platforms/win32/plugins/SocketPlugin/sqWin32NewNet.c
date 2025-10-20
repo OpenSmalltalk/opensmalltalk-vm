@@ -2163,7 +2163,7 @@ sqInt sqResolverGetAddressInfoSize(void)
 }
 
 
-void sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize)
+void sqResolverGetAddressInfoResultSize(unsigned char *addr, sqInt addrSize)
 {
   if ((!addrInfo) || (addrSize < AddressHeaderSize + addrInfo->ai_addrlen))
 	{

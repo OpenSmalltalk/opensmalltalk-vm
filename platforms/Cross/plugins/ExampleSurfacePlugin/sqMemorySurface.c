@@ -5,7 +5,7 @@
 #include "../SurfacePlugin/SurfacePlugin.h"
 
 typedef struct memSurface {
-  int width, height, depth, stride;
+  sqInt width, height, depth, stride;
   void *bits;
 } memSurface;
 
@@ -17,7 +17,8 @@ static fn_ioFindSurface findSurface = 0;
 extern struct VirtualMachine *interpreterProxy;
 
 /******************* Surface manager entry points *******************/
-static int memGetSurfaceFormat(sqIntptr_t handle, int *w, int *h, int *d, int *msbFlag) {
+static int memGetSurfaceFormat(sqIntptr_t handle, sqInt *w, sqInt *h, sqInt *d, sqInt *msbFlag)
+{
   memSurface *ms = (memSurface *) handle;
   *w = ms->width;
   *h = ms->height;
@@ -26,7 +27,8 @@ static int memGetSurfaceFormat(sqIntptr_t handle, int *w, int *h, int *d, int *m
   return 1;
 }
 
-static sqIntptr_t memLock(sqIntptr_t handle, int *stride, int x, int y, int w, int h){
+static sqIntptr_t memLock(sqIntptr_t handle, sqInt *stride, sqInt x, sqInt y, sqInt w, sqInt h)
+{
   /* Locking can be safely ignored for memory surfaces but we need to fill in 
      the stride and return the bits */
   memSurface *ms = (memSurface *) handle;
@@ -34,14 +36,9 @@ static sqIntptr_t memLock(sqIntptr_t handle, int *stride, int x, int y, int w, i
   return (sqIntptr_t)ms->bits;
 }
 
-static int memUnlock(sqIntptr_t handle, int x, int y, int w, int h){
-  return 1; /* ignored */
-}
+static int memUnlock(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h){ return 1; /* ignored */ }
 
-static int memShow(sqIntptr_t handle, int x, int y, int w, int h) {
-  /* unsupported */
-  return 0;
-}
+static int memShow(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h) { /* unsupported */ return 0; }
 
 static sqSurfaceDispatch memSurfaceDispatch = {
   1,
@@ -54,7 +51,7 @@ static sqSurfaceDispatch memSurfaceDispatch = {
 
 /******************* primitive entry points *******************/
 
-int memCreateSurfaceWidthHeightDepth(int w, int h, int d) {
+int memCreateSurfaceWidthHeightDepth(sqInt w, sqInt h, int d) {
   memSurface *ms;
   int id;
   /* since I'm lazy I'll only deal with d >= 8 */
@@ -124,4 +121,3 @@ int memInitialize(void) {
   if(!findSurface) return 0;
   return 1;
 }
-

@@ -1728,7 +1728,7 @@ void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *h
 
 sqInt sqResolverGetAddressInfoSize(void) {return -1;}
 
-void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize) {
+void  sqResolverGetAddressInfoResultSize(unsigned char *addr, sqInt addrSize) {
 	interpreterProxy->success(false);
 	return;
 }

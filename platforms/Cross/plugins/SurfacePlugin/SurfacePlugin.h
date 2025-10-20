@@ -8,10 +8,10 @@
 
 /* Plugins creating their own surfaces must register these using
    the following set of functions. The typedefs are for easier casts. */
-typedef int (*fn_getSurfaceFormat)(sqIntptr_t surfaceHandle, int* width, int* height, int* depth, int* isMSB);
-typedef sqIntptr_t (*fn_lockSurface)(sqIntptr_t surfaceHandle, int *pitch, int x, int y, int w, int h);
-typedef int (*fn_unlockSurface)(sqIntptr_t surfaceHandle, int x, int y, int w, int h);
-typedef int (*fn_showSurface)(sqIntptr_t surfaceHandle, int x, int y, int w, int h);
+typedef int (*fn_getSurfaceFormat)(sqIntptr_t surfaceHandle, sqInt * width, sqInt * height, sqInt * depth, sqInt * isMSB);
+typedef sqIntptr_t (*fn_lockSurface)(sqIntptr_t surfaceHandle, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h);
+typedef int (*fn_unlockSurface)(sqIntptr_t surfaceHandle, sqInt x, sqInt y, sqInt w, sqInt h);
+typedef int (*fn_showSurface)(sqIntptr_t surfaceHandle, sqInt x, sqInt y, sqInt w, sqInt h);
 
 typedef struct sqSurfaceDispatch {
 	/* Version information. Must be provided by the client
@@ -29,14 +29,14 @@ typedef struct sqSurfaceDispatch {
 
 /* The functions for sqSurfaceDispatch are:
 
-	int getSurfaceFormat(sqIntptr_t handle, int* width, int* height, int* depth, int* isMSB);
+	int getSurfaceFormat(sqIntptr_t handle, sqInt * width, sqInt * height, sqInt * depth, sqInt * isMSB);
 		Return general information about the OS drawing surface.
 		Return true if successful, false otherwise.
 
 		The returned values describe the basic properties such as
 		width, height, depth and LSB vs. MSB pixels.
 
-	sqIntptr_t lockSurface(sqIntptr_t handle, int *pitch, int x, int y, int w, int h);
+	sqIntptr_t lockSurface(sqIntptr_t handle, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h);
 		Lock the bits of the surface.
 		Return a pointer to the actual surface bits, or NULL on failure.
 		If successful, store the pitch of the surface (e.g., the bytes
@@ -67,14 +67,14 @@ typedef struct sqSurfaceDispatch {
 		be inside the source and dest boundingBox) but it is not aligned to word boundaries
 		yet. It is up to the support code to compute accurate alignment if necessary.
 
-	int unlockSurface(sqIntptr_t handle, int x, int y, int w, int h);
+	int unlockSurface(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h);
 		Unlock the bits of a (possibly modified) surface after BitBlt completed.
 		The return value is ignored.
 
 		The arguments provided specify the dirty region of the surface. If the
 		surface is unmodified all arguments are set to zero.
 
-	int showSurface(sqIntptr_t handle, int x, int y, int w, int h);
+	int showSurface(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h);
 		Display the contents of the surface on the actual screen.
 
 		If ioShowSurface() is called the surface in question represents
@@ -83,9 +83,9 @@ typedef struct sqSurfaceDispatch {
 	FXBlt uses a variant of the above functions which are exported from
 	the surface plugin:
 
-	int ioGetSurfaceFormat(int surfaceID, int* width, int* height, int* depth, int* isMSB);
-	sqIntptr_t ioLockSurface(int surfaceID, int *pitch, int x, int y, int w, int h);
-	int ioUnlockSurface(int surfaceID, int x, int y, int w, int h);
+	int ioGetSurfaceFormat(int surfaceID, sqInt *width, sqInt *height, sqInt *depth, sqInt *isMSB);
+	sqIntptr_t ioLockSurface(int surfaceID, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h);
+	int ioUnlockSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h);
 
 	These functions are looked up in the registered surfaces and invoked
 	as appropriate. The meaning of all values is exactly the same as for
@@ -95,13 +95,12 @@ typedef struct sqSurfaceDispatch {
 
 	Interpreter itself uses a separate entry point for updating the display
 
-	int ioShowSurface(int surfaceID, int x, int y, int w, int h);
+	int ioShowSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h);
 
 	since the management of deferred updates is currently an intrinsic
 	property of the VM (which is bad - deferred updates should be a
 	property of the DisplayScreen in question and not of the VM but
 	that's the way it is...).
-
 */
 
 /* The following are the entry points for the surface manager:

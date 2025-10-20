@@ -14,8 +14,8 @@
 #include "sqVirtualMachine.h"
 
 typedef struct QuickTimeBitMapForSqueak {
-   int width, height, depth;    /* width, height, and depth */
-   int rowBytes;   /* how many bytes per scan line? */
+   sqInt width, height, depth;    /* width, height, and depth */
+   sqInt rowBytes;   /* how many bytes per scan line? */
    MovieDrawingCompleteUPP	myDrawCompleteProc;
    Movie	movie;
    int	semaIndex;
@@ -27,10 +27,10 @@ static fn_ioRegisterSurface registerSurface = 0;
 static fn_ioUnregisterSurface unregisterSurface = 0;
 static fn_ioFindSurface findSurface = 0;
 
-int QuicktimeGetSurfaceFormat(sqIntptr_t handle, int* width, int* height, int* depth, int* isMSB);
-sqIntptr_t QuicktimeLockSurface(sqIntptr_t handle, int *pitch, int x, int y, int w, int h);
-int QuicktimeUnlockSurface(sqIntptr_t handle, int x, int y, int w, int h);
-int QuicktimeShowSurface(sqIntptr_t handle, int x, int y, int w, int h);
+int QuicktimeGetSurfaceFormat(sqIntptr_t handle, sqInt *width, sqInt *height, sqInt *depth, sqInt *isMSB);
+sqIntptr_t QuicktimeLockSurface(sqIntptr_t handle, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h);
+int QuicktimeUnlockSurface(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h);
+int QuicktimeShowSurface(sqIntptr_t handle, sqInt x, sqInt y, sqInt w, sqInt h);
 
 struct VirtualMachine *interpreterProxy;
 
@@ -64,7 +64,7 @@ sqInt sqQuicktimeShutdown() {
 	return true;
 }
 
-int stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width, int height, int rowBytes, int depth, void *movie)
+int stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char *buffer, sqInt width, sqInt height, sqInt rowBytes, sqInt depth, void *movie)
 {
 	QuickTimeBitMapForSqueak *bitMap;
 	int sqHandle;
@@ -82,7 +82,7 @@ int stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width,
 }
 
 int stQuicktimeSetToExistingSurfacegworldwidthheightrowBytesdepthmovie
-	(int sqHandle, char * buffer, int width, int height, int rowBytes, int depth, void *movie)
+	(int sqHandle, char *buffer, sqInt width, sqInt height, sqInt rowBytes, sqInt depth, void *movie)
 {
 	QuickTimeBitMapForSqueak *bitMap;
 	

@@ -419,7 +419,7 @@ sqInt sqResolverGetAddressInfoSize(void) {
 	return 0;
 }
 
-void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize) {
+void  sqResolverGetAddressInfoResultSize(unsigned char *addr, sqInt addrSize) {
 	//Unsupported
 }
 

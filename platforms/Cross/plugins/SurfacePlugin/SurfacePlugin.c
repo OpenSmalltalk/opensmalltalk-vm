@@ -67,12 +67,12 @@ EXPORT(long) initialiseModule(void);
 EXPORT(long) shutdownModule(void);
 
 /* critical FXBlt entry points */
-EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB);
-EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h);
-EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h);
+EXPORT(int) ioGetSurfaceFormat (int surfaceID, sqInt *width, sqInt *height, sqInt *depth, sqInt *isMSB);
+EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h);
+EXPORT(int) ioUnlockSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h);
 
 /* interpreter entry point */
-EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h);
+EXPORT(int) ioShowSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h);
 
 /* client entry points */
 EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID);
@@ -83,14 +83,16 @@ EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surf
 /* ioGetSurfaceFormat:
 	Return information describing the given surface.
 	Return true if successful, false otherwise. */
-EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB)
+EXPORT(int) ioGetSurfaceFormat (int surfaceID, sqInt *width, sqInt *height, sqInt *depth, sqInt *isMSB)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		FAIL;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) FAIL;
+	if (!surface->dispatch)
+		FAIL;
 	/* Allow getSurfaceFormat to be defaulted to 0 */
-	if(!surface->dispatch->getSurfaceFormat)
+	if (!surface->dispatch->getSurfaceFormat)
 		return -1;
 	return surface->dispatch->getSurfaceFormat(surface->handle, width, height, depth, isMSB);
 }
@@ -99,41 +101,48 @@ EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* dep
 	Lock the bits of the surface. 
 	Return a pointer to the actual surface bits,
 	or NULL on failure. */
-EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h)
+EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		FAIL;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) FAIL;
-	if(!surface->dispatch->lockSurface) FAIL;
+	if (!surface->dispatch)
+		FAIL;
+	if (!surface->dispatch->lockSurface)
+		FAIL;
 	return surface->dispatch->lockSurface(surface->handle, pitch, x, y, w, h);
 }
 
 /* ioUnlockSurface:
 	Unlock the bits of the surface. 
 	The return value is ignored. */
-EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h)
+EXPORT(int) ioUnlockSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		FAIL;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) FAIL;
+	if (!surface->dispatch)
+		FAIL;
 	/* Allow unlockSurface to be defaulted to 0 */
-	if(!surface->dispatch->unlockSurface)
+	if (!surface->dispatch->unlockSurface)
 		return -1;
 	return surface->dispatch->unlockSurface(surface->handle, x, y, w, h);
 }
 
 /* ioShowSurface:
 	Transfer the bits of a surface to the screen. */
-EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h)
+EXPORT(int) ioShowSurface(int surfaceID, sqInt x, sqInt y, sqInt w, sqInt h)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		FAIL;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) FAIL;
+	if (!surface->dispatch)
+		FAIL;
 	/* Allow showSurface to be defaulted to 0 */
-	if(!surface->dispatch->showSurface)
+	if (!surface->dispatch->showSurface)
 		-1;
 	return surface->dispatch->showSurface(surface->handle, x, y, w, h);
 }
@@ -147,9 +156,11 @@ EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, i
 {
 	int index;
 
-	if(!fn) return 0;
-	if(fn->majorVersion != 1 && fn->minorVersion != 0) return 0;
-	if(numSurfaces == maxSurfaces) {
+	if (!fn)
+		return 0;
+	if (fn->majorVersion != 1 && fn->minorVersion != 0)
+		return 0;
+	if (numSurfaces == maxSurfaces) {
 		maxSurfaces = maxSurfaces * 2 + 10;
 		surfaceArray = realloc(surfaceArray, sizeof(SqueakSurface) * maxSurfaces);
 		for(index = numSurfaces; index < maxSurfaces; index++){
@@ -159,10 +170,11 @@ EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, i
 		index = numSurfaces;
 	} else {
 		for(index = 0; index < maxSurfaces; index++)
-			if(surfaceArray[index].dispatch == NULL)
+			if (surfaceArray[index].dispatch == NULL)
 				break;
 	}
-	if(index >= maxSurfaces) return 0; /* should not happen */
+	if (index >= maxSurfaces)
+		return 0; /* should not happen */
 	surfaceArray[index].handle = surfaceHandle;
 	surfaceArray[index].dispatch = fn;
 	*surfaceID = index;
@@ -176,9 +188,11 @@ EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, i
 EXPORT(int) ioUnregisterSurface(int surfaceID)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		return 0;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) return 0;
+	if (!surface->dispatch)
+		return 0;
 	surface->handle = 0;
 	surface->dispatch = NULL;
 	numSurfaces--;
@@ -193,10 +207,13 @@ EXPORT(int) ioUnregisterSurface(int surfaceID)
 EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle)
 {
 	SqueakSurface *surface;
-	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;
+	if (surfaceID < 0 || surfaceID >= maxSurfaces)
+		return 0;
 	surface = surfaceArray + surfaceID;
-	if(surface->dispatch == NULL) return 0;
-	if(fn && fn != surface->dispatch) return 0;
+	if (!surface->dispatch)
+		return 0;
+	if (fn && fn != surface->dispatch)
+		return 0;
 	*surfaceHandle = surface->handle;
 	return 1;
 }
@@ -225,7 +242,8 @@ EXPORT(long) initialiseModule() {
 
 EXPORT(long) shutdownModule() {
 	/* This module can only be shut down if no surfaces are registered */
-	if(numSurfaces != 0) return 0;
+	if (numSurfaces != 0)
+		return 0;
 	free(surfaceArray);
 	return 1;
 }

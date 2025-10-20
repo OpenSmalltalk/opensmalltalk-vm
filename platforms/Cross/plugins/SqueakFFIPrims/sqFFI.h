@@ -2,7 +2,7 @@
 *   PROJECT: Squeak foreign function interface
 *   FILE:    sqFFI.h
 *   CONTENT: Declarations for the foreign function interface's surface support
-			 plus optional declaration of the sqFFITestFuncs.c test suite.
+*			 plus optional declaration of the sqFFITestFuncs.c test suite.
 *
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
@@ -39,9 +39,9 @@ void initSurfacePluginFunctionPointers();
 void initManualSurfaceFunctionPointers
 	(fn_ioRegisterSurface, fn_ioUnregisterSurface, fn_ioFindSurface);
 int createManualSurface
-	(int width, int height, int rowPitch, int depth, int isMSB);
+	(sqInt width, sqInt height, sqInt rowPitch, sqInt depth, sqInt isMSB);
 int destroyManualSurface(int surfaceID);
-int setManualSurfacePointer(int surfaceID, void* ptr);
+int setManualSurfacePointer(int surfaceID, void *ptr);
 void doFFILogCallout(sqInt externalFunctionName);
 
 

@@ -64,7 +64,7 @@ extern int print3Dlog(char *fmt, ...);
 #endif
 
 #undef ERROR_CHECK
-#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__)); }
+#define ERROR_CHECK if (FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__)); }
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -96,7 +96,6 @@ static int fUpdateClipper = 1;      /* Determine clipper status again */
 static int fClipperAttached = 0;    /* Is a clipper currently attached? */
 static int fPrintDebugInfo = 1;	   /* Shall we print debugging information?! */
 static int fExclusive = 0;          /* Do we have exclusive access?! */
-static int fHasSysLock = 1;	    /* Do we use DDLOCK_NOSYSLOCK?! */
 
 typedef struct d3dRenderer {
   int bufferRect[4];
@@ -147,13 +146,16 @@ typedef struct d3dRenderer {
 static d3dRenderer *current = NULL;
 static d3dRenderer allRenderer[MAX_RENDERER];
 
-#define RELEASE(lp) if(lp) { lp->lpVtbl->Release(lp); lp = NULL; }
+#define RELEASE(lp) if (lp) { lp->lpVtbl->Release(lp); lp = NULL; }
 
-d3dRenderer *d3dRendererFromHandle(int handle) {
-  DPRINTF3D(7, ("Looking for renderer id: %d\n", handle));
-  if(handle < 0 || handle >= MAX_RENDERER) return NULL;
-  if(allRenderer[handle].fUsed) return allRenderer+handle;
-  return NULL;
+static inline d3dRenderer *d3dRendererFromHandle(int handle)
+{
+	// DPRINTF3D(7, ("Looking for renderer id: %d\n", handle));
+	if (handle >= 0 
+	 && handle < MAX_RENDERER
+	 && allRenderer[handle].fUsed)
+		return allRenderer+handle;
+	return NULL;
 }
 
 /*****************************************************************************/
@@ -172,34 +174,34 @@ static HRESULT d3dLock(LPDIRECTDRAWSURFACE7 lpdd, DDSURFACEDESC2 *ddsd,
   hRes = lpdd->lpVtbl->
     Lock(lpdd, NULL, ddsd, 
 	 DDLOCK_NOSYSLOCK | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL);
-  if(!FAILED(hRes)) return DD_OK;
-  if(printWarnings)
+  if (!FAILED(hRes)) return DD_OK;
+  if (printWarnings)
     DPRINTF3D(3,("WARNING: Failed to lock surface using DDLOCK_NOSYSLOCK | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%lX)\n",hRes));
   hRes = lpdd->lpVtbl->
     Lock(lpdd, NULL, ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL);
-  if(!FAILED(hRes)) return DD_OK;
-  if(printWarnings)
+  if (!FAILED(hRes)) return DD_OK;
+  if (printWarnings)
     DPRINTF3D(3,("WARNING: Failed to lock surface using DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%lX)\n",hRes));
   hRes = lpdd->lpVtbl->Lock(lpdd, NULL, ddsd, DDLOCK_WAIT, NULL);
-  if(!FAILED(hRes)) return DD_OK;
-  if(printWarnings)
+  if (!FAILED(hRes)) return DD_OK;
+  if (printWarnings)
     DPRINTF3D(3,("WARNING: Failed to lock surface using DDLOCK_WAIT (errCode=%lX)\n",hRes));
   /* Wait until the blt completed */
   do {
     hRes = lpdd->lpVtbl->GetBltStatus(lpdd, DDGBS_ISBLTDONE);
-  } while(hRes == DDERR_WASSTILLDRAWING);
-  if(FAILED(hRes)) {
+  } while (hRes == DDERR_WASSTILLDRAWING);
+  if (FAILED(hRes)) {
     DPRINTF3D(3,("WARNING: Blt not completed on surface (errCode=%lX)\n",hRes));
   }
   hRes = lpdd->lpVtbl->Lock(lpdd, NULL, ddsd, 0, NULL);
-  if(!FAILED(hRes)) return DD_OK;
+  if (!FAILED(hRes)) return DD_OK;
   DPRINTF3D(1,("ERROR: Failed to lock surface using (errCode=%lX)\n",hRes));
   return hRes;
 }
 
 /* d3dGetSurfaceFormat: Return information about the given surface. */
 static int d3dGetSurfaceFormat(sqIntptr_t handle, 
-			       int* width, int* height, int* depth, int* isMSB)
+			       sqInt *width, sqInt *height, sqInt *depth, sqInt *isMSB)
 {
   LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   DDSURFACEDESC2 desc;
@@ -207,7 +209,7 @@ static int d3dGetSurfaceFormat(sqIntptr_t handle,
 
   desc.dwSize = sizeof(DDSURFACEDESC2);
   hRes = lpddSurface->lpVtbl->GetSurfaceDesc(lpddSurface, &desc);
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     DPRINTF3D(1,("ERROR: Failed to obtain surface descriptor (d3dGetSurfaceFormat) (errCode=%lX)\n",hRes));
     return 0;
   }
@@ -220,27 +222,27 @@ static int d3dGetSurfaceFormat(sqIntptr_t handle,
 
 /* d3dLockSurface: Lock the bits of the surface for BitBlt. */
 static sqIntptr_t d3dLockSurface(sqIntptr_t handle, 
-			  int *pitch, int x, int y, int w, int h)
+			  sqInt *pitch, sqInt x, sqInt y, sqInt w, sqInt h)
 {
   LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   DDSURFACEDESC2 desc;
   HRESULT hRes;
 
   hRes = d3dLock(lpddSurface, &desc, 0);
-  if(FAILED(hRes)) return 0;
+  if (FAILED(hRes)) return 0;
   *pitch = desc.lPitch;
   return (sqIntptr_t) desc.lpSurface;
 }
 
 /* d3dUnlockSurface: Unlock the bits of a surface after BitBlt completed. */
 static int d3dUnlockSurface(sqIntptr_t handle, 
-			    int x, int y, int w, int h)
+			    sqInt x, sqInt y, sqInt w, sqInt h)
 {
   LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   HRESULT hRes;
 
   hRes = lpddSurface->lpVtbl->Unlock(lpddSurface, NULL);
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     DPRINTF3D(1,("ERROR: Failed to unlock surface (d3dUnlockSurface) (errCode=%lX)\n",hRes));
     return 0;
   }
@@ -249,7 +251,7 @@ static int d3dUnlockSurface(sqIntptr_t handle,
 
 /* d3dShowSurface: Blt the modified contents of the surface to the screen. */
 static int d3dShowSurface(sqIntptr_t handle, 
-			  int x, int y, int w, int h)
+			  sqInt x, sqInt y, sqInt w, sqInt h)
 {
   /* unsupported */
   return 0;
@@ -307,34 +309,34 @@ EnumDeviceCallback(LPSTR            lpszDeviceDesc,
   DPRINTF3D(3,("Device description: %s\n", lpszDeviceDesc));
   DPRINTF3D(3,("Hardware accelerated: %s\n", fIsHardware ? "YES" : "NO"));
   DPRINTF3D(3,("Available render depths: "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_1) DPRINTF3D(3,("1 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_2) DPRINTF3D(3,("2 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_4) DPRINTF3D(3,("4 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_8) DPRINTF3D(3,("8 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_16) DPRINTF3D(3,("16 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_24) DPRINTF3D(3,("24 "));
-  if(lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_32) DPRINTF3D(3,("32 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_1) DPRINTF3D(3,("1 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_2) DPRINTF3D(3,("2 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_4) DPRINTF3D(3,("4 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_8) DPRINTF3D(3,("8 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_16) DPRINTF3D(3,("16 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_24) DPRINTF3D(3,("24 "));
+  if (lpDeviceDesc->dwDeviceRenderBitDepth & DDBD_32) DPRINTF3D(3,("32 "));
   DPRINTF3D(3,("\n"));
 
   DPRINTF3D(3,("Available Z-buffer depths: "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_1) DPRINTF3D(3,("1 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_2) DPRINTF3D(3,("2 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_4) DPRINTF3D(3,("4 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_8) DPRINTF3D(3,("8 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_16) DPRINTF3D(3,("16 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_24) DPRINTF3D(3,("24 "));
-  if(lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_32) DPRINTF3D(3,("32 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_1) DPRINTF3D(3,("1 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_2) DPRINTF3D(3,("2 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_4) DPRINTF3D(3,("4 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_8) DPRINTF3D(3,("8 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_16) DPRINTF3D(3,("16 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_24) DPRINTF3D(3,("24 "));
+  if (lpDeviceDesc->dwDeviceZBufferBitDepth & DDBD_32) DPRINTF3D(3,("32 "));
   DPRINTF3D(3,("\n"));
 
   DPRINTF3D(3,("Z-buffer tests: "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_NEVER) DPRINTF3D(3,("NEVER "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_LESS) DPRINTF3D(3,("LESS "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_EQUAL) DPRINTF3D(3,("EQUAL "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_LESSEQUAL) DPRINTF3D(3,("LESSEQUAL "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_GREATER) DPRINTF3D(3,("GREATER "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_NOTEQUAL) DPRINTF3D(3,("NOTEQUAL "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_GREATEREQUAL) DPRINTF3D(3,("GREATEREQUAL "));
-  if(triCaps->dwZCmpCaps & D3DPCMPCAPS_ALWAYS) DPRINTF3D(3,("ALWAYS "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_NEVER) DPRINTF3D(3,("NEVER "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_LESS) DPRINTF3D(3,("LESS "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_EQUAL) DPRINTF3D(3,("EQUAL "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_LESSEQUAL) DPRINTF3D(3,("LESSEQUAL "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_GREATER) DPRINTF3D(3,("GREATER "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_NOTEQUAL) DPRINTF3D(3,("NOTEQUAL "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_GREATEREQUAL) DPRINTF3D(3,("GREATEREQUAL "));
+  if (triCaps->dwZCmpCaps & D3DPCMPCAPS_ALWAYS) DPRINTF3D(3,("ALWAYS "));
   DPRINTF3D(3,("\n"));
 
   DPRINTF3D(3,("Gouraud shading (RGB): %s\n",
@@ -369,45 +371,45 @@ EnumDeviceCallback(LPSTR            lpszDeviceDesc,
     (triCaps->dwShadeCaps & D3DPSHADECAPS_FOGPHONG) ? "YES" : "NO"));
 
   /* The device must support the current display depth */
-  if(!(lpDeviceDesc->dwDeviceRenderBitDepth & dwDisplayBitDepth))
+  if (!(lpDeviceDesc->dwDeviceRenderBitDepth & dwDisplayBitDepth))
     return D3DENUMRET_OK;
 
   /* The device must have a z-buffer >= 16bit */
   depth = lpDeviceDesc->dwDeviceZBufferBitDepth;
-  if( !(depth & DDBD_16) && !(depth & DDBD_24) && !(depth & DDBD_32))
+  if ( !(depth & DDBD_16) && !(depth & DDBD_24) && !(depth & DDBD_32))
     return D3DENUMRET_OK;
 
   /* The device must support less or less-equal depth comparison */
-  if(!(triCaps->dwZCmpCaps & D3DPCMPCAPS_LESS) &&
+  if (!(triCaps->dwZCmpCaps & D3DPCMPCAPS_LESS) &&
      !(triCaps->dwZCmpCaps & D3DPCMPCAPS_LESSEQUAL))
     return D3DENUMRET_OK;
 
   /* The device must support gouraud shaded triangles */
-  if(!(triCaps->dwShadeCaps & D3DPSHADECAPS_COLORGOURAUDMONO) &&
+  if (!(triCaps->dwShadeCaps & D3DPSHADECAPS_COLORGOURAUDMONO) &&
      !(triCaps->dwShadeCaps & D3DPSHADECAPS_COLORGOURAUDRGB))
     return D3DENUMRET_OK;
 
   /* The device must support perspective corrected textures */
-  if(!(triCaps->dwTextureCaps & D3DPTEXTURECAPS_PERSPECTIVE))
+  if (!(triCaps->dwTextureCaps & D3DPTEXTURECAPS_PERSPECTIVE))
     return D3DENUMRET_OK;
 
   /* The device must support texture interpolation */
-  if(!(triCaps->dwTextureFilterCaps & D3DPTFILTERCAPS_LINEAR))
+  if (!(triCaps->dwTextureFilterCaps & D3DPTFILTERCAPS_LINEAR))
     return D3DENUMRET_OK;
 
   /* The device must match hw/sw constraints from the renderer */
-  if(fIsHardware) {
-    if(!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
+  if (fIsHardware) {
+    if (!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
   } else {
-    if(!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
+    if (!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
   }
 
   /* this is a device we're interested in */
-  if(renderer->fDeviceFound) {
+  if (renderer->fDeviceFound) {
     /* we had one already, check the details */
-    if(renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) {
+    if (renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) {
       /* we have already a hardware renderer */
-      if(!fIsHardware) return D3DENUMRET_OK;
+      if (!fIsHardware) return D3DENUMRET_OK;
     }
   }
   CopyMemory(&renderer->guidDevice, &lpDeviceDesc->deviceGUID, sizeof(GUID));
@@ -431,22 +433,22 @@ HRESULT CALLBACK EnumZBufferCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
   DPRINTF3D(3,("### New Z-Buffer format:\n"));
   DPRINTF3D(3,("flags: %lx\n", ddpf->dwFlags));
   DPRINTF3D(3,("depth: %ld\n", ddpf->dwZBufferBitDepth));
-  if(ddpf->dwFlags != DDPF_ZBUFFER) 
+  if (ddpf->dwFlags != DDPF_ZBUFFER) 
     D3DENUMRET_OK; /* not a z-buffer */
-  if(!dest->dwSize) {
+  if (!dest->dwSize) {
     /* this is the first z-buffer we found */
     memcpy(dest, ddpf, sizeof(DDPIXELFORMAT));
     return D3DENUMRET_OK;
   }
   /* more than one choice; try picking a 16bit z-buffer */
-  if(dest->dwZBufferBitDepth == 16) 
+  if (dest->dwZBufferBitDepth == 16) 
     return D3DENUMRET_OK;
-  if(ddpf->dwZBufferBitDepth == 16) {
+  if (ddpf->dwZBufferBitDepth == 16) {
     memcpy(dest, ddpf, sizeof(DDPIXELFORMAT));
     return D3DENUMRET_OK;
   }
   /* none of the two is a 16bit z-buffer; just take the larger one */
-  if(ddpf->dwZBufferBitDepth > dest->dwZBufferBitDepth) {
+  if (ddpf->dwZBufferBitDepth > dest->dwZBufferBitDepth) {
     memcpy(dest, ddpf, sizeof(DDPIXELFORMAT));
   }
   return D3DENUMRET_OK;
@@ -462,20 +464,20 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
   d3dRenderer *renderer = (d3dRenderer*)lParam;
 
   /* Check for a 8 bit palette indexed texture */
-  if(ddpf->dwFlags & DDPF_PALETTEINDEXED8) {
+  if (ddpf->dwFlags & DDPF_PALETTEINDEXED8) {
     DPRINTF3D(3,("\nTexture: 8bit palette indexed\n"));
     CopyMemory(&renderer->ddpfTextureFormat08, ddpf, sizeof(*ddpf));
     renderer->fTextureFound08 = TRUE;
     return DDENUMRET_OK;
   }
   /* Check for 16 bit textures */
-  if((ddpf->dwRGBBitCount == 16) && (ddpf->dwFlags & DDPF_RGB)) {
+  if ((ddpf->dwRGBBitCount == 16) && (ddpf->dwFlags & DDPF_RGB)) {
     DPRINTF3D(3,("\nTexture: 16bit RGB\n"));
     DPRINTF3D(3,("Red mask: %lx\n", ddpf->dwRBitMask));
     DPRINTF3D(3,("Green mask: %lx\n", ddpf->dwGBitMask));
     DPRINTF3D(3,("Blue mask: %lx\n", ddpf->dwBBitMask));
     DPRINTF3D(3,("Alpha mask: %lx\n", ddpf->dwRGBAlphaBitMask));
-    if((ddpf->dwFlags & DDPF_ALPHAPIXELS) && 
+    if ((ddpf->dwFlags & DDPF_ALPHAPIXELS) && 
        ddpf->dwRBitMask	== 0x0F00 && 
        ddpf->dwGBitMask	== 0x00F0 && 
        ddpf->dwBBitMask	== 0x000F &&
@@ -485,11 +487,11 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
       renderer->fTextureFound4x4x4x4 = TRUE;
       return DDENUMRET_OK;
     }
-    if(ddpf->dwRBitMask == 0x7C00 && 
+    if (ddpf->dwRBitMask == 0x7C00 && 
        ddpf->dwGBitMask == 0x03E0 && 
        ddpf->dwBBitMask == 0x001F) {
-      if(ddpf->dwFlags & DDPF_ALPHAPIXELS) {
-	if(ddpf->dwRGBAlphaBitMask == 0x8000) {
+      if (ddpf->dwFlags & DDPF_ALPHAPIXELS) {
+	if (ddpf->dwRGBAlphaBitMask == 0x8000) {
 	  DPRINTF3D(3,("[Note: Perfect 1x5x5x5 texture format]\n"));
 	  CopyMemory(&renderer->ddpfTextureFormat1x5x5x5, ddpf, sizeof(*ddpf));
 	  renderer->fTextureFound1x5x5x5 = TRUE;
@@ -500,31 +502,31 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
 	renderer->fTextureFound0x5x5x5 = TRUE;
       }
     } else {
-      if(ddpf->dwFlags & DDPF_ALPHAPIXELS) {
+      if (ddpf->dwFlags & DDPF_ALPHAPIXELS) {
 	DPRINTF3D(3,("[Note: Lousy 1x5x5x5 texture format]\n"));
-	if(renderer->fTextureFound1x5x5x5) return DDENUMRET_OK;
+	if (renderer->fTextureFound1x5x5x5) return DDENUMRET_OK;
 	CopyMemory(&renderer->ddpfTextureFormat1x5x5x5, ddpf, sizeof(*ddpf));
 	renderer->fTextureFound1x5x5x5 = TRUE;
       } else {
 	DPRINTF3D(3,("[Note: Lousy 0x5x5x5 texture format]\n"));
-	if(renderer->fTextureFound0x5x5x5) return DDENUMRET_OK;
+	if (renderer->fTextureFound0x5x5x5) return DDENUMRET_OK;
 	CopyMemory(&renderer->ddpfTextureFormat0x5x5x5, ddpf, sizeof(*ddpf));
 	renderer->fTextureFound0x5x5x5 = TRUE;
       }
     }
   }
   /* Check for 32bit textures */
-  if( (ddpf->dwRGBBitCount == 32) && (ddpf->dwFlags & DDPF_RGB)) {
+  if ( (ddpf->dwRGBBitCount == 32) && (ddpf->dwFlags & DDPF_RGB)) {
     DPRINTF3D(3,("\nTexture: 32bit RGB\n"));
     DPRINTF3D(3,("Red mask: %lx\n", ddpf->dwRBitMask));
     DPRINTF3D(3,("Green mask: %lx\n", ddpf->dwGBitMask));
     DPRINTF3D(3,("Blue mask: %lx\n", ddpf->dwBBitMask));
     DPRINTF3D(3,("Alpha mask: %lx\n", ddpf->dwRGBAlphaBitMask));
-    if(ddpf->dwRBitMask == 0x00FF0000 && 
+    if (ddpf->dwRBitMask == 0x00FF0000 && 
        ddpf->dwGBitMask == 0x0000FF00 && 
        ddpf->dwBBitMask == 0x000000FF) {
-      if(ddpf->dwFlags & DDPF_ALPHAPIXELS) {
-	if(ddpf->dwRGBAlphaBitMask == 0xFF000000) {
+      if (ddpf->dwFlags & DDPF_ALPHAPIXELS) {
+	if (ddpf->dwRGBAlphaBitMask == 0xFF000000) {
 	  DPRINTF3D(3,("[Note: Perfect 8x8x8x8 texture format]\n"));
 	  CopyMemory(&renderer->ddpfTextureFormat8x8x8x8, ddpf, sizeof(*ddpf));
 	  renderer->fTextureFound8x8x8x8 = TRUE;
@@ -535,14 +537,14 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
 	renderer->fTextureFound0x8x8x8 = TRUE;
       }
     } else {
-      if(ddpf->dwFlags & DDPF_ALPHAPIXELS) {
+      if (ddpf->dwFlags & DDPF_ALPHAPIXELS) {
 	DPRINTF3D(3,("[Note: Lousy 8x8x8x8 texture format]\n"));
-	if(renderer->fTextureFound8x8x8x8) return DDENUMRET_OK;
+	if (renderer->fTextureFound8x8x8x8) return DDENUMRET_OK;
 	CopyMemory(&renderer->ddpfTextureFormat8x8x8x8, ddpf, sizeof(*ddpf));
 	renderer->fTextureFound0x8x8x8 = TRUE;
       } else {
 	DPRINTF3D(3,("[Note: Lousy 0x8x8x8 texture format]\n"));
-	if(renderer->fTextureFound0x5x5x5) return DDENUMRET_OK;
+	if (renderer->fTextureFound0x5x5x5) return DDENUMRET_OK;
 	CopyMemory(&renderer->ddpfTextureFormat0x8x8x8, ddpf, sizeof(*ddpf));
 	renderer->fTextureFound0x8x8x8 = TRUE;
       }
@@ -591,7 +593,7 @@ static void d3dPrintMemoryInformation(void)
 int d3dInitializePrimary(void) {
   HRESULT hRes;
   DPRINTF3D(5,("[Initializing primary surface]\n"));
-  if(!lpDD) {
+  if (!lpDD) {
     DPRINTF3D(5,("[Creating DDraw object]\n"));
     hRes = CoCreateInstance(&CLSID_DirectDraw,
 			    NULL, 
@@ -599,34 +601,34 @@ int d3dInitializePrimary(void) {
 			    &IID_IDirectDraw7,
 			    (void**)&lpDD);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
-    if(!lpDD) {
+    if (FAILED(hRes)) return 0;
+    if (!lpDD) {
       DPRINTF3D(1,("ERROR: Could not create IDirectDraw7\n"));
       return 0;
     }
     DPRINTF3D(5,("[Initializing DDraw object]\n"));
     hRes = lpDD->lpVtbl->Initialize(lpDD, NULL);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
+    if (FAILED(hRes)) return 0;
     DPRINTF3D(5,("[Setting cooperation level]\n"));
     hRes = lpDD->lpVtbl->
       SetCooperativeLevel(lpDD, *theSTWindow, 
 			  DDSCL_NORMAL | DDSCL_FPUPRESERVE);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
+    if (FAILED(hRes)) return 0;
   }
-  if(!lpD3D) {
+  if (!lpD3D) {
     /* query for the direct3d object */
     DPRINTF3D(5,("[Querying for IDirect3D7]\n"));
     hRes = lpDD->lpVtbl->QueryInterface(lpDD,&IID_IDirect3D7, (LPVOID*)&lpD3D);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
-    if(!lpD3D) {
+    if (FAILED(hRes)) return 0;
+    if (!lpD3D) {
       DPRINTF3D(1,("ERROR: Could not retrieve IDirect3D7\n"));
       return 0;
     }
   }
-  if(!lpddPrimary) {
+  if (!lpddPrimary) {
     /* create the primary surface */
     DDSURFACEDESC2 ddsd;
     ZeroMemory( &ddsd, sizeof(DDSURFACEDESC2) );
@@ -638,7 +640,7 @@ int d3dInitializePrimary(void) {
     hRes = lpDD->lpVtbl->CreateSurface( lpDD, &ddsd, &lpddPrimary, NULL );
     ERROR_CHECK;
     if (FAILED(hRes)) return 0;
-    if(!lpddPrimary) {
+    if (!lpddPrimary) {
       DPRINTF3D(1,("ERROR: Could not create primary surface\n"));
       return 0;
     }
@@ -650,18 +652,18 @@ int d3dInitializePrimary(void) {
    * blit from the rendering surface to the primary we don't write
    * outside the visible region of the window.
    */
-  if(!lpddClipper) {
+  if (!lpddClipper) {
     DPRINTF3D(5,("[Creating clipper]\n"));
     hRes = lpDD->lpVtbl->CreateClipper(lpDD, 0UL, &lpddClipper, NULL);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
-    if(!lpddClipper) {
+    if (FAILED(hRes)) return 0;
+    if (!lpddClipper) {
       DPRINTF3D(1,("ERROR: Could not create clipper\n"));
       return 0;
     }
     hRes = lpddClipper->lpVtbl->SetHWnd(lpddClipper, 0UL, *theSTWindow);
     ERROR_CHECK;
-    if(FAILED(hRes)) return 0;
+    if (FAILED(hRes)) return 0;
     hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, lpddClipper);
     ERROR_CHECK;
     if (FAILED(hRes)) return 0;
@@ -692,7 +694,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   ZeroMemory(&displayDesc, sizeof(displayDesc));
   displayDesc.dwSize = sizeof(displayDesc);
   hRes = lpDD->lpVtbl->GetDisplayMode(lpDD, &displayDesc);
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     DPRINTF3D(1,("ERROR: Failed to get current display mode (errCode=%lX)\n",hRes));
     goto cleanup;
   }
@@ -719,7 +721,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   ERROR_CHECK;
 
   /* see if we have a device */
-  if(!renderer->fDeviceFound) {
+  if (!renderer->fDeviceFound) {
     return 0;
   }
 
@@ -732,7 +734,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
     EnumZBufferFormats(lpD3D, &renderer->guidDevice, EnumZBufferCallback, &ddpfZBuffer);
 
   /* see if we have a z-buffer format */
-  if(FAILED(hRes) || ddpfZBuffer.dwSize == 0) {
+  if (FAILED(hRes) || ddpfZBuffer.dwSize == 0) {
     return 0;
   }
 
@@ -746,7 +748,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   ddsd.dwHeight = renderer->bufferRect[3];
   hRes = lpDD->lpVtbl->CreateSurface(lpDD, &ddsd, &lpdsTarget, NULL);
   ERROR_CHECK;
-  if(FAILED(hRes)) goto cleanup;
+  if (FAILED(hRes)) goto cleanup;
 
   /* create the z-buffer */
   ZeroMemory(&ddsd, sizeof(ddsd));
@@ -755,7 +757,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   memcpy(&ddsd.ddpfPixelFormat, &ddpfZBuffer, sizeof(DDPIXELFORMAT));
 
   /* make sure HW z-buffer ends up in video and SW z-buffer in system memory */
-  if(renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) {
+  if (renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) {
     ddsd.ddsCaps.dwCaps    = DDSCAPS_ZBUFFER | DDSCAPS_VIDEOMEMORY;
   } else {
     ddsd.ddsCaps.dwCaps    = DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY;
@@ -771,18 +773,18 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
     hRes = lpDD->lpVtbl->CreateSurface(lpDD, &ddsd, &lpdsZBuffer, NULL);
   }
   ERROR_CHECK;
-  if(FAILED(hRes)) goto cleanup;
+  if (FAILED(hRes)) goto cleanup;
 
   /* attach z-buffer to rendering target */
   hRes = lpdsTarget->lpVtbl->AddAttachedSurface(lpdsTarget, lpdsZBuffer);
   ERROR_CHECK;
-  if(FAILED(hRes)) goto cleanup;
+  if (FAILED(hRes)) goto cleanup;
 
   /* create the rendering device */
   hRes = lpD3D->lpVtbl->CreateDevice(lpD3D, &renderer->guidDevice,
 				     lpdsTarget, &lpDevice);
   ERROR_CHECK;
-  if(FAILED(hRes)) goto cleanup;
+  if (FAILED(hRes)) goto cleanup;
 
   /* enumerate available texture formats */
   hRes = lpDevice->lpVtbl->EnumTextureFormats(lpDevice, EnumTextureCallback, renderer);
@@ -834,7 +836,7 @@ int d3dReleaseRenderer(d3dRenderer *renderer) {
   RELEASE(renderer->lpdsTarget);
   renderer->fUsed = 0;
   /* and unregister exposed surface */
-  if(renderer->surfaceID >= 0)
+  if (renderer->surfaceID >= 0)
     (*unregisterSurface)(renderer->surfaceID);
   renderer->fUsed = 0;
   return 1;
@@ -846,7 +848,7 @@ int d3dReleaseRenderer(d3dRenderer *renderer) {
 
 int d3dDestroyRenderer(int handle) {
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 1; /* already destroyed */
+  if (!renderer) return 1; /* already destroyed */
   d3dReleaseRenderer(renderer);
   return 1;
 }
@@ -859,16 +861,16 @@ int d3dCreateRendererFlags(int x, int y, int w, int h, int flags) {
   int i, index;
   d3dRenderer *renderer;
 
-  if(flags & ~SUPPORTED_FLAGS) {
+  if (flags & ~SUPPORTED_FLAGS) {
     DPRINTF3D(1, ("ERROR: Unsupported flags requested( %d)\n", flags));
     return -1;
   }
 
   DPRINTF3D(3, ("---- Initializing D3D ----\n"));
-  for(i=0; i < MAX_RENDERER; i++) {
-    if(allRenderer[i].fUsed == 0) break;
+  for (i=0; i < MAX_RENDERER; i++) {
+    if (allRenderer[i].fUsed == 0) break;
   }
-  if(i >= MAX_RENDERER) {
+  if (i >= MAX_RENDERER) {
     DPRINTF3D(1, ("ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
     return -1;
   }
@@ -881,17 +883,17 @@ int d3dCreateRendererFlags(int x, int y, int w, int h, int flags) {
   renderer->bufferRect[2] = w;
   renderer->bufferRect[3] = h;
   renderer->devFlags = flags;
-  if(!d3dInitializePrimary()) {
+  if (!d3dInitializePrimary()) {
     /* disable DX if we cannot create the primary objects */
     fDirectXEnable = 0;
     return -1;
   }
   /* create and initialize the renderer */
-  if(!d3dInitializeRenderer(renderer)) {
+  if (!d3dInitializeRenderer(renderer)) {
     return -1;
   }
   /* register the exposed surface */
-  if(!(*registerSurface)((sqIntptr_t)renderer->lpdsTarget, 
+  if (!(*registerSurface)((sqIntptr_t)renderer->lpdsTarget, 
 			 &d3dTargetDispatch, &renderer->surfaceID)) {
     d3dReleaseRenderer(renderer);
     DPRINTF3D(1,("ERROR: Failed to register rendering target\n"));
@@ -904,7 +906,7 @@ int d3dCreateRendererFlags(int x, int y, int w, int h, int flags) {
 
 int d3dGetRendererSurfaceHandle(int handle) {
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return -1;
+  if (!renderer) return -1;
   return renderer->surfaceID;
 }
 
@@ -915,16 +917,16 @@ static DDSURFACEDESC2 *d3dGetRendererDesc(int handle) {
   HRESULT hRes;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return NULL;
+  if (!renderer) return NULL;
   /* Check if the renderer was registered as a valid display surface.
      Note: This information could be obtained from the renderer 
      directly but it's safer to see if the surface has really been
      registered. */
-  if(!(*findSurface)(renderer->surfaceID, &d3dTargetDispatch, (sqIntptr_t*) (&lpdsTarget))) {
+  if (!(*findSurface)(renderer->surfaceID, &d3dTargetDispatch, (sqIntptr_t*) (&lpdsTarget))) {
     return NULL;
   }
   /* But make sure we're talking about the right surface here */
-  if(lpdsTarget != renderer->lpdsTarget) {
+  if (lpdsTarget != renderer->lpdsTarget) {
     return NULL;
   }
 
@@ -936,25 +938,25 @@ static DDSURFACEDESC2 *d3dGetRendererDesc(int handle) {
 
 int d3dGetRendererSurfaceWidth(int handle) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
-  if(!desc) return -1;
+  if (!desc) return -1;
   return desc->dwWidth;
 }
 
 int d3dGetRendererSurfaceHeight(int handle) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
-  if(!desc) return -1;
+  if (!desc) return -1;
   return desc->dwHeight;
 }
 
 int d3dGetRendererSurfaceDepth(int handle) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
-  if(!desc) return -1;
+  if (!desc) return -1;
   return desc->ddpfPixelFormat.dwRGBBitCount;
 }
 
 int d3dGetRendererColorMasks(int handle, unsigned int *masks) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
-  if(!desc) return 0;
+  if (!desc) return 0;
 
   masks[0] = desc->ddpfPixelFormat.dwRBitMask;
   masks[1] = desc->ddpfPixelFormat.dwGBitMask;
@@ -981,9 +983,9 @@ int d3dSetVerboseLevel(int level) {
 
 int d3dSetBufferRect(int handle, int x, int y, int w, int h) {
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   /* do not allow resizing offscreen buffers */
-  if( (renderer->bufferRect[2] != w) || (renderer->bufferRect[3] != h) )
+  if ( (renderer->bufferRect[2] != w) || (renderer->bufferRect[3] != h) )
     return 0;
   renderer->bufferRect[0] = x;
   renderer->bufferRect[1] = y;
@@ -998,7 +1000,7 @@ int d3dGetIntProperty(int handle, int prop)
   LPDIRECT3DDEVICE7 lpDevice;
   DWORD dwState;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
+  if (!renderer) return 0;
 
   lpDevice = renderer->lpDevice;
 
@@ -1007,17 +1009,17 @@ int d3dGetIntProperty(int handle, int prop)
     hRes = lpDevice->lpVtbl->
       GetRenderState(lpDevice, D3DRENDERSTATE_CULLMODE , &dwState);
     ERROR_CHECK;
-    if(dwState == D3DCULL_NONE) return 0;
-    if(dwState == D3DCULL_CW) return 1;
-    if(dwState == D3DCULL_CCW) return -1;
+    if (dwState == D3DCULL_NONE) return 0;
+    if (dwState == D3DCULL_CW) return 1;
+    if (dwState == D3DCULL_CCW) return -1;
     return 0;
   case 2: /* polygon mode */
     hRes = lpDevice->lpVtbl->
       GetRenderState(lpDevice, D3DRENDERSTATE_FILLMODE, &dwState);
     ERROR_CHECK;
-    if(dwState == D3DFILL_SOLID) return 0;
-    if(dwState == D3DFILL_WIREFRAME) return 1;
-    if(dwState == D3DFILL_POINT) return 2;
+    if (dwState == D3DFILL_SOLID) return 0;
+    if (dwState == D3DFILL_WIREFRAME) return 1;
+    if (dwState == D3DFILL_POINT) return 2;
     return 0;
   case 3: /* point size */
     return 1;
@@ -1030,7 +1032,7 @@ int d3dGetIntProperty(int handle, int prop)
      return dwState;
   case 6: /* blend source factor */
   case 7: /* blend dest factor */
-    if(prop == 6) {
+    if (prop == 6) {
       hRes = lpDevice->lpVtbl->
 	GetRenderState(lpDevice, D3DRENDERSTATE_SRCBLEND, &dwState);
     } else {
@@ -1062,16 +1064,16 @@ int d3dSetIntProperty(int handle, int prop, int value)
   LPDIRECT3DDEVICE7 lpDevice;
   DWORD dwState;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
+  if (!renderer) return 0;
 
   lpDevice = renderer->lpDevice;
 
   switch(prop) {
   case 1: /* backface culling */
     dwState = 0;
-    if(value == 0) dwState = D3DCULL_NONE;
-    if(value == 1) dwState = D3DCULL_CW;
-    if(value == -1)dwState = D3DCULL_CCW;
+    if (value == 0) dwState = D3DCULL_NONE;
+    if (value == 1) dwState = D3DCULL_CW;
+    if (value == -1)dwState = D3DCULL_CCW;
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, D3DRENDERSTATE_CULLMODE , dwState);
     ERROR_CHECK;
@@ -1113,7 +1115,7 @@ int d3dSetIntProperty(int handle, int prop, int value)
         case 10: dwState = D3DBLEND_SRCALPHASAT; break;
         default: return 0;
       }
-      if(prop == 6) {
+      if (prop == 6) {
 	hRes = lpDevice->lpVtbl->
 	  SetRenderState(lpDevice, D3DRENDERSTATE_SRCBLEND, dwState);
       } else {
@@ -1135,15 +1137,13 @@ int d3dAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 o
 {
   HRESULT hRes;
   DDSURFACEDESC2 ddsd;
-  LPDIRECT3DDEVICE7 lpDevice;
   LPDIRECTDRAWSURFACE7 lpdsTexture;
   int surfaceID = -1;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  lpDevice = renderer->lpDevice;
 
-  if(w & (w-1)) return -1; /* not power of two */
-  if(h & (h-1)) return -1; /* not power of two */
+  if (w & (w-1)) return -1; /* not power of two */
+  if (h & (h-1)) return -1; /* not power of two */
   DPRINTF3D(5, ("### Allocating new texture (w = %d, h = %d, d = %d)\n", w, h, d));
 
   /* fill in basic surface structure */
@@ -1156,16 +1156,16 @@ int d3dAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 o
   ddsd.dwHeight        = h;
 
   /* fill in pixel format */
-  if(renderer->fTextureFound8x8x8x8) {
+  if (renderer->fTextureFound8x8x8x8) {
     ddsd.ddpfPixelFormat = renderer->ddpfTextureFormat8x8x8x8;
-  } else if(renderer->fTextureFound4x4x4x4) {
+  } else if (renderer->fTextureFound4x4x4x4) {
     ddsd.ddpfPixelFormat = renderer->ddpfTextureFormat4x4x4x4;
-  } else if(renderer->fTextureFound0x8x8x8) {
+  } else if (renderer->fTextureFound0x8x8x8) {
     ddsd.ddpfPixelFormat = renderer->ddpfTextureFormat0x8x8x8;
   } else return -1;
 
   /* enable texture management */
-  if(renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION)
+  if (renderer->ddDesc.dwDevCaps & D3DDEVCAPS_HWRASTERIZATION)
     ddsd.ddsCaps.dwCaps2 = DDSCAPS2_TEXTUREMANAGE;
   else
     ddsd.ddsCaps.dwCaps |= DDSCAPS_SYSTEMMEMORY;
@@ -1173,12 +1173,12 @@ int d3dAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 o
   /* create texture surface */
   hRes = lpDD->lpVtbl->CreateSurface(lpDD, &ddsd, &lpdsTexture, NULL);
   ERROR_CHECK;
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     return -1;
   }
 
   /* register texture */
-  if(!(*registerSurface)((sqIntptr_t)lpdsTexture, &d3dTextureDispatch, &surfaceID)) {
+  if (!(*registerSurface)((sqIntptr_t)lpdsTexture, &d3dTextureDispatch, &surfaceID)) {
     RELEASE(lpdsTexture);
     DPRINTF3D(1,("ERROR: Failed to register texture\n"));
     return -1;
@@ -1189,18 +1189,16 @@ int d3dAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 o
 int d3dDestroyTexture(int rendererHandle, int handle) /* return true on success, false on error */
 {
   LPDIRECTDRAWSURFACE7 lpdsTexture;
-  LPDIRECT3DDEVICE7 lpDevice;
   d3dRenderer *renderer = d3dRendererFromHandle(rendererHandle);
 
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
+  if (!renderer) return 0;
 
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
+  if (!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return 0;
 
   /* release and unregister texture */
-  lpDevice->lpVtbl->SetTexture(lpDevice, 0, NULL);
+  renderer->lpDevice->lpVtbl->SetTexture(renderer->lpDevice, 0, NULL);
   RELEASE(lpdsTexture);
   (*unregisterSurface)(handle);
   return 1;
@@ -1212,11 +1210,11 @@ int d3dActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 
   DDSURFACEDESC2 desc;
   HRESULT hRes;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
+  if (!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return -1;
   desc.dwSize = sizeof(desc);
   hRes = lpdsTexture->lpVtbl->GetSurfaceDesc(lpdsTexture, &desc);
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     return -1;
   }
   return desc.ddpfPixelFormat.dwRGBBitCount;
@@ -1228,7 +1226,7 @@ int d3dTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4]) 
   DDSURFACEDESC2 desc;
   HRESULT hRes;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
+  if (!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return 0;
   desc.dwSize = sizeof(desc);
   hRes = lpdsTexture->lpVtbl->GetSurfaceDesc(lpdsTexture, &desc);
@@ -1249,7 +1247,7 @@ int d3dTextureSurfaceHandle(int rendererHandle, int handle) {
   /* d3dTextures alias the texture and the surface handle */
   LPDIRECTDRAWSURFACE7 lpdsTexture;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
+  if (!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
     DPRINTF3D(3, ("WARNING: Texture (%d) not registered\n", handle));
     return -1;
   }
@@ -1277,11 +1275,9 @@ int d3dSetViewport(int handle, int x, int y, int w, int h) /* return true on suc
 {
   HRESULT hRes;
   D3DVIEWPORT7 d3dViewport;
-  LPDIRECT3DDEVICE7 lpDevice;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
+  if (!renderer) return 0;
 
   DPRINTF3D(5, ("### New Viewport\n"));
   DPRINTF3D(5, ("\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
@@ -1297,7 +1293,7 @@ int d3dSetViewport(int handle, int x, int y, int w, int h) /* return true on suc
   d3dViewport.dwHeight = h;
   d3dViewport.dvMinZ = 0;
   d3dViewport.dvMaxZ = 1;
-  hRes = lpDevice->lpVtbl->SetViewport(lpDevice, &d3dViewport);
+  hRes = renderer->lpDevice->lpVtbl->SetViewport(renderer->lpDevice, &d3dViewport);
   ERROR_CHECK;
   return 1;
 }
@@ -1305,12 +1301,10 @@ int d3dSetViewport(int handle, int x, int y, int w, int h) /* return true on suc
 int d3dClearDepthBuffer(int handle)/* return true on success, false on error */
 {
   HRESULT hRes;
-  LPDIRECT3DDEVICE7 lpDevice;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
-  hRes = lpDevice->lpVtbl->Clear(lpDevice, 0, NULL, D3DCLEAR_ZBUFFER, 
+  if (!renderer) return 0;
+  hRes = renderer->lpDevice->lpVtbl->Clear(renderer->lpDevice, 0, NULL, D3DCLEAR_ZBUFFER, 
 				 0, 1.0, 0);
   ERROR_CHECK;
   return 1;
@@ -1319,12 +1313,10 @@ int d3dClearDepthBuffer(int handle)/* return true on success, false on error */
 int d3dClearViewport(int handle, unsigned int rgba, unsigned int pv) /* return true on success, false on error */
 {
   HRESULT hRes;
-  LPDIRECT3DDEVICE7 lpDevice;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
-  hRes = lpDevice->lpVtbl->Clear(lpDevice, 0, NULL, D3DCLEAR_TARGET, 
+  if (!renderer) return 0;
+  hRes = renderer->lpDevice->lpVtbl->Clear(renderer->lpDevice, 0, NULL, D3DCLEAR_TARGET, 
 				 rgba, 0.0, 0);
   ERROR_CHECK;
   return 1;
@@ -1333,23 +1325,21 @@ int d3dClearViewport(int handle, unsigned int rgba, unsigned int pv) /* return t
 int d3dFinishRenderer(int handle) /* return true on success, false on error */
 {
   HRESULT hRes;
-  LPDIRECT3DDEVICE7 lpDevice;
   LPDIRECTDRAWSURFACE7 lpdsTarget;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
-  lpdsTarget = renderer->lpdsTarget;
+  if (!renderer) return 0;
 
-  if(renderer->fSceneStarted) {
+  if (renderer->fSceneStarted) {
     DPRINTF3D(5,("Ending current scene\n"));
-    hRes = lpDevice->lpVtbl->EndScene(lpDevice);
+    hRes = renderer->lpDevice->lpVtbl->EndScene(renderer->lpDevice);
     ERROR_CHECK;
     renderer->fSceneStarted = 0;
   }
+  lpdsTarget = renderer->lpdsTarget;
   do {
     hRes = lpdsTarget->lpVtbl->GetBltStatus(lpdsTarget, DDGBS_ISBLTDONE);
-  } while(hRes == DDERR_WASSTILLDRAWING);
+  } while (hRes == DDERR_WASSTILLDRAWING);
   ERROR_CHECK;
   return 1;
 }
@@ -1357,15 +1347,13 @@ int d3dFinishRenderer(int handle) /* return true on success, false on error */
 int d3dFlushRenderer(int handle) /* return true on success, false on error */
 {
   HRESULT hRes;
-  LPDIRECT3DDEVICE7 lpDevice;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
-  lpDevice = renderer->lpDevice;
+  if (!renderer) return 0;
 
-  if(renderer->fSceneStarted) {
+  if (renderer->fSceneStarted) {
     DPRINTF3D(5,("Ending current scene\n"));
-    hRes = lpDevice->lpVtbl->EndScene(lpDevice);
+    hRes = renderer->lpDevice->lpVtbl->EndScene(renderer->lpDevice);
     ERROR_CHECK;
     renderer->fSceneStarted = 0;
   }
@@ -1381,10 +1369,10 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
   int x, y, w, h;
 
-  if(!renderer) return 0;
+  if (!renderer) return 0;
 
   /* make sure scene has ended */
-  if(renderer->fSceneStarted)
+  if (renderer->fSceneStarted)
     d3dFinishRenderer(handle);
   lpddSurface = renderer->lpdsTarget;
   x = renderer->bufferRect[0];
@@ -1405,7 +1393,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
      full screen mode.
 
   */
-  if(fUseSmartClipper /* && fUpdateClipper */) {
+  if (fUseSmartClipper /* && fUpdateClipper */) {
     static DWORD dwSize = 1024;
     static char clb[1024];
     static LPRGNDATA rgnData = (LPRGNDATA) clb;
@@ -1413,17 +1401,17 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
     /* Query the current clip list */
     hRes = lpddClipper->lpVtbl->
       GetClipList(lpddClipper, NULL, rgnData, &dwSize);
-    if(hRes == DD_OK) {
+    if (hRes == DD_OK) {
       /* Check if the clip list has no entry (e.g., entire region invisible) */
-      if(rgnData->rdh.nCount == 0)
+      if (rgnData->rdh.nCount == 0)
 	return 1;
       /* Check if the clip list has one entry.
 	 If so, detach the clipper so we can use BltFast */
-      if(rgnData->rdh.nCount > 1) {
+      if (rgnData->rdh.nCount > 1) {
 	/* More than one entry -- attach the clipper */
-	if(!fClipperAttached) {
+	if (!fClipperAttached) {
 	  hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, lpddClipper);
-	  if(FAILED(hRes)) {
+	  if (FAILED(hRes)) {
 	    DPRINTF3D(2,("WARNING: Failed to attach clipper (errCode=%lX)\n",hRes));
 	  } else {
 	    fClipperAttached = 1;
@@ -1431,20 +1419,20 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
 	}
       } else {
 	/* One entry. Detach the clipper. */
-	if(fClipperAttached) {
+	if (fClipperAttached) {
 	  hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, NULL);
-	  if(FAILED(hRes)) {
+	  if (FAILED(hRes)) {
 	    DPRINTF3D(2,("WARNING: Failed to detach clipper (errCode=%lX)\n",hRes));
 	  } else {
 	    fClipperAttached = 0;
 	  }
 	}
       }
-    } else if(hRes == DDERR_REGIONTOOSMALL && !fClipperAttached) {
+    } else if (hRes == DDERR_REGIONTOOSMALL && !fClipperAttached) {
       /* We have no clipper but the region is too small
 	 (meaning there's lots of stuff to clip). Attach it. */
       hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, lpddClipper);
-      if(FAILED(hRes)) {
+      if (FAILED(hRes)) {
 	DPRINTF3D(2,("WARNING: Failed to attach clipper (errCode=%lX)\n",hRes));
       } else {
 	fClipperAttached = 1;
@@ -1452,18 +1440,18 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
     } else return 0;
     /* After detaching the clipper, set the affected region so
        we don't accidentally blt outside the window */
-    if(rgnData->rdh.nCount == 1 && !fClipperAttached) {
+    if (rgnData->rdh.nCount == 1 && !fClipperAttached) {
       int dx, dy;
       /* Compute the inset of clip rect into stWindowRect */
       dx = rgnData->rdh.rcBound.left - stWindowRect.left;
       dy = rgnData->rdh.rcBound.top - stWindowRect.top;
-      if(x < dx) x = dx;
-      if(y < dy) y = dy;
+      if (x < dx) x = dx;
+      if (y < dy) y = dy;
       /* Compute the distance of the clip rect from stWindowRect origin */
       dx = rgnData->rdh.rcBound.right - stWindowRect.left;
       dy = rgnData->rdh.rcBound.bottom - stWindowRect.top;
-      if((x+w) > dx) w = dx-x;
-      if((y+h) > dy) h = dy-y;
+      if ((x+w) > dx) w = dx-x;
+      if ((y+h) > dy) h = dy-y;
     }
     fUpdateClipper = 0; /* wait until something happens */
   }
@@ -1481,7 +1469,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
   dxRect.bottom = h;
 #endif
 
-  if(fExclusive) {
+  if (fExclusive) {
     /* Exclusive means fullscreen */
     dstRect.left   = x;
     dstRect.top    = y;
@@ -1493,23 +1481,23 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
     dstRect.right  = stWindowRect.left + x + w;
     dstRect.bottom = stWindowRect.top  + y + h;
   }
-  if(!fClipperAttached) {
+  if (!fClipperAttached) {
     /* No clipper attached. We can use the BltFast method
        which is usually quite a bit faster than anything else. */
     hRes = lpddPrimary->lpVtbl->
       BltFast(lpddPrimary, dstRect.left, dstRect.top, 
 	      lpddSurface, &dxRect, DDBLTFAST_WAIT | DDBLTFAST_NOCOLORKEY);
-    if(FAILED(hRes)) {
+    if (FAILED(hRes)) {
       DPRINTF3D(2,("WARNING: IDirectDrawSurface::BltFast() failed (errCode=%lX)\n",hRes));
     }
   }
-  if(fClipperAttached || FAILED(hRes)) {
+  if (fClipperAttached || FAILED(hRes)) {
     /* If we have a clipper attached or BltFast went
        wrong do it the normal way. */
     hRes = lpddPrimary->lpVtbl->
       Blt(lpddPrimary,&dstRect,lpddSurface, &dxRect, DDBLT_WAIT, NULL);
   }
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     DPRINTF3D(1,("ERROR: Failed to blt to primary surface (errCode=%lX)\n",hRes));
     return 0;
   }
@@ -1517,8 +1505,8 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
   /* Wait until the blt completed */
   do {
     hRes = lpddSurface->lpVtbl->GetBltStatus(lpddSurface, DDGBS_ISBLTDONE);
-  } while(hRes == DDERR_WASSTILLDRAWING);
-  if(FAILED(hRes)) return hRes;
+  } while (hRes == DDERR_WASSTILLDRAWING);
+  if (FAILED(hRes)) return hRes;
 #endif
   return 1;
 }
@@ -1537,11 +1525,11 @@ int d3dSetTransform(int handle, float *modelViewMatrix, float *projectionMatrix)
   float *m;
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   lpDevice = renderer->lpDevice;
 
   DPRINTF3D(5, ("### Installing new transformations\n"));
-  if(modelViewMatrix) {
+  if (modelViewMatrix) {
     m = modelViewMatrix;
     d._11 = *m++; d._21 = *m++; d._31 = *m++; d._41 = *m++;
     d._12 = *m++; d._22 = *m++; d._32 = *m++; d._42 = *m++;
@@ -1554,7 +1542,7 @@ int d3dSetTransform(int handle, float *modelViewMatrix, float *projectionMatrix)
     SetTransform(lpDevice, D3DTRANSFORMSTATE_WORLD, &d);
   ERROR_CHECK;
 
-  if(projectionMatrix) {
+  if (projectionMatrix) {
     m = projectionMatrix;
     d._11 = *m++; d._21 = *m++; d._31 = *m++; d._41 = *m++;
     d._12 = *m++; d._22 = *m++; d._32 = *m++; d._42 = *m++;
@@ -1590,11 +1578,11 @@ int d3dDisableLights(int handle) {
   int i;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   lpDevice = renderer->lpDevice;
   DPRINTF3D(5, ("### Disabling all lights\n"));
   
-  for(i = 0; i <= renderer->maxLights; i++) {
+  for (i = 0; i <= renderer->maxLights; i++) {
     hRes = lpDevice->lpVtbl->LightEnable(lpDevice, i, FALSE);
     ERROR_CHECK;
   }
@@ -1609,11 +1597,11 @@ int d3dLoadMaterial(int handle, B3DPrimitiveMaterial *mat)
   LPDIRECT3DDEVICE7 lpDevice;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   lpDevice = renderer->lpDevice;
 
   DPRINTF3D(5, ("### New Material\n"));
-  if(!mat) {
+  if (!mat) {
     DPRINTF3D(5, ("\tOFF (material == nil)\n"));
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, D3DRENDERSTATE_LIGHTING, FALSE);
@@ -1668,20 +1656,20 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
   HRESULT hRes;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
-  if(!renderer) return 0;
-  if(idx < 0) return 0;
+  if (!renderer) return 0;
+  if (idx < 0) return 0;
   lpDevice = renderer->lpDevice;
 
   DPRINTF3D(5, ("### New Light (%d)\n", idx));
 
-  if(!light) {
+  if (!light) {
     DPRINTF3D(5, ("\tDISABLED\n"));
     hRes = lpDevice->lpVtbl->LightEnable(lpDevice, idx, FALSE);
     ERROR_CHECK;
     return 1;
   }
 
-  if(idx > renderer->maxLights) renderer->maxLights = idx;
+  if (idx > renderer->maxLights) renderer->maxLights = idx;
 
   DPRINTF3D(5, ("\tambient       : %g, %g, %g, %g\n",
 	      light->ambient[0], light->ambient[1], 
@@ -1700,26 +1688,26 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 	      light->attenuation[0], light->attenuation[1], 
 	      light->attenuation[2]));
   DPRINTF3D(5, ("\tflags [%d]:", light->flags));
-  if(light->flags & B3D_LIGHT_AMBIENT) 
+  if (light->flags & B3D_LIGHT_AMBIENT) 
     DPRINTF3D(5,(" B3D_LIGHT_AMBIENT"));
-  if(light->flags & B3D_LIGHT_DIFFUSE) 
+  if (light->flags & B3D_LIGHT_DIFFUSE) 
     DPRINTF3D(5,(" B3D_LIGHT_DIFFUSE"));
-  if(light->flags & B3D_LIGHT_SPECULAR) 
+  if (light->flags & B3D_LIGHT_SPECULAR) 
     DPRINTF3D(5,(" B3D_LIGHT_SPECULAR"));
-  if(light->flags & B3D_LIGHT_POSITIONAL) 
+  if (light->flags & B3D_LIGHT_POSITIONAL) 
     DPRINTF3D(5,(" B3D_LIGHT_POSITIONAL"));
-  if(light->flags & B3D_LIGHT_DIRECTIONAL) 
+  if (light->flags & B3D_LIGHT_DIRECTIONAL) 
     DPRINTF3D(5,(" B3D_LIGHT_DIRECTIONAL"));
-  if(light->flags & B3D_LIGHT_ATTENUATED) 
+  if (light->flags & B3D_LIGHT_ATTENUATED) 
     DPRINTF3D(5,(" B3D_LIGHT_ATTENUATED"));
-  if(light->flags & B3D_LIGHT_HAS_SPOT) 
+  if (light->flags & B3D_LIGHT_HAS_SPOT) 
     DPRINTF3D(5,(" B3D_LIGHT_HAS_SPOT"));
   DPRINTF3D(5, ("\n"));
   DPRINTF3D(5, ("\tspot exponent : %g\n", light->spotExponent));
 
   DPRINTF3D(5, ("### Installing Light (%d)\n", idx));
   memset(&d3dLight, 0, sizeof(d3dLight));
-  if(light->flags & B3D_LIGHT_AMBIENT) {
+  if (light->flags & B3D_LIGHT_AMBIENT) {
     DPRINTF3D(5, ("\tambient  : %g, %g, %g, %g\n",
 		light->ambient[0], light->ambient[1], 
 		light->ambient[2], light->ambient[3]));
@@ -1731,7 +1719,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     DPRINTF3D(5, ("\tambient  : OFF (0, 0, 0, 1)\n"));
   }
 
-  if(light->flags & B3D_LIGHT_DIFFUSE) {
+  if (light->flags & B3D_LIGHT_DIFFUSE) {
     DPRINTF3D(5, ("\tdiffuse  : %g, %g, %g, %g\n",
 		light->diffuse[0], light->diffuse[1], 
 		light->diffuse[2], light->diffuse[3]));
@@ -1743,7 +1731,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     DPRINTF3D(5, ("\tdiffuse  : OFF (0, 0, 0, 1)\n"));
   }
 
-  if(light->flags & B3D_LIGHT_SPECULAR) {
+  if (light->flags & B3D_LIGHT_SPECULAR) {
     DPRINTF3D(5, ("\tspecular : %g, %g, %g, %g\n",
 		light->specular[0], light->specular[1], 
 		light->specular[2], light->specular[3]));
@@ -1755,7 +1743,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     DPRINTF3D(5, ("\tspecular : OFF (0, 0, 0, 1)\n"));
   }
 
-  if(light->flags & B3D_LIGHT_POSITIONAL) {
+  if (light->flags & B3D_LIGHT_POSITIONAL) {
     DPRINTF3D(5, ("\tposition : %g, %g, %g\n",
 		light->position[0], light->position[1], light->position[2]));
     d3dLight.dltType = D3DLIGHT_POINT;
@@ -1763,7 +1751,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     d3dLight.dvPosition.y = light->position[1];
     d3dLight.dvPosition.z = light->position[2];
   } else {
-    if(light->flags & B3D_LIGHT_DIRECTIONAL) {
+    if (light->flags & B3D_LIGHT_DIRECTIONAL) {
       DPRINTF3D(5, ("\tdirection: %g, %g, %g\n",
 		  light->direction[0], light->direction[1], 
 		  light->direction[2]));
@@ -1774,7 +1762,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     }
   }
 
-  if(light->flags & B3D_LIGHT_ATTENUATED) {
+  if (light->flags & B3D_LIGHT_ATTENUATED) {
     DPRINTF3D(5, ("\tattenuation: %g, %g, %g\n",
 		light->attenuation[0], light->attenuation[1], 
 		light->attenuation[2]));
@@ -1786,7 +1774,7 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
     d3dLight.dvAttenuation0 = 1.0;
   }
 
-  if(light->flags & B3D_LIGHT_HAS_SPOT) {
+  if (light->flags & B3D_LIGHT_HAS_SPOT) {
     DPRINTF3D(5, ("\tspot exponent : %g\n", light->spotExponent));
     DPRINTF3D(5, ("\tspot cutoff   : ???\n"));
     DPRINTF3D(5, ("\tspot direction: %g, %g, %g\n",
@@ -1833,7 +1821,7 @@ int d3dSetFog(int handle, int fogType, double density,
   DWORD fogMode;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   lpDevice = renderer->lpDevice;
 
   hRes = lpDevice->lpVtbl->
@@ -1843,7 +1831,7 @@ int d3dSetFog(int handle, int fogType, double density,
   hRes = lpDevice->lpVtbl->
     SetRenderState(lpDevice, D3DRENDERSTATE_FOGVERTEXMODE, D3DFOG_NONE);
   ERROR_CHECK;
-  if(fogType == 0) {
+  if (fogType == 0) {
     return 1;
   }
   /* figure out what we can use */
@@ -1856,7 +1844,7 @@ int d3dSetFog(int handle, int fogType, double density,
   /* range-based fog? */
   rFog = renderer->ddDesc.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_FOGRANGE;
 
-  if(!vFog && !pFog) return 0; /* neither vertex nor pixel fog */
+  if (!vFog && !pFog) return 0; /* neither vertex nor pixel fog */
 
   hRes = lpDevice->lpVtbl->
     SetRenderState(lpDevice, D3DRENDERSTATE_FOGENABLE, TRUE);
@@ -1866,15 +1854,15 @@ int d3dSetFog(int handle, int fogType, double density,
   ERROR_CHECK;
 
   fogMode = D3DFOG_NONE;
-  if(fogType == 1) fogMode = D3DFOG_LINEAR;
-  if(fogType == 2) fogMode = D3DFOG_EXP;
-  if(fogType == 3) fogMode = D3DFOG_EXP2;
-  if(!pFog || (!wFog && fogType == 1)) {
+  if (fogType == 1) fogMode = D3DFOG_LINEAR;
+  if (fogType == 2) fogMode = D3DFOG_EXP;
+  if (fogType == 3) fogMode = D3DFOG_EXP2;
+  if (!pFog || (!wFog && fogType == 1)) {
     /* if we don't have pixel fog use vertex fog instead */
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, D3DRENDERSTATE_FOGVERTEXMODE, fogMode);
     /* but enable range based fog if available */
-    if(rFog) {
+    if (rFog) {
       ERROR_CHECK;
       hRes = lpDevice->lpVtbl->
 	SetRenderState(lpDevice, D3DRENDERSTATE_RANGEFOGENABLE, TRUE);
@@ -1919,12 +1907,12 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
-  if(!renderer) return 0;
+  if (!renderer) return 0;
   lpDevice = renderer->lpDevice;
 
-  if(!renderer->fSceneStarted) {
+  if (!renderer->fSceneStarted) {
     hRes = lpDevice->lpVtbl->BeginScene(lpDevice);
-    if(FAILED(hRes)) {
+    if (FAILED(hRes)) {
       return 0;
     }
     renderer->fSceneStarted = 1;
@@ -1933,21 +1921,21 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
   DPRINTF3D(5, ("### Primitive : %d\n", primType));
   DPRINTF3D(5, ("\ttexHandle   : %d\n", texHandle));
   DPRINTF3D(5, ("\tcolor flags :"));
-  if(flags & B3D_VB_TRACK_AMBIENT) DPRINTF3D(5,(" B3D_VB_TRACK_AMBIENT"));
-  if(flags & B3D_VB_TRACK_DIFFUSE) DPRINTF3D(5,(" B3D_VB_TRACK_DIFFUSE"));
-  if(flags & B3D_VB_TRACK_SPECULAR) DPRINTF3D(5,(" B3D_VB_TRACK_SPECULAR"));
-  if(flags & B3D_VB_TRACK_EMISSION) DPRINTF3D(5,(" B3D_VB_TRACK_EMISSION"));
+  if (flags & B3D_VB_TRACK_AMBIENT) DPRINTF3D(5,(" B3D_VB_TRACK_AMBIENT"));
+  if (flags & B3D_VB_TRACK_DIFFUSE) DPRINTF3D(5,(" B3D_VB_TRACK_DIFFUSE"));
+  if (flags & B3D_VB_TRACK_SPECULAR) DPRINTF3D(5,(" B3D_VB_TRACK_SPECULAR"));
+  if (flags & B3D_VB_TRACK_EMISSION) DPRINTF3D(5,(" B3D_VB_TRACK_EMISSION"));
   DPRINTF3D(5, ("\n\tlight flags :"));
-  if(flags & B3D_VB_LOCAL_VIEWER) DPRINTF3D(5,(" B3D_VB_LOCAL_VIEWER"));
-  if(flags & B3D_VB_TWO_SIDED) DPRINTF3D(5,(" B3D_VB_TWO_SIDED"));
+  if (flags & B3D_VB_LOCAL_VIEWER) DPRINTF3D(5,(" B3D_VB_LOCAL_VIEWER"));
+  if (flags & B3D_VB_TWO_SIDED) DPRINTF3D(5,(" B3D_VB_TWO_SIDED"));
   DPRINTF3D(5, ("\n\tvertex flags:"));
-  if(flags & B3D_VB_HAS_NORMALS) DPRINTF3D(5,(" B3D_VB_HAS_NORMALS"));
-  if(flags & B3D_VB_HAS_TEXTURES) DPRINTF3D(5,(" B3D_VB_HAS_TEXTURES"));
+  if (flags & B3D_VB_HAS_NORMALS) DPRINTF3D(5,(" B3D_VB_HAS_NORMALS"));
+  if (flags & B3D_VB_HAS_TEXTURES) DPRINTF3D(5,(" B3D_VB_HAS_TEXTURES"));
   DPRINTF3D(5, ("\n"));
 
   /* process VB flags */
   tracking = FALSE;
-  if(flags & B3D_VB_TRACK_AMBIENT) {
+  if (flags & B3D_VB_TRACK_AMBIENT) {
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, 
 		     D3DRENDERSTATE_AMBIENTMATERIALSOURCE, 
@@ -1955,7 +1943,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
     ERROR_CHECK;
     tracking = TRUE;
   }
-  if(flags & B3D_VB_TRACK_DIFFUSE) {
+  if (flags & B3D_VB_TRACK_DIFFUSE) {
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, 
 		     D3DRENDERSTATE_DIFFUSEMATERIALSOURCE, 
@@ -1963,7 +1951,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
     ERROR_CHECK;
     tracking = TRUE;
   }
-  if(flags & B3D_VB_TRACK_SPECULAR) {
+  if (flags & B3D_VB_TRACK_SPECULAR) {
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, 
 		     D3DRENDERSTATE_SPECULARMATERIALSOURCE, 
@@ -1971,7 +1959,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
     ERROR_CHECK;
     tracking = TRUE;
   }
-  if(flags & B3D_VB_TRACK_EMISSION) {
+  if (flags & B3D_VB_TRACK_EMISSION) {
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, 
 		     D3DRENDERSTATE_EMISSIVEMATERIALSOURCE, 
@@ -1989,9 +1977,9 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 
   /* @@@ TODO: What about two-sided lighting? */
 
-  if(texHandle >= 0 && (flags & B3D_VB_HAS_TEXTURES)) {
+  if (texHandle >= 0 && (flags & B3D_VB_HAS_TEXTURES)) {
     /* Look if the surface was registered as D3D surface */
-    if(!(*findSurface)(texHandle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
+    if (!(*findSurface)(texHandle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
       DPRINTF3D(4, ("WARNING: Texture (%d) not registered\n", texHandle));
       lpdsTexture = NULL;
     }
@@ -2003,11 +1991,11 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 
   /* setup flexible vertex format flags */
   vtxFlags = D3DFVF_XYZ;
-  if(tracking)
+  if (tracking)
     vtxFlags |= D3DFVF_DIFFUSE;
-  if(flags & B3D_VB_HAS_NORMALS)
+  if (flags & B3D_VB_HAS_NORMALS)
     vtxFlags |= D3DFVF_NORMAL;
-  if(flags & B3D_VB_HAS_TEXTURES)
+  if (flags & B3D_VB_HAS_TEXTURES)
     vtxFlags |= D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0);
 
   /* fill in stride data */
@@ -2019,7 +2007,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
   d3dStrideData.diffuse.dwStride = sizeof(B3DPrimitiveVertex);
   d3dStrideData.specular.lpvData = &vtxPointer->pixelValue32;
   d3dStrideData.specular.dwStride = sizeof(B3DPrimitiveVertex);
-  for(i=0; i < D3DDP_MAXTEXCOORD; i++) {
+  for (i=0; i < D3DDP_MAXTEXCOORD; i++) {
     d3dStrideData.textureCoords[i].lpvData = vtxPointer->texCoord;
     d3dStrideData.textureCoords[i].dwStride = sizeof(B3DPrimitiveVertex);
   }
@@ -2055,9 +2043,9 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
     break;
   case 4: /* indexed lines */
     nFaces = idxSize / 2;
-    for(i = 0; i < nFaces; i++) {
+    for (i = 0; i < nFaces; i++) {
       B3DInputFace *face = facePtr + (2*i);
-      if(face[0] && face[1]) {
+      if (face[0] && face[1]) {
 	*idxPtr++ = face[0]-1;
 	*idxPtr++ = face[1]-1;
       }
@@ -2074,9 +2062,9 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
     break;
   case 5: /* indexed triangles */
     nFaces = idxSize / 3;
-    for(i = 0; i < nFaces; i++) {
+    for (i = 0; i < nFaces; i++) {
       B3DInputFace *face = facePtr + (3*i);
-      if(face[0] && face[1] && face[2]) {
+      if (face[0] && face[1] && face[2]) {
 	*idxPtr++ = face[0]-1;
 	*idxPtr++ = face[1]-1;
 	*idxPtr++ = face[2]-1;
@@ -2095,9 +2083,9 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
   case 6: /* indexed quads */
     /* NOTE: Following fits into face array because idxPtr is short */
     nFaces = idxSize / 4;
-    for(i = 0; i < nFaces; i++) {
+    for (i = 0; i < nFaces; i++) {
       B3DInputFace *face = facePtr + (4*i);
-      if(face[0] && face[1] && face[2] && face[3]) {
+      if (face[0] && face[1] && face[2] && face[3]) {
 	*idxPtr++ = face[0]-1;
 	*idxPtr++ = face[1]-1;
 	*idxPtr++ = face[2]-1;
@@ -2136,14 +2124,14 @@ static int d3dMessageHook(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   int result = 0;
 
   /* Call the original pre-message hook */
-  if(nextPreMessageHook)
+  if (nextPreMessageHook)
     result = (*nextPreMessageHook)(hwnd, message,wParam, lParam);
 
   /* Note: We need to intercept certain messages regardless of
      whether they are handled or not. */
 
-  if(hwnd != *theSTWindow) return result; /* not sent to stWindow */
-  if(message == WM_WINDOWPOSCHANGED) {
+  if (hwnd != *theSTWindow) return result; /* not sent to stWindow */
+  if (message == WM_WINDOWPOSCHANGED) {
     /* When the window position changed we need to update the clipper */
     fUpdateClipper = 1;
     /* And to recompute the stWindow rectangle */
@@ -2165,43 +2153,43 @@ int d3dInitialize(void)
   int i;
   HRESULT hRes;
 
-  for(i=0; i<MAX_RENDERER; i++)
+  for (i=0; i<MAX_RENDERER; i++)
     allRenderer[i].fUsed = 0;
 
   glVerbosityLevel = 1;
 
   hRes = CoInitialize(NULL);
-  if(FAILED(hRes)) {
+  if (FAILED(hRes)) {
     DPRINTF3D(1, ("ERROR: Failed to CoInitialize\n"));
     return 0;
   }
   /* lookup the necessary things from interpreter */
   theSTWindow = (HWND*) interpreterProxy->ioLoadFunctionFrom("stWindow","");
-  if(!theSTWindow) {
+  if (!theSTWindow) {
     DPRINTF3D(1,("ERROR: Failed to look up stWindow\n"));
     return 0;
   }
   registerSurface = (fn_ioRegisterSurface) 
     interpreterProxy->ioLoadFunctionFrom("ioRegisterSurface","SurfacePlugin");
-  if(!registerSurface) {
+  if (!registerSurface) {
     DPRINTF3D(1,("ERROR: Failed to look up ioRegisterSurface()\n"));
     return 0;
   }
   unregisterSurface = (fn_ioUnregisterSurface)
     interpreterProxy->ioLoadFunctionFrom("ioUnregisterSurface","SurfacePlugin");
-  if(!unregisterSurface) {
+  if (!unregisterSurface) {
     DPRINTF3D(1,("ERROR: Failed to look up ioUnregisterSurface()\n"));
     return 0;
   }
   findSurface = (fn_ioFindSurface)
     interpreterProxy->ioLoadFunctionFrom("ioFindSurface","SurfacePlugin");
-  if(!findSurface) {
+  if (!findSurface) {
     DPRINTF3D(1,("ERROR: Failed to look up ioFindSurface()\n"));
     return 0;
   }
   preMessageHook = (messageHook*)
     interpreterProxy->ioLoadFunctionFrom("preMessageHook","");
-  if(!preMessageHook) {
+  if (!preMessageHook) {
     DPRINTF3D(1,("ERROR: Failed to look up preMessageHook()\n"));
     return 0;
   }
@@ -2219,8 +2207,8 @@ int d3dInitialize(void)
 int d3dShutdown(void)
 {
   int i;
-  for(i=0; i<MAX_RENDERER;i++) {
-    if(allRenderer[i].fUsed)
+  for (i=0; i<MAX_RENDERER;i++) {
+    if (allRenderer[i].fUsed)
       d3dDestroyRenderer(i);
   }
   d3dReleasePrimary();

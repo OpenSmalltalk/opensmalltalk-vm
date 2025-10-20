@@ -94,7 +94,7 @@ void sqSocketSetReusable(SocketPtr s);
 void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
 																		 sqInt flags, sqInt family, sqInt type, sqInt protocol);
 sqInt sqResolverGetAddressInfoSize(void);
-void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize);
+void  sqResolverGetAddressInfoResultSize(unsigned char *addr, sqInt addrSize);
 sqInt sqResolverGetAddressInfoFamily(void);
 sqInt sqResolverGetAddressInfoType(void);
 sqInt sqResolverGetAddressInfoProtocol(void);
