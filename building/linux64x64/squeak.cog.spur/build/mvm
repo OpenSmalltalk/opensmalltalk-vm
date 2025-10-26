@@ -11,17 +11,17 @@ if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 # librt and libpthread funs now supplied by libc
 # Many Linux systems supply empty library files 
 # but OpenBSD does not.
-if [ `uname` = "OpenBSD" ]; then LIBRT=""; else LIBRT="-lrt"; fi
-
-CFLAGS="$OPT -msse2 -DCOGMTVM=0"
-LIBS=$LIBRT
-LDFLAGS=""
 
 # Special treatment for OpenBSD Linux
 if [ `uname` = "OpenBSD" ]; then
-	CFLAGS="$CFLAGS -I/usr/local/include"
+	OPT="$OPT -DMUSL"
+	CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 	LIBS="$LIBS -lexecinfo"
 	LDFLAGS="$LDFLAGS -L/usr/local/lib"
+else
+	CFLAGS="$CFLAGS $OPT -msse2 -DCOGMTVM=0"
+	LIBS="$LIBS -lrt"
+	LDFLAGS="$LDFLAGS"
 fi
 
 if [ $# -ge 1 ]; then

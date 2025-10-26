@@ -7,8 +7,6 @@ INSTALLDIR=sqcogspur64ARMv8linuxht
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
 
-##OPT="-g -O3  -DMUSL -DNDEBUG -DDEBUGVM=0"
-
 if [ `uname` = "OpenBSD" ]; then
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
 # librt and libpthread functions now supplied by libc.
