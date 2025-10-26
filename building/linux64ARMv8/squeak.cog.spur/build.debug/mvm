@@ -14,6 +14,7 @@ if [ `uname` = "OpenBSD" ]; then
     LIBRT=""
 # OpenBSD has problems with fast-bitblt under gcc and clang
     FASTBITBLT=""
+    OPT="$OPT -DMUSL"
 # Prefer clang over gcc if available
     if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 else # non-OpenBSD Linux

@@ -87,7 +87,11 @@ int mmapErrno = 0;
 #endif
 
 #define MAP_PROT	(PROT_READ | PROT_WRITE)
+#ifdef __OpenBSD__
+#define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_STACK)
+#else
 #define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
+#endif
 
 extern int useMmap;
 /* Since Cog needs to make memory executable via mprotect, and since mprotect
