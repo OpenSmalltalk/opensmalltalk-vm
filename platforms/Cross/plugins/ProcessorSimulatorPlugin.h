@@ -101,3 +101,16 @@ extern void storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState);
  * produces duplicate symbols so use this large hammer, setMinAddresses.
  */
 extern void setMinAddresses(uintptr_t mra, uintptr_t mwa);
+
+/*
+ * Answer zero if a 64-bit performance counter is available, storing its value
+ * through the pointer if so.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+extern long performanceCounter64ofinto(void *cpu, uintptr_t *perfCounterp);
+
+/*
+ * Answer zero if the 64-bit performance counter could be incremented by increment.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+extern long incrementPerformanceCounter64ofby(void *cpu, uintptr_t increment);

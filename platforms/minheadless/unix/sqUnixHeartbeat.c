@@ -171,11 +171,26 @@ ioHighResClock(void)
 {
   /* return the value of the high performance counter */
   sqLong value = 0;
-#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__)  \
-			|| defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+
+#if (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(i386) || defined(__i386) || defined(__i386__))
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
+#elif (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+    __asm__ __volatile__ ("rdtsc\n\t"			// Returns the time in EDX:EAX.
+						"shl $32, %%rdx\n\t"	// Shift the upper bits left.
+						"or %%rdx, %0"			// 'Or' in the lower bits.
+						: "=a" (value)
+						: 
+						: "rdx");
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+    // would prefer to use PMCCNTR_EL0 but at least macOS makes it illegal
+    __asm__ __volatile__ ("MRS  %0, CNTVCT_EL0" : "=r"(value));
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
+	/* Tim, not sure I have input beyond:
+		Is there a 64-bit clock on ARM?  If so, access it here :-)
+	 */
+#elif defined(__riscv64__)
+  	__asm__ __volatile__ ("rdcycle a0" : "=r"(value));
 #else
 # error "no high res clock defined"
 #endif

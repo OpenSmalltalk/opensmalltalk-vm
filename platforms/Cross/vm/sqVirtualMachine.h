@@ -123,7 +123,11 @@ typedef struct VirtualMachine {
 	/* InterpreterProxy methodsFor: 'special objects' */
 
 	sqInt (*characterTable)(void);
-	sqInt (*displayObject)(void);
+#if OLD_FOR_REFERENCE
+	sqInt (*displayObject)(void); // repurposed
+#else /* since there is no legacy plugin problem back to 3.8 we repurpose... */
+	sqInt  (*stackMutableObjectValue)(sqInt offset);
+#endif
 	sqInt (*falseObject)(void);
 	sqInt (*nilObject)(void);
 	sqInt (*trueObject)(void);
@@ -397,6 +401,7 @@ sqInt  pushInteger(sqInt integerValue);
 double stackFloatValue(sqInt offset);
 sqInt  stackIntegerValue(sqInt offset);
 sqInt  stackObjectValue(sqInt offset);
+sqInt  stackMutableObjectValue(sqInt offset);
 sqInt  stackValue(sqInt offset);
 
 /*** variables ***/
@@ -463,6 +468,9 @@ sqInt isOopMutable(sqInt oop);
 sqInt isOopImmutable(sqInt oop);
 
 /* InterpreterProxy methodsFor: 'converting' */
+// N.B. there is no booleanObjectOf because testing a boolean and answering either
+// trueObject() or falseObject() is faster than passing an argument to a function
+// that does the same.
 sqInt  booleanValueOf(sqInt obj);
 sqInt  checkedIntegerValueOf(sqInt intOop);
 sqInt  floatObjectOf(double aFloat);
