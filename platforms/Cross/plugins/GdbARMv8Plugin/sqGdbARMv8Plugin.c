@@ -160,7 +160,7 @@ performanceCounter64ofinto(void *cpup, uintptr_t *perfCounterp)
 {
 	sim_cpu *cpu = cpup;
 
-	if (lastCPU != cpu)
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
 		return BadCPUInstance;
 
 	*perfCounterp = cpu->cntvct;
@@ -177,7 +177,7 @@ incrementPerformanceCounter64ofby(void *cpup, uintptr_t increment)
 {
 	sim_cpu *cpu = cpup;
 
-	if (lastCPU != cpu)
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
 		return BadCPUInstance;
 
 	cpu->cntvct += increment;
