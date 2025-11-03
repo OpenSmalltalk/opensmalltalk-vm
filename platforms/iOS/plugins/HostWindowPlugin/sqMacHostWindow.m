@@ -146,10 +146,13 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 
 	NSWindow *window = nsWindowFromIndex(windowIndex);
 	[gDelegateApp runBlockOnMainThread:^{
-		NSRect frame = [window frame];
+		// TODO: Check image-header flag bit 8; if set, avoid calling #convertRectToBacking:
+		// mt: Still, there might be an issue somewhere else because this code
+		// should work in all kinds of settings ...
+		NSRect frame = [window convertRectToBacking: [window frame]];
 		frame.size.width = x;
 		frame.size.height = y;
-		[window setFrame: frame display: YES];
+		[window setFrame: [window convertRectFromBacking: frame] display:YES];  
 	}];
 	return 0;
 }

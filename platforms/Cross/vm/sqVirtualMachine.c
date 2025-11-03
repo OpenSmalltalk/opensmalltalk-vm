@@ -90,7 +90,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->pushInteger = pushInteger;
 	VM->stackFloatValue = stackFloatValue;
 	VM->stackIntegerValue = stackIntegerValue;
-	VM->stackObjectValue = stackObjectValue;
+	VM->stackObjectValue = stackObjectValue; // N.B. see stackMutableObjectValue below
 	VM->stackValue = stackValue;
 
 	/* InterpreterProxy methodsFor: 'object access' */
@@ -156,7 +156,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 # else
 	VM->characterTable = characterTable;
 # endif
+#if OLD_FOR_REFERENCE
 	VM->displayObject = displayObject;
+#else
+	VM->stackMutableObjectValue = stackMutableObjectValue; // cf stackObjectValue above
+#endif
 	VM->falseObject = falseObject;
 	VM->nilObject = nilObject;
 	VM->trueObject = trueObject;

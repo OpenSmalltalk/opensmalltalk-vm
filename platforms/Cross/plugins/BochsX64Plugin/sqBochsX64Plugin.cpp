@@ -194,6 +194,40 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	}
 
 	/*
+	 * Answer if a 64-bit performance counter is available, storing its value through
+	 * the pointer if so.
+	 */
+	long
+	performanceCounter64ofinto(void *cpu, uintptr_t *perfCounterp)
+	{
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
+
+		if (anx64 != &bx_cpu)
+			return BadCPUInstance;
+
+		*perfCounterp = anx64->timeStampCounter;
+
+		return 0;
+	}
+
+	/*
+	 * Answer zero if the 64-bit performance counter could be incremented by increment.
+	 * Answer an integer error code if and when something went awry (as specified above).
+	 */
+	long
+	incrementPerformanceCounter64ofby(void *cpu, uintptr_t increment)
+	{
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
+
+		if (anx64 != &bx_cpu)
+			return BadCPUInstance;
+
+		anx64->timeStampCounter += increment;
+
+		return 0;
+	}
+
+	/*
 	 * Currently a dummy for Bochs.
 	 */
 	void

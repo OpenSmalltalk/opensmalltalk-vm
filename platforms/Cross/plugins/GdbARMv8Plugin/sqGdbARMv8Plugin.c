@@ -152,6 +152,40 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 }
 
 /*
+ * Answer if a 64-bit performance counter is available, storing its value through
+ * the pointer if so.
+ */
+long
+performanceCounter64ofinto(void *cpup, uintptr_t *perfCounterp)
+{
+	sim_cpu *cpu = cpup;
+
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
+		return BadCPUInstance;
+
+	*perfCounterp = cpu->cntvct;
+
+	return 0;
+}
+
+/*
+ * Answer zero if the 64-bit performance counter could be incremented by increment.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+long
+incrementPerformanceCounter64ofby(void *cpup, uintptr_t increment)
+{
+	sim_cpu *cpu = cpup;
+
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
+		return BadCPUInstance;
+
+	cpu->cntvct += increment;
+
+	return 0;
+}
+
+/*
  * Currently a dummy for ARM Processor Alien.
  */
 void

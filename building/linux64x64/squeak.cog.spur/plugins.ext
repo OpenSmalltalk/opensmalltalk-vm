@@ -18,6 +18,7 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
+VectorEnginePlugin \
 ## CameraPlugin   OpenBSD fails to build this..
 # GdbARMPlugin # fails to compile
 # GdbARMv8Plugin # ditto
