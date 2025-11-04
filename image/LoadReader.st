@@ -19,7 +19,7 @@ repository := MCHttpRepository
 				[ex pass].
 			ex resume]].
 
-((Process instVarNames at: 4) = 'threadId'
+((Process instVarNames at: 4) = 'threadAffinity'
  and: [(flags := Smalltalk vmParameterAt: 48) noMask: 1]) ifTrue:
 	[Smalltalk vmParameterAt: 48 put: flags + 1].
 

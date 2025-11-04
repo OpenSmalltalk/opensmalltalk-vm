@@ -348,6 +348,13 @@ crashDumpFile()
  *
  */
 
+#if COGMTVM
+extern void dumpOwnerLogOnMax(FILE *aFile, sqInt maxElements);
+#else
+# define dumpOwnerLogOnMax(f,n) 0 // nada
+#endif
+#define NUMOLOGS 128
+
 static void
 sigusr1(int sig, siginfo_t *info, void *uap)
 {
@@ -364,7 +371,9 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	FILE *crashdump = crashDumpFile();
 	ctime_r(&now,ctimebuf);
 	reportStackState(crashdump,"SIGUSR1", ctimebuf, 1, uap);
+	dumpOwnerLogOnMax(crashdump,NUMOLOGS);
 	reportStackState(stdout,"SIGUSR1", ctimebuf, 1, uap);
+	dumpOwnerLogOnMax(stdout,NUMOLOGS);
 	fclose(crashdump);
 
 	errno = saved_errno;
@@ -400,7 +409,9 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 		FILE *crashdump = crashDumpFile();
 		ctime_r(&now,ctimebuf);
 		reportStackState(crashdump,fault, ctimebuf, 0, uap);
+		dumpOwnerLogOnMax(crashdump,NUMOLOGS);
 		reportStackState(stderr,fault, ctimebuf, 0, uap);
+		dumpOwnerLogOnMax(stderr,NUMOLOGS);
 		fclose(crashdump);
 	}
 	if (blockOnError) block();
