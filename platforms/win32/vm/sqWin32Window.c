@@ -2336,6 +2336,10 @@ ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if (lsbDisplay) depth = -depth;
+  /* Use sane default if image omits to provide depth in time. For example,
+   * exception while processing the StartUpList before #beDisplay is called.
+   */
+  if (depth == 0) depth = 32;
 
   bmi = BmiForDepth(depth);
   if (!bmi)
