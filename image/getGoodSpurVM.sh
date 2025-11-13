@@ -35,7 +35,7 @@ else
 			curl -L "$URL" -o "$LATESTVM"
 			open $LATESTVM
 			while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
-			rm -rf $VM
+			rm -rf "$VM"
 			cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
 			diskutil eject "/Volumes/$VOLUME"
 		fi
@@ -83,7 +83,7 @@ else
 			echo curl -L "$URL" -o "$LATESTVM"
 			curl -L "$URL" -o "$LATESTVM"
 			unzip $LATESTVM -d sqwin.$LATESTRELEASE
-			rm -f $LATESTVM
+			rm -f "$LATESTVM"
 		fi
 		VM=sqwin.$LATESTRELEASE/SqueakConsole.exe;;
 	*)	echo "do not know how to download a VM for your system" 1>&2
