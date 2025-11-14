@@ -7,19 +7,19 @@ INSTALLDIR=sqcogspur64linuxht
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
 # Prefer clang over gcc if available
-if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
+if command -v clang > /dev/null; then CC=clang; else CC=gcc; fi
 
 # librt and libpthread funs now supplied by libc
 # Many Linux systems supply empty library files 
 # but OpenBSD does not.
-if [ `uname` = "OpenBSD" ]; then LIBRT=""; else LIBRT="-lrt"; fi
+if [ "$(uname)" = "OpenBSD" ]; then LIBRT=""; else LIBRT="-lrt"; fi
 
 CFLAGS="$OPT -msse2 -DCOGMTVM=0"
 LIBS=$LIBRT
 LDFLAGS=""
 
 # Special treatment for OpenBSD Linux
-if [ `uname` = "OpenBSD" ]; then
+if [ "$(uname)" = "OpenBSD" ]; then
 	CFLAGS="$CFLAGS -I/usr/local/include"
 	LIBS="$LIBS -lexecinfo"
 	LDFLAGS="$LDFLAGS -L/usr/local/lib"
@@ -31,7 +31,7 @@ fi
 
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
-read a
+read -r a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean

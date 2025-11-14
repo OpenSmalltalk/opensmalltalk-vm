@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -o pipefail
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64linuxht
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE"
@@ -9,7 +10,7 @@ if [ $# -ge 1 ]; then
 fi
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
-read a
+read -r a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm -f config.h; test -f Makefile && make reallyclean
@@ -21,11 +22,11 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	CC=gcc \
 	VM_WORD_SIZE="64" \
-	VM_CFLAGS="$OPT"
+	VM_CFLAGS="$OPT" \
 	CFLAGS="$OPT"
 ## --without-vm-display-fbdev
 rm -f vm/sqUnixMain.o # nuke version info
-rm -rf ../../../../products/$INSTALLDIR
+rm -rf "../../../../products/$INSTALLDIR"
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
+make install-squeak install-plugins prefix="$(cd ../../../../;pwd)/products/$INSTALLDIR" 2>&1 | tee LOG

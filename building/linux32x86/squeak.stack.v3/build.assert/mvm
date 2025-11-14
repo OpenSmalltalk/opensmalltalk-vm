@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
-case "`uname -m`" in # ensure we see x86 as machine type
+set -o pipefail
+case "$(uname -m)" in # ensure we see x86 as machine type
 i*86) ;; # we're good
-*) if type i386 2>&1 >/dev/null; then
+*) if type i386 >/dev/null 2>&1; then
 	echo "Re-exec as x86"
 	exec i386 "$0" "$@"
 fi ;;
@@ -17,7 +18,7 @@ fi
 
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
-read a
+read -r a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm -f config.h; test -f Makefile && make reallyclean
@@ -30,7 +31,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
-rm -rf ../../../../products/$INSTALLDIR
+rm -rf "../../../../products/$INSTALLDIR"
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
+make install-squeak install-plugins prefix="$(cd ../../../../;pwd)/products/$INSTALLDIR" 2>&1 | tee LOG
