@@ -218,7 +218,10 @@ sqInt success(sqInt);
 
 extern VM_EXPORT void *displayBits;
 extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
-extern VM_EXPORT sqInt sendWheelEvents;
+#if !defined(SQ_USE_GLOBAL_STRUCT) // In the interpreter this is not const
+extern VM_EXPORT const sqInt imageHeaderFlags;
+#define sendWheelEvents() (imageHeaderFlags & 0x80)
+#endif
 
 sqInt ioBeep(void);
 sqInt ioExit(void);

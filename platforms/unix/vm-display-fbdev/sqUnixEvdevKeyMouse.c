@@ -51,8 +51,6 @@
 /* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
 #include <libevdev-1.0/libevdev/libevdev.h> /*  /usr/include/libevdev-1.0/libevdev/libevdev.h */
 
-extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
-
 #ifndef input_event_sec
 #define input_event_sec  time.tv_sec
 #define input_event_usec time.tv_usec
@@ -642,7 +640,7 @@ static void processLibEvdevMouseEvents() {
 #ifdef DEBUG_EVENTS
 	  DPRINTF("EVDEV  Wheel value: %d\n", value);
 #endif
-	  if (sendWheelEvents) {
+	  if (sendWheelEvents()) {
 	    recordMouseWheelEvent( 0, value ); /* delta-y only */
 	  } else { /* Send wheel events as arrow up/down */
 	    if (value > -1) {

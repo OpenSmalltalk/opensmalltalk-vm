@@ -377,7 +377,7 @@ yZero()
 		prevYDelta = ( now - prevYTime < 500) ? prevYDelta + yDelta : yDelta;
 		prevYTime = now;
 	}
-	if (sendWheelEvents) {
+	if (sendWheelEvents()) {
 		float limit = 20;
 		if (-limit < prevXDelta && prevXDelta < limit && -limit < prevYDelta && prevYDelta < limit ) return;
 		sqMouseEvent evt;

@@ -7,24 +7,20 @@
 #include "interp.h"
 
 #if SPURVM
-# define VM_VERSION "7.0rc2"
+# define VM_VERSION "7.0"
 #else
-# define VM_VERSION "4.7rc2"
+# define VM_VERSION "4.7"
 #endif
+
+// Functions extending the original struct VirtualMachine are guarded by VM_PROXY_MINOR below
+// We want to clean-up and simplify with VM_PROXY_MAJOR -> 2 asap.
+// VM_PROXY_MAJOR & VM_PROXY_MINOR are properly defined in interp.h
 
 #ifndef VM_PROXY_MAJOR
-/* Increment the following number if you change the order of
-   functions listed or if you remove functions */
 # define VM_PROXY_MAJOR 1
 #endif
-
 #ifndef VM_PROXY_MINOR
-/* Increment the following number if you add functions at the end */
-# if SPURVM
-#	define VM_PROXY_MINOR 13
-# else
-#	define VM_PROXY_MINOR 12
-# endif
+# define VM_PROXY_MINOR 12
 #endif
 
 #include "sqMemoryAccess.h"
@@ -384,6 +380,7 @@ typedef struct VirtualMachine {
   sqInt (*isWordsOrShorts)(sqInt oop);	/* for SoundPlugin et al */
   sqInt (*bytesPerElement)(sqInt oop);	/* for SocketPugin et al */
   sqInt (*fileTimesInUTC)(void);		/* for FilePlugin et al */
+  sqInt (*processHasOSErr)(void);		/* for ThreadedFFIPlugin/SqueakFFIPrims */
 #endif
 } VirtualMachine;
 
@@ -610,6 +607,7 @@ sqInt identityHashOf(sqInt);
 sqInt isWordsOrShorts(sqInt);
 sqInt bytesPerElement(sqInt);
 sqInt fileTimesInUTC(void);
+sqInt processHasOSErr(void);
 sqInt primitiveFailForwithSecondary(sqInt reasonCode,sqLong extraErrorCode);
 #endif
 
