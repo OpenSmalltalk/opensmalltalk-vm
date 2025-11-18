@@ -29,16 +29,16 @@ DEV_PKGS=(
 # Per default, let apt decide
 ARCHCODE=""
 if [[ "${ARCH}" = "linux32x86" ]]; then
-    sudo apt-get update -y
-    sudo apt-get install -y software-properties-common  # for add-apt-repository
+    apt-get update -y
+    apt-get install -y software-properties-common  # for add-apt-repository
 
-    sudo dpkg --add-architecture i386
-    sudo add-apt-repository ppa:ondrej/php
+    dpkg --add-architecture i386
+    add-apt-repository ppa:ondrej/php
     ARCHCODE=":i386"
 fi
 
-sudo apt-get update -y
-sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
+apt-get update -y
+apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
      debhelper \
      devscripts \
      gcc-multilib \

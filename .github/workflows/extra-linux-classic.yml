@@ -81,9 +81,6 @@ jobs:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.flavor }}
 
-      - name: Install sudo
-        run: apt-get update -y && apt-get install -y sudo
-
       - name: Prepare environment
         run: ./scripts/ci/actions_prepare_linux_x86.sh
 
