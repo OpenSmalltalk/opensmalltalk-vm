@@ -24,6 +24,7 @@ DEV_PKGS=(
     uuid-dev
     libglu1-mesa-dev
     libpcre2-8-0
+    libltdl-dev
 )
 
 # Per default, let apt decide
