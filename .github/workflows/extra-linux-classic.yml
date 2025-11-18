@@ -3,6 +3,9 @@ name: Extra Monthly Builds (Linux Classic)
 # See: https://github.com/OpenSmalltalk/opensmalltalk-vm/issues/742
 
 on:
+  push:
+    paths:
+      - '.github/workflows/extra-linux-classic.yml'
   schedule:
     - cron: '0 0 1 * *' # Build on the 1st of every month at midnight
   workflow_dispatch:
