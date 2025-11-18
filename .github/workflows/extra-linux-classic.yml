@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04
+          - ubuntu:20.04
         arch:
           - linux64x64
           - linux32x86
