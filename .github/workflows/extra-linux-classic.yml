@@ -63,6 +63,7 @@ jobs:
       ARCH: ${{ matrix.arch }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
+      DEBIAN_FRONTEND: noninteractive  # for container
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
@@ -81,7 +82,7 @@ jobs:
           key: thirdparty-cache-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.flavor }}
 
       - name: Install sudo
-        run: apt-get update && apt-get install -y sudo
+        run: apt-get update -y && apt-get install -y sudo
 
       - name: Prepare environment
         run: ./scripts/ci/actions_prepare_linux_x86.sh
