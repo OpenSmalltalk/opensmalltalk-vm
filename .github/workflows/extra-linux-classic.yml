@@ -26,7 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu:20.04
+          - name: ubuntu-20.04
+            docker: buildpack-deps:22.04-scm
         arch:
           - linux64x64
           - linux32x86
@@ -57,8 +58,8 @@ jobs:
 
     runs-on: ubuntu-22.04
     container:
-      image: ${{ matrix.os }}
-    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}/${{ matrix.os }} ${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+      image: ${{ matrix.os.docker }}
+    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}/${{ matrix.os.name }} ${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
       FLAVOR: ${{ matrix.flavor }}
@@ -79,7 +80,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.flavor }}
+          key: thirdparty-cache-${{ matrix.os.name }}-${{ matrix.arch }}-${{ matrix.flavor }}
 
       - name: Prepare environment
         run: ./scripts/ci/actions_prepare_linux_x86.sh
