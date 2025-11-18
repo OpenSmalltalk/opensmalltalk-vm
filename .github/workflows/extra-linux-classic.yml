@@ -27,7 +27,7 @@ jobs:
       matrix:
         os:
           - name: ubuntu-20.04
-            docker: buildpack-deps:22.04-scm
+            docker: buildpack-deps:20.04-scm
         arch:
           - linux64x64
           - linux32x86
