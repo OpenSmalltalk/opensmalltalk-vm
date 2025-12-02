@@ -507,9 +507,9 @@ typedef struct LayerTransformation
 #pragma mark Fullscreen
 
 - (void) ioSetFullScreen: (sqInt) fullScreen {
-	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
-        [self.window toggleFullScreen: nil];
-	}
+	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1))
+		[gDelegateApp runBlockOnMainThread:
+			^{[self.window toggleFullScreen: nil];}];
 }
 
 - (void) preDrawThelayers {
