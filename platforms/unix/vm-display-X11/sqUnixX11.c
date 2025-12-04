@@ -3495,7 +3495,6 @@ static const char *
 nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
 #endif /* DEBUG_EVENTS */
 
-extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
 /* if sendWheelEvents is false this maps wheel events to arrow keys */
 static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
 /* if sendWheelEvents is true this determines how much x & y are incremented */
@@ -3634,7 +3633,7 @@ handleEvent(XEvent *evt)
 		recordMouseEvent();
 	  }
 	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
-		if (sendWheelEvents)
+		if (sendWheelEvents())
 			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 4],
 								  mouseWheelYDelta[evt->xbutton.button - 4]);
 		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right

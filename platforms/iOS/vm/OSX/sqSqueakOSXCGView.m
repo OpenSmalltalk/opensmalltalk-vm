@@ -287,9 +287,7 @@ extern sqInt cannotDeferDisplayUpdates;
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
-		return;
-	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
+	if (([self isInFullScreenMode] == YES) == (fullScreen == 1))
 		return;
 
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
@@ -301,13 +299,14 @@ extern sqInt cannotDeferDisplayUpdates;
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],
 			NSFullScreenModeApplicationPresentationOptions, nil];
-		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
-		extern struct	VirtualMachine* interpreterProxy;
+		[gDelegateApp runBlockOnMainThread:
+			^{[self enterFullScreenMode:[NSScreen mainScreen] withOptions: options];}];
 		interpreterProxy->fullDisplayUpdate();
 	}
 
 	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
-		[self exitFullScreenModeWithOptions: NULL];
+		[gDelegateApp runBlockOnMainThread:
+			^{[self exitFullScreenModeWithOptions: NULL];}];
 		if ([self.window isKeyWindow] == NO) {
 			[self.window makeKeyAndOrderFront: self];
 			//	NOT SURE IF THIS IS NEEDED, MORE TESTING	[self.window setContentSize: self.savedScreenBoundsAtTimeOfFullScreen.size];
