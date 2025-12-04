@@ -723,7 +723,8 @@ static unsigned int allocatedExtraLayers = 0;
 - (void) ioSetFullScreen: (sqInt) fullScreen {
 	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
 		self.fullScreenInProgress = YES;
-        [self.window toggleFullScreen: nil];
+		[gDelegateApp runBlockOnMainThread:
+			^{[self.window toggleFullScreen: nil];}];
 	}
 }
 

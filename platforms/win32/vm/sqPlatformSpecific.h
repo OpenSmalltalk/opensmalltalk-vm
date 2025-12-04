@@ -134,7 +134,7 @@ extern void reportMinimumUnusedHeadroom(void);
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const unsigned long tltiIndex;
 #  endif
-#  define ioGetThreadLocalThreadIndex() ((long)TlsGetValue(tltiIndex))
+#  define ioGetThreadLocalThreadIndex() ((sqInt)TlsGetValue(tltiIndex))
 #  define ioSetThreadLocalThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
 #  define ioTransferTimeslice() Sleep(0)
 #  define ioMilliSleep(ms) Sleep(ms)

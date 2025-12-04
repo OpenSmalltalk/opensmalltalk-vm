@@ -71,9 +71,6 @@ void setFullScreenFlag(sqInt);
 sqInt getSavedWindowSize(void);
 extern sqInt deferDisplayUpdates;
 
-extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
-/* if sendWheelEvents is false this maps wheel events to arrow keys */
-
 /*** Variables -- image and path names ***/
 #define IMAGE_NAME_SIZE MAX_PATH_UTF8 
 
@@ -383,7 +380,7 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     mousePosition.y = GET_Y_LPARAM(lParam);
     break;
   case WM_MOUSEHWHEEL: {
-    if (inputSemaphoreIndex && sendWheelEvents) {
+    if (inputSemaphoreIndex && sendWheelEvents()) {
       int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
       /* accumulate enough delta before sending the event to the image */
       int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
@@ -413,7 +410,7 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     zDelta = vWheelDelta;
     vWheelDelta = 0;
     if (inputSemaphoreIndex) {
-      if (sendWheelEvents) {
+      if (sendWheelEvents()) {
         recordMouseWheelEvent(messageTouse,0,zDelta);
         break;   
       } else {
@@ -2336,6 +2333,10 @@ ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if (lsbDisplay) depth = -depth;
+  /* Use sane default if image omits to provide depth in time. For example,
+   * exception while processing the StartUpList before #beDisplay is called.
+   */
+  if (depth == 0) depth = 32;
 
   bmi = BmiForDepth(depth);
   if (!bmi)
