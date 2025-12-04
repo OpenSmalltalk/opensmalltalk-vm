@@ -1,19 +1,13 @@
-/* sqUnixFBDev.c -- display driver for the Linux framebuffer
+/* sqQNXScreenDisplay.c -- display driver for QNX Screen subsystem
  * 
- * Author: Ian Piumarta <ian.piumarta@squeakland.org>
+ * Author: Ken Dickey <Ken.Dickey@Whidbey.COM>
  */
 
-
-/* The framebuffer display driver was donated to the Squeak community by:
- * 
- *	Weather Dimensions, Inc.
- *	13271 Skislope Way, Truckee, CA 96161
- *	http://www.weatherdimensions.com
- *
- * Copyright (C) 2003-2005 Ian Piumarta
+/* 
+ * Copyright (C) 2025 Kenneth Alan Dickey
  * All Rights Reserved.
  * 
- * This file is part of Unix Squeak.
+ * This file is part of the OpenSmalltalk-VM
  * 
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
@@ -35,10 +29,29 @@
  */
 
 /*
- *   last update: 31 Jan 2012 13:38:32 CET; Michael J. Zeder
- */
+  OpenSmalltalk-vm
+    https://OpenSmalltalk.org
+    https://github.com/OpenSmalltalk/opensmalltalk-vm
+  
+  QNX free licence & details at
+    https://qnx.com/getqnx
 
+  QNX 8.0 Screen Developer Documentation
+    https://www.qnx.com/developers/docs/8.0/
+    	  com.qnx.doc.screen/topic/manual/cscreen_about.html
 
+  Source cross-compiled on Ubuntu/Mint Linux on x86_64
+  for target system: Raspberry Pi 4 (aarch64) + QNX 8.0
+
+  VM Interface
+    --  struct SqDisplay = access via ioGetDisplayModule()
+    VM/platforms/unix/vm/SqDisplay.h -- struct sqDisplay def
+    VM/platforms/Cross/vm/sq.h  -- Display/Keyboard/Mouse + events
+    VM/platforms/unix/vm/sqUnixEvent.c -- helpers, e.g. recordMouseEvent()
+    VM/platforms/unix/vm-display-custom/sqUnixCustomModule.h -- generic starting point
+*/
+
+/* OpenSmalltalk VM */
 #include "sq.h"
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
@@ -50,6 +63,7 @@
 # undef ioMSecs
 #endif
 
+/* POSIX */
 #include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
@@ -64,6 +78,54 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <assert.h>
+
+/* Splash Screen Display Image: Squeak Balloon */
+
+/* Pixels are kept as 32 bits: uint32_t */
+typedef uint32_t pixel_t;
+#include "Balloon.h"  /* Squeak Balloon image */
+/* Forward declarations */
+static void showBalloons( void *bufPtr );
+static void showBalloonAt(void *bufPtr, int left, int top);
+static inline void putPixel(void *bufPtr, int x, int y, pixel_t pix);
+
+/* QNX */
+#include <screen/screen.h>
+
+/* QNX data structures */
+screen_context_t screenContext = NULL;
+screen_event_t   userEvent;
+screen_window_t  window;
+screen_session_t keyboardSession;
+screen_buffer_t	 buffer;
+void* bufPointer; /* buffer pointer */
+int   stride;     /* buffer stride (bytes per scan line) */
+int   displaySize[2];    /* {width,height} in pixels */
+const int alwaysTrue = 1;
+
+
+/* OVERVIEW:
+   - Create a Screen/Graphic Context
+   - Create a Render Target
+     + Set Render Properties
+   - Allocate Pixmap Buffers
+   - Render into Buffers
+     + Post/Update to (re)draw a Buffer
+   - Attache Devices [Keyboard,Mouse/Pointer,MultiTouch,Joystick]
+   - Run Event Loop
+
+ Note that microkernel message passing implies copying event data
+ from external io managers into local storage.  When an event is
+ received, an io manager process dealloctes its event data.
+
+ Here we are staying simple.  Our application (the VM) is assumed
+ here with a single Display, a Mouse, and a Keyboard.  Windowing
+ is our own Smalltalk Windows/Morphs within a single QNX Window
+ which is the size of the single/main Display. Software rendering.
+
+ QNX architects for multiple displays, touch events, joystick, game pad..
+ Future projects not addressed here.  Touch events will need VM support.
+*/
 
 #if !defined(DEBUG)
 # define DEBUG	0
@@ -95,6 +157,7 @@ static debugmsg* DPRINTF_debugmsg_new(void)
   }
   return msg;
 }
+
 static void DPRINTF(const char *fmt, ...)
 {
   va_list ap;
@@ -107,6 +170,7 @@ static void DPRINTF(const char *fmt, ...)
   }
   va_end(ap);
 }
+
 static void DPRINTF_REDIRECT(bool flag)
 {
   if (flag) {
@@ -162,49 +226,8 @@ static void outOfMemory(void)
 static inline int min(int a, int b) { return a < b ? a : b; }
 static inline int max(int a, int b) { return a > b ? a : b; }
 
+/* Forward */
 static void failPermissions(const char *who);
-
-static char *msDev=    0;
-static char *msProto=  0;
-static char *kmPath=   0;
-static char *fbDev=    0;
-static int   vtLock=   0;
-static int   vtSwitch= 0;
-
-struct kb;
-struct ms;
-struct fb;
-
-static struct ms *ms= 0;
-static struct kb *kb= 0;
-static struct fb *fb= 0;
-
-#include "sqUnixFBDevUtil.c"
-#ifdef NOEVDEV
-#include "sqUnixFBDevMouse.c"
-#include "sqUnixFBDevKeyboard.c"
-#else
-#include "sqUnixEvdevKeycodeMap.c"
-#include "sqUnixEvdevKeyMouse.c"
-#endif
-#include "sqUnixFBDevFramebuffer.c"
-
-static void openFramebuffer(void)
-{
-  fb= fb_new();
-  fb_open(fb, kb, fbDev);
-}
-
-
-static void closeFramebuffer(void)
-{
-  if (fb)
-    {
-      fb_close(fb);
-      fb_delete(fb);
-      fb= 0;
-    }
-}
 
 
 static void enqueueKeyboardEvent(int key, int up, int modifiers)
@@ -225,30 +248,6 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
     }
 }
 
-static void openKeyboard(void)
-{
-  kb= kb_new();
-  kb_open(kb, vtSwitch, vtLock);
-#ifdef NOEVDEV
-  kb_setCallback(kb, enqueueKeyboardEvent);
-#endif
-}
-
-static void closeKeyboard(void)
-{
-  if (kb)
-    {
-#ifdef NOEVDEV
-      kb_setCallback(kb, 0);
-#endif
-      kb_close(kb);
-#ifdef NOEVDEV
-      kb_delete(kb);
-#endif
-      kb= 0;
-    }
-}
-
 
 static void enqueueMouseEvent(int b, int dx, int dy)
 {
@@ -261,34 +260,10 @@ static void enqueueMouseEvent(int b, int dx, int dy)
   recordMouseEvent();
 }
 
-static void openMouse(void)
-{
-  ms= ms_new();
-  ms_open(ms, msDev, msProto);
-#ifdef NOEVDEV
-  ms_setCallback(ms, enqueueMouseEvent);
-#endif
-}
-
-static void closeMouse(void)
-{
-  if (ms)
-    {
-#ifdef NOEVDEV
-      ms_setCallback(ms, 0);
-#endif
-      ms_close(ms);
-#ifdef NOEVDEV
-      ms_delete(ms);
-#endif
-      ms= 0;
-    }
-}
-
 
 static sqInt display_ioBeep(void)
 {
-  kb_bell(kb);
+  /* @@FIXME: NYI@@ */
   return 0;
 }
 
@@ -315,28 +290,25 @@ static sqInt display_ioProcessEvents(void)
 
 static sqInt display_ioScreenDepth(void)
 {
-  // we could match negative depths for little-endian machines here, but:
-  //   1. some kinds of BitBlt seem to be broken at depth -8;
-  //   2. doing our own conversionis 20% faster than having BitBlt do it.
-  return fb_depth(fb);
+  return 32; /* bits per pixel @@REVISIT: dynamic ask QNX? @@ */
 }
 
 
 static double display_ioScreenScaleFactor(void)
 {
-  return fb_scale(fb);
+  return 1;
 }
 
 static sqInt display_ioScreenSize(void)
-{
-  return ((fb_width(fb) << 16) | fb_height(fb));
+{ /* QNX Screen: displaySize[2] => {width, height} */
+  return (displaySize[0] << 16) | displaySize[1]);
 }
 
 
 static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-  fb_setCursor(fb, pointerForOop(cursorBitsIndex), pointerForOop(cursorMaskIndex), offsetX, offsetY);
-  return 1;
+  react();
+  return 0;
 }
 
 
@@ -346,13 +318,22 @@ static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt
 }
 
 
-static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
+static sqInt display_ioShowDisplay(sqInt dispBitsIndex,
+				   sqInt width, sqInt height,
+				   sqInt depth,
+				   sqInt affectedL, sqInt affectedR,
+				   sqInt affectedT, sqInt affectedB)
 {
-  if ((depth  != fb_depth(fb)) || (width  != fb_width(fb)) || (height != fb_height(fb))
-      || (affectedR < affectedL) || (affectedB < affectedT))
+  if ((depth  != display_ioScreenDepth())
+      || (width  != displaySize[0])
+      || (height != displaySize[1])
+      || (affectedR < affectedL)
+      || (affectedB < affectedT))
     return 0;
-  fb->copyBits(fb, pointerForOop(dispBitsIndex), affectedL, affectedR, affectedT, affectedB);
-  return 1;
+/* @@FIXME: NYI@@
+   fb->copyBits(fb, pointerForOop(dispBitsIndex), affectedL, affectedR, affectedT, affectedB); */
+/*   return 1; */
+  return 0;
 }
 
 
@@ -365,32 +346,76 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static void openDisplay(void)
 {
+  int sessionVisible = SCREEN_PROPERTY_VISIBLE; /* => active */
+  int usage          = SCREEN_USAGE_NATIVE;
+  int eventType	     = 0;
+  int objectType     = 0;
+  
   DPRINTF("openDisplay\n");
   DPRINTF_REDIRECT(true);
-  openMouse();
-  openKeyboard();
-  openFramebuffer();
-  // init mouse after setting graf mode on tty avoids packets being
-  // snarfed by gpm
-#ifdef NOEVDEV
-  ms->init(ms);
-#endif
+  if (screen_create_context(&screenContext,SCREEN_APPLICATION_CONTEXT) < 0) {
+    perror("QNX: Cannot create Screen Context");
+    exit(errno);
+  }
+
+  if (screen_create_window_type(&window,
+				screenContext,
+				(SCREEN_APPLICATION_WINDOW |SCREEN_ROOT_WINDOW)) < 0) {
+    perror("QNX: Cannot create QNX Display Window");
+    exit(errno);
+  }
+
+  if (screen_create_window_buffers(window, 1) < 0) {
+    perror("QNX: Cannot create Window Buffer");
+    exit(errno);
+  } 
+
+  /* Render Setup */
+  screen_set_window_property_iv(window, SCREEN_PROPERTY_FORMAT,
+	(const int[]){ SCREEN_FORMAT_RGBX8888 });
+  screen_set_window_property_iv(window, SCREEN_PROPERTY_USAGE,
+	(const int[]) { SCREEN_USAGE_READ | SCREEN_USAGE_WRITE });
+  screen_get_window_property_iv(window, SCREEN_PROPERTY_BUFFER_SIZE,size);
+  screen_get_window_property_pv(window, SCREEN_PROPERTY_BUFFERS, (void **)&buffer);
+  screen_get_buffer_property_pv(buffer, SCREEN_PROPERTY_POINTER, &bufPointer);
+  screen_get_buffer_property_iv(buffer, SCREEN_PROPERTY_STRIDE,  &stride);
+
+  screen_fill(screenContext,
+	      buffer,			      /* Color white */
+	      (const int[]){ SCREEN_BLIT_COLOR, 0x00000000, SCREEN_BLIT_END });
+
+  screen_set_window_property_iv(window, SCREEN_PROPERTY_VISIBLE, &alwaysTrue);
+
+  screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
+  screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
+
+  showBalloons(bufPointer);
+  screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
+  screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
+
+  sleep( 3 ); /* Let the user see splash screen */
+  
+  /* FOR THE USER */
+  
+  if (screen_create_event(&userEvent) != 0) {
+    perror("QNX: Cannot create User Event holder");
+    exit(errno);
+  }
 }
 
 
 static void closeDisplay(void)
 {
   DPRINTF("closeDisplay\n");
-  closeFramebuffer();
   DPRINTF_REDIRECT(false);
-  closeKeyboard();
-  closeMouse();
+  screen_destroy_window( window );
+  screen_destroy_context( screenContext );
 }
 
 
 static char *display_winSystemName(void)
 {
-  return "fbdev";
+  return "qnxScreenDisplay";
 }
 
 
@@ -399,7 +424,6 @@ static void display_winInit(void)
 #if defined(AT_EXIT)
   AT_EXIT(closeDisplay);
 #else
-# warning: cannot release /dev/fb0 on exit!
 # endif
 
   (void)recordMouseEvent;
@@ -418,73 +442,67 @@ static void display_winOpen(int argc, char *dropFiles[])
 
 static void failPermissions(const char *who)
 {
-  fprintf(stderr, "cannot open %s\n", who);
-  fprintf(stderr, "either:\n");
-  fprintf(stderr, "  -  you don't have a framebuffer driver for your graphics card\n");
-  fprintf(stderr, "     (you might be able to load one with 'modprobe'; look in\n");
-  fprintf(stderr, "     /lib/modules for something called '<your-card>fb.o'\n");
-  fprintf(stderr, "  -  you don't have write permission on some of the following\n");
-  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/input/event?, /dev/input/mouse0\n");
-  fprintf(stderr, "  -  you need to run Squeak as root on your machine\n");
+  fprintf(stderr, "Cannot open %s\n", who);
+  fprintf(stderr, "You should be running QNX on a Raspberry Pi 4/5\n");
+  fprintf(stderr, "  with a Display, Keyboard, & Mouse\n");
+  fprintf(stderr, "Check sources at github.com/OpenSmalltalk/opensmalltalk-vm\n");
+  fprintf(stderr, "  /platforms/unix/vm-display-qnxScreen\n");
+  fprintf(stderr, "Ask/Report on  vm-dev@lists.squeakfoundation.org\n");
   exit(1);
 }
 
 
 static void display_printUsage(void)
 {
-  printf("\nFBDev <option>s:\n");
-  printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb0)\n");
-  printf("  -kbmap <file>         load keymap from <file> \n");
-  printf("   [Make file by: 'dumpkeys -f -n --keys-only > squeak-kb.map' ]\n");
-  printf("  -msdev <dev>          use mouse device <dev> (default: /dev/input/event1)\n");
-  printf("  -kbdev <dev>          use keyboard device <dev> (default: /dev/input/event0)\n");
-  /*  printf("  -vtlock               disallow all vt switching (for any reason)\n");
-      printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n"); */
+  printf("\nNO currently used QNX Display options\n");
 }
 
 
 static void display_printUsageNotes(void)
 {
-  printf("  -vtlock disables keyboard vt switching even when -vtswitch is enabled\n");
+  ; /* skip */
 }
 
 
 static void display_parseEnvironment(void)
 {
+  /*  Currently NO Environment Variables Used */
+
+  /* How2:
   char *ev= 0;
   if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=    strdup(ev);
   if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=   strdup(ev);
-  if ((ev= getenv("SQUEAK_MSDEV")))	msDev=    strdup(ev);
-  if ((ev= getenv("SQUEAK_KBDEV")))	kbDev.kbName=    strdup(ev);
-  if ((ev= getenv("SQUEAK_MSPROTO")))	msProto=  strdup(ev);
-  if ((ev= getenv("SQUEAK_VTLOCK")))	vtLock=   1;
-  if ((ev= getenv("SQUEAK_VTSWITCH")))	vtSwitch= 1;
+  */
 }
 
 
 static int display_parseArgument(int argc, char **argv)
 {
-  int n= 1;
-  char *arg= argv[0];
+  /* Currently NO Arguments Used */
 
-  if      (!strcmp(arg, "-vtlock"))	 vtLock=   1;
-  else if (!strcmp(arg, "-vtswitch"))	 vtSwitch= 1;
-  else if (argv[1])	/* option requires an argument */
-    {
-      n= 2;
-      if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1];
-      else if (!strcmp(arg, "-kbmap"))	 kmPath=  argv[1];
-      else if (!strcmp(arg, "-msdev"))	 msDev=   argv[1];
-      else if (!strcmp(arg, "-kbdev"))	 kbDev.kbName=   argv[1]; 
-      else if (!strcmp(arg, "-msproto")) msProto= argv[1];
-      else
-	n= 0;	/* not recognised */
-    }
-  else
-    n= 0;
-  return n;
+  /* how2: */
+  /* int n= 1; */
+  /* char *arg= argv[0]; */
+
+  /* if      (!strcmp(arg, "-vtlock"))	 vtLock=   1; */
+  /* else if (!strcmp(arg, "-vtswitch"))	 vtSwitch= 1; */
+  /* else if (argv[1])	/\* option requires an argument *\/ */
+  /*   { */
+  /*     n= 2; */
+  /*     if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1]; */
+  /*     else if (!strcmp(arg, "-kbmap"))	 kmPath=  argv[1]; */
+  /*     else if (!strcmp(arg, "-msdev"))	 msDev=   argv[1]; */
+  /*     else if (!strcmp(arg, "-kbdev"))	 kbDev.kbName=   argv[1];  */
+  /*     else if (!strcmp(arg, "-msproto")) msProto= argv[1]; */
+  /*     else */
+  /* 	n= 0;	/\* not recognised *\/ */
+  /*   } */
+  /* else */
+  /*   n= 0; */
+  /* return n; */
+
+  return( 0 ) ;
 }
-
 
 static sqInt display_clipboardSize(void)									{ return 0; }
 static sqInt display_clipboardWriteFromAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
@@ -501,8 +519,16 @@ static sqInt display_dndOutAcceptedType(char * buf, int nbuf)	{ return 0; }
 static sqInt display_dndReceived(char *fileName)	{ return 0; }
 
 static sqInt display_ioFormPrint(sqInt bits, sqInt w, sqInt h, sqInt d, double hs, double vs, sqInt l)	{ return 0; }
-static sqInt display_ioSetFullScreen(sqInt fullScreen)							{ return 0; }
-static sqInt display_ioForceDisplayUpdate(void)								{ return 0; }
+
+static sqInt display_ioSetFullScreen(sqInt fullScreen)							{ return 0; } /* Our 1 window is already fullscreen */
+
+static sqInt display_ioForceDisplayUpdate(void)
+{
+  screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
+  screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
+  return 0;
+}
+
 static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)		{ return 0; }
 static void display_winSetName(char *imageName)								{ return  ; }
 static void display_winExit(void)									{ return  ; }
@@ -513,25 +539,9 @@ static void display_winImageNotFound(void)								{ return  ; }
 //----------------------------------------------------------------
 
 // OSPP
-
-void openXDisplay(void)		{}
-void disconnectXDisplay(void)	{}
-void synchronizeXDisplay(void)	{}
-void forgetXDisplay(void)	{}
-
 static void *display_ioGetDisplay(void)	{ return 0; }
 static void *display_ioGetWindow(void)	{ return 0; }
 
-// OpenGL
-
-static sqInt  display_ioGLinitialise(void)								{ return 0; }
-static sqInt  display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)	{ return 0; }
-static void  display_ioGLdestroyRenderer(glRenderer *r)							{ return  ; }
-static void  display_ioGLswapBuffers(glRenderer *r)							{ return  ; }
-static sqInt  display_ioGLmakeCurrentRenderer(glRenderer *r)						{ return 0; }
-static void  display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)			{ return  ; }
-
-// Mozilla
 
 static sqInt display_primitivePluginBrowserReady()	{ return primitiveFail(); }
 static sqInt display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
@@ -580,11 +590,11 @@ static long display_ioScreenRectangles(void) { return 0; }
 
 #include "SqModule.h"
 
-SqDisplayDefine(fbdev);
+SqDisplayDefine(qnxScreen);
 
 static void *display_makeInterface(void)
 {
-  return &display_fbdev_itf; /* @@@ WTF @@ */
+  return &display_qnxScreen_itf;
 }
 
-SqModuleDefine(display,	fbdev);
+SqModuleDefine(display,	qnxScreen);

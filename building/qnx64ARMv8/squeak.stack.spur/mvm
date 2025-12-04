@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -e
+# Stack Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=sqstkspur64linuxht
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+# echo -n "clean? "
+# read a
+# case $a in
+# n|no|N|NO)	echo "ok but this isn't safe!!";;
+# *)			rm -f config.h; test -f Makefile && make reallyclean
+# esac
+# Copy down ../plugins.?ny
+../../../../scripts/copylinuxpluginspecfiles
+##@@FIXME: add vm-dev-qnx-screen @@##
+cp -r ../Save/* .
+
+## QNX ENV ##
+source ../sourceMe.sh
+
+# test -f config.h || ../../../../platforms/unix/config/configure \
+# 	--with-vmversion=5.0 \
+# 	--with-src=src/spur64.stack --disable-cogit \
+# 	--without-vm-display-fbdev --without-npsqueak \
+# 	--without-x --without-gl \
+# 	--build=x86_64 \
+# 	--host=aarch64 \
+# 	--target=aarch64 \
+# 	CC="$QNX_CC" \
+# 	CFLAGS="$QNX_CFLAGS" \
+# 	LDFLAGS="$QNX_LDFLAGS" \
+# 	LIBS="$QNX_LIBS" \
+# 	VM_WORD_SIZE="64" \
+# 	VM_CFLAGS="-DNDEBUG -DDEBUGVM=0"
+echo "WARNING: configure is broken for cross compilation [x86->arm64]"
+echo "           Using hand-specialized config.h"
+
+./config.status
+
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0

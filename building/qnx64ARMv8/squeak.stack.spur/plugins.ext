@@ -2,13 +2,7 @@
 EXTERNAL_PLUGINS = \
 FileAttributesPlugin \
 SqueakFFIPrims \
-SqueakSSL \
 LocalePlugin \
-UnicodePlugin \
-UUIDPlugin \
-DESPlugin \
-MD5Plugin \
-SHA2Plugin \
 VectorEnginePlugin
 
 
