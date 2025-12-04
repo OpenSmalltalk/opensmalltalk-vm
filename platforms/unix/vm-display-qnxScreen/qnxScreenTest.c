@@ -1,6 +1,11 @@
 /* qnxScreenTest.c -- test basic rendering */
 
-/* $QNX_CC $QNX_CFLAGS -trigraphs $QNX_LDFLAGS -lscreen -o screenTest qnxScreenTest.c */
+/*
+ source ./sourceMe.sh   ## in Bash Shell
+ $QNX_CC $QNX_CFLAGS -trigraphs $QNX_LDFLAGS -lscreen -o screenTest qnxScreenTest.c 
+ scp screenTest qnxuser@192.168.TARGET:/home/qnxuser/bin
+## Test on QNX RasPi4 Target
+*/
 
 
 #include <stdio.h>
