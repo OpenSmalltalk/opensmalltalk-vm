@@ -5,7 +5,7 @@ topdir="/home/kend/Kens-VM"
 cfgdir="/home/kend/Kens-VM/platforms/unix/config"
 
 int_modules="vm"
-ext_modules="vm-display-null vm-sound-null"
+ext_modules="vm-display-null vm-display-qnxScreen vm-sound-null"
 int_plugins=" BitBltPlugin FileCopyPlugin FilePlugin FileDialogPlugin Float64ArrayPlugin FloatArrayPlugin FloatMathPlugin IA32ABI LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SerialPlugin SocketPlugin StarSqueakPlugin SurfacePlugin "
 ext_plugins=" FileAttributesPlugin SqueakFFIPrims LocalePlugin VectorEnginePlugin"
 exc_plugins=""
