@@ -57,6 +57,9 @@ SurfacePlugin/SurfacePlugin$a : .force
 vm-display-null${la} :
 	@$(SHELL) -ec 'cd vm-display-null; $(MAKE) vm-display-null${la}'
 
+vm-display-qnxScreen${la} :
+	@$(SHELL) -ec 'cd vm-display-qnxScreen; $(MAKE) vm-display-qnxScreen${la}'
+
 vm-sound-null${la} :
 	@$(SHELL) -ec 'cd vm-sound-null; $(MAKE) vm-sound-null${la}'
 
