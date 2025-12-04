@@ -22,7 +22,7 @@ Basic Steps:
  [2] Build it
    cd opensmalltalk-vm/building/qnx64ARMv8/squeak.stack.spur/build
    ./mvm
-   # Answer "y" to "clean?"
+   #@@@ CURRENT IS BROKEN - built & tested with hand work; scp to rpi4 target.
  [3] Copy VM files to QNX Target
  [4] Copy Smalltalk image, changes, sources files to QNX target [no git available]
  [5] Playtime!
