@@ -95,6 +95,11 @@ int main(void) {
 
   sleep( 1 );
 
+  printf("\nDisplay (width , height) = (%d , %d)", size[0], size[1]);
+  printf("\n  Depth = 32 bits/pixel = 4 bytes/pixel");
+  printf("\n  stride = %d bytes per scan line", stride);
+  printf("\n");
+
   showBalloons(bufPointer);
   screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
   screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
@@ -286,11 +291,17 @@ Event Type: SCREEN_EVENT_KEYBOARD
   screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SYM,   &keyValue);
   screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_FLAGS, &keyFlags);
   screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_MODIFIERS, &keyModifiers);
+  if (keyFlags & SCREEN_FLAG_CAP_VALID) {
+      screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_KEY_CAP, &keyCap);
+  }
 
-  if ((keyValue > 0x20) && (keyValue < 0x7F))
+  if ((keyValue >= 0x20) && (keyValue <= 0x7F))
     printf("\n ASCII '%c' ", keyValue);
   else
     printf("\n");
+  if ((keyModifiers & KEYMOD_CTRL) && (keyCap < 0x7F))
+    printf(" ^%c ", (keyCap - 0x20));
+
   printPCKeys(keyValue);  /* NON-ASII, e.g. keypadkeys, home, .. */
   printModifiers(keyModifiers); /* SHIFT, etc. */
   printf(" KeyCode=0x%lx ", keyValue);
@@ -305,13 +316,12 @@ Event Type: SCREEN_EVENT_KEYBOARD
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SYM, &keySym);
       printf(" keySym=0x%lx", keySym);
   }
+  /* NB: For control keys, keySym is not valid. */
 
   if (keyFlags & SCREEN_FLAG_SCAN_VALID) {
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SCAN, &keyScan);
-      printf(" keyScan=0x%lx", keyScan);
+      printf(" key physical location=0x%lx", keyScan);
   }
-
-  printf(PROMPT);
 }
 
 void printKeyFlags(int flags) {

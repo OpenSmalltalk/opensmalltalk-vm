@@ -81,16 +81,23 @@ int main(void) {
 
   screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
   screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
-
+  
   sleep( 1 );
+
+  printf("\nDisplay (width , height) = (%d , %d)", size[0], size[1]);
+  printf("\n  Depth = 32 bits/pixel = 4 bytes/pixel");
+  printf("\n  stride = %d bytes per scan line", stride);
+  printf("\n");
 
   showBalloons(bufPointer);
   screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
   screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
 
+  
+
   sleep( 10 ) ; /* let the user see it */
   
-  printf("\nExiting Display Test\n\n");
+  printf("\nExiting Display Test (Normal timeout)\n\n");
 
   screen_destroy_window( window );
   screen_destroy_context( screenContext );
