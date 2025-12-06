@@ -380,7 +380,8 @@ typedef struct VirtualMachine {
   sqInt (*isWordsOrShorts)(sqInt oop);	/* for SoundPlugin et al */
   sqInt (*bytesPerElement)(sqInt oop);	/* for SocketPugin et al */
   sqInt (*fileTimesInUTC)(void);		/* for FilePlugin et al */
-  sqInt (*processOSErrInstVarOffset)(void);		/* for ThreadedFFIPlugin/SqueakFFIPrims */
+  sqInt (*processOSErrInstVarOffset)(void);	/* for ThreadedFFIPlugin/SqueakFFIPrims */
+  sqInt (*activeProcess)(void);				/* for ThreadedFFIPlugin/SqueakFFIPrims */
 #endif
 } VirtualMachine;
 
@@ -609,6 +610,7 @@ sqInt bytesPerElement(sqInt);
 sqInt fileTimesInUTC(void);
 sqInt processOSErrInstVarOffset(void);
 sqInt primitiveFailForwithSecondary(sqInt reasonCode,sqLong extraErrorCode);
+sqInt activeProcess(void);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);

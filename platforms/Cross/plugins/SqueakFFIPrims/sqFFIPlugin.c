@@ -77,7 +77,7 @@ doFFILogCallout(sqInt externalFunctionName)
 
     fprintf(ffiLogFile,
 			"%.*s\n",
-			interpreterProxy->byteSizeOf(externalFunctionName),
-			interpreterProxy->firstIndexableField(externalFunctionName));
+			(int)interpreterProxy->byteSizeOf(externalFunctionName),
+			(char *)interpreterProxy->firstIndexableField(externalFunctionName));
     fflush(ffiLogFile);
 }
