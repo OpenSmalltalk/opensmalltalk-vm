@@ -30,8 +30,6 @@ void printModifiers(int modifiers);
 void printMouseButtons(int buttons);
 void printPCKeys(int keyCode);
 
-#define PROMPT "\n*==> "
-
 /* Global loop control */
 int keyValue = 0;
 int loopCount = 0;
@@ -106,14 +104,6 @@ int main(void) {
 
   sleep( 2 ) ; /* let the user see it */
   
-  /* Keyboard & Mouse Pointer */
-  /* if (screen_create_session_type(&keyboardSession,screenContext,SCREEN_EVENT_KEYBOARD) */
-  /*     < 0) { */
-  /*   printf("\nqnx screenTest: Keyboard Session creation failure with errno %d\n", errno); */
-  /*   return -1; */
-  /* } */
-  /* screen_set_session_property_iv(keyboardSession, SCREEN_PROPERTY_VISIBLE, &alwaysTrue); */
-
 
   /* FOR THE USER */
   
@@ -123,7 +113,6 @@ int main(void) {
   }
 
   printf("\nQNX Keyboard test.  Type 'x' to exit\n");
-  printf(PROMPT);
   
   while ((keyValue != KEYCODE_X) && (loopCount < maxLoopCount)) {
 
@@ -137,37 +126,38 @@ int main(void) {
 	!= 0) {
       printf("\nEvent Object type failure.  Errno = 0x%lx", errno);
       break;
-    } else {
-      printf("\nEvent Object Type: 0x%lx", objectType);
-      switch (objectType) {
-      case SCREEN_OBJECT_TYPE_CONTEXT:
-	printf(": Context");
-	break;
-      case SCREEN_OBJECT_TYPE_GROUP:
-	printf(": Group");
-	break;
-      case SCREEN_OBJECT_TYPE_DISPLAY:
-	printf(": Display");
-	break;
-      case SCREEN_OBJECT_TYPE_DEVICE:
-	printf(": Device");
-	break;
-      case SCREEN_OBJECT_TYPE_PIXMAP:
-	printf(": Pixmap");
-	break;
-      case SCREEN_OBJECT_TYPE_SESSION:
-	printf(": Session");
-	break;
-      case SCREEN_OBJECT_TYPE_STREAM:
-	printf(": Stream");
-	break;
-      case SCREEN_OBJECT_TYPE_WINDOW:
-	printf(": Window");
-	break;
-      default:
-	break;
-      }
     }
+    /* else { */
+    /*   printf("\nEvent Object Type: 0x%lx", objectType); */
+      /* switch (objectType) { */
+      /* case SCREEN_OBJECT_TYPE_CONTEXT: */
+      /* 	printf(": Context"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_GROUP: */
+      /* 	printf(": Group"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_DISPLAY: */
+      /* 	printf(": Display"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_DEVICE: */
+      /* 	printf(": Device"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_PIXMAP: */
+      /* 	printf(": Pixmap"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_SESSION: */
+      /* 	printf(": Session"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_STREAM: */
+      /* 	printf(": Stream"); */
+      /* 	break; */
+      /* case SCREEN_OBJECT_TYPE_WINDOW: */
+      /* 	printf(": Window"); */
+      /* 	break; */
+      /* default: */
+      /* 	break; */
+      /* } */
+    /* } */
 
     if (objectType == SCREEN_OBJECT_TYPE_WINDOW) {
 
@@ -296,11 +286,14 @@ Event Type: SCREEN_EVENT_KEYBOARD
   }
 
   if ((keyValue >= 0x20) && (keyValue <= 0x7F))
-    printf("\n ASCII '%c' ", keyValue);
+    printf("\nASCII '%c' ", keyValue);
   else
     printf("\n");
   if ((keyModifiers & KEYMOD_CTRL) && (keyCap < 0x7F))
-    printf(" ^%c ", (keyCap - 0x20));
+    printf("CTL ^%c ", (keyCap - 0x20));
+
+  if ((keyModifiers & KEYMOD_ALT) && (keyCap < 0x7F))
+    printf("ALT %c ", keyCap);
 
   printPCKeys(keyValue);  /* NON-ASII, e.g. keypadkeys, home, .. */
   printModifiers(keyModifiers); /* SHIFT, etc. */
@@ -320,7 +313,7 @@ Event Type: SCREEN_EVENT_KEYBOARD
 
   if (keyFlags & SCREEN_FLAG_SCAN_VALID) {
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SCAN, &keyScan);
-      printf(" key physical location=0x%lx", keyScan);
+      printf(" location=0x%lx", keyScan);
   }
 }
 
