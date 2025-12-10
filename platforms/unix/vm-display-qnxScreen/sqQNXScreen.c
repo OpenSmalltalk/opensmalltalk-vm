@@ -80,16 +80,17 @@
 #include <stdbool.h>
 #include <assert.h>
 
-/* Software Defined Cursor Info */
-struct softCursor {
-  SqPoint	position;
-  SqPoint	offset;
-  int		visible;
-  uint16_t	bits[16];
-  uint16_t	mask[16];
-  pixel_t	back[16][16];
-}
-  
+/* QNX */
+#include <screen/screen.h>
+#include <sys/keycodes.h>
+
+//----------------------------------------------------------------
+
+#include "sqUnixEvent.c"
+
+//static inline int min(int a, int b) { return a < b ? a : b; }
+//static inline int max(int a, int b) { return a > b ? a : b; }
+
 /* Splash Screen Display Image: Squeak Balloon */
 
 /* Pixels are kept as 32 bits: uint32_t */
@@ -103,16 +104,66 @@ void printQNXKeyFlags(int flags);
 void printQNXModifiers(int modifiers);
 void printQNXMouseButtons(int buttons);
 void printQNXPCKeys(int keyCode);
-static void showBalloons( void *bufPtr );
+static void showBalloons(void * bufPtr);
 static void showBalloonAt(void *bufPtr, int left, int top);
-static inline void putPixel(void *bufPtr, int x, int y, pixel_t pix);
+static inline void putPixel(int x, int y, pixel_t pix);
+static inline pixel_t getPixel(int x, int y);
 const pixel_t blackPixel = 0x00FFFFFF;
 const pixel_t whitePixel = 0x00000000;
 static void showCursor(void);
+static int cursorIn(int l, int r, int t, int b);
+static inline void showCursorIn(int l, int r, int t, int b);
+static inline void hideCursorIn(int l, int r, int t, int b);
+static void setCursor(char *bits, char *mask, int xoff, int yoff);
+static void advanceCursor(int dx, int dy);
 
 
-/* QNX */
-#include <screen/screen.h>
+/* Software Defined Cursor Info */
+static int cursorBits[] = {
+  0b0000000000000000,
+  0b0100000000000000,
+  0b0110000000000000,
+  0b0111000000000000,
+  0b0111100000000000,
+  0b0111110000000000,
+  0b0111111000000000,
+  0b0111111100000000,
+  0b0111111110000000,
+  0b0111110000000000,
+  0b0110110000000000,
+  0b0100011000000000,
+  0b0000011000000000,
+  0b0000001100000000,
+  0b0000001100000000,
+  0b0000000000000000
+};
+static int maskBits[] =  {
+  0b1100000000000000,
+  0b1110000000000000,
+  0b1111000000000000,
+  0b1111100000000000,
+  0b1111110000000000,
+  0b1111111000000000,
+  0b1111111100000000,
+  0b1111111110000000,
+  0b1111111111000000,
+  0b1111111111100000,
+  0b1111111000000000,
+  0b1110111100000000,
+  0b1100111100000000,
+  0b1000011110000000,
+  0b0000011110000000,
+  0b0000001110000000
+};
+
+struct softCursor {
+  SqPoint	position;
+  SqPoint	offset;
+  int		visible;
+  uint16_t	bits[16];
+  uint16_t	mask[16];
+  pixel_t	back[16][16];
+};
 
 /* QNX data structures */
 screen_context_t screenContext = NULL;
@@ -124,6 +175,9 @@ void* bufPointer; /* buffer pointer */
 int   stride;     /* buffer stride (bytes per scan line) */
 int   displaySize[2];    /* {width,height} in pixels */
 const int alwaysTrue = 1;
+
+static inline int screenWidth(void)  { return displaySize[0]; }
+static inline int screenHeight(void) { return displaySize[1]; }
 
 
 /* OVERVIEW:
@@ -244,16 +298,6 @@ static void outOfMemory(void)
 
 
 //----------------------------------------------------------------
-
-#include "sqUnixEvent.c"
-
-static inline int min(int a, int b) { return a < b ? a : b; }
-static inline int max(int a, int b) { return a > b ? a : b; }
-
-static inline int displayWidth(void)  { return displaySize[0]; }
-static inline int displayHeight(void) { return displaySize[1]; }
-
-//----------------------------------------------------------------
 /* PIXELS */
 
 static inline int pixelPosition(int x, int y) {
@@ -261,18 +305,18 @@ static inline int pixelPosition(int x, int y) {
 	 + (y * stride) ); /* stride = bytes per scan line */
 }
 
-static inline void putPixel(void *bufPtr, int x, int y, pixel_t pix)
+static inline void putPixel(int x, int y, pixel_t pix)
 {
-  if ((x >= 0) && (y >= 0) && (x < size[0]) && (y < size[1])) /* size[width,height] */
+  if ((x >= 0) && (y >= 0) && (x < screenWidth()) && (y < screenHeight()))
     {
-      *((pixel_t *)(bufPtr + pixelPosition(x,y)) = pix;
+      *((pixel_t *)(bufPointer + pixelPosition(x,y))) = pix;
     }
 }
 
 static inline pixel_t getPixel(int x, int y)
 {
-  return ((x >= 0) && (y >= 0) && (x < displayWidth()) && (y < displayHeight()))
-    ? *((pixel_t *)(bufPointer + pixelLocation(x,y)))
+  return ((x >= 0) && (y >= 0) && (x < screenWidth()) && (y < screenHeight()))
+    ? *((pixel_t *)(bufPointer + pixelPosition(x,y)))
     : 0;
 }
 
@@ -285,57 +329,25 @@ static inline pixel_t getPixel(int x, int y)
 //----------------------------------------------------------------
 /* Soft(ware) Cursor Management */
  
-softCursor cursor;
+struct softCursor cursor;
 
 void initCursor(void)
 {
   int x,y;
   
-  cursor.position.x = displayHeight() / 2;
-  cursor.position.y = displayWidth() / 2;
+  cursor.position.x = screenHeight() / 2;
+  cursor.position.y = screenWidth() / 2;
   cursor.offset.x = 0; /* Cuis has cursor: -1@-1, mask: 0@0 */
   cursor.offset.y = 0;
   cursor.visible  = 0;
-  cursor.bits = {
-    0b0000000000000000
-    0b0100000000000000
-    0b0110000000000000
-    0b0111000000000000
-    0b0111100000000000
-    0b0111110000000000
-    0b0111111000000000
-    0b0111111100000000
-    0b0111111110000000
-    0b0111110000000000
-    0b0110110000000000
-    0b0100011000000000
-    0b0000011000000000
-    0b0000001100000000
-    0b0000001100000000
-    0b0000000000000000
-  };
-  cursor.mask = {
-    0b1100000000000000
-    0b1110000000000000
-    0b1111000000000000
-    0b1111100000000000
-    0b1111110000000000
-    0b1111111000000000
-    0b1111111100000000
-    0b1111111110000000
-    0b1111111111000000
-    0b1111111111100000
-    0b1111111000000000
-    0b1110111100000000
-    0b1100111100000000
-    0b1000011110000000
-    0b0000011110000000
-    0b0000001110000000
-  };
-  for (x = 0; x < 16; x++)
-    for (y = 0; y < 16; y++)
-      cursor.back[x,y] = 0;
-
+ 
+  for (x = 0; x < 16; x++) {
+    cursor.bits[x] = cursorBits[x];
+    cursor.mask[x] = maskBits[x];
+    for (y = 0; y < 16; y++) {
+      cursor.back[x][y] = 0;
+    }
+  }
   showCursor();
 }
 
@@ -348,12 +360,12 @@ static void hideCursor(void)
       int x, y;
       for (y= 0; y < 16; y++)
 	for (x= 0; x < 16; x++)
-	  putPixel(bufPointer, xo + x, yo + y, cursor.back[y][x]);
+	  putPixel( xo + x, yo + y, cursor.back[y][x] );
       cursor.visible= 0;
     }
 }
 
-static void showCursor(void) ()
+static void showCursor(void)
 {
   if (!cursor.visible)
     {
@@ -368,9 +380,9 @@ static void showCursor(void) ()
 	  for (x= 0; x < 16; x += 1)
 	    {
 	      /* Look at top bit, then shift & look at next bit.. */
-	      cursor.back[y][x]= getPixel(self, xo + x, yo + y);
-	      if      (bits & 0x8000) putPixel(bufPointer, xo + x, yo + y, blackPixel);
-	      else if (mask & 0x8000) putPixel(bufPointer, xo + x, yo + y, whitePixel);
+	      cursor.back[y][x]= getPixel( xo + x, yo + y );
+	      if      (bits & 0x8000) putPixel( xo + x, yo + y, blackPixel );
+	      else if (mask & 0x8000) putPixel( xo + x, yo + y, whitePixel );
 	      bits <<= 1;
 	      mask <<= 1;
 	    }
@@ -379,7 +391,7 @@ static void showCursor(void) ()
     }
 }
 
-static int cursorIn(_self, int l, int r, int t, int b)
+static int cursorIn(int l, int r, int t, int b)
 {
   int cl= cursor.position.x + cursor.offset.x;
   int cr= cl + 15;
@@ -388,23 +400,23 @@ static int cursorIn(_self, int l, int r, int t, int b)
   return !((cr < l) || (cl > r) || (ct > b) || (cb < t));
 }
 
-static inline void hideCursorIn(_self, int l, int r, int t, int b)
+static inline void hideCursorIn(int l, int r, int t, int b)
 {
-  if (cursorIn(self, l, r, t, b))
-    hideCursor(self);
+  if (cursorIn(l, r, t, b))
+    hideCursor();
 }
 
-static inline void showCursorIn(_self, int l, int r, int t, int b)
+static inline void showCursorIn(int l, int r, int t, int b)
 {
-  if (cursorIn(self, l, r, t, b))
-    showCursor(self);
+  if (cursorIn(l, r, t, b))
+    showCursor();
 }
 
 
 static void setCursor(char *bits, char *mask, int xoff, int yoff)
 {
   int y;
-  hideCursor(self);
+  hideCursor();
   cursor.offset.x= xoff;
   cursor.offset.y= yoff;
   for (y= 0;  y < 16; y = y+1)
@@ -417,52 +429,20 @@ static void setCursor(char *bits, char *mask, int xoff, int yoff)
         cursor.mask[y]= cursor.bits[y]; /* Black Bits matter */
       }
     }
-  showCursor(self);
+  showCursor();
 }
 
 
 static void advanceCursor(int dx, int dy)
 {
-  hideCursor(self);
-  cursor.position.x= max(0, min(cursor.position.x + dx, displyWidth(self)   - 1));
-  cursor.position.y= max(0, min(cursor.position.y + dy, displayHeight(self) - 1));
-  showCursor(self);
+  hideCursor();
+  cursor.position.x= max(0, min(cursor.position.x + dx, screenWidth() - 1));
+  cursor.position.y= max(0, min(cursor.position.y + dy, screenHeight() - 1));
+  showCursor();
 }
 
 
 //----------------------------------------------------------------
-
-
-static void enqueueKeyboardEvent(int key, int up, int modifiers)
-{
-  DPRINTF("KEY %3d %02x %c %s mod %02x\n",
-	  key, key, ((key > 32) && (key < 127)) ? key : ' ',
-	  up ? "UP" : "DOWN", modifiers);
-
-  modifierState= modifiers;
-  if (up)
-    {
-      recordKeyboardEvent(key, EventKeyUp, modifiers, key);
-    }
-  else
-    {
-      recordKeyboardEvent(key, EventKeyDown, modifiers, key);
-      recordKeyboardEvent(key, EventKeyChar, modifiers, key);
-    }
-}
-
-
-static void enqueueMouseEvent(int b, int dx, int dy)
-{
-  advanceCursor(bufPointer, dx, dy);
-  buttonState= b;
-  mousePosition= cursor.position;
-  if (b)
-    DPRINTF("mouse %02x at %4d,%4d mod %02x\n",
-	    b, mousePosition.x, mousePosition.y, modifierState);
-  recordMouseEvent();
-}
-
 
 static sqInt display_ioBeep(void)
 {
@@ -480,15 +460,16 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 static sqInt display_ioProcessEvents(void)
 {
+  int objectType, eventType;
 
-  while (screen_get_event( screenContext, event, 0) == 0) { /* zero on success */
+  while (screen_get_event( screenContext, userEvent, 0) == 0) { /* zero on success */
 
-      if (screen_get_event_property_iv(event,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
+      if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
 	!= 0) {
 	DPRINTF("\nEvent Object type failure.  Errno = 0x%lx", errno);
 	break;
       }
-      if (screen_get_event_property_iv(event,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
+      if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
 	!= 0) {
 	DPRINTF("\nEvent Object type failure.  Errno = 0x%lx", errno);
 	break;
@@ -526,7 +507,7 @@ static sqInt display_ioProcessEvents(void)
     /* } */      
       if (objectType == SCREEN_OBJECT_TYPE_WINDOW) {
 
-	if (screen_get_event_property_iv(event,SCREEN_PROPERTY_TYPE,&eventType) != 0) {
+	if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_TYPE,&eventType) != 0) {
 	  DPRINTF("\nEvent type failure.  Errno = 0x%lx", errno);
 	  break;
 	}
@@ -539,18 +520,18 @@ static sqInt display_ioProcessEvents(void)
 	
 	case SCREEN_EVENT_KEYBOARD:
 	  /* DPRINTF("\nGot KEYBOARD Event"); */
-	  handleKeyboardEvent(event);
+	  handleKeyboardEvent(userEvent);
 	  break;
 
 	case SCREEN_EVENT_POINTER:
 	  /* DPRINTF("\nGot MOUSE POINTER Event"); */
-	  handlePointerEvent(event);
+	  handlePointerEvent(userEvent);
 	  break;
 
 	case SCREEN_EVENT_GAMEPAD:
 	case SCREEN_EVENT_JOYSTICK:
 	  DPRINTF("\nGot Joystick/Game Event");
-	  /* handleJoystickEvent(event); */
+	  /* handleJoystickEvent(userEvent); */
 	  break;
 	default:
 	  DPRINTF("\nGot UNHANDLED Event Type: 0x%lx", eventType);
@@ -576,13 +557,16 @@ static double display_ioScreenScaleFactor(void)
 
 static sqInt display_ioScreenSize(void)
 { /* QNX Screen: displaySize[2] => {width, height} */
-  return (displaySize[0] << 16) | displaySize[1]);
+  return ((displaySize[0] << 16) | displaySize[1]);
 }
 
 
 static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-  react();
+  setCursor((char *)cursorBitsIndex,
+	    (char *)cursorMaskIndex,
+	    (int)offsetX,
+	    (int)offsetY);
   return 0;
 }
 
@@ -599,22 +583,24 @@ static inline unsigned long pixel_position(int x, int y) {
 static sqInt display_ioShowDisplay(sqInt dispBitsIndex,
 				   sqInt width, sqInt height,
 				   sqInt depth,
-				   sqInt affectedL, sqInt affectedR,
-				   sqInt affectedT, sqInt affectedB)
+				   sqInt left, sqInt right,
+				   sqInt top,  sqInt bottom)
 {
   int x, y;
+  char *bits;
 
   if ((depth  != display_ioScreenDepth())
-      || (width  != displaySize[0])
-      || (height != displaySize[1])
-      || (affectedR < affectedL)
-      || (affectedB < affectedT))
+      || (width  != screenWidth())
+      || (height != screenHeight())
+      || (right < left)
+      || (bottom < top))
     return 0;
 
   hideCursorIn(left, right, top, bottom);
+  bits = pointerForOop(dispBitsIndex);
   for (y= top;  y < bottom;  y += 1)
     {
-      pixel_t *in=  (pixel_t *)(bits + ((left + (y * displayWidth())) * 4));
+      pixel_t *in=  (pixel_t *)(bits + ((left + (y * screenWidth())) * 4));
       pixel_t *out= (pixel_t *)(bufPointer + pixelPosition(left, y));
       for (x= left;  x < right;  x += 1, in += 1, out += 1)
 	{
@@ -622,13 +608,14 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex,
 	}
     }
   showCursorIn(left, right, top, bottom);
+  return 0;
 }
 
 
 static sqInt display_ioHasDisplayDepth(sqInt i)
 {
-  DPRINTF("hasDisplayDepth %d (%d) => %d\n", i, fb_depth(fb), (i == fb_depth(fb)));
-  return (i == fb_depth(fb));
+  DPRINTF("hasDisplayDepth %d (%d) => %d\n", i, 32, (i = 32));
+  return (i == 32);
 }
 
 
@@ -663,7 +650,7 @@ static void openDisplay(void)
 	(const int[]){ SCREEN_FORMAT_RGBX8888 });
   screen_set_window_property_iv(window, SCREEN_PROPERTY_USAGE,
 	(const int[]) { SCREEN_USAGE_READ | SCREEN_USAGE_WRITE });
-  screen_get_window_property_iv(window, SCREEN_PROPERTY_BUFFER_SIZE,size);
+  screen_get_window_property_iv(window, SCREEN_PROPERTY_BUFFER_SIZE, displaySize);
   screen_get_window_property_pv(window, SCREEN_PROPERTY_BUFFERS, (void **)&buffer);
   screen_get_buffer_property_pv(buffer, SCREEN_PROPERTY_POINTER, &bufPointer);
   screen_get_buffer_property_iv(buffer, SCREEN_PROPERTY_STRIDE,  &stride);
@@ -820,15 +807,16 @@ Event Type: SCREEN_EVENT_KEYBOARD
 
   /* Map between QNX Screen World & OpenSmalltalk VM World */
   keyCodeSupplied = keyValue;
-  if (keyModifiers & KEYMOD_SHIFT) { sqModifiers |= ShiftKeyBit };
-  if (keyModifiers & KEYMOD_CTRL)  { sqModifiers |= CtrlKeyBit };
-  if (keyModifiers & KEYMOD_ALT)   { sqModifiers |= CommandKeyBit };
+  if (keyModifiers & KEYMOD_SHIFT) { sqModifiers |= ShiftKeyBit; }
+  if (keyModifiers & KEYMOD_CTRL)  { sqModifiers |= CtrlKeyBit; }
+  if (keyModifiers & KEYMOD_ALT)   { sqModifiers |= CommandKeyBit; }
   if (keyFlags & SCREEN_FLAG_KEY_DOWN) {
     sqPressCode = EventKeyDown;
   } else {
     sqPressCode = EventKeyUp;
   }
 
+  if (keyCodeSupplied == 0) { keyCodeSupplied = keyCap; } /* ctrl, alt */
 
   recordKeyboardEvent( keyCodeSupplied, sqPressCode, sqModifiers, keyValue );
   
@@ -846,23 +834,23 @@ Event Type: SCREEN_EVENT_KEYBOARD
 
   printQNXPCKeys(keyValue);  /* NON-ASII, e.g. keypadkeys, home, .. */
   printQNXModifiers(keyModifiers); /* SHIFT, etc. */
-  printf(" KeyCode=0x%lx ", keyValue);
+  printf(" KeyCode=0x%x ", keyValue);
   printQNXKeyFlags(keyFlags);
 
   if (keyFlags & SCREEN_FLAG_CAP_VALID) {
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_KEY_CAP, &keyCap);
-      printf(" keyCap=0x%lx", keyCap);
+      printf(" keyCap=0x%x", keyCap);
   }
   
   if (keyFlags & SCREEN_FLAG_SYM_VALID) {
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SYM, &keySym);
-      printf(" keySym=0x%lx", keySym);
+      printf(" keySym=0x%x", keySym);
   }
   /* NB: For control keys, keySym is not valid. */
 
   if (keyFlags & SCREEN_FLAG_SCAN_VALID) { /* Physical Keyboard Key Location */
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SCAN, &keyScan);
-      printf(" location=0x%lx", keyScan);
+      printf(" location=0x%x", keyScan);
   }
 #endif
 }
@@ -935,21 +923,21 @@ handlePointerEvent(screen_event_t keyEvent) {
 			       &wheelVert);
 
   /* map between QNX Screen World & OpenSmalltalk VM World */
-  mousePosition[0] = position[0];
-  mousePosition[1] = position[1];
+  mousePosition.x = position[0];
+  mousePosition.y = position[1];
   /* NYI -- no single button mouse in QNX
    *  red button honours the modifiers:
    *	red+ctrl    = yellow button
    *	red+command = blue button
    */
   buttonState = 0;
-  if (qnxButtons & 1) { buttonState |= RedButtonBit };   /* Left */
-  if (qnxButtons & 2) { buttonState |= YellowButtonBit };/* Middle */
-  if (qnxButtons & 4) { buttonState |= BlueButtonBit };  /* Right */
+  if (qnxButtons & 1) { buttonState |= RedButtonBit; }   /* Left */
+  if (qnxButtons & 2) { buttonState |= YellowButtonBit; }/* Middle */
+  if (qnxButtons & 4) { buttonState |= BlueButtonBit; }  /* Right */
   modifierState = 0;
-  if (qnxModifiers & KEYMOD_SHIFT) { modifierState |= ShiftKeyBit };
-  if (qnxModifiers & KEYMOD_CTRL)  { modifierState |= CtrlKeyBit };
-  if (qnxModifiers & KEYMOD_ALT)   { modifierState |= CommandKeyBit };
+  if (qnxModifiers & KEYMOD_SHIFT) { modifierState |= ShiftKeyBit; }
+  if (qnxModifiers & KEYMOD_CTRL)  { modifierState |= CtrlKeyBit; }
+  if (qnxModifiers & KEYMOD_ALT)   { modifierState |= CommandKeyBit; }
   if (wheelVert != 0) {
     recordMouseWheelEvent(0, wheelVert); /* ?? nrClicks ?? */
   }
@@ -958,9 +946,9 @@ handlePointerEvent(screen_event_t keyEvent) {
   }
   
 #if defined(DEBUG)
-  printf("\n Mouse Point @ (%ld,%ld) ", position[0], position[1]);
-  printQNXMouseButtons(buttons);
-  printQNXModifiers(modifiers);
+  printf("\n Mouse Point @ (%d,%d) ", position[0], position[1]);
+  printQNXMouseButtons(qnxButtons);
+  printQNXModifiers(qnxModifiers);
   if (wheelHoriz != 0)
     printf("\n Horizontal wheel clicks = %d", wheelHoriz); 
   if (wheelVert != 0)
@@ -972,9 +960,9 @@ void printQNXMouseButtons(int buttons) {
   /* Just a bitmask */
   if (buttons != 0) {
     printf(" MouseButton: ");
-    if (1 & buttons) printf("Left ");
-    if (2 & buttons) printf("Middle ");
-    if (4 & buttons) printf("Right ");
+    if (1 & buttons) printf("Left/Red ");
+    if (2 & buttons) printf("Middle/Yellow ");
+    if (4 & buttons) printf("Right/Blue ");
   }
 }
 
@@ -1263,7 +1251,7 @@ static long display_hostWindowClose(long index)                                 
 static long display_hostWindowCreate(long w, long h, long x, long y,
   char *list, long attributeListLength)                                                      { return 0; }
 static long display_hostWindowShowDisplay(unsigned char *dispBitsIndex, long width, long height, long depth,
-  long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)              { return 0; }
+  long left, long right, long top, long bottom, sqIntptr_t windowIndex)              { return 0; }
 static long display_hostWindowGetSize(long windowIndex)                                       { return -1; }
 static long display_hostWindowSetSize(long windowIndex, long w, long h)                         { return -1; }
 static long display_hostWindowGetPosition(long windowIndex)                                   { return -1; }
@@ -1271,6 +1259,15 @@ static long display_hostWindowSetPosition(long windowIndex, long x, long y)     
 static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)     { return -1; }
 static long display_hostWindowCloseAll(void)                                                 { return 0; }
 #endif
+
+/* OpenGL */
+
+static sqInt display_ioGLinitialise(void) {   return 0; }
+static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags) {  return 0; }
+static void  display_ioGLdestroyRenderer(glRenderer *r) {  }
+static void  display_ioGLswapBuffers(glRenderer *r) {  }
+static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r) {   return 0; }
+static void  display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h) {  }
 
 
 // new stubs for the CogVM
@@ -1288,6 +1285,43 @@ static long display_ioScreenRectangles(void) { return 0; }
 #endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 7
 #endif // SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
+//----------------------------------------------------------------
+/* Balloon splash image */
+
+static void showBalloons(void *bufPtr) {
+  int x, y;
+
+  x = screenWidth() / 2;
+  y = screenHeight() / 2;
+  showBalloonAt(bufPtr,x,y) ;
+  showBalloonAt(bufPtr,x+(x/2),y-(y/2)) ;
+  showBalloonAt(bufPtr,x+(x/2),y+(y/2)) ;
+  showBalloonAt(bufPtr,x-(x/2),y-(y/2)) ;
+  showBalloonAt(bufPtr,x-(x/2),y+(y/2)) ;
+}
+  
+
+static void showBalloonAt(void *bufPtr, int left, int top)
+{
+  int x, y;
+  char *data = balloon_data, pixel[4];
+  pixel_t myPixel;
+  int balloon_bytes_per_pixel = 4; /* 32 bits */
+
+  /* Center Balloon on x,y point */
+  left -= balloon_width_pixels  / 2;
+  top  -= balloon_height_pixels / 2;
+  for (y = 0; y < balloon_height_pixels; y++) {
+    for (x = 0; x < balloon_width_pixels; x++) {
+      /* extract RGB values from Balloon data */
+      BALLOON_PIXEL( data, pixel );
+      /* above side effect: data += balloon_bytes_per_pixel */
+      putPixel(left + x,
+	       top + y,
+	       ((pixel[0] << 16) | (pixel[1] << 8) | pixel[2])); /* RGB */
+    }
+  }
+}
 
 
 //----------------------------------------------------------------
