@@ -116,6 +116,7 @@ static inline void showCursorIn(int l, int r, int t, int b);
 static inline void hideCursorIn(int l, int r, int t, int b);
 static void setCursor(char *bits, char *mask, int xoff, int yoff);
 static void advanceCursor(int dx, int dy);
+static void cursorTo(int x, int y);
 
 
 /* Software Defined Cursor Info */
@@ -203,8 +204,9 @@ static inline int screenHeight(void) { return displaySize[1]; }
  Future projects not addressed here.  Touch events will need VM support.
 */
 
+/*@@DEBUG@@*/
 #if !defined(DEBUG)
-# define DEBUG	0
+# define DEBUG	1
 #endif
 
 #if (DEBUG)
@@ -441,6 +443,13 @@ static void advanceCursor(int dx, int dy)
   showCursor();
 }
 
+static void cursorTo(int x, int y)
+{
+  hideCursor();
+  cursor.position.x= x;
+  cursor.position.y= y;
+  showCursor();
+}
 
 //----------------------------------------------------------------
 
@@ -461,19 +470,22 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 static sqInt display_ioProcessEvents(void)
 {
   int objectType, eventType;
+  int pollMax = 0;
 
-  while (screen_get_event( screenContext, userEvent, 0) == 0) { /* zero on success */
+  while ((pollMax < 1) && (screen_get_event( screenContext, userEvent, 0) == 0)) { /* zero on success */
 
-      if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
+    pollMax += 1;
+    
+    if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
 	!= 0) {
 	DPRINTF("\nEvent Object type failure.  Errno = 0x%lx", errno);
 	break;
-      }
-      if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
+    }
+    if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_OBJECT_TYPE,&objectType)
 	!= 0) {
-	DPRINTF("\nEvent Object type failure.  Errno = 0x%lx", errno);
-	break;
-      }
+      DPRINTF("\nEvent Object type failure.  Errno = 0x%lx", errno);
+      break;
+    }
     /* else { */
     /*   printf("\nEvent Object Type: 0x%lx", objectType); */
       /* switch (objectType) { */
@@ -505,16 +517,16 @@ static sqInt display_ioProcessEvents(void)
       /* 	break; */
       /* } */
     /* } */      
-      if (objectType == SCREEN_OBJECT_TYPE_WINDOW) {
+    if (objectType == SCREEN_OBJECT_TYPE_WINDOW) {
 
-	if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_TYPE,&eventType) != 0) {
-	  DPRINTF("\nEvent type failure.  Errno = 0x%lx", errno);
-	  break;
-	}
+      if (screen_get_event_property_iv(userEvent,SCREEN_PROPERTY_TYPE,&eventType) != 0) {
+	DPRINTF("\nEvent type failure.  Errno = 0x%lx", errno);
+	break;
+      }
       
-	switch (eventType) {
+      switch (eventType) {
 
-	case SCREEN_EVENT_NONE:
+      case SCREEN_EVENT_NONE:
 	  DPRINTF("\nGot NULL Event");
 	  break;
 	
@@ -539,6 +551,8 @@ static sqInt display_ioProcessEvents(void)
 	}
       }
     }
+
+  pollMax = 0; /* reset */
 
   return 0;
 }
@@ -614,7 +628,7 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex,
 
 static sqInt display_ioHasDisplayDepth(sqInt i)
 {
-  DPRINTF("hasDisplayDepth %d (%d) => %d\n", i, 32, (i = 32));
+  DPRINTF("hasDisplayDepth %d (%d) => %d\n", i, 32, (i == 32));
   return (i == 32);
 }
 
@@ -668,7 +682,7 @@ static void openDisplay(void)
   screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
   screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
 
-  sleep( 3 ); /* Let the user see splash screen */
+  sleep( 1 ); /* Let the user see splash screen */
   
   /* FOR THE USER */
   
@@ -676,6 +690,8 @@ static void openDisplay(void)
     perror("QNX: Cannot create User Event holder");
     exit(errno);
   }
+
+  /*  ioSetInputSemaphore( 1 ) ; *@@??@@*/
 }
 
 
@@ -865,26 +881,26 @@ void printQNXKeyFlags(int flags) {
   if (flags & SCREEN_FLAG_KEY_REPEAT)
     printf("KeyRepeat ");
 
-  if (flags & SCREEN_FLAG_SCAN_VALID)
-    printf("KeyScanValid ");
+  /* if (flags & SCREEN_FLAG_SCAN_VALID) */
+  /*   printf("KeyScanValid "); */
 
-  if (flags & SCREEN_FLAG_SYM_VALID)
-    printf("KeySym ");
+  /* if (flags & SCREEN_FLAG_SYM_VALID) */
+  /*   printf("KeySym "); */
 
-  if (flags & SCREEN_FLAG_CAP_VALID)
-    printf("KeyCap ");
+  /* if (flags & SCREEN_FLAG_CAP_VALID) */
+  /*   printf("KeyCap "); */
 
-  if (flags & SCREEN_FLAG_DISPLACEMENT_VALID)
-    printf("KeyDisplacment ");
+  /* if (flags & SCREEN_FLAG_DISPLACEMENT_VALID) */
+  /*   printf("KeyDisplacment "); */
 
-  if (flags & SCREEN_FLAG_POSITION_VALID)
-    printf("KeyPosition ");
+  /* if (flags & SCREEN_FLAG_POSITION_VALID) */
+  /*   printf("KeyPosition "); */
 
-  if (flags & SCREEN_FLAG_SOURCE_POSITION_VALID)
-    printf("KeySourcePosition ");
+  /* if (flags & SCREEN_FLAG_SOURCE_POSITION_VALID) */
+  /*   printf("KeySourcePosition "); */
 
-  if (flags & SCREEN_FLAG_SIZE_VALID)
-    printf("KeySize ");
+  /* if (flags & SCREEN_FLAG_SIZE_VALID) */
+  /*   printf("KeySize "); */
 }
 
 //----------------------------------------------------------------
@@ -938,6 +954,9 @@ handlePointerEvent(screen_event_t keyEvent) {
   if (qnxModifiers & KEYMOD_SHIFT) { modifierState |= ShiftKeyBit; }
   if (qnxModifiers & KEYMOD_CTRL)  { modifierState |= CtrlKeyBit; }
   if (qnxModifiers & KEYMOD_ALT)   { modifierState |= CommandKeyBit; }
+
+  cursorTo(mousePosition.x, mousePosition.y);
+  
   if (wheelVert != 0) {
     recordMouseWheelEvent(0, wheelVert); /* ?? nrClicks ?? */
   }
