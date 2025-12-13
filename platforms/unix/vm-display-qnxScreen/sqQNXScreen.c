@@ -789,6 +789,221 @@ static int display_parseArgument(int argc, char **argv)
 //----------------------------------------------------------------
 /* KEYBOARD */
 
+/* Map between QNX Screen World & OpenSmalltalk VM World */
+/* Smalltalk: `Sensor kbdTest.` */
+int keyMap( int keyValue, int keyFlags, int sqModifiers, int keyCap, int keySym ) {
+  int keyResult;
+  
+  if (keyValue == 0) {
+    keyResult = keyCap;  /* ctrl, alt */
+  } else {
+    keyResult = keyValue;
+  }
+
+  if (sqModifiers & CtrlKeyBit) { /* Control Keys */
+    keyResult &= 0x00FF;
+    keyResult -= 0x60; /* e.g. m=0x6D ^M=0x0D */
+    if (keyResult > 0x20) {
+      DPRINTF("\nkeyMap(): Bogus control key 0x%x\n", keyResult);
+      return( 0 ) ;
+    }
+    return( keyResult );
+  }
+
+  if (keyResult <= 0x7F) { /* simple ASCII */
+    return( keyResult );
+  }
+
+  if ((keyResult > KEYCODE_PC_KEYS) && (keyResult <= KEYCODE_F12)) {
+    switch ( keyResult ) {
+    /* Nota Bene: VM only handles some keys: `Sensor kbdTest.` */
+    /* case KEYCODE_PAUSE: */
+    /*   printf("PAUSE "); */
+    /*   break; */
+    /* case KEYCODE_SCROLL_LOCK: */
+    /*   printf("SCROLL_LOCK "); */
+    /*   break; */
+    /* case KEYCODE_PRINT: */
+    /*   printf("PRINT "); */
+    /*   break; */
+    /* case KEYCODE_SYSREQ: */
+    /*   printf("SYSREQ "); */
+    /*   break; */
+    /* case KEYCODE_BREAK: */
+    /*   printf("BREAK "); */
+    /*   break; */
+    case KEYCODE_ESCAPE:
+      keyResult = 0x1B;
+      break;
+    case KEYCODE_BACKSPACE:
+      keyResult = 0x08;
+      break;
+    case KEYCODE_TAB:
+      keyResult = 0x09;
+      break;
+    /* case KEYCODE_BACK_TAB: */
+    /*   printf("BACK_TAB "); */
+    /*   break; */
+    case KEYCODE_RETURN:
+      keyResult = 0x0D; /* CR */
+      break;
+    /* case KEYCODE_CAPS_LOCK: */
+    /*   printf("CAPS_LOCK "); */
+    /*   break; */
+    /* case KEYCODE_LEFT_SHIFT: */
+    /*   printf("LEFT_SHIFT "); */
+    /*   break; */
+    /* case KEYCODE_RIGHT_SHIFT: */
+    /*   printf("RIGHT_SHIFT "); */
+    /*   break; */
+    /* case KEYCODE_LEFT_CTRL: */
+    /*   printf("LEFT_CTRL "); */
+    /*   break; */
+    /* case KEYCODE_RIGHT_CTRL: */
+    /*   printf("RIGHT_CTRL "); */
+    /*   break; */
+    /* case KEYCODE_LEFT_ALT: */
+    /*   printf("LEFT_ALT "); */
+    /*   break; */
+    /* case KEYCODE_RIGHT_ALT: */
+    /*   printf("RIGHT_ALT "); */
+    /*   break; */
+    /* case KEYCODE_MENU: */
+    /*   printf("MENU "); */
+    /*   break; */
+    /* case KEYCODE_LEFT_HYPER: */
+    /*   printf("LEFT_HYPER "); */
+    /*   break; */
+    /* case KEYCODE_RIGHT_HYPER: */
+    /*   printf("RIGHT_HYPER "); */
+    /*   break; */
+    case KEYCODE_INSERT:
+      keyResult = 5;
+      break;
+    case KEYCODE_HOME:
+      keyResult = 1;
+      break;
+    case KEYCODE_PG_UP:
+      keyResult = 11;
+      break;
+    case KEYCODE_DELETE:
+      keyResult = 127;
+      break;
+    case KEYCODE_END:
+      keyResult = 4;
+      break;
+    case KEYCODE_PG_DOWN:
+      keyResult = 12;
+      break;
+    case KEYCODE_LEFT: /* arrow */
+      keyResult = 28;
+      break;
+    case KEYCODE_RIGHT: /* arrow */
+      keyResult = 29;
+      break;
+    case KEYCODE_UP:  /* arrow */
+      keyResult = 30;
+      break;
+    case KEYCODE_DOWN:  /* arrow */
+      keyResult = 31;
+      break;
+    /* case KEYCODE_NUM_LOCK: */
+    /*   printf("NUM_LOCK "); */
+    /*   break; */
+    case KEYCODE_KP_PLUS:
+      keyResult = 0x2B;
+      break;
+    case KEYCODE_KP_MINUS:
+      keyResult = 0x2D;
+      break;
+    case KEYCODE_KP_MULTIPLY:
+      keyResult = 0x2A;
+      break;
+    case KEYCODE_KP_DIVIDE:
+      keyResult = 0x2F;
+      break;
+    case KEYCODE_KP_ENTER:
+      keyResult = 0x0D;
+      break;
+    case KEYCODE_KP_HOME:
+      keyResult = 1;
+      break;
+    case KEYCODE_KP_UP:
+      keyResult = 30;
+      break;
+    case KEYCODE_KP_PG_UP:
+      keyResult = 11;
+      break;
+    case KEYCODE_KP_LEFT:
+      keyResult = 28;
+      break;
+    case KEYCODE_KP_FIVE:
+      keyResult = 0x35;
+      break;
+    case KEYCODE_KP_RIGHT:
+      keyResult = 29;
+      break;
+    case KEYCODE_KP_END:
+      keyResult = 4;
+      break;
+    case KEYCODE_KP_DOWN:
+      keyResult = 31;
+      break;
+    case KEYCODE_KP_PG_DOWN:
+      keyResult = 12;
+      break;
+    case KEYCODE_KP_INSERT:
+      keyResult = 5;
+      break;
+    case KEYCODE_KP_DELETE:
+      keyResult = 127;
+      break;
+    /* case KEYCODE_F1: */
+    /*   printf("F1 "); */
+    /*   break; */
+    /* case KEYCODE_F2: */
+    /*   printf("F2 "); */
+    /*   break; */
+    /* case KEYCODE_F3: */
+    /*   printf("F3 "); */
+    /*   break; */
+    /* case KEYCODE_F4: */
+    /*   printf("F4 "); */
+    /*   break; */
+    /* case KEYCODE_F5: */
+    /*   printf("F5 "); */
+    /*   break; */
+    /* case KEYCODE_F6: */
+    /*   printf("F6 "); */
+    /*   break; */
+    /* case KEYCODE_F7: */
+    /*   printf("F7 "); */
+    /*   break; */
+    /* case KEYCODE_F8: */
+    /*   printf("F8 "); */
+    /*   break; */
+    /* case KEYCODE_F9: */
+    /*   printf("F9 "); */
+    /*   break; */
+    /* case KEYCODE_F10: */
+    /*   printf("F10 "); */
+    /*   break; */
+    /* case KEYCODE_F11: */
+    /*   printf("F11 "); */
+    /*   break; */
+    /* case KEYCODE_F12: */
+    /*   printf("F12 "); */
+    /*   break; */
+    default:
+      DPRINTF("\nUHANDLED PC_KEY: 0x%x\n", keyResult );
+      keyResult = 0; /* UNHANDLED */
+      break;
+    }
+    return( keyResult );
+  }  
+  return( 0 ); /* Not handled */
+}
+
 void
 handleKeyboardEvent(screen_event_t keyEvent) {
 /*
@@ -822,19 +1037,28 @@ Event Type: SCREEN_EVENT_KEYBOARD
       screen_get_event_property_iv(keyEvent, SCREEN_PROPERTY_SYM, &keySym);
 
   /* Map between QNX Screen World & OpenSmalltalk VM World */
-  keyCodeSupplied = keyValue;
   if (keyModifiers & KEYMOD_SHIFT) { sqModifiers |= ShiftKeyBit; }
   if (keyModifiers & KEYMOD_CTRL)  { sqModifiers |= CtrlKeyBit; }
   if (keyModifiers & KEYMOD_ALT)   { sqModifiers |= CommandKeyBit; }
+
   if (keyFlags & SCREEN_FLAG_KEY_DOWN) {
     sqPressCode = EventKeyDown;
   } else {
     sqPressCode = EventKeyUp;
   }
 
-  if (keyCodeSupplied == 0) { keyCodeSupplied = keyCap; } /* ctrl, alt */
+  keyCodeSupplied = keyMap( keyValue, keyFlags, sqModifiers, keyCap, keySym );
 
-  recordKeyboardEvent( keyCodeSupplied, sqPressCode, sqModifiers, keyValue );
+  if ((keyCodeSupplied != 0) && (keyCodeSupplied <= 0x7F)) {
+#if defined(DEBUG)
+    printf("\nKeyCodeSupplied: 0x%x", keyCodeSupplied);
+#endif
+    if (keyCodeSupplied < 0x20)  { sqModifiers |= CtrlKeyBit; }
+    recordKeyboardEvent( keyCodeSupplied, sqPressCode, sqModifiers, keyCodeSupplied );
+    if (sqPressCode == EventKeyDown) {
+      recordKeyboardEvent( keyCodeSupplied, EventKeyChar, sqModifiers, keyCodeSupplied );
+    }
+  }
   
 #if defined(DEBUG)
 
@@ -958,13 +1182,13 @@ handlePointerEvent(screen_event_t keyEvent) {
   cursorTo(mousePosition.x, mousePosition.y);
   
   if (wheelVert != 0) {
-    recordMouseWheelEvent(0, wheelVert); /* ?? nrClicks ?? */
+    recordMouseWheelEvent(0, (- wheelVert)); /* invert wheel direction */
   }
   else {
     recordMouseEvent();
   }
   
-#if defined(DEBUG)
+#if defined(EVENT_MOUSE)
   printf("\n Mouse Point @ (%d,%d) ", position[0], position[1]);
   printQNXMouseButtons(qnxButtons);
   printQNXModifiers(qnxModifiers);
