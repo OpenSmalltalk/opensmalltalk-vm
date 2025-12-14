@@ -584,7 +584,7 @@ SqDisplayDefine(fbdev);
 
 static void *display_makeInterface(void)
 {
-  return &display_fbdev_itf;
+  return &display_fbdev_itf; /* @@@ WTF @@ */
 }
 
 SqModuleDefine(display,	fbdev);

@@ -15,9 +15,10 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 ../../../../scripts/copylinuxpluginspecfiles
 test -f config.h || ../../../../platforms/unix/config/configure \
-		--with-vmversion=5.0 \
+	--with-vmversion=5.0 \
 	--with-src=src/spur64.stack --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
+	--without-x \
 	TARGET_ARCH="-m64" \
 	CC=clang \
 	VM_WORD_SIZE="64" \

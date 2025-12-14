@@ -21,6 +21,7 @@ if [ `uname` = "OpenBSD" ]; then
 	CFLAGS="$CFLAGS -I/usr/local/include"
 	LIBS="$LIBS -lexecinfo"
 	LDFLAGS="$LDFLAGS -L/usr/local/lib"
+	OPT="$OPT -DMUSL"
 fi
 
 if [ $# -ge 1 ]; then

@@ -336,7 +336,9 @@ aioFini(void)
  * answer whether i/o becomes possible within the given number of
  * microSeconds
  */
-#define max(x,y) (((x)>(y))?(x):(y))
+#if !defined(__QNX__)
+# define max(x,y) (((x)>(y))?(x):(y))
+#endif
 
 long	pollpip = 0;		/* set in sqUnixMain.c by -pollpip arg */
 

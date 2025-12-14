@@ -1,0 +1,15 @@
+cogit="no"
+srcdir="/home/kend/Kens-VM/src/spur64.stack"
+blddir="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build"
+topdir="/home/kend/Kens-VM"
+cfgdir="/home/kend/Kens-VM/platforms/unix/config"
+
+int_modules="vm"
+ext_modules="vm-display-null vm-display-qnxScreen vm-sound-null"
+int_plugins=" BitBltPlugin FileCopyPlugin FilePlugin FileDialogPlugin Float64ArrayPlugin FloatArrayPlugin FloatMathPlugin IA32ABI LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SerialPlugin SocketPlugin StarSqueakPlugin SurfacePlugin "
+ext_plugins=" FileAttributesPlugin SqueakFFIPrims LocalePlugin VectorEnginePlugin"
+exc_plugins=""
+
+vmi_dirs="/home/kend/Kens-VM/src/spur64.stack	/home/kend/Kens-VM/platforms/Cross			/home/kend/Kens-VM/platforms/unix"
+int_dirs="/home/kend/Kens-VM/src/plugins	/home/kend/Kens-VM/platforms/Cross/plugins	/home/kend/Kens-VM/platforms/unix/plugins"
+ext_dirs="/home/kend/Kens-VM/src/plugins	/home/kend/Kens-VM/platforms/Cross/plugins	/home/kend/Kens-VM/platforms/unix/plugins"
