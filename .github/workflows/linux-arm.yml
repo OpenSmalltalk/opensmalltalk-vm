@@ -87,7 +87,7 @@ jobs:
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
-        uses: uraimo/run-on-arch-action@v2
+        uses: uraimo/run-on-arch-action@v3
         id: build-vm
         with: 
           arch: ${{ env.ARCH_ARM }}
