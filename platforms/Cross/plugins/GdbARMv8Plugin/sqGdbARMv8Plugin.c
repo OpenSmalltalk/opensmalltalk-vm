@@ -277,6 +277,29 @@ storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 	registerState[33] = ((sim_cpu *)cpu)->CPSR;
 }
 
+int
+fpRegHighTide(void *cpu)
+{
+	int i = 32; // num fp regs
+	FRegister *fpregs = &(((sim_cpu *)cpu)->fr[0]);
+
+	while (i > 0 && !fpregs[i-1].v[0]) --i;
+	return i;
+}
+
+void
+storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState)
+{
+	int n;
+
+	for (n = -1; ++n < 32;)
+		registerState[n] = ((sim_cpu *)cpu)->gr[n].u64;
+	registerState[32] = ((sim_cpu *)cpu)->pc;
+	registerState[33] = ((sim_cpu *)cpu)->CPSR;
+	for(n = -1; ++n < nfpRegs;)
+		registerState[n + 34] = ((sim_cpu *)cpu)->fr[n].v[0];
+}
+
 /* Adapted from sim/aarch64/memory.c -- Memory accessor functions for the AArch64 simulator
 
    Copyright (C) 2015-2019 Free Software Foundation, Inc.

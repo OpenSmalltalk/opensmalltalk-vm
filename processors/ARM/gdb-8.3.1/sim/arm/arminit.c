@@ -239,6 +239,10 @@ ARMul_DoProg (ARMul_State * state)
 	pc = ARMul_Emulate32 (state);
       else
 	pc = ARMul_Emulate26 (state);
+#if COG
+       if (state->EndCondition == PanicError)
+	break;
+#endif
     }
   return (pc);
 }
