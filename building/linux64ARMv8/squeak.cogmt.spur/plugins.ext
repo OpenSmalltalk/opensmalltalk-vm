@@ -20,5 +20,7 @@ DESPlugin \
 MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin \
+PseudoTTYPlugin \
 # GdbARMPlugin # fails to compile
 # GdbARMv8Plugin # ditto
+
