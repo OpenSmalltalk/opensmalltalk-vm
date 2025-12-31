@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win32 VM using clang/MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
 # Compilation rules and flags for plugins built with the MSVC toolchain, such
@@ -30,23 +30,19 @@ override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 #############################################################################
 # C compiler settings assuming Visual C++ 2017 Community Edition
 #
-# Try and choose a compiler.  Alas clang-cl does not appear to support x86.
-# And ClangC2 is broken.  So just use MSVC
 #
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
-#$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
-$(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 
-override TOOLPREFIX:="$(VCToolsInstallDir)bin/Hostx64/x86/"
-override HOSTTOOLPREFIX:="$(VCToolsInstallDir)bin/Hostx64/x64/"
-export TOOLPREFIX HOSTTOOLPREFIX
-MSVC:=MSVC
-undefine Clang
-undefine ClangC2
-CC:=$(TOOLPREFIX)cl.exe -nologo
-HOSTCC:=$(HOSTTOOLPREFIX)cl.exe -nologo
+CC:=clang.exe
+HOSTCC:=$(CC)
+Clang:=Clang32
+undefine MSVC
+export TOOLPREFIX
+$(info CC=$(CC))
+AS:=as --32
+XCFLAGS+=-DRGBMul32BitFallBack=1
 
 $(info CC=$(CC))
 
@@ -68,9 +64,18 @@ endif
 MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 #$(info MSVCINCLUDES is $(MSVCINCLUDES))
 
+ifdef Clang32
+PRODUCTION_OFLAGS:=-Os
+ASSERT_OFLAGS:=-Od
+DEBUG_OFLAGS:=-O0
+DASH_O:=-o
+OFLAGS=-O3
+CFLAGS=	-m32 -MD -DLP32=1 -DWIN32=1 -gcodeview $(OFLAGS) \
+	-Dalloca=_alloca -Dhuge=my_huge \
+	$(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
+else ifdef MSVC
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # -Z7 debug info in files; -Zi debug info in PDB
-ifdef MSVC
 PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
 ASSERT_OFLAGS:=-Os -Oi- -Oy-
 DEBUG_OFLAGS:=-Od
@@ -79,7 +84,7 @@ OFLAGS= -Ot
 CFLAGS=	-MD -DLP32=1 -DWIN32=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-else ifdef ClangC2
+else
 PRODUCTION_OFLAGS:=-Os
 ASSERT_OFLAGS:=-Od
 DEBUG_OFLAGS:=-O0
