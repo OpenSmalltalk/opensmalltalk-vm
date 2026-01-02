@@ -37,6 +37,7 @@
  *
  */
 
+#include <sys/kd.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -508,12 +509,20 @@ static void kb_bell(struct kb *kbdSelf)
 
 static void kb_initGraphics(struct kb *kbdSelf)
 {
-  /* NoOp */
+        if (ioctl( 0, KDSETMODE, KD_GRAPHICS))
+        {
+                fprintf(stderr,"Could not set console to KD_GRAPHICS mode.\n");
+                exit(1);
+        }
 }
 
 static void kb_freeGraphics(struct kb *kbdSelf)
 {
-  /* NoOp */
+        if (ioctl( 0, KDSETMODE, KD_TEXT))
+        {
+                fprintf(stderr,"Could not set console to KD_TEXT mode.\n");
+                exit(1);
+        }
 }
 
 
