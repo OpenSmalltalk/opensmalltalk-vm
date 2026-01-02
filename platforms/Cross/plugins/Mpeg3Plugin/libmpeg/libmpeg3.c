@@ -487,6 +487,7 @@ int mpeg3_previous_frame(mpeg3_t *file, int stream)
 
 	if(file->has_video)
 		return mpeg3video_previous_frame(file->vtrack[stream]->video);
+	return -1;
 }
 
 double mpeg3_tell_percentage(mpeg3_t *file)
