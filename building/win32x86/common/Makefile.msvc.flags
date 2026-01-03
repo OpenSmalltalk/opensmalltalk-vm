@@ -42,7 +42,6 @@ undefine MSVC
 export TOOLPREFIX
 $(info CC=$(CC))
 AS:=as --32
-XCFLAGS+=-DRGBMul32BitFallBack=1
 
 $(info CC=$(CC))
 
