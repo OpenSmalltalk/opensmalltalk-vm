@@ -97,7 +97,10 @@ static int  getModifierState();
 static void updateModifierState(struct input_event* evt); 
 static void processLibEvdevKeyEvents();
 static void enqueueMouseEvent(int b, int dx, int dy);
-static void enqueueKeyboardEvent(int key, int up, int modifiers);
+static void enqueueKeyPressEvent(int key, int down, int modifiers);
+static void enqueueKeyCharEvent(int key, int modifiers);
+static void setModifierKeyCode(struct input_event* evt, int squeakKeyCode); 
+static void setCharKeyCode(int eventValue, int squeakKeyCode, int modifiers); 
 #ifdef DEBUG_EVENTS
 static void printKeyState(int kind); 
 #endif
@@ -306,49 +309,60 @@ static int isModifier(int code) {
 
 
 static void setKeyCode(struct input_event* evt) {
-  int squeakKeyCode, modifierBits;
-  /* NB: possible to get a Key UP _withOUT_ a Key DOWN */
-  if (evt->type == EV_KEY) {
 
-    lastKeyCode = evt->code;
-    modifierBits = getModifierState();
-    squeakKeyCode = keyCode2keyValue( lastKeyCode,
+  /* NB: possible to get a Key UP _withOUT_ a Key DOWN */
+
+  int squeakKeyCode, modifierBits;
+
+  if (evt->type != EV_KEY) 
+	return;
+
+  lastKeyCode = evt->code;
+  modifierBits = getModifierState();
+  squeakKeyCode = keyCode2keyValue( lastKeyCode,
 				      (modifierBits & ShiftKeyBit) );
 
-    if (isModifier(evt->code)) {
-      /* Track, but do NOT report, modifier-key state. */
-      updateModifierState(evt); 
-      setSqueakModifierState();
-    } else {
+  if (evt->value < 0 || evt->value > 2) {
+
+	DPRINTF("Key code: %d with UNKNOWN STATE: (%d) ? (0=up|1=down|2=repeat)\n", squeakKeyCode, evt->value);
+	return;
+  }
+
 #ifdef DEBUG_KEYBOARD_EVENTS
 	DPRINTF("Setting key code: %d from raw: %d\n", squeakKeyCode, evt->code);
 	printKeyState(evt->value);
 #endif
-	if (squeakKeyCode == 0) return; /* no mapping for key */
 
-	switch (evt->value) {
-	case 0: /* keyUp */
-	  enqueueKeyboardEvent(squeakKeyCode,
-			       1, /* keyUp: C TRUE */
-			       modifierBits);
-	  clearKeyCode();
-	  break;
-	case 1: /* keydown */
-	case 2: /* repeat */
-	  enqueueKeyboardEvent(squeakKeyCode,
-			       0, /* keyUp: C FALSE */
-			       modifierBits);
-	/* initially cmd-. (command+period) */
-	if ((squeakKeyCode & (modifierBits << 8)) == getInterruptKeycode())	
-	  setInterruptPending(true);
+  if (squeakKeyCode == 0) return; /* no mapping for key */
 
-	  break;
-	default:
-	  DPRINTF("Key code: %d with UNKNOWN STATE: (%d) ? (0=up|1=down|2=repeat)\n", squeakKeyCode, evt->value);
-	  break;
-	}
-    }
-  }
+  if (isModifier(evt->code))
+
+	setModifierKeyCode(evt, squeakKeyCode);
+  else
+	setCharKeyCode(evt->value, squeakKeyCode, getModifierState());
+}
+
+static void setModifierKeyCode(struct input_event* evt, int squeakKeyCode) {
+
+/* for a modifier we update the modifier state  and record up/down events, but not char events. */
+
+  updateModifierState(evt); 
+  setSqueakModifierState();
+	
+  if (evt->value < 2) 
+  	enqueueKeyPressEvent(squeakKeyCode,
+	               evt->value, 
+		       getModifierState());
+}
+
+static void setCharKeyCode(int eventValue, int squeakKeyCode,int modifiers) {
+
+  enqueueKeyPressEvent(squeakKeyCode,
+	               eventValue, 
+		       modifiers);
+
+  if (eventValue > 0) /* 0 = up */
+    enqueueKeyCharEvent(squeakKeyCode, modifiers);
 }
 
 #ifdef DEBUG_EVENTS
@@ -658,11 +672,11 @@ static void processLibEvdevMouseEvents() {
 	      arrowCode = 31; /* arrow v down */
 	    }
 	    /* Use OR of modifier bits to signal synthesized arrow keys */
-	    enqueueKeyboardEvent(arrowCode,
-				 0, /* key down */
+	    setCharKeyCode(arrowCode,
+				 1, /* key down */
 			     (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit)); 
-	    enqueueKeyboardEvent(arrowCode,
-				 1, /* key up */
+	    setCharKeyCode(arrowCode,
+				 0, /* key up */
 			     (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit)); 
 	  }
 	  break;
