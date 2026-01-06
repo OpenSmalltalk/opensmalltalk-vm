@@ -15,4 +15,6 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
-VectorEnginePlugin
+VectorEnginePlugin \
+PseudoTTYPlugin \
+

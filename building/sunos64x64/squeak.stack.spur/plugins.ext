@@ -16,3 +16,5 @@ DESPlugin \
 MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin \
+PseudoTTYPlugin \
+
