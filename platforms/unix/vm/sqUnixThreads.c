@@ -87,20 +87,20 @@ void
 ioSignalOSSemaphore(sqOSSemaphore *sem)
 {
 #if DEBUG
-	int tid = ioGetThreadLocalThreadIndex();
+	sqInt tid = ioThreadLocalGetThreadIndex();
 	int err;
 
 	if ((err = pthread_mutex_lock(&sem->mutex)))
-		THRLOG("%d !! SIGN pthread_mutex_lock 0x%p => %d\n", tid, sem, err);
+		THRLOG(PRIdSQINT " !! SIGN pthread_mutex_lock 0x%p => %d\n", tid, sem, err);
 	if (++sem->count <= 0) {
-		THRLOG("%d pthread_cond_signal 0x%p\n", tid, sem);
+		THRLOG(PRIdSQINT " pthread_cond_signal 0x%p\n", tid, sem);
 		err = pthread_cond_signal(&sem->cond);
-		THRLOG("%d pthread_cond_signal 0x%p => %d\n", tid, sem, err);
+		THRLOG(PRIdSQINT " pthread_cond_signal 0x%p => %d\n", tid, sem, err);
 	}
 	else
-		THRLOG("%d ioSig 0x%p ++count = %d\n", tid, sem, sem->count);
+		THRLOG(PRIdSQINT " ioSig 0x%p ++count = %d\n", tid, sem, sem->count);
 	if ((err = pthread_mutex_unlock(&sem->mutex)))
-		THRLOG("%d !!pthread_mutex_unlock 0x%p => %d\n", tid, sem, err);
+		THRLOG(PRIdSQINT " !!pthread_mutex_unlock 0x%p => %d\n", tid, sem, err);
 #else
 	(void)pthread_mutex_lock(&sem->mutex);
 	if (++sem->count <= 0)
@@ -113,20 +113,20 @@ void
 ioWaitOnOSSemaphore(sqOSSemaphore *sem)
 {
 #if DEBUG
-	int tid = ioGetThreadLocalThreadIndex();
+	sqInt tid = ioThreadLocalGetThreadIndex();
 	int err;
 
 	if ((err = pthread_mutex_lock(&sem->mutex)))
-		THRLOG("%d !! WAIT pthread_mutex_lock 0x%p => %d\n", tid, sem, err);
+		THRLOG(PRIdSQINT " !! WAIT pthread_mutex_lock 0x%p => %d\n", tid, sem, err);
 	if (--sem->count < 0) {
-		THRLOG("%d pthread_cond_wait 0x%p\n", tid, sem);
+		THRLOG(PRIdSQINT " pthread_cond_wait 0x%p\n", tid, sem);
 		err = pthread_cond_wait(&sem->cond, &sem->mutex);
-		THRLOG("%d proceeding 0x%p (pcw err %d)\n", tid, sem, err);
+		THRLOG(PRIdSQINT " proceeding 0x%p (pcw err %d)\n", tid, sem, err);
 	}
 	else
-		THRLOG("%d ioWait 0x%p --count = %d\n", tid, sem, sem->count);
+		THRLOG(PRIdSQINT " ioWait 0x%p --count = %d\n", tid, sem, sem->count);
 	if ((err = pthread_mutex_unlock(&sem->mutex)))
-		THRLOG("%d !! WAIT pthread_mutex_unlock 0x%p => %d\n", tid, sem, err);
+		THRLOG(PRIdSQINT " !! WAIT pthread_mutex_unlock 0x%p => %d\n", tid, sem, err);
 #else
 	(void)pthread_mutex_lock(&sem->mutex);
 	if (--sem->count < 0)
@@ -136,18 +136,20 @@ ioWaitOnOSSemaphore(sqOSSemaphore *sem)
 }
 
 
-pthread_key_t tltiIndex; /* clients see this as a const read-only export */
+pthread_key_t tltiIndex, tlifcIndex; // clients see these as const read-only exports
 
 static void
 initThreadLocalThreadIndices(void)
 {
-	int err = pthread_key_create(&tltiIndex,0);
+	int err = 0;
+	err |= pthread_key_create(&tltiIndex,0);
+	err |= pthread_key_create(&tlifcIndex,0);
 	if (err)
 		error("pthread_key_create");
 }
 
 /*
- * ioGetThreadLocalThreadIndex & ioSetThreadLocalThreadIndex are defined in
+ * ioThreadLocalGetThreadIndex & ioThreadLocalSetThreadIndex are defined in
  * sqPlatformSpecific.h.
  */
 
@@ -264,6 +266,6 @@ dumpThreadLog()
 	while (1);
 }
 
-extern pthread_key_t tltiIndex;
+extern pthread_key_t tltiIndex, tlifcIndex;
 #endif // DEBUG
 #endif // COGMTVM

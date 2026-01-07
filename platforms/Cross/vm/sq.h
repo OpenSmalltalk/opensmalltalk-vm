@@ -327,11 +327,17 @@ extern sqOSThread getVMOSThread(void);
  * # define sqOSSemaphore pthread_cond_t
  * # define ioOSThreadsEqual(a,b) pthread_equal(a,b)
  */
-# if !defined(ioGetThreadLocalThreadIndex)
-long ioGetThreadLocalThreadIndex(void);
+# if !defined(ioThreadLocalGetThreadIndex)
+sqInt ioThreadLocalGetThreadIndex(void);
 # endif
-# if !defined(ioSetThreadLocalThreadIndex)
-void ioSetThreadLocalThreadIndex(long);
+# if !defined(ioThreadLocalSetThreadIndex)
+sqInt ioThreadLocalSetThreadIndex(sqInt);
+# endif
+# if !defined(ioThreadLocalGetInFFICall)
+sqInt ioThreadLocalGetInFFICall(void);
+# endif
+# if !defined(ioThreadLocalSetInFFICall)
+sqInt ioThreadLocalSetInFFICall(sqInt);
 # endif
 
 # if !defined(ioNewOSThread)

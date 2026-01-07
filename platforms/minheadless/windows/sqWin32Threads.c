@@ -56,7 +56,7 @@ initThreadLocalThreadIndices(void)
 }
 
 /*
- * ioGetThreadLocalThreadIndex & ioSetThreadLocalThreadIndex are defined in
+ * ioThreadLocalGetThreadIndex & ioThreadLocalSetThreadIndex are defined in
  * sqPlatformSpecific.h.
  */
 

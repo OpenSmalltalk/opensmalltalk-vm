@@ -161,10 +161,12 @@ typedef struct {
 
 # if COGMTVM
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
-extern const pthread_key_t tltiIndex;
+extern const pthread_key_t tltiIndex, tlifcIndex;
 #  endif
-#  define ioGetThreadLocalThreadIndex() ((long)pthread_getspecific(tltiIndex))
-#  define ioSetThreadLocalThreadIndex(v) (pthread_setspecific(tltiIndex,(void*)(v)))
+#  define ioThreadLocalGetThreadIndex() ((long)pthread_getspecific(tltiIndex))
+#  define ioThreadLocalSetThreadIndex(v) (pthread_setspecific(tltiIndex,(void*)(v)))
+#  define ioThreadLocalGetInFFICall() ((long)pthread_getspecific(tlifcIndex))
+#  define ioThreadLocalSetInFFICall(v) (pthread_setspecific(tlifcIndex,(void*)(v)))
 #  define ioOSThreadIsAlive(thread) (pthread_kill(thread,0) == 0)
 #  define ioTransferTimeslice() sched_yield()
 #  define ioMilliSleep(ms) usleep((ms) * 1000)
