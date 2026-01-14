@@ -1,0 +1,30 @@
+Instructions to build an OpenSmalltalk-VM for the QNX 8.0 microkernel.
+
+It is assumed the build system is x86 Linux and target is Raspberry Pi 4 QNX.
+
+There is no requirement for Visual Studio, but you will need the free
+QNX licence and Software Development Platform available from:
+   https://qnx.com/getqnx
+
+Docs at:
+   https://www.qnx.com/developers/docs/qnxeverywhere/index.html
+
+The basic differences from a Linux build are that
+  [A] OpenSmalltalk-VM is cross compiled [x86 build -> aarch64 runtime]
+  [B] QNX includes and libraries are required
+
+Basic Steps:
+ [0] Get QNX SDP [url above]
+ [1] Get OpenSmalltalk-VM
+   cd $HOME
+   ## Fixme: release to Opensmalltalk/OpenSmalltalk-VM
+   git clone --filter=blob:none https://github.com/KenDickey/opensmalltalk-vm
+ [2] Build it
+   cd opensmalltalk-vm/building/qnx64ARMv8/squeak.stack.spur/build
+   ./mvm
+   #@@@ CURRENT IS BROKEN - built & tested with hand work; scp to rpi4 target.
+ [3] Copy VM files to QNX Target
+ [4] Copy Smalltalk image, changes, sources files to QNX target [no git available]
+ [5] Playtime!
+
+
