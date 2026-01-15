@@ -5,6 +5,7 @@ INSTALLDIR=sqcogspurmt64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
+CC=gcc
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
@@ -32,9 +33,9 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	INTERP=cointerpmt \
-	CC=clang \
+	CC=gcc \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
+	LIBS=""
 ##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

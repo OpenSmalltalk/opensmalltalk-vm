@@ -32,9 +32,9 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-vm-display-fbdev --without-npsqueak \
 	--with-scriptname=spur64 \
 	INTERP=cointerpmt \
-	CC=clang \
+	CC=gcc \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
+	LIBS="$LIBS"
 
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
