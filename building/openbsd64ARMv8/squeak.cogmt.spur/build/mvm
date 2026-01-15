@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Cog Spur MT VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspurmt64ARMv8linuxht
+INSTALLDIR=sqcogspurmt64ARMv8openbsdht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
@@ -40,5 +40,5 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
-# but older linux readlinks lack the -f flag
+# but older openbsd readlinks lack the -f flag
 make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
