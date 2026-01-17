@@ -128,7 +128,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 	if (!validfp(fp,fp - 1)
 	 || !validfp(fp->savedfp,fp)) {
 		int attempts = 4;
-		fp = (Frame *)(((usqInt)fp | sizeof(void)-1) - (sizeof(void)-1));
+		fp = (Frame *)(((usqInt)fp | sizeof(void *)-1) - (sizeof(void *)-1));
 		while (--attempts >= 0) {
 			fp = (Frame *)((usqInt)fp + sizeof(void *));
 			if (validfp(fp,startfp)
