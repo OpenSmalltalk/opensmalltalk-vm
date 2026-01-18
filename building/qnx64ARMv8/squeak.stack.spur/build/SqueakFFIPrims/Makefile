@@ -45,15 +45,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -84,7 +84,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -146,7 +146,7 @@ TARGET= SqueakFFIPrims$a
 
 OBJS= SqueakFFIPrims$o sqFFIPlugin$o sqManualSurface$o sqFFITestFuncs$o
 
-XINCLUDES=  -I/home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims 
+XINCLUDES=  -I/home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims 
 
 $(TARGET) : $(OBJS) Makefile
 	$(LINK) $(TARGET) $(OBJS)
@@ -155,37 +155,37 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-ARM32FFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM32FFIPlugin.c
-	$(COMPILE) ARM32FFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM32FFIPlugin.c
+ARM32FFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM32FFIPlugin.c
+	$(COMPILE) ARM32FFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM32FFIPlugin.c
 
-ARM64AppleFFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM64AppleFFIPlugin.c
-	$(COMPILE) ARM64AppleFFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM64AppleFFIPlugin.c
+ARM64AppleFFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM64AppleFFIPlugin.c
+	$(COMPILE) ARM64AppleFFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM64AppleFFIPlugin.c
 
-ARM64FFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM64FFIPlugin.c
-	$(COMPILE) ARM64FFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/ARM64FFIPlugin.c
+ARM64FFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM64FFIPlugin.c
+	$(COMPILE) ARM64FFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/ARM64FFIPlugin.c
 
-IA32FFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/IA32FFIPlugin.c
-	$(COMPILE) IA32FFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/IA32FFIPlugin.c
+IA32FFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/IA32FFIPlugin.c
+	$(COMPILE) IA32FFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/IA32FFIPlugin.c
 
-RiscV64FFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/RiscV64FFIPlugin.c
-	$(COMPILE) RiscV64FFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/RiscV64FFIPlugin.c
+RiscV64FFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/RiscV64FFIPlugin.c
+	$(COMPILE) RiscV64FFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/RiscV64FFIPlugin.c
 
-SqueakFFIPrims$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/SqueakFFIPrims.c
-	$(COMPILE) SqueakFFIPrims$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/SqueakFFIPrims.c
+SqueakFFIPrims$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/SqueakFFIPrims.c
+	$(COMPILE) SqueakFFIPrims$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/SqueakFFIPrims.c
 
-X64SysVFFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/X64SysVFFIPlugin.c
-	$(COMPILE) X64SysVFFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/X64SysVFFIPlugin.c
+X64SysVFFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/X64SysVFFIPlugin.c
+	$(COMPILE) X64SysVFFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/X64SysVFFIPlugin.c
 
-X64Win64FFIPlugin$o : /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/X64Win64FFIPlugin.c
-	$(COMPILE) X64Win64FFIPlugin$o /home/kend/Kens-VM/src/plugins/SqueakFFIPrims/X64Win64FFIPlugin.c
+X64Win64FFIPlugin$o : /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/X64Win64FFIPlugin.c
+	$(COMPILE) X64Win64FFIPlugin$o /home/kend/QNX-VM/src/plugins/SqueakFFIPrims/X64Win64FFIPlugin.c
 
-sqFFIPlugin$o : /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c
-	$(COMPILE) sqFFIPlugin$o /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c
+sqFFIPlugin$o : /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c
+	$(COMPILE) sqFFIPlugin$o /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c
 
-sqFFITestFuncs$o : /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c
-	$(COMPILE) sqFFITestFuncs$o /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c
+sqFFITestFuncs$o : /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c
+	$(COMPILE) sqFFITestFuncs$o /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c
 
-sqManualSurface$o : /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c
-	$(COMPILE) sqManualSurface$o /home/kend/Kens-VM/platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c
+sqManualSurface$o : /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c
+	$(COMPILE) sqManualSurface$o /home/kend/QNX-VM/platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c
 
 .force :

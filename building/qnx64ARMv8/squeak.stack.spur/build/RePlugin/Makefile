@@ -69,15 +69,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -108,7 +108,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -155,7 +155,7 @@ COMPILE		= $(CC) $(CFLAGS) $(CPPFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) -DSQUEAK_BUIL
 LINK		= $(AR) -rc
 RANLIB		= ranlib
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/plugins/RePlugin 
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/plugins/RePlugin 
 OBJS		=  RePlugin$o chartables$o get$o pcre$o study$o
 TARGET		= RePlugin$a
 PLIBS		= 
@@ -169,19 +169,19 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-RePlugin$o : /home/kend/Kens-VM/src/plugins/RePlugin/RePlugin.c
-	$(COMPILE) RePlugin$o /home/kend/Kens-VM/src/plugins/RePlugin/RePlugin.c
+RePlugin$o : /home/kend/QNX-VM/src/plugins/RePlugin/RePlugin.c
+	$(COMPILE) RePlugin$o /home/kend/QNX-VM/src/plugins/RePlugin/RePlugin.c
 
-chartables$o : /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/chartables.c
-	$(COMPILE) chartables$o /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/chartables.c
+chartables$o : /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/chartables.c
+	$(COMPILE) chartables$o /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/chartables.c
 
-get$o : /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/get.c
-	$(COMPILE) get$o /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/get.c
+get$o : /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/get.c
+	$(COMPILE) get$o /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/get.c
 
-pcre$o : /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/pcre.c
-	$(COMPILE) pcre$o /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/pcre.c
+pcre$o : /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/pcre.c
+	$(COMPILE) pcre$o /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/pcre.c
 
-study$o : /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/study.c
-	$(COMPILE) study$o /home/kend/Kens-VM/platforms/Cross/plugins/RePlugin/study.c
+study$o : /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/study.c
+	$(COMPILE) study$o /home/kend/QNX-VM/platforms/Cross/plugins/RePlugin/study.c
 
 .force :

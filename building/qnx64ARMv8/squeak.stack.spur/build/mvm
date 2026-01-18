@@ -42,6 +42,7 @@ echo "           Using hand-specialized config.h"
 ./config.status
 
 rm -f vm/sqUnixMain.o # nuke version info
+./compile-version.sh
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag

@@ -1039,8 +1039,8 @@ Event Type: SCREEN_EVENT_KEYBOARD
   /* Map between QNX Screen World & OpenSmalltalk VM World */
   if (keyModifiers & KEYMOD_SHIFT) { sqModifiers |= ShiftKeyBit; }
   if (keyModifiers & KEYMOD_CTRL)  { sqModifiers |= CtrlKeyBit; }
-  if (keyModifiers & KEYMOD_ALT)   {
-    sqModifiers |= CommandKeyBit;  /* NB: ALT+. NOT CTL+. */
+  if (keyModifiers & KEYMOD_ALT)   { sqModifiers |= CommandKeyBit;
+    /* NB: ALT+. NOT CTL+. */
     if (keyValue == 0x2E) { /* Command+period = meta+dot */
       setInterruptPending(true);
       return;

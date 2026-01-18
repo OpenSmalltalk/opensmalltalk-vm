@@ -78,15 +78,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -117,7 +117,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -181,7 +181,7 @@ IOBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 
 OBJS		= $(IOBJS) # see mkmf
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/src/spur64.stack  \
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/src/spur64.stack  \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
 		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin
 
@@ -216,89 +216,86 @@ sqUnixMemory$o : $(topdir)/platforms/unix/vm/sqUnixSpurMemory.c
 
 
 
-gcc3x-interp$o : /home/kend/Kens-VM/src/spur64.stack/gcc3x-interp.c
-	$(COMPILE) gcc3x-interp$o /home/kend/Kens-VM/src/spur64.stack/gcc3x-interp.c
+gcc3x-interp$o : /home/kend/QNX-VM/src/spur64.stack/gcc3x-interp.c
+	$(COMPILE) gcc3x-interp$o /home/kend/QNX-VM/src/spur64.stack/gcc3x-interp.c
 
-interp$o : /home/kend/Kens-VM/src/spur64.stack/interp.c
-	$(COMPILE) interp$o /home/kend/Kens-VM/src/spur64.stack/interp.c
+interp$o : /home/kend/QNX-VM/src/spur64.stack/interp.c
+	$(COMPILE) interp$o /home/kend/QNX-VM/src/spur64.stack/interp.c
 
-validImage$o : /home/kend/Kens-VM/src/spur64.stack/validImage.c
-	$(COMPILE) validImage$o /home/kend/Kens-VM/src/spur64.stack/validImage.c
+validImage$o : /home/kend/QNX-VM/src/spur64.stack/validImage.c
+	$(COMPILE) validImage$o /home/kend/QNX-VM/src/spur64.stack/validImage.c
 
-sqExternalSemaphores$o : /home/kend/Kens-VM/platforms/Cross/vm/sqExternalSemaphores.c
-	$(COMPILE) sqExternalSemaphores$o /home/kend/Kens-VM/platforms/Cross/vm/sqExternalSemaphores.c
+sqExternalSemaphores$o : /home/kend/QNX-VM/platforms/Cross/vm/sqExternalSemaphores.c
+	$(COMPILE) sqExternalSemaphores$o /home/kend/QNX-VM/platforms/Cross/vm/sqExternalSemaphores.c
 
-sqHeapMap$o : /home/kend/Kens-VM/platforms/Cross/vm/sqHeapMap.c
-	$(COMPILE) sqHeapMap$o /home/kend/Kens-VM/platforms/Cross/vm/sqHeapMap.c
+sqHeapMap$o : /home/kend/QNX-VM/platforms/Cross/vm/sqHeapMap.c
+	$(COMPILE) sqHeapMap$o /home/kend/QNX-VM/platforms/Cross/vm/sqHeapMap.c
 
-sqNamedPrims$o : /home/kend/Kens-VM/platforms/Cross/vm/sqNamedPrims.c
-	$(COMPILE) sqNamedPrims$o /home/kend/Kens-VM/platforms/Cross/vm/sqNamedPrims.c
+sqNamedPrims$o : /home/kend/QNX-VM/platforms/Cross/vm/sqNamedPrims.c
+	$(COMPILE) sqNamedPrims$o /home/kend/QNX-VM/platforms/Cross/vm/sqNamedPrims.c
 
-sqPath$o : /home/kend/Kens-VM/platforms/Cross/vm/sqPath.c
-	$(COMPILE) sqPath$o /home/kend/Kens-VM/platforms/Cross/vm/sqPath.c
+sqPath$o : /home/kend/QNX-VM/platforms/Cross/vm/sqPath.c
+	$(COMPILE) sqPath$o /home/kend/QNX-VM/platforms/Cross/vm/sqPath.c
 
-sqTextEncoding$o : /home/kend/Kens-VM/platforms/Cross/vm/sqTextEncoding.c
-	$(COMPILE) sqTextEncoding$o /home/kend/Kens-VM/platforms/Cross/vm/sqTextEncoding.c
+sqTextEncoding$o : /home/kend/QNX-VM/platforms/Cross/vm/sqTextEncoding.c
+	$(COMPILE) sqTextEncoding$o /home/kend/QNX-VM/platforms/Cross/vm/sqTextEncoding.c
 
-sqTicker$o : /home/kend/Kens-VM/platforms/Cross/vm/sqTicker.c
-	$(COMPILE) sqTicker$o /home/kend/Kens-VM/platforms/Cross/vm/sqTicker.c
+sqTicker$o : /home/kend/QNX-VM/platforms/Cross/vm/sqTicker.c
+	$(COMPILE) sqTicker$o /home/kend/QNX-VM/platforms/Cross/vm/sqTicker.c
 
-sqVirtualMachine$o : /home/kend/Kens-VM/platforms/Cross/vm/sqVirtualMachine.c
-	$(COMPILE) sqVirtualMachine$o /home/kend/Kens-VM/platforms/Cross/vm/sqVirtualMachine.c
+sqVirtualMachine$o : /home/kend/QNX-VM/platforms/Cross/vm/sqVirtualMachine.c
+	$(COMPILE) sqVirtualMachine$o /home/kend/QNX-VM/platforms/Cross/vm/sqVirtualMachine.c
 
-aio$o : /home/kend/Kens-VM/platforms/unix/vm/aio.c
-	$(COMPILE) aio$o /home/kend/Kens-VM/platforms/unix/vm/aio.c
+aio$o : /home/kend/QNX-VM/platforms/unix/vm/aio.c
+	$(COMPILE) aio$o /home/kend/QNX-VM/platforms/unix/vm/aio.c
 
-debug$o : /home/kend/Kens-VM/platforms/unix/vm/debug.c
-	$(COMPILE) debug$o /home/kend/Kens-VM/platforms/unix/vm/debug.c
+debug$o : /home/kend/QNX-VM/platforms/unix/vm/debug.c
+	$(COMPILE) debug$o /home/kend/QNX-VM/platforms/unix/vm/debug.c
 
-dlfcn-dyld$o : /home/kend/Kens-VM/platforms/unix/vm/dlfcn-dyld.c
-	$(COMPILE) dlfcn-dyld$o /home/kend/Kens-VM/platforms/unix/vm/dlfcn-dyld.c
+dlfcn-dyld$o : /home/kend/QNX-VM/platforms/unix/vm/dlfcn-dyld.c
+	$(COMPILE) dlfcn-dyld$o /home/kend/QNX-VM/platforms/unix/vm/dlfcn-dyld.c
 
-mac-alias$o : /home/kend/Kens-VM/platforms/unix/vm/mac-alias.c
-	$(COMPILE) mac-alias$o /home/kend/Kens-VM/platforms/unix/vm/mac-alias.c
+mac-alias$o : /home/kend/QNX-VM/platforms/unix/vm/mac-alias.c
+	$(COMPILE) mac-alias$o /home/kend/QNX-VM/platforms/unix/vm/mac-alias.c
 
-osExports$o : /home/kend/Kens-VM/platforms/unix/vm/osExports.c
-	$(COMPILE) osExports$o /home/kend/Kens-VM/platforms/unix/vm/osExports.c
+osExports$o : /home/kend/QNX-VM/platforms/unix/vm/osExports.c
+	$(COMPILE) osExports$o /home/kend/QNX-VM/platforms/unix/vm/osExports.c
 
-sqQNXScreenDisplay$o : /home/kend/Kens-VM/platforms/unix/vm/sqQNXScreenDisplay.c
-	$(COMPILE) sqQNXScreenDisplay$o /home/kend/Kens-VM/platforms/unix/vm/sqQNXScreenDisplay.c
+sqUnixCharConv$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixCharConv.c
+	$(COMPILE) sqUnixCharConv$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixCharConv.c
 
-sqUnixCharConv$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixCharConv.c
-	$(COMPILE) sqUnixCharConv$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixCharConv.c
+sqUnixDisplayHelpers$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixDisplayHelpers.c
+	$(COMPILE) sqUnixDisplayHelpers$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixDisplayHelpers.c
 
-sqUnixDisplayHelpers$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixDisplayHelpers.c
-	$(COMPILE) sqUnixDisplayHelpers$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixDisplayHelpers.c
+sqUnixEvent$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixEvent.c
+	$(COMPILE) sqUnixEvent$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixEvent.c
 
-sqUnixEvent$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixEvent.c
-	$(COMPILE) sqUnixEvent$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixEvent.c
+sqUnixExternalPrims$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixExternalPrims.c
+	$(COMPILE) sqUnixExternalPrims$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixExternalPrims.c
 
-sqUnixExternalPrims$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixExternalPrims.c
-	$(COMPILE) sqUnixExternalPrims$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixExternalPrims.c
+sqUnixHeartbeat$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixHeartbeat.c
+	$(COMPILE) sqUnixHeartbeat$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixHeartbeat.c
 
-sqUnixHeartbeat$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixHeartbeat.c
-	$(COMPILE) sqUnixHeartbeat$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixHeartbeat.c
+sqUnixITimerHeartbeat$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixITimerHeartbeat.c
+	$(COMPILE) sqUnixITimerHeartbeat$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixITimerHeartbeat.c
 
-sqUnixITimerHeartbeat$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixITimerHeartbeat.c
-	$(COMPILE) sqUnixITimerHeartbeat$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixITimerHeartbeat.c
+sqUnixITimerTickerHeartbeat$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixITimerTickerHeartbeat.c
+	$(COMPILE) sqUnixITimerTickerHeartbeat$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixITimerTickerHeartbeat.c
 
-sqUnixITimerTickerHeartbeat$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixITimerTickerHeartbeat.c
-	$(COMPILE) sqUnixITimerTickerHeartbeat$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixITimerTickerHeartbeat.c
+sqUnixMain$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixMain.c
+	$(COMPILE) sqUnixMain$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixMain.c
 
-sqUnixMain$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixMain.c
-	$(COMPILE) sqUnixMain$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixMain.c
+sqUnixMemory$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixMemory.c
+	$(COMPILE) sqUnixMemory$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixMemory.c
 
-sqUnixMemory$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixMemory.c
-	$(COMPILE) sqUnixMemory$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixMemory.c
+sqUnixSpurMemory$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixSpurMemory.c
+	$(COMPILE) sqUnixSpurMemory$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixSpurMemory.c
 
-sqUnixSpurMemory$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixSpurMemory.c
-	$(COMPILE) sqUnixSpurMemory$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixSpurMemory.c
+sqUnixThreads$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixThreads.c
+	$(COMPILE) sqUnixThreads$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixThreads.c
 
-sqUnixThreads$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixThreads.c
-	$(COMPILE) sqUnixThreads$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixThreads.c
-
-sqUnixVMProfile$o : /home/kend/Kens-VM/platforms/unix/vm/sqUnixVMProfile.c
-	$(COMPILE) sqUnixVMProfile$o /home/kend/Kens-VM/platforms/unix/vm/sqUnixVMProfile.c
+sqUnixVMProfile$o : /home/kend/QNX-VM/platforms/unix/vm/sqUnixVMProfile.c
+	$(COMPILE) sqUnixVMProfile$o /home/kend/QNX-VM/platforms/unix/vm/sqUnixVMProfile.c
 
 # Ensure the heartbeat is compiled with less aggressive optimization.  At
 # least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM;

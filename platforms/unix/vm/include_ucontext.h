@@ -22,6 +22,8 @@
 #elif __sun
 /* Single UNIX Specification (SUS), Version 2 specifies <ucontext.h> */
 # include <ucontext.h>
+#elif __QNX__
+# include <ucontext.h>
 #else
 # include <sys/ucontext.h>
 #endif

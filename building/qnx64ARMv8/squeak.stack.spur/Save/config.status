@@ -438,7 +438,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build'
+ac_pwd='/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build'
 srcdir='../../../../platforms/unix/config'
 INSTALL='/usr/bin/install -c'
 AWK='mawk'
@@ -745,7 +745,7 @@ fi
 
 
 
-  cfgdir=/home/kend/Kens-VM/platforms/unix/config
+  cfgdir=/home/kend/QNX-VM/platforms/unix/config
 
 
 
@@ -845,14 +845,14 @@ fi
 
 echo 'BEGIN {' >"$ac_tmp/subs1.awk" &&
 cat >>"$ac_tmp/subs1.awk" <<\_ACAWK &&
-F["make_cfg"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.cfg"
-F["make_int"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.int"
-F["make_ext"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.ext"
-F["make_prg"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.prg"
-F["Makefile_install"]="/home/kend/Kens-VM/platforms/unix/config/Makefile.install"
-F["Makefile_dist"]="/home/kend/Kens-VM/util/Makefile.dist"
-F["Makefile_rpm"]="/home/kend/Kens-VM/util/Makefile.rpm"
-F["Makefile_deb"]="/home/kend/Kens-VM/util/Makefile.deb"
+F["make_cfg"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.cfg"
+F["make_int"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.int"
+F["make_ext"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.ext"
+F["make_prg"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build/make.prg"
+F["Makefile_install"]="/home/kend/QNX-VM/platforms/unix/config/Makefile.install"
+F["Makefile_dist"]="/home/kend/QNX-VM/util/Makefile.dist"
+F["Makefile_rpm"]="/home/kend/QNX-VM/util/Makefile.rpm"
+F["Makefile_deb"]="/home/kend/QNX-VM/util/Makefile.deb"
 _ACAWK
 cat >>"$ac_tmp/subs1.awk" <<\_ACAWK &&
 S["LTLIBOBJS"]=""
@@ -876,7 +876,7 @@ S["HAVE_LANGINFO_CODESET"]=""
 S["VM_DISPX11_BITBLT_FLAGS"]=""
 S["VM_DISPX11_OBJS"]=""
 S["X_INCLUDES"]=""
-"latforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include"
+"latforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include"
 S["X_CPPFLAGS"]=""
 S["X_EXTRA_LIBS"]=""
 S["X_LIBS"]=""
@@ -903,8 +903,8 @@ S["PTHREAD_LIBS"]=""
 S["PTHREAD_CC"]="$(QNX_CC)"
 S["ax_pthread_config"]=""
 S["HAVE_INTERP_H"]=""
-S["INCLUDES"]="-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/p"\
-"latforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include"
+S["INCLUDES"]="-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/p"\
+"latforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include"
 S["LN"]="ln"
 S["WFLAGS"]=""
 S["INSTALL_DATA"]="${INSTALL} -m 644"
@@ -926,12 +926,12 @@ S["SQ_UPDATE"]=""
 S["SQ_MINOR"]=""
 S["SQ_MAJOR"]=""
 S["scriptname"]="spur64"
-S["blddir"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build"
-S["vmmcfg"]="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build"
-S["vmpdir"]="/home/kend/Kens-VM/src/plugins"
-S["vmmdir"]="/home/kend/Kens-VM/src/spur64.stack"
-S["cfgdir"]="/home/kend/Kens-VM/platforms/unix/config"
-S["topdir"]="/home/kend/Kens-VM"
+S["blddir"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build"
+S["vmmcfg"]="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build"
+S["vmpdir"]="/home/kend/QNX-VM/src/plugins"
+S["vmmdir"]="/home/kend/QNX-VM/src/spur64.stack"
+S["cfgdir"]="/home/kend/QNX-VM/platforms/unix/config"
+S["topdir"]="/home/kend/QNX-VM"
 S["cogit"]="no"
 S["LIBTOOL_DEPS"]="../../../../platforms/unix/config/ltmain.sh"
 S["LT_SYS_LIBRARY_PATH"]=""

@@ -69,15 +69,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -108,7 +108,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -155,7 +155,7 @@ COMPILE		= $(CC) $(CFLAGS) $(CPPFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) -DSQUEAK_BUIL
 LINK		= $(AR) -rc
 RANLIB		= ranlib
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI 
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI 
 OBJS		=  IA32ABI$o AlienSUnitTestProcedures$o arm32abicc$o arm64abicc$o ia32abicc$o ppc32abicc$o riscv64abicc$o x64sysvabicc$o x64win64abicc$o x64win64stub$o xabicc$o
 TARGET		= IA32ABI$a
 PLIBS		= 
@@ -170,37 +170,37 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-IA32ABI$o : /home/kend/Kens-VM/src/plugins/IA32ABI/IA32ABI.c
-	$(COMPILE) IA32ABI$o /home/kend/Kens-VM/src/plugins/IA32ABI/IA32ABI.c
+IA32ABI$o : /home/kend/QNX-VM/src/plugins/IA32ABI/IA32ABI.c
+	$(COMPILE) IA32ABI$o /home/kend/QNX-VM/src/plugins/IA32ABI/IA32ABI.c
 
-AlienSUnitTestProcedures$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/AlienSUnitTestProcedures.c
-	$(COMPILE) AlienSUnitTestProcedures$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/AlienSUnitTestProcedures.c
+AlienSUnitTestProcedures$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/AlienSUnitTestProcedures.c
+	$(COMPILE) AlienSUnitTestProcedures$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/AlienSUnitTestProcedures.c
 
-arm32abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/arm32abicc.c
-	$(COMPILE) arm32abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/arm32abicc.c
+arm32abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/arm32abicc.c
+	$(COMPILE) arm32abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/arm32abicc.c
 
-arm64abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/arm64abicc.c
-	$(COMPILE) arm64abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/arm64abicc.c
+arm64abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/arm64abicc.c
+	$(COMPILE) arm64abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/arm64abicc.c
 
-ia32abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/ia32abicc.c
-	$(COMPILE) ia32abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/ia32abicc.c
+ia32abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/ia32abicc.c
+	$(COMPILE) ia32abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/ia32abicc.c
 
-ppc32abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/ppc32abicc.c
-	$(COMPILE) ppc32abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/ppc32abicc.c
+ppc32abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/ppc32abicc.c
+	$(COMPILE) ppc32abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/ppc32abicc.c
 
-riscv64abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/riscv64abicc.c
-	$(COMPILE) riscv64abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/riscv64abicc.c
+riscv64abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/riscv64abicc.c
+	$(COMPILE) riscv64abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/riscv64abicc.c
 
-x64sysvabicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64sysvabicc.c
-	$(COMPILE) x64sysvabicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64sysvabicc.c
+x64sysvabicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64sysvabicc.c
+	$(COMPILE) x64sysvabicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64sysvabicc.c
 
-x64win64abicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64win64abicc.c
-	$(COMPILE) x64win64abicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64win64abicc.c
+x64win64abicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64win64abicc.c
+	$(COMPILE) x64win64abicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64win64abicc.c
 
-x64win64stub$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64win64stub.c
-	$(COMPILE) x64win64stub$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/x64win64stub.c
+x64win64stub$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64win64stub.c
+	$(COMPILE) x64win64stub$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/x64win64stub.c
 
-xabicc$o : /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/xabicc.c
-	$(COMPILE) xabicc$o /home/kend/Kens-VM/platforms/Cross/plugins/IA32ABI/xabicc.c
+xabicc$o : /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/xabicc.c
+	$(COMPILE) xabicc$o /home/kend/QNX-VM/platforms/Cross/plugins/IA32ABI/xabicc.c
 
 .force :

@@ -6,7 +6,7 @@ INSTALLDIR=sqstkspur64linuxht
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
-if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+###if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 # echo -n "clean? "
 # read a
 # case $a in
@@ -14,7 +14,7 @@ if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 # *)			rm -f config.h; test -f Makefile && make reallyclean
 # esac
 # Copy down ../plugins.?ny
-../../../../scripts/copylinuxpluginspecfiles
+../../../scripts/copylinuxpluginspecfiles
 ##@@FIXME: add vm-dev-qnx-screen @@##
 cp -r ../Save/* .
 

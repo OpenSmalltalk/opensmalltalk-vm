@@ -68,15 +68,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -107,11 +107,13 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
-LDFLAGS=	-Wl,-z,now $(QNX_LDFLAGS)
+QNX_LIBS=	-lsocket -linputevents -liconv -lffi
+QNX_LDFLAGS=	-L/home/kend/qnx800_3/target/qnx/aarch64le/lib -L/home/kend/qnx800_3/target/qnx/aarch64le/usr/lib
+LDFLAGS=	 -Wl,-z,now $(QNX_LIBS) $(QNX_LDFLAGS)
 BITBLT_OBJS=	BitBltPlugin.o
 IA32ABI_OBJS=	IA32ABI.o AlienSUnitTestProcedures.o xabicc.o
 VM_DISPX11_OBJS= 
@@ -125,7 +127,7 @@ FT2_PLUGIN_LIBS =
 UNICODE_PLUGIN_CFLAGS = 
 UNICODE_PLUGIN_LIBS = 
 
-LIBS= -lz -lm -lsocket -linputevents -liconv -lffi
+LIBS=		-lz -lm $(QNX_LIBS) $(QNX_LDFLAGS)
 
 
 X_CFLAGS=	
@@ -163,25 +165,27 @@ RANLIB		= :
 
 la		= .la
 
-SQLIBS		=  vm/vm$a BitBltPlugin/BitBltPlugin$a FileCopyPlugin/FileCopyPlugin$a FilePlugin/FilePlugin$a FileDialogPlugin/FileDialogPlugin$a Float64ArrayPlugin/Float64ArrayPlugin$a FloatArrayPlugin/FloatArrayPlugin$a FloatMathPlugin/FloatMathPlugin$a IA32ABI/IA32ABI$a LargeIntegers/LargeIntegers$a Matrix2x3Plugin/Matrix2x3Plugin$a MiscPrimitivePlugin/MiscPrimitivePlugin$a  RePlugin/RePlugin$a SecurityPlugin/SecurityPlugin$a SerialPlugin/SerialPlugin$a SocketPlugin/SocketPlugin$a StarSqueakPlugin/StarSqueakPlugin$a  SurfacePlugin/SurfacePlugin$a
+SQLIBS		=  vm/vm$a BitBltPlugin/BitBltPlugin$a FileCopyPlugin/FileCopyPlugin$a FilePlugin/FilePlugin$a FileDialogPlugin/FileDialogPlugin$a Float64ArrayPlugin/Float64ArrayPlugin$a FloatArrayPlugin/FloatArrayPlugin$a FloatMathPlugin/FloatMathPlugin$a IA32ABI/IA32ABI$a LargeIntegers/LargeIntegers$a Matrix2x3Plugin/Matrix2x3Plugin$a MiscPrimitivePlugin/MiscPrimitivePlugin$a RePlugin/RePlugin$a SecurityPlugin/SecurityPlugin$a SerialPlugin/SerialPlugin$a SocketPlugin/SocketPlugin$a StarSqueakPlugin/StarSqueakPlugin$a SurfacePlugin/SurfacePlugin$a
 PLUGINS_LA	=  vm-display-null${la} vm-display-qnxScreen${la} vm-sound-null${la} FileAttributesPlugin${la} SqueakFFIPrims${la} LocalePlugin${la} VectorEnginePlugin${la}
 
 squeak		= squeak
 squeaksh	= squeak.sh
 binsqueaksh	= bin.squeak.sh
 
-all : $(squeak) plugins
+all : $(squeak) plugins squeak.1 $(npsqueak)
 
 # VM
 
 $(squeak) : config.sh $(SQLIBS) version.o
-	$(LINK) $(squeak) $(SQLIBS) $(LDFLAGS) $(LIBS) version.o -Wl,--whole-archive,vm/vm.a,--no-whole-archive
+	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS)  -Wl,--whole-archive,vm/vm.a,--no-whole-archive
 	@echo
 	@size $(squeak)
 	@echo
+	@./$(squeak) -version || ./$(squeak) --version 
+	@echo
 
 version.o : version.c
-	$(COMPILE) version.o version.c
+	./compile-version.sh
 
 version.c : $(SQLIBS)
 	${cfgdir}/verstamp version.c $(CC)
@@ -204,6 +208,70 @@ squeak.sh: ${cfgdir}/squeak.sh.in getversion
 
 bin.squeak.sh: ${cfgdir}/bin.squeak.sh.in getversion
 	sed "s|.expanded_relative_imgdir.|lib/squeak/`./getversion VERSION_TAG`|" <${cfgdir}/bin.squeak.sh.in >bin.squeak.sh
+
+# npsqueak
+
+npsqueak : nps/npsqueak.so
+
+nps :
+	mkdir nps
+	$(SHELL) -ec 'cd nps; ln -s $(topdir)/platforms/unix/npsqueak/* .'
+
+nps/npsqueak.so : nps getversion
+	$(SHELL) -ec 'cd nps; $(MAKE) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
+
+# OSX app bundle
+
+osxdir=$(topdir)/platforms/unix/vm-display-Quartz
+#app=Squeak-$(VM_MAJOR).$(VM_MINOR)-$(VM_RELEASE).app
+app=Squeak-`./getversion VM_MAJOR`.`./getversion VM_MINOR`-`./getversion VM_RELEASE`.app
+appdir=$(app)/Contents
+
+Squeak.app : squeak plugins Info.plist getversion
+	/bin/rm -rf $(app)
+	mkdir -p			$(appdir)/MacOS
+	cp -p  squeak			$(appdir)/MacOS/.
+	cp -p  */.libs/*		$(appdir)/MacOS/.
+	rm -f				$(appdir)/MacOS/*.la
+	rm -f				$(appdir)/MacOS/*.lai
+	cp -p  Info.plist		$(appdir)/.
+	cp -p  $(osxdir)/PkgInfo	$(appdir)/.
+	cp -pr $(osxdir)/Resources	$(appdir)/.
+	-find $(app) -name '*~' | xargs rm -f
+
+Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo getversion
+	$(osxdir)/mkinfo $(osxdir)/Info.plist.in Info.plist.tmp "`./getversion VM_VERSION`"
+	mv Info.plist.tmp Info.plist
+
+# OSX plugin bundle
+
+nposxdir=$(topdir)/platforms/unix/vm-display-Quartz
+npapp=NPSqueak.bundle
+npappdir=$(npapp)/Contents
+
+NPSqueak.bundle : NPSqueak plugins
+	/bin/rm -rf $(npapp)
+	mkdir -p			$(npappdir)/MacOS
+	cp -p  squeak			$(npappdir)/MacOS/.
+	cp -p  */.libs/*.so		$(npappdir)/MacOS/.
+	cp -p  Info.plist		$(npappdir)/.
+	cp -p  $(nposxdir)/PkgInfo	$(npappdir)/.
+	cp -pr $(nposxdir)/Resources	$(npappdir)/.
+	-find $(npapp) -name '*~' | xargs rm -f
+
+NPOBJS		= vm-display-Quartz/sqUnixSafari.o vm-sound-MacOSX/sqUnixSoundMacOSX.o vm-display-Quartz/sqUnixQuartz.o
+NPLIBS		= $(NPOBJS) -framework CoreAudio -framework AudioToolbox
+
+NPSqueak : config.sh $(SQLIBS) version.o $(NPOBJS)
+	gcc -bundle -flat_namespace -undefined suppress -o NPSqueak \
+	  $(NPLIBS) $(SQLIBS) version.o $(LIBS)  vm/vm.a
+
+# manual page
+
+squeak.1 : $(topdir)/platforms/unix/doc/squeak.1 getversion
+	$(cfgdir)/mkman `./getversion VM_MAJOR` `./getversion VM_VERSION` \
+	  $(bindir) $(imgdir) $(plgdir) $(mandir) $(docdir) \
+	  < $(topdir)/platforms/unix/doc/squeak.1 > $@
 
 # install/distrib (these just get in the way -- suck 'em in from elsewhere)
 
@@ -325,20 +393,17 @@ uninstall-npsqueak : npsqueak getversion .force
 
 # VMM configuration changes
 
-config.sh :
-
-#@@KenD@@##
-#config.sh : $(vmmcfg)/plugins.int $(vmmcfg)/plugins.ext libtool
-#	./config.status
-#	@echo
-#	@echo "configuration changed: please run make again"
-#	@echo
-#	@exit 1
+config.sh : $(vmmcfg)/plugins.int $(vmmcfg)/plugins.ext libtool
+	./config.status
+	@echo
+	@echo "configuration changed: please run make again"
+	@echo
+	@exit 1
 
 # bookkeeping
 LIBTOOL_DEPS = ../../../../platforms/unix/config/ltmain.sh
 libtool: $(LIBTOOL_DEPS)
-##@@KenD@@##	$(SHELL) ./config.status libtool
+	$(SHELL) ./config.status libtool
 
 
 # targets
@@ -380,9 +445,6 @@ Matrix2x3Plugin/Matrix2x3Plugin$a : .force
 
 MiscPrimitivePlugin/MiscPrimitivePlugin$a : .force
 	@$(SHELL) -ec 'cd MiscPrimitivePlugin; $(MAKE) MiscPrimitivePlugin$a'
-
-Mpeg3Plugin/Mpeg3Plugin$a : .force
-	@$(SHELL) -ec 'cd Mpeg3Plugin; $(MAKE) Mpeg3Plugin$a'
 
 RePlugin/RePlugin$a : .force
 	@$(SHELL) -ec 'cd RePlugin; $(MAKE) RePlugin$a'

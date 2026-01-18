@@ -69,15 +69,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -108,7 +108,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -155,7 +155,7 @@ COMPILE		= $(CC) $(CFLAGS) $(CPPFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) -DSQUEAK_BUIL
 LINK		= $(AR) -rc
 RANLIB		= ranlib
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin 
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin 
 OBJS		=  BitBltPlugin$o BitBltArm$o BitBltArm64$o BitBltArmLinux$o BitBltArmOther$o BitBltArmSimd$o BitBltDispatch$o BitBltGeneric$o BitBltArmSimdAlphaBlend$o BitBltArmSimdBitLogical$o BitBltArmSimdCompare$o BitBltArmSimdPixPaint$o BitBltArmSimdSourceWord$o
 TARGET		= BitBltPlugin$a
 PLIBS		= 
@@ -173,43 +173,43 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-BitBltPlugin$o : /home/kend/Kens-VM/src/plugins/BitBltPlugin/BitBltPlugin.c
-	$(COMPILE) BitBltPlugin$o /home/kend/Kens-VM/src/plugins/BitBltPlugin/BitBltPlugin.c
+BitBltPlugin$o : /home/kend/QNX-VM/src/plugins/BitBltPlugin/BitBltPlugin.c
+	$(COMPILE) BitBltPlugin$o /home/kend/QNX-VM/src/plugins/BitBltPlugin/BitBltPlugin.c
 
-BitBltArm$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm.c
-	$(COMPILE) BitBltArm$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm.c
+BitBltArm$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm.c
+	$(COMPILE) BitBltArm$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm.c
 
-BitBltArm64$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm64.c
-	$(COMPILE) BitBltArm64$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm64.c
+BitBltArm64$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm64.c
+	$(COMPILE) BitBltArm64$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArm64.c
 
-BitBltArmLinux$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmLinux.c
-	$(COMPILE) BitBltArmLinux$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmLinux.c
+BitBltArmLinux$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmLinux.c
+	$(COMPILE) BitBltArmLinux$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmLinux.c
 
-BitBltArmOther$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmOther.c
-	$(COMPILE) BitBltArmOther$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmOther.c
+BitBltArmOther$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmOther.c
+	$(COMPILE) BitBltArmOther$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmOther.c
 
-BitBltArmSimd$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimd.c
-	$(COMPILE) BitBltArmSimd$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimd.c
+BitBltArmSimd$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimd.c
+	$(COMPILE) BitBltArmSimd$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimd.c
 
-BitBltDispatch$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltDispatch.c
-	$(COMPILE) BitBltDispatch$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltDispatch.c
+BitBltDispatch$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltDispatch.c
+	$(COMPILE) BitBltDispatch$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltDispatch.c
 
-BitBltGeneric$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltGeneric.c
-	$(COMPILE) BitBltGeneric$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltGeneric.c
+BitBltGeneric$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltGeneric.c
+	$(COMPILE) BitBltGeneric$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltGeneric.c
 
-BitBltArmSimdAlphaBlend$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdAlphaBlend.s
-	$(AS) BitBltArmSimdAlphaBlend$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdAlphaBlend.s
+BitBltArmSimdAlphaBlend$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdAlphaBlend.s
+	$(AS) BitBltArmSimdAlphaBlend$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdAlphaBlend.s
 
-BitBltArmSimdBitLogical$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdBitLogical.s
-	$(AS) BitBltArmSimdBitLogical$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdBitLogical.s
+BitBltArmSimdBitLogical$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdBitLogical.s
+	$(AS) BitBltArmSimdBitLogical$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdBitLogical.s
 
-BitBltArmSimdCompare$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdCompare.s
-	$(AS) BitBltArmSimdCompare$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdCompare.s
+BitBltArmSimdCompare$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdCompare.s
+	$(AS) BitBltArmSimdCompare$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdCompare.s
 
-BitBltArmSimdPixPaint$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdPixPaint.s
-	$(AS) BitBltArmSimdPixPaint$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdPixPaint.s
+BitBltArmSimdPixPaint$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdPixPaint.s
+	$(AS) BitBltArmSimdPixPaint$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdPixPaint.s
 
-BitBltArmSimdSourceWord$o : /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdSourceWord.s
-	$(AS) BitBltArmSimdSourceWord$o /home/kend/Kens-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdSourceWord.s
+BitBltArmSimdSourceWord$o : /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdSourceWord.s
+	$(AS) BitBltArmSimdSourceWord$o /home/kend/QNX-VM/platforms/Cross/plugins/BitBltPlugin/BitBltArmSimdSourceWord.s
 
 .force :

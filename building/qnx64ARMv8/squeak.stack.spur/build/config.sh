@@ -1,8 +1,8 @@
 cogit="no"
-srcdir="/home/kend/Kens-VM/src/spur64.stack"
-blddir="/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build"
-topdir="/home/kend/Kens-VM"
-cfgdir="/home/kend/Kens-VM/platforms/unix/config"
+srcdir="/home/kend/QNX-VM/src/spur64.stack"
+blddir="/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build"
+topdir="/home/kend/QNX-VM"
+cfgdir="/home/kend/QNX-VM/platforms/unix/config"
 
 int_modules="vm"
 ext_modules="vm-display-null vm-display-qnxScreen vm-sound-null"
@@ -10,6 +10,6 @@ int_plugins=" BitBltPlugin FileCopyPlugin FilePlugin FileDialogPlugin Float64Arr
 ext_plugins=" FileAttributesPlugin SqueakFFIPrims LocalePlugin VectorEnginePlugin"
 exc_plugins=""
 
-vmi_dirs="/home/kend/Kens-VM/src/spur64.stack	/home/kend/Kens-VM/platforms/Cross			/home/kend/Kens-VM/platforms/unix"
-int_dirs="/home/kend/Kens-VM/src/plugins	/home/kend/Kens-VM/platforms/Cross/plugins	/home/kend/Kens-VM/platforms/unix/plugins"
-ext_dirs="/home/kend/Kens-VM/src/plugins	/home/kend/Kens-VM/platforms/Cross/plugins	/home/kend/Kens-VM/platforms/unix/plugins"
+vmi_dirs="/home/kend/QNX-VM/src/spur64.stack	/home/kend/QNX-VM/platforms/Cross			/home/kend/QNX-VM/platforms/unix"
+int_dirs="/home/kend/QNX-VM/src/plugins	/home/kend/QNX-VM/platforms/Cross/plugins	/home/kend/QNX-VM/platforms/unix/plugins"
+ext_dirs="/home/kend/QNX-VM/src/plugins	/home/kend/QNX-VM/platforms/Cross/plugins	/home/kend/QNX-VM/platforms/unix/plugins"

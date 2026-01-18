@@ -78,15 +78,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -117,7 +117,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -135,7 +135,7 @@ FT2_PLUGIN_LIBS =
 UNICODE_PLUGIN_CFLAGS = 
 UNICODE_PLUGIN_LIBS = 
 
-LIBS=		-lz -lm $(QNX_LIBS) $(QNX_LDFLAGS) 
+LIBS=		-lz -lm -lscreen $(QNX_LIBS) $(QNX_LDFLAGS) 
 
 
 X_CFLAGS=	
@@ -181,7 +181,7 @@ OBJS		= sqQNXScreen$o
 #XCFLAGS		= $(X_CFLAGS) -Wall -Werror -Wno-unknown-pragmas
 XCFLAGS		= $(X_CFLAGS) -Wall -Wno-unknown-pragmas
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen  $(X_INCLUDES) $(QNX_CFLAGS) \
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen  $(X_INCLUDES) $(QNX_CFLAGS) \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
 		  -I$(topdir)/platforms/Cross/plugins/B3DAcceleratorPlugin \
 		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin
@@ -193,13 +193,13 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-qnxDisplayTest$o : /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/qnxDisplayTest.c
-	$(COMPILE) qnxDisplayTest$o /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/qnxDisplayTest.c
+qnxDisplayTest$o : /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/qnxDisplayTest.c
+	$(COMPILE) qnxDisplayTest$o /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/qnxDisplayTest.c
 
-qnxScreenTest$o : /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/qnxScreenTest.c
-	$(COMPILE) qnxScreenTest$o /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/qnxScreenTest.c
+qnxScreenTest$o : /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/qnxScreenTest.c
+	$(COMPILE) qnxScreenTest$o /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/qnxScreenTest.c
 
-sqQNXScreen$o : /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/sqQNXScreen.c
-	$(COMPILE) sqQNXScreen$o /home/kend/Kens-VM/platforms/unix/vm-display-qnxScreen/sqQNXScreen.c
+sqQNXScreen$o : /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/sqQNXScreen.c
+	$(COMPILE) sqQNXScreen$o /home/kend/QNX-VM/platforms/unix/vm-display-qnxScreen/sqQNXScreen.c
 
 .force :

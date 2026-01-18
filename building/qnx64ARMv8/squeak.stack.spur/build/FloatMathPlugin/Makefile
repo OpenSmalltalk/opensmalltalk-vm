@@ -69,15 +69,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -108,7 +108,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -155,7 +155,7 @@ COMPILE		= $(CC) $(CFLAGS) $(CPPFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) -DSQUEAK_BUIL
 LINK		= $(AR) -rc
 RANLIB		= ranlib
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin 
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin 
 OBJS		=  FloatMathPlugin$o acos$o acosh$o asin$o asinh$o atan$o atan2$o atanh$o copysign$o cos$o cosh$o exp$o expm1$o finite$o fmod$o hypot$o isnan$o k_cos$o k_rem_pio2$o k_sin$o k_tan$o ldexp$o log$o log10$o log1p$o modf$o pow$o rem_pio2$o rint$o scalb$o scalbn$o sin$o sinh$o sqrt$o tan$o tanh$o
 TARGET		= FloatMathPlugin$a
 PLIBS		= 
@@ -170,112 +170,112 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-FloatMathPlugin$o : /home/kend/Kens-VM/src/plugins/FloatMathPlugin/FloatMathPlugin.c
-	$(COMPILE) FloatMathPlugin$o /home/kend/Kens-VM/src/plugins/FloatMathPlugin/FloatMathPlugin.c
+FloatMathPlugin$o : /home/kend/QNX-VM/src/plugins/FloatMathPlugin/FloatMathPlugin.c
+	$(COMPILE) FloatMathPlugin$o /home/kend/QNX-VM/src/plugins/FloatMathPlugin/FloatMathPlugin.c
 
-acos$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/acos.c
-	$(COMPILE) acos$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/acos.c
+acos$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/acos.c
+	$(COMPILE) acos$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/acos.c
 
-acosh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/acosh.c
-	$(COMPILE) acosh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/acosh.c
+acosh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/acosh.c
+	$(COMPILE) acosh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/acosh.c
 
-asin$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/asin.c
-	$(COMPILE) asin$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/asin.c
+asin$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/asin.c
+	$(COMPILE) asin$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/asin.c
 
-asinh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/asinh.c
-	$(COMPILE) asinh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/asinh.c
+asinh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/asinh.c
+	$(COMPILE) asinh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/asinh.c
 
-atan$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atan.c
-	$(COMPILE) atan$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atan.c
+atan$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atan.c
+	$(COMPILE) atan$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atan.c
 
-atan2$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atan2.c
-	$(COMPILE) atan2$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atan2.c
+atan2$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atan2.c
+	$(COMPILE) atan2$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atan2.c
 
-atanh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atanh.c
-	$(COMPILE) atanh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/atanh.c
+atanh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atanh.c
+	$(COMPILE) atanh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/atanh.c
 
-copysign$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/copysign.c
-	$(COMPILE) copysign$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/copysign.c
+copysign$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/copysign.c
+	$(COMPILE) copysign$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/copysign.c
 
-cos$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/cos.c
-	$(COMPILE) cos$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/cos.c
+cos$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/cos.c
+	$(COMPILE) cos$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/cos.c
 
-cosh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/cosh.c
-	$(COMPILE) cosh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/cosh.c
+cosh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/cosh.c
+	$(COMPILE) cosh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/cosh.c
 
-exp$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/exp.c
-	$(COMPILE) exp$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/exp.c
+exp$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/exp.c
+	$(COMPILE) exp$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/exp.c
 
-expm1$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/expm1.c
-	$(COMPILE) expm1$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/expm1.c
+expm1$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/expm1.c
+	$(COMPILE) expm1$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/expm1.c
 
-finite$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/finite.c
-	$(COMPILE) finite$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/finite.c
+finite$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/finite.c
+	$(COMPILE) finite$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/finite.c
 
-fmod$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/fmod.c
-	$(COMPILE) fmod$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/fmod.c
+fmod$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/fmod.c
+	$(COMPILE) fmod$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/fmod.c
 
-hypot$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/hypot.c
-	$(COMPILE) hypot$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/hypot.c
+hypot$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/hypot.c
+	$(COMPILE) hypot$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/hypot.c
 
-isnan$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/isnan.c
-	$(COMPILE) isnan$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/isnan.c
+isnan$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/isnan.c
+	$(COMPILE) isnan$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/isnan.c
 
-k_cos$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_cos.c
-	$(COMPILE) k_cos$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_cos.c
+k_cos$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_cos.c
+	$(COMPILE) k_cos$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_cos.c
 
-k_rem_pio2$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_rem_pio2.c
-	$(COMPILE) k_rem_pio2$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_rem_pio2.c
+k_rem_pio2$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_rem_pio2.c
+	$(COMPILE) k_rem_pio2$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_rem_pio2.c
 
-k_sin$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_sin.c
-	$(COMPILE) k_sin$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_sin.c
+k_sin$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_sin.c
+	$(COMPILE) k_sin$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_sin.c
 
-k_tan$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_tan.c
-	$(COMPILE) k_tan$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/k_tan.c
+k_tan$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_tan.c
+	$(COMPILE) k_tan$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/k_tan.c
 
-ldexp$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/ldexp.c
-	$(COMPILE) ldexp$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/ldexp.c
+ldexp$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/ldexp.c
+	$(COMPILE) ldexp$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/ldexp.c
 
-log$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log.c
-	$(COMPILE) log$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log.c
+log$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log.c
+	$(COMPILE) log$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log.c
 
-log10$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log10.c
-	$(COMPILE) log10$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log10.c
+log10$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log10.c
+	$(COMPILE) log10$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log10.c
 
-log1p$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log1p.c
-	$(COMPILE) log1p$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/log1p.c
+log1p$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log1p.c
+	$(COMPILE) log1p$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/log1p.c
 
-modf$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/modf.c
-	$(COMPILE) modf$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/modf.c
+modf$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/modf.c
+	$(COMPILE) modf$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/modf.c
 
-pow$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/pow.c
-	$(COMPILE) pow$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/pow.c
+pow$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/pow.c
+	$(COMPILE) pow$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/pow.c
 
-rem_pio2$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/rem_pio2.c
-	$(COMPILE) rem_pio2$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/rem_pio2.c
+rem_pio2$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/rem_pio2.c
+	$(COMPILE) rem_pio2$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/rem_pio2.c
 
-rint$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/rint.c
-	$(COMPILE) rint$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/rint.c
+rint$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/rint.c
+	$(COMPILE) rint$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/rint.c
 
-scalb$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/scalb.c
-	$(COMPILE) scalb$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/scalb.c
+scalb$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/scalb.c
+	$(COMPILE) scalb$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/scalb.c
 
-scalbn$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/scalbn.c
-	$(COMPILE) scalbn$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/scalbn.c
+scalbn$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/scalbn.c
+	$(COMPILE) scalbn$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/scalbn.c
 
-sin$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sin.c
-	$(COMPILE) sin$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sin.c
+sin$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sin.c
+	$(COMPILE) sin$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sin.c
 
-sinh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sinh.c
-	$(COMPILE) sinh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sinh.c
+sinh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sinh.c
+	$(COMPILE) sinh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sinh.c
 
-sqrt$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sqrt.c
-	$(COMPILE) sqrt$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/sqrt.c
+sqrt$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sqrt.c
+	$(COMPILE) sqrt$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/sqrt.c
 
-tan$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/tan.c
-	$(COMPILE) tan$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/tan.c
+tan$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/tan.c
+	$(COMPILE) tan$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/tan.c
 
-tanh$o : /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/tanh.c
-	$(COMPILE) tanh$o /home/kend/Kens-VM/platforms/Cross/plugins/FloatMathPlugin/tanh.c
+tanh$o : /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/tanh.c
+	$(COMPILE) tanh$o /home/kend/QNX-VM/platforms/Cross/plugins/FloatMathPlugin/tanh.c
 
 .force :

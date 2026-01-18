@@ -1,4 +1,4 @@
-/* Automatically generated on Wed Jan 7 01:14:05 PM PST 2026 */
+/* Automatically generated on Sat Jan 17 03:40:37 PM PST 2026 */
 extern sqExport vm_exports[];
 extern sqExport os_exports[];
 extern sqExport BitBltPlugin_exports[];

@@ -16,5 +16,5 @@ COMPILE.cc	= $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(XCFLAGS) \
 		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -c -o
 LINK		= $(LIBTOOL) --mode=link \
 		  $(CC) $(CFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -o
+		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -shared -o
 RANLIB		= :

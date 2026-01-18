@@ -69,15 +69,15 @@ target_cpu=	aarch64
 host_vendor=	rpi4
 host_os=	qnx-gnu
 
-topdir=		/home/kend/Kens-VM
-cfgdir=		/home/kend/Kens-VM/platforms/unix/config
-srcdir=		/home/kend/Kens-VM/src/spur64.stack
-vmmcfg=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
-blddir=		/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+topdir=		/home/kend/QNX-VM
+cfgdir=		/home/kend/QNX-VM/platforms/unix/config
+srcdir=		/home/kend/QNX-VM/src/spur64.stack
+vmmcfg=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
+blddir=		/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 scriptname=	spur64
 
-top_builddir=	/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build
+top_builddir=	/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build
 
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -108,7 +108,7 @@ LN_S=		ln -s
 
 CC=		$(QNX_CC)
 DEFS=		-DHAVE_CONFIG_H
-INCLUDES=	-I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/Kens-VM/platforms/unix/vm -I/home/kend/Kens-VM/platforms/Cross/vm -I/home/kend/Kens-VM/src/spur64.stack -I/usr/local/include
+INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/home/kend/QNX-VM/platforms/unix/vm -I/home/kend/QNX-VM/platforms/Cross/vm -I/home/kend/QNX-VM/src/spur64.stack -I/usr/local/include
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
@@ -166,7 +166,7 @@ LINKXX		= $(LIBTOOL) --mode=link \
 		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -avoid-version -module -rpath $(plgdir) -o
 RANLIB		= :
 
-XINCLUDES	=  -I/home/kend/Kens-VM/platforms/Cross/plugins/FileAttributesPlugin -I/home/kend/Kens-VM/platforms/unix/plugins/FileAttributesPlugin 
+XINCLUDES	=  -I/home/kend/QNX-VM/platforms/Cross/plugins/FileAttributesPlugin -I/home/kend/QNX-VM/platforms/unix/plugins/FileAttributesPlugin 
 OBJS		=  FileAttributesPlugin$o faCommon$o faSupport$o
 TARGET		= FileAttributesPlugin$a
 PLIBS		= 
@@ -180,13 +180,13 @@ $(TARGET) : $(OBJS) Makefile
 
 
 
-FileAttributesPlugin$o : /home/kend/Kens-VM/src/plugins/FileAttributesPlugin/FileAttributesPlugin.c
-	$(COMPILE) FileAttributesPlugin$o /home/kend/Kens-VM/src/plugins/FileAttributesPlugin/FileAttributesPlugin.c
+FileAttributesPlugin$o : /home/kend/QNX-VM/src/plugins/FileAttributesPlugin/FileAttributesPlugin.c
+	$(COMPILE) FileAttributesPlugin$o /home/kend/QNX-VM/src/plugins/FileAttributesPlugin/FileAttributesPlugin.c
 
-faCommon$o : /home/kend/Kens-VM/platforms/Cross/plugins/FileAttributesPlugin/faCommon.c
-	$(COMPILE) faCommon$o /home/kend/Kens-VM/platforms/Cross/plugins/FileAttributesPlugin/faCommon.c
+faCommon$o : /home/kend/QNX-VM/platforms/Cross/plugins/FileAttributesPlugin/faCommon.c
+	$(COMPILE) faCommon$o /home/kend/QNX-VM/platforms/Cross/plugins/FileAttributesPlugin/faCommon.c
 
-faSupport$o : /home/kend/Kens-VM/platforms/unix/plugins/FileAttributesPlugin/faSupport.c
-	$(COMPILE) faSupport$o /home/kend/Kens-VM/platforms/unix/plugins/FileAttributesPlugin/faSupport.c
+faSupport$o : /home/kend/QNX-VM/platforms/unix/plugins/FileAttributesPlugin/faSupport.c
+	$(COMPILE) faSupport$o /home/kend/QNX-VM/platforms/unix/plugins/FileAttributesPlugin/faSupport.c
 
 .force :
