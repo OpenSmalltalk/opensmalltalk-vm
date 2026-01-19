@@ -40,6 +40,6 @@ ranlib StarSqueakPlugin.a
 ar -rc SurfacePlugin.a SurfacePlugin.o 
 ranlib SurfacePlugin.a
 /home/kend/QNX-VM/platforms/unix/config/verstamp version.c qcc -Vgcc_ntoaarch64le
-qcc -Vgcc_ntoaarch64le -Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 -DNOEXECINFO=1 -I/home/kend/qnx800/target/qnx/usr/include -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -DNOEXECINFO=1 -I/home/kend/qnx800/target/qnx/usr/include  -Wl,-z,now -lsocket -linputevents -liconv -lffi -L/home/kend/qnx800/target/qnx/aarch64le/lib -L/home/kend/qnx800/target/qnx/aarch64le/usr/lib   -c -o version.o version.c
+qcc -Vgcc_ntoaarch64le -Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 -DNOEXECINFO=1 -I/home/kend/qnx800/target/qnx/usr/include -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -DNOEXECINFO=1 -I/home/kend/qnx800/target/qnx/usr/include  -Wl,-z,now -lsocket -linputevents -liconv -lffi -lscreen -L/home/kend/qnx800/target/qnx/aarch64le/lib -L/home/kend/qnx800/target/qnx/aarch64le/usr/lib   -c -o version.o version.c
 cc: Can't specify -P, -C, -E, -c or -S with -o and have multiple files
 make: *** [Makefile:186: version.o] Error 1

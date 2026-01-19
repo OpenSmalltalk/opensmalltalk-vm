@@ -1,6 +1,17 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.int
 INTERNAL_PLUGINS = \
+ADPCMCodecPlugin \
+AioPlugin \
+AsynchFilePlugin \
+B2DPlugin \
 BitBltPlugin \
+BMPReadWriterPlugin \
+CroquetPlugin \
+HostWindowPlugin \
+ZipPlugin \
+DropPlugin \
+DSAPrims \
+FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
 FileDialogPlugin \
@@ -8,6 +19,10 @@ Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 IA32ABI \
+JoystickTabletPlugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+Klatt \
 LargeIntegers \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
@@ -16,43 +31,9 @@ RePlugin \
 SecurityPlugin \
 SerialPlugin \
 SocketPlugin \
+SoundCodecPrims \
+SoundGenerationPlugin \
+SoundPlugin \
 StarSqueakPlugin \
-SurfacePlugin 
-
-# ADPCMCodecPlugin \
-# AioPlugin \
-# AsynchFilePlugin \
-# B2DPlugin \
-# BitBltPlugin \
-# BMPReadWriterPlugin \
-# CroquetPlugin \
-# HostWindowPlugin \
-# ZipPlugin \
-# DropPlugin \
-# DSAPrims \
-# FFTPlugin \
-# FileCopyPlugin \
-# FilePlugin \
-# FileDialogPlugin \
-# Float64ArrayPlugin \
-# FloatArrayPlugin \
-# FloatMathPlugin \
-# IA32ABI \
-# JoystickTabletPlugin \
-# JPEGReaderPlugin \
-# JPEGReadWriter2Plugin \
-# Klatt \
-# LargeIntegers \
-# Matrix2x3Plugin \
-# MiscPrimitivePlugin \
-# Mpeg3Plugin \
-# RePlugin \
-# SecurityPlugin \
-# SerialPlugin \
-# SocketPlugin \
-# SoundCodecPrims \
-# SoundGenerationPlugin \
-# SoundPlugin \
-# StarSqueakPlugin \
-# SurfacePlugin \
-# VMProfileLinuxSupportPlugin
+SurfacePlugin \
+VMProfileLinuxSupportPlugin

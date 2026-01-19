@@ -14,7 +14,7 @@ export QNX_CCFLAGS="-DNOEXECINFO=1 -I$QNX_BASE/target/qnx/usr/include"
 export QNX_CFLAGS=$QNX_CCFLAGS
 export QNX_MAKEFLAGS=$QNX_CCFLAGS
 export QNX_LDFLAGS="-L$QNX_TARGET/lib -L$QNX_TARGET/usr/lib"
-export QNX_LIBS="-lsocket -linputevents -liconv -lffi"
+export QNX_LIBS="-lsocket -linputevents -liconv -lffi -lscreen" 
 export QNX_CPU=aarch64
 export QNX_TARGET_OS=qnx
 export QNX_TARGET_ARCH=-Vgcc_ntoaarch64le

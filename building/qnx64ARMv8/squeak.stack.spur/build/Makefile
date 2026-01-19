@@ -111,7 +111,7 @@ INCLUDES=	-I/home/kend/QNX-VM/building/qnx64ARMv8/squeak.stack.spur/build -I/hom
 CPPFLAGS=	 -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable $(QNX_CFLAGS)
 CFLAGS=		-Wall   -g -O2 -DNDEBUG -DDEBUGVM=0 -DCOGMTVM=0 -DLSB_FIRST=1 $(QNX_CFLAGS)
 WFLAGS=		
-LDFLAGS=	 -Wl,-z,now -lscreen $(QNX_LIBS) $(QNX_LDFLAGS)
+LDFLAGS=	 -Wl,-z,now $(QNX_LIBS) $(QNX_LDFLAGS)
 BITBLT_OBJS=	BitBltPlugin.o
 IA32ABI_OBJS=	IA32ABI.o AlienSUnitTestProcedures.o xabicc.o
 VM_DISPX11_OBJS= 
@@ -163,7 +163,7 @@ RANLIB		= :
 
 la		= .la
 
-SQLIBS		=  vm/vm$a BitBltPlugin/BitBltPlugin$a FileCopyPlugin/FileCopyPlugin$a FilePlugin/FilePlugin$a FileDialogPlugin/FileDialogPlugin$a Float64ArrayPlugin/Float64ArrayPlugin$a FloatArrayPlugin/FloatArrayPlugin$a FloatMathPlugin/FloatMathPlugin$a IA32ABI/IA32ABI$a LargeIntegers/LargeIntegers$a Matrix2x3Plugin/Matrix2x3Plugin$a MiscPrimitivePlugin/MiscPrimitivePlugin$a RePlugin/RePlugin$a SecurityPlugin/SecurityPlugin$a SerialPlugin/SerialPlugin$a SocketPlugin/SocketPlugin$a StarSqueakPlugin/StarSqueakPlugin$a SurfacePlugin/SurfacePlugin$a
+SQLIBS		=  vm/vm$a ADPCMCodecPlugin/ADPCMCodecPlugin$a B2DPlugin/B2DPlugin$a BitBltPlugin/BitBltPlugin$a BMPReadWriterPlugin/BMPReadWriterPlugin$a CroquetPlugin/CroquetPlugin$a HostWindowPlugin/HostWindowPlugin$a ZipPlugin/ZipPlugin$a DropPlugin/DropPlugin$a DSAPrims/DSAPrims$a FFTPlugin/FFTPlugin$a FileCopyPlugin/FileCopyPlugin$a FilePlugin/FilePlugin$a FileDialogPlugin/FileDialogPlugin$a Float64ArrayPlugin/Float64ArrayPlugin$a FloatArrayPlugin/FloatArrayPlugin$a FloatMathPlugin/FloatMathPlugin$a IA32ABI/IA32ABI$a JPEGReaderPlugin/JPEGReaderPlugin$a JPEGReadWriter2Plugin/JPEGReadWriter2Plugin$a Klatt/Klatt$a LargeIntegers/LargeIntegers$a Matrix2x3Plugin/Matrix2x3Plugin$a MiscPrimitivePlugin/MiscPrimitivePlugin$a RePlugin/RePlugin$a SecurityPlugin/SecurityPlugin$a SerialPlugin/SerialPlugin$a SocketPlugin/SocketPlugin$a SoundCodecPrims/SoundCodecPrims$a SoundGenerationPlugin/SoundGenerationPlugin$a SoundPlugin/SoundPlugin$a StarSqueakPlugin/StarSqueakPlugin$a SurfacePlugin/SurfacePlugin$a
 PLUGINS_LA	=  vm-display-null${la} vm-display-qnxScreen${la} vm-sound-null${la} FileAttributesPlugin${la} SqueakFFIPrims${la} LocalePlugin${la} VectorEnginePlugin${la}
 
 squeak		= squeak
@@ -175,7 +175,7 @@ all : $(squeak) plugins squeak.1 $(npsqueak)
 # VM
 
 $(squeak) : config.sh $(SQLIBS) version.o
-	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS)  -Wl,--whole-archive,vm/vm.a,--no-whole-archive
+	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS) -lsocket -linputevents -liconv -lffi -lscreen -Wl,--whole-archive,vm/vm.a,--no-whole-archive
 	@echo
 	@size $(squeak)
 	@echo
@@ -411,8 +411,35 @@ libtool: $(LIBTOOL_DEPS)
 vm/vm$a : .force
 	@$(SHELL) -ec 'cd vm; $(MAKE) vm$a'
 
+ADPCMCodecPlugin/ADPCMCodecPlugin$a : .force
+	@$(SHELL) -ec 'cd ADPCMCodecPlugin; $(MAKE) ADPCMCodecPlugin$a'
+
+B2DPlugin/B2DPlugin$a : .force
+	@$(SHELL) -ec 'cd B2DPlugin; $(MAKE) B2DPlugin$a'
+
 BitBltPlugin/BitBltPlugin$a : .force
 	@$(SHELL) -ec 'cd BitBltPlugin; $(MAKE) BitBltPlugin$a'
+
+BMPReadWriterPlugin/BMPReadWriterPlugin$a : .force
+	@$(SHELL) -ec 'cd BMPReadWriterPlugin; $(MAKE) BMPReadWriterPlugin$a'
+
+CroquetPlugin/CroquetPlugin$a : .force
+	@$(SHELL) -ec 'cd CroquetPlugin; $(MAKE) CroquetPlugin$a'
+
+HostWindowPlugin/HostWindowPlugin$a : .force
+	@$(SHELL) -ec 'cd HostWindowPlugin; $(MAKE) HostWindowPlugin$a'
+
+ZipPlugin/ZipPlugin$a : .force
+	@$(SHELL) -ec 'cd ZipPlugin; $(MAKE) ZipPlugin$a'
+
+DropPlugin/DropPlugin$a : .force
+	@$(SHELL) -ec 'cd DropPlugin; $(MAKE) DropPlugin$a'
+
+DSAPrims/DSAPrims$a : .force
+	@$(SHELL) -ec 'cd DSAPrims; $(MAKE) DSAPrims$a'
+
+FFTPlugin/FFTPlugin$a : .force
+	@$(SHELL) -ec 'cd FFTPlugin; $(MAKE) FFTPlugin$a'
 
 FileCopyPlugin/FileCopyPlugin$a : .force
 	@$(SHELL) -ec 'cd FileCopyPlugin; $(MAKE) FileCopyPlugin$a'
@@ -435,6 +462,15 @@ FloatMathPlugin/FloatMathPlugin$a : .force
 IA32ABI/IA32ABI$a : .force
 	@$(SHELL) -ec 'cd IA32ABI; $(MAKE) IA32ABI$a'
 
+JPEGReaderPlugin/JPEGReaderPlugin$a : .force
+	@$(SHELL) -ec 'cd JPEGReaderPlugin; $(MAKE) JPEGReaderPlugin$a'
+
+JPEGReadWriter2Plugin/JPEGReadWriter2Plugin$a : .force
+	@$(SHELL) -ec 'cd JPEGReadWriter2Plugin; $(MAKE) JPEGReadWriter2Plugin$a'
+
+Klatt/Klatt$a : .force
+	@$(SHELL) -ec 'cd Klatt; $(MAKE) Klatt$a'
+
 LargeIntegers/LargeIntegers$a : .force
 	@$(SHELL) -ec 'cd LargeIntegers; $(MAKE) LargeIntegers$a'
 
@@ -455,6 +491,15 @@ SerialPlugin/SerialPlugin$a : .force
 
 SocketPlugin/SocketPlugin$a : .force
 	@$(SHELL) -ec 'cd SocketPlugin; $(MAKE) SocketPlugin$a'
+
+SoundCodecPrims/SoundCodecPrims$a : .force
+	@$(SHELL) -ec 'cd SoundCodecPrims; $(MAKE) SoundCodecPrims$a'
+
+SoundGenerationPlugin/SoundGenerationPlugin$a : .force
+	@$(SHELL) -ec 'cd SoundGenerationPlugin; $(MAKE) SoundGenerationPlugin$a'
+
+SoundPlugin/SoundPlugin$a : .force
+	@$(SHELL) -ec 'cd SoundPlugin; $(MAKE) SoundPlugin$a'
 
 StarSqueakPlugin/StarSqueakPlugin$a : .force
 	@$(SHELL) -ec 'cd StarSqueakPlugin; $(MAKE) StarSqueakPlugin$a'
