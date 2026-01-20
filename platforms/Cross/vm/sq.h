@@ -191,6 +191,7 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
 
 /* VM_TICKER enables facilities providing periodic invocation of functions
  * on a high-priority thread in the VM, preempting Smalltalk execution.
+ * This is used by Qwaq/Teleplace/Virtend VMs to do sound processing "in the background".
  */
 #if VM_TICKER
 extern usqInt ioVMTickerCount(void);
@@ -218,7 +219,11 @@ sqInt success(sqInt);
 
 extern VM_EXPORT void *displayBits;
 extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
-extern VM_EXPORT sqInt sendWheelEvents;
+#if !defined(SQ_USE_GLOBAL_STRUCT) // In the interpreter this is not const
+extern VM_EXPORT const sqInt imageHeaderFlags;
+# define sendWheelEvents() (imageHeaderFlags & 0x80)
+# define upscaleDisplayOnHighDPI() (!(imageHeaderFlags & 0x400))
+#endif
 
 sqInt ioBeep(void);
 sqInt ioExit(void);
@@ -322,11 +327,17 @@ extern sqOSThread getVMOSThread(void);
  * # define sqOSSemaphore pthread_cond_t
  * # define ioOSThreadsEqual(a,b) pthread_equal(a,b)
  */
-# if !defined(ioGetThreadLocalThreadIndex)
-long ioGetThreadLocalThreadIndex(void);
+# if !defined(ioThreadLocalGetThreadIndex)
+sqInt ioThreadLocalGetThreadIndex(void);
 # endif
-# if !defined(ioSetThreadLocalThreadIndex)
-void ioSetThreadLocalThreadIndex(long);
+# if !defined(ioThreadLocalSetThreadIndex)
+sqInt ioThreadLocalSetThreadIndex(sqInt);
+# endif
+# if !defined(ioThreadLocalGetInFFICall)
+sqInt ioThreadLocalGetInFFICall(void);
+# endif
+# if !defined(ioThreadLocalSetInFFICall)
+sqInt ioThreadLocalSetInFFICall(sqInt);
 # endif
 
 # if !defined(ioNewOSThread)

@@ -133,6 +133,16 @@ Option C' - WinSDK via x86 Native Tools Command Prompt substitutes Cygwin for MS
 	install Cygwin instead of MSYS2, and use "..\common\SETPATH_CYGWIN.BAT"
 	instead of "..\common\SETPATH_MSYS2.BAT"
 
+Option D - cygwin, clang-12, and MSVC, as used by ELiot Miranda, Dec 2025
+	Install clang-12, the last clang version to support x86, from
+	https://prereleases.llvm.org/win-snapshots/LLVM-12.0.0-6923b0a7-win32.exe
+	Install it to \LLVM12-32.
+	Install an MSVC Community Edition
+	Open the x86 MSVC build shell, e.g. create a shortcut to
+		%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+	cd to either squeak.cog.spur.MSVC or squeak.stack.spur.MSVC
+	evaluate ..\common\SETPATH_CYGWIN.BAT
+	evaluate ..\common\MAKEALL.BAT
 
 
 Tailoring the VM build

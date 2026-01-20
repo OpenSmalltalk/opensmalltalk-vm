@@ -274,13 +274,27 @@ storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 {
 	for (int n = -1; ++n < 16;)
 		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
-#if 1
 	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
-#else
-	registerState[16] = ((((ARMul_State *)cpu)->NFlag & 1) << 5)
-					  + ((((ARMul_State *)cpu)->ZFlag & 1) << 4)
-					  + ((((ARMul_State *)cpu)->CFlag & 1) << 3)
-					  + ((((ARMul_State *)cpu)->VFlag & 1) << 2)
-					  +  (((ARMul_State *)cpu)->IFFlags & 3);
-#endif
+}
+
+int
+fpRegHighTide(void *cpu)
+{
+	int i = 32; // num fp regs
+	uint64_t *fpregs = &(((ARMul_State *)cpu)->VFP_Reg[0].dword);
+
+	while (i > 0 && !fpregs[i-1]) --i;
+	return i;
+}
+
+void
+storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState)
+{
+	int n;
+
+	for (n = -1; ++n < 16;)
+		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
+	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
+	for(n = -1; ++n < nfpRegs;)
+		registerState[n + 17] = ((ARMul_State *)cpu)->VFP_Reg[n].dword;
 }

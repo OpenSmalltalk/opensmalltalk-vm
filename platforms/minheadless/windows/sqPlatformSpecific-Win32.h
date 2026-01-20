@@ -123,8 +123,8 @@ extern void reportMinimumUnusedHeadroom(void);
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const unsigned long tltiIndex;
 #  endif
-#  define ioGetThreadLocalThreadIndex() ((long)TlsGetValue(tltiIndex))
-#  define ioSetThreadLocalThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
+#  define ioThreadLocalGetThreadIndex() ((long)TlsGetValue(tltiIndex))
+#  define ioThreadLocalSetThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
 #  define ioTransferTimeslice() Sleep(0)
 #  define ioMilliSleep(ms) Sleep(ms)
 # endif /* COGMTVM */

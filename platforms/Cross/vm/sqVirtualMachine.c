@@ -379,6 +379,8 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isWordsOrShorts = isWordsOrShorts;
 	VM->bytesPerElement = bytesPerElement;
 	VM->fileTimesInUTC = fileTimesInUTC;
+	VM->processOSErrInstVarOffset = processOSErrInstVarOffset;
+	VM->activeProcess = activeProcess;
 #endif
 	return VM;
 }

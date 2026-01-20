@@ -132,10 +132,12 @@ extern void reportMinimumUnusedHeadroom(void);
  */
 #  define sqOSSemaphore void *
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
-extern const unsigned long tltiIndex;
+extern const unsigned long tltiIndex, tlifcIndex;
 #  endif
-#  define ioGetThreadLocalThreadIndex() ((long)TlsGetValue(tltiIndex))
-#  define ioSetThreadLocalThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
+#  define ioThreadLocalGetThreadIndex() ((sqInt)TlsGetValue(tltiIndex))
+#  define ioThreadLocalSetThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
+#  define ioThreadLocalGetInFFICall()   ((sqInt)TlsGetValue(tlifcIndex))
+#  define ioThreadLocalSetInFFICall(v)   (TlsSetValue(tlifcIndex,(void*)(v)))
 #  define ioTransferTimeslice() Sleep(0)
 #  define ioMilliSleep(ms) Sleep(ms)
 # endif /* COGMTVM */

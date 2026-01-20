@@ -42,8 +42,10 @@ manifest := #(
 		9	('Balloon3D-Constants' 'Balloon3D-Plugins'  )
 	squeaksource		'Cryptography'
 		9	('CryptographyPlugins'  )
+	squeaksource		'NumberPrinter'
+		5	('NumberPrinter')
 	squeaksource		'Printf'
-		5	('NumberPrinter' 'Printf')
+		5	('Printf')
 	squeaksource		'VectorEnginePlugin'
 		9	('VectorEnginePlugin')
 	squeaksource		'dbus'

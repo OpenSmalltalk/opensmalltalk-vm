@@ -6,10 +6,12 @@
 #
 #############################################################################
 
-ifdef MSVC
-include ../common/Makefile.msvc.msvc.rules
-else ifdef Clang
-include ../common/Makefile.msvc.msvc.rules
-else ifdef ClangC2
-include ../common/Makefile.msvc.clangc2.rules
-endif
+#ifdef Clang32
+include ../common/Makefile.msvc.clang12.rules
+#else ifdef MSVC
+#include ../common/Makefile.msvc.msvc.rules
+#else ifdef Clang
+#include ../common/Makefile.msvc.msvc.rules
+#else ifdef ClangC2
+#include ../common/Makefile.msvc.clangc2.rules
+#endif

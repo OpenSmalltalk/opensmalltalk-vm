@@ -39,6 +39,7 @@
 
 DWORD tlthIndex = (DWORD)-1; /* process-wide thread handle thread-local key */
 DWORD tltiIndex = (DWORD)-1; /* thread index thread-local key */
+DWORD tlifcIndex = (DWORD)-1; /* in FFI call thread-local key */
 
 static void
 initThreadLocalThreadIndices(void)
@@ -46,8 +47,10 @@ initThreadLocalThreadIndices(void)
 	if (tlthIndex == (DWORD)-1) {
 		tlthIndex = TlsAlloc();
 		tltiIndex = TlsAlloc();
+		tlifcIndex = TlsAlloc();
 		if (tlthIndex == TLS_OUT_OF_INDEXES
-		 || tltiIndex == TLS_OUT_OF_INDEXES) { /* illiterate swine! */
+		 || tltiIndex == TLS_OUT_OF_INDEXES
+		 || tlifcIndex  == TLS_OUT_OF_INDEXES) { // illiterate swine!
 			printLastError(TEXT("ThreadLocalThreadIndices TlsAlloc failed"));
 			exit(1);
 		}
@@ -55,7 +58,7 @@ initThreadLocalThreadIndices(void)
 }
 
 /*
- * ioGetThreadLocalThreadIndex & ioSetThreadLocalThreadIndex are defined in
+ * ioThreadLocalGetThreadIndex & ioThreadLocalSetThreadIndex are defined in
  * sqPlatformSpecific.h.
  */
 

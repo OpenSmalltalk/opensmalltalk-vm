@@ -10,6 +10,10 @@ OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
 ##OPT="-g -O3  -DMUSL -DNDEBUG -DDEBUGVM=0"
 
 if [ "$(uname)" = "OpenBSD" ]; then
+    OPT="$OPT -DMUSL"
+    CFLAGS="$CFLAGS $OPT -I/usr/local/include"
+    LIBS="$LIBS -lexecinfo"
+    LDFLAGS="$LDFLAGS -L/usr/local/lib"
     DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
 # librt and libpthread functions now supplied by libc.
 # Many Linux systems supply empty library files but

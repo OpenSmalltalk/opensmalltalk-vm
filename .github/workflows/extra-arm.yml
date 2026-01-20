@@ -51,11 +51,11 @@ jobs:
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
-        uses: uraimo/run-on-arch-action@v2
+        uses: uraimo/run-on-arch-action@v3
         id: build-vm
         with: 
           arch: ${{ env.ARCH_ARM }}
-          distro: buster
+          distro: bullseye
 
           #TODO: Somehow use ./scripts/ci/actions_prepare_linux_arm.sh
           #SEE: https://github.com/uraimo/run-on-arch-action/issues/54

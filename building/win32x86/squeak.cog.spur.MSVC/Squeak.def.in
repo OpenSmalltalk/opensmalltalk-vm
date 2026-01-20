@@ -1,0 +1,3 @@
+; Set the total stack size to 4 megabytes (0x400000), reserving 4Mb and
+; committing 64k (0x10000)
+STACKSIZE 0x400000,0x10000
