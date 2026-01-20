@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspur64linuxht
+INSTALLDIR=sqcogspur64openbsdht
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 
@@ -9,7 +9,7 @@ OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 # librt and libpthread funs now supplied by libc
-# Many Linux systems supply empty library files 
+# Many Openbsd systems supply empty library files 
 # but OpenBSD does not.
 LIBRT=""
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
@@ -40,5 +40,5 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
-# but older linux readlinks lack the -f flag
+# but older openbsd readlinks lack the -f flag
 make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
