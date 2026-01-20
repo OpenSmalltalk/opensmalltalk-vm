@@ -197,6 +197,16 @@ XColor		 stColorBlack;		/* black pixel value in stColormap */
 XColor		 stColorWhite;		/* white pixel value in stColormap */
 int		 savedWindowOrigin= -1;	/* initial origin of window */
 
+/* Multi-format clipboard offer table */
+typedef struct SelectionOffer {
+  Atom type;
+  char *data;
+  size_t size;
+  struct SelectionOffer *next;
+} SelectionOffer;
+
+static SelectionOffer *offerTable= NULL;
+
 #define		 SELECTION_ATOM_COUNT  10
 /* http://www.freedesktop.org/standards/clipboards-spec/clipboards.txt */
 Atom		 selectionAtoms[SELECTION_ATOM_COUNT];
@@ -610,6 +620,68 @@ static int allocateSelectionBuffer(int count)
   return 1;
 }
 
+/* Clear all offers from the table */
+static void clearOffers(void)
+{
+  SelectionOffer *offer= offerTable;
+  while (offer) {
+    SelectionOffer *next= offer->next;
+    if (offer->data) free(offer->data);
+    free(offer);
+    offer= next;
+  }
+  offerTable= NULL;
+}
+
+/* Find offer by type */
+static SelectionOffer *findOffer(Atom type)
+{
+  SelectionOffer *offer= offerTable;
+  while (offer) {
+    if (offer->type == type) return offer;
+    offer= offer->next;
+  }
+  return NULL;
+}
+
+/* Add or update offer in table */
+static int addOffer(Atom type, const char *data, size_t size)
+{
+  SelectionOffer *offer;
+  
+  /* Check if offer already exists - update it */
+  offer= findOffer(type);
+  if (offer) {
+    char *newData= (char *)malloc(size + 1);
+    if (!newData) return 0;
+    memcpy(newData, data, size);
+    newData[size]= '\0';
+    if (offer->data) free(offer->data);
+    offer->data= newData;
+    offer->size= size;
+    return 1;
+  }
+  
+  /* Add new offer */
+  offer= (SelectionOffer *)malloc(sizeof(SelectionOffer));
+  if (!offer) return 0;
+  
+  offer->data= (char *)malloc(size + 1);
+  if (!offer->data) {
+    free(offer);
+    return 0;
+  }
+  
+  memcpy(offer->data, data, size);
+  offer->data[size]= '\0';
+  offer->type= type;
+  offer->size= size;
+  offer->next= offerTable;
+  offerTable= offer;
+  
+  return 1;
+}
+
 
 /* answers true if selection could be handled */
 static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
@@ -642,95 +714,51 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
   fprintf(stderr, "\n");
 #endif
 
-  if ((XA_STRING == requestEv->target) || (xaUTF8String == requestEv->target))
-    {
-      int   len= strlen(stPrimarySelection);
-      char *buf= (char *)malloc(len * 3 + 1);
-      int   n;
-
-#    if defined(DEBUG_SELECTIONS)
-      fprintf(stderr, "sendSelection: len=%d, sel=", len);
-      dumpSelectionData(stPrimarySelection, len, 1);
-#    endif
-      if (xaUTF8String == requestEv->target)
-        n= sq2uxUTF8(stPrimarySelection, len, buf, len * 3 + 1, 1);
-      else
-        n= sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1);
-#    if defined(DEBUG_SELECTIONS)
-      fprintf(stderr, "sendSelection: n=%d, buf=", n);
-      dumpSelectionData(buf, n, 1);
-#    endif
-      XChangeProperty(requestEv->display, requestEv->requestor,
-		      targetProperty, requestEv->target,
-		      8, PropModeReplace, (const unsigned char *)buf, n);
-      free(buf);
-    }
-  else if ((stSelectionType == requestEv->target) && (None != stSelectionType))
-    {
-      /* In case of type other than image/png */
-      XChangeProperty(requestEv->display, requestEv->requestor,
-		      targetProperty, requestEv->target,
-		      8, PropModeReplace,
-		      (const unsigned char *) stPrimarySelection,
-		      stPrimarySelectionSize);
-    }
+  /* Check offer table first - allows overriding even meta-formats if desired */
+  SelectionOffer *customOffer= findOffer(requestEv->target);
+  if (customOffer) {
+    XChangeProperty(requestEv->display, requestEv->requestor,
+                    targetProperty, requestEv->target,
+                    8, PropModeReplace,
+                    (const unsigned char *)customOffer->data,
+                    customOffer->size);
+  }
   else if (xaTargets == requestEv->target)
     {
-      /* If we don't report COMPOUND_TEXT in this list, KMail (and maybe other
-       * Qt/KDE apps) don't accept pastes from Squeak. Of course, they'll use
-       * UTF8_STRING anyway... */
-      Atom targets[7];
-      int targetsSize= 6;
-      targets[0]= xaTargets;
-      targets[1]= xaMultiple;
-      targets[2]= xaTimestamp;	        /* required by ICCCM */
-      targets[3]= xaUTF8String;
-      targets[4]= XA_STRING;
-      targets[5]= xaCompoundText;
-      if (stSelectionType != None)
-	{
-	  targetsSize += 1;
-	  targets[6]= stSelectionType;
-	}
-      xError= XChangeProperty(requestEv->display, requestEv->requestor,
-                              targetProperty, XA_ATOM,
-                              32, PropModeReplace, (unsigned char *)targets, targetsSize);
-    }
-  else if (xaCompoundText == requestEv->target)
-    {
-      /* COMPOUND_TEXT is handled here for older clients that don't handle UTF-8 */
-      XTextProperty  textProperty;
-      char          *list[]= { stPrimarySelection, NULL };
+      /* Report meta-formats plus offers from image */
+      size_t capacity= 3;
+      SelectionOffer *offer;
+      for (offer= offerTable; offer; offer= offer->next)
+        capacity++;
 
-      if (localeEncoding == sqTextEncoding)
-	xError= XmbTextListToTextProperty(requestEv->display, list, 1, XCompoundTextStyle, &textProperty);
-#    if defined(X_HAVE_UTF8_STRING)
-      else if (uxUTF8Encoding == sqTextEncoding)
-	xError= Xutf8TextListToTextProperty(requestEv->display, list, 1, XCompoundTextStyle, &textProperty);
-#    endif
-      else
-	{
-	  int	len= strlen(stPrimarySelection);
-	  char *buf= (char *)malloc(len * 3 + 1);
-
-	  list[0]= buf;
-	  sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1);
-	  xError= XmbTextListToTextProperty(requestEv->display, list, 1, XCompoundTextStyle, &textProperty);
-	  free(buf);
-	}
-
-      if (Success == xError)
-        {
-	  xError= XChangeProperty(requestEv->display, requestEv->requestor,
-				  targetProperty, xaCompoundText,
-				  8, PropModeReplace, textProperty.value, textProperty.nitems);
-          XFree((void *)textProperty.value);
+      Atom *targets= (Atom *)malloc(capacity * sizeof(Atom));
+      if (!targets) {
+        xError= BadAlloc;
+        notifyEv.property= None;
+      } else {
+        int targetsSize= 3;
+        targets[0]= xaTargets;
+        targets[1]= xaMultiple;
+        targets[2]= xaTimestamp;	        /* required by ICCCM */
+        /* Add all offers from the table, deduplicating against meta-formats */
+        for (offer= offerTable; offer; offer= offer->next) {
+          /* Skip if already in the list (handles user-provided meta-formats) */
+          int i, duplicate= 0;
+          for (i= 0; i < targetsSize; i++) {
+            if (targets[i] == offer->type) {
+              duplicate= 1;
+              break;
+            }
+          }
+          if (!duplicate) {
+            targets[targetsSize++]= offer->type;
+          }
         }
-      else
-        {
-          fprintf(stderr, "XmbTextListToTextProperty returns %d\n", xError);
-          notifyEv.property= None;
-        }
+        xError= XChangeProperty(requestEv->display, requestEv->requestor,
+                                targetProperty, XA_ATOM,
+                                32, PropModeReplace, (unsigned char *)targets, targetsSize);
+        free(targets);
+      }
     }
   else if (xaTimestamp == requestEv->target)
     {
@@ -792,7 +820,8 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
     }
   else
     {
-      notifyEv.property= None;	/* couldn't handle it */
+      /* No hardcoded handler and not in offer table */
+      notifyEv.property= None;
     }
 
 #if defined(DEBUG_SELECTIONS)
@@ -1198,7 +1227,24 @@ void initClipboard(void)
   stPrimarySelectionSize= 0;
   stOwnsSelection= 0;
   stOwnsClipboard= 0;
-  stSelectionType= None;
+  clearOffers();
+}
+
+// NB: Must not put new offers in the same event loop cycle as relinquishClipboard is called
+void relinquishClipboard(void)
+{
+  Time ts = getXTimestamp();
+
+  stOwnsClipboard = 0;
+  stOwnsSelection = 0;
+  stSelectionTime = ts;
+  clearOffers();
+  stPrimarySelection = stEmptySelection;
+  stPrimarySelectionSize = 0;
+
+  XSetSelectionOwner(stDisplay, xaClipboard, None, ts);
+  XSetSelectionOwner(stDisplay, XA_PRIMARY,   None, ts);
+  XFlush(stDisplay);
 }
 
 
@@ -1221,33 +1267,122 @@ static Atom stringToAtom(char *target, size_t size)
  *
  * selectionName : None (CLIPBOARD and PRIMARY), or XdndSelection
  * type : None (various string), or target type ('image/png' etc.)
- * data : data
+ * data : data, or NULL to clear clipboard
  * ndata : size of the data
- * typeName : 0 (various string), or target name ('image/png' etc.)
+ * typeName : 0 (various string), or target name ('image/png' etc.), or "" (legacy text - automatic formats)
  * ntypeName : length of typeName
  * isDnd : true if XdndSelection, false if CLIPBOARD or PRIMARY
- * isClaiming : true if XGetSelectionOwner is needed
+ * isClaiming : true if XGetSelectionOwner is needed (will also clear previous offers)
  */
-static void
+static sqInt
 display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
 {
-  if (allocateSelectionBuffer(ndata))
-    {
-      Atom type= stringToAtom(typeName, nTypeName);
-      stSelectionName= isDnd ? xaXdndSelection : None;
+  sqInt success = 1;
+
+  if (data == NULL) {
+	// clear
+	if (isClaiming) {
+	  relinquishClipboard();
+	} else {
+	  clearOffers();
+	}
+	return success;
+  }
+  
+  /* If claiming, clear previous offers and start fresh */
+  if (isClaiming) {
+    clearOffers();
+  }
+
+  Atom type;
+  stSelectionName= isDnd ? xaXdndSelection : None;
+  
+  /* Empty typeName means legacy text clipboard - provide all text formats */
+  if (nTypeName == 0) {
+    int len= ndata;
+    char *buf;
+    int n;
+    
+    /* Store original data in stPrimarySelection for legacy read operations */
+    if (allocateSelectionBuffer(ndata)) {
       memcpy((void *)stPrimarySelection, data, ndata);
       stPrimarySelection[ndata]= '\0';
-      stSelectionType= type;
-      if (isClaiming) claimSelection();
     }
+    
+    /* Offer UTF8_STRING */
+    buf= (char *)malloc(len * 3 + 1);
+    if (buf) {
+      n= sq2uxUTF8(data, len, buf, len * 3 + 1, 1);
+      if (!addOffer(xaUTF8String, buf, n)) return 0;
+      
+      /* Offer STRING (ISO Latin-1) - reuse same buffer */
+      n= sq2uxText(data, len, buf, len * 3 + 1, 1);
+      if (!addOffer(XA_STRING, buf, n)) return 0;
+      
+      /* Offer COMPOUND_TEXT - use converted buffer
+         If we don't report COMPOUND_TEXT in this list, KMail (and maybe other
+         Qt/KDE apps) don't accept pastes from Squeak. Of course, they'll use
+         UTF8_STRING anyway... */
+      XTextProperty textProperty;
+      char *list[]= { buf, NULL };
+      int xError;
+      
+      /* For COMPOUND_TEXT, we need locale or UTF-8 encoded text */
+      if (localeEncoding == sqTextEncoding) {
+        /* Convert from Squeak to locale encoding first */
+        n= sq2uxText(data, len, buf, len * 3 + 1, 1);
+        list[0]= buf;
+        xError= XmbTextListToTextProperty(stDisplay, list, 1, XCompoundTextStyle, &textProperty);
+      }
+#     if defined(X_HAVE_UTF8_STRING)
+      else if (uxUTF8Encoding == sqTextEncoding) {
+        /* Convert from Squeak to UTF-8 first */
+        n= sq2uxUTF8(data, len, buf, len * 3 + 1, 1);
+        list[0]= buf;
+        xError= Xutf8TextListToTextProperty(stDisplay, list, 1, XCompoundTextStyle, &textProperty);
+      }
+#     endif
+      else {
+        /* Generic conversion via locale */
+        n= sq2uxText(data, len, buf, len * 3 + 1, 1);
+        list[0]= buf;
+        xError= XmbTextListToTextProperty(stDisplay, list, 1, XCompoundTextStyle, &textProperty);
+      }
+      
+      if (Success == xError) {
+        success = addOffer(xaCompoundText, (char *)textProperty.value, textProperty.nitems);
+        XFree((void *)textProperty.value);
+      } else {
+		success = 0;
+	  }
+      
+      free(buf);
+    }
+  }
+  else {
+    /* Typed format: add single offer */
+    type= stringToAtom(typeName, nTypeName);
+    if (!(success = addOffer(type, data, ndata))) {
+      fprintf(stderr, "display_clipboardWriteWithType: failed to add offer for type %s\n", typeName);
+    }
+  }
+
+  if (!success) {
+	return 0;
+  }
+
+  if (isClaiming) claimSelection();
+
+  return 1;
 }
 
 
 static sqInt
 display_clipboardSize(void)
 {
-  if (stOwnsClipboard) return 0;
-  getSelection();
+  if (!stOwnsClipboard) {
+	getSelection();
+  }
   return stPrimarySelectionSize;
 }
 
@@ -1255,8 +1390,7 @@ display_clipboardSize(void)
 static sqInt
 display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
-  display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
-  return 0;
+  return display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
 }
 
 /* Transfer the X selection into the given byte array; optimise local requests. */
@@ -2442,7 +2576,27 @@ display_clipboardGetTypeNames(void)
     dndGetTargets(&targets, &nTypeNames);
   else 
     {
-      if (stOwnsClipboard) return 0;
+      if (stOwnsClipboard) {
+        /* Serve from local offer table only */
+        SelectionOffer *offer;
+        int count= 0, i= 0;
+        
+        /* Count offers */
+        for (offer= offerTable; offer; offer= offer->next) count++;
+        
+        typeNames= calloc(count + 1, sizeof(char *));
+        if (!typeNames) return 0;
+        
+        for (offer= offerTable; offer; offer= offer->next) {
+          char *atomName= XGetAtomName(stDisplay, offer->type);
+          if (atomName) {
+            typeNames[i++]= strdup(atomName);
+            XFree(atomName);
+          }
+        }
+        typeNames[i]= 0;
+        return typeNames;
+      }
       targets= (Atom *)getSelectionData(xaClipboard, xaTargets, &bytes);
       if (0 == bytes) return 0;
       nTypeNames= bytes / sizeof(Atom);
@@ -2470,7 +2624,20 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
   isDnd= dndAvailable();
   inputSelection= isDnd ? xaXdndSelection : xaClipboard;
 
-  if ((!isDnd) && stOwnsClipboard) return 0;
+  if ((!isDnd) && stOwnsClipboard) {
+    /* Serve from local offer table */
+    SelectionOffer *offer;
+    type= stringToAtom(typeName, nTypeName);
+    offer= findOffer(type);
+    if (offer) {
+      if (allocateSelectionBuffer(offer->size)) {
+        memcpy(stPrimarySelection, offer->data, offer->size);
+        stPrimarySelection[offer->size]= '\0';
+        return stPrimarySelectionSize;
+      }
+    }
+    return 0;
+  }
 
   chunk= newSelectionChunk();
   type= stringToAtom(typeName, nTypeName);
@@ -3790,6 +3957,7 @@ handleEvent(XEvent *evt)
 	  stOwnsClipboard= 0;
 	  stOwnsSelection= 0;   /* clear both CLIPBOARD and PRIMARY */
 	  usePrimaryFirst= 0;
+	  clearOffers();        /* clear multi-format offers */
 	}
       else if (XA_PRIMARY == evt->xselectionclear.selection)
 	{

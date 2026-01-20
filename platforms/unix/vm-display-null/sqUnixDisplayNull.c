@@ -111,9 +111,9 @@ static sqInt display_clipboardSizeWithType(char *typeName, int nTypeName)
   return 0;
 }
 
-static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
+static sqInt display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
 {
-  return;
+  return 0;
 }
 
 static sqInt display_dndOutStart(char *types, int ntypes)	{ return 0; }
