@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqstkspur64linuxht
+INSTALLDIR=sqstkspur64openbsdht
 OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
 
 # Prefer clang over gcc, but use gcc if clang isn't available...

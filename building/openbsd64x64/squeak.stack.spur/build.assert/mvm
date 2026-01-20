@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # assert Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/sqstkspur64linuxht
+INSTALLDIR=assert/sqstkspur64openbsdht
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 # Prefer clang over gcc, but use gcc if clang isn't available...
