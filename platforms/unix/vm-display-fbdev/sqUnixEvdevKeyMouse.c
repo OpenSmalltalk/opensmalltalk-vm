@@ -47,6 +47,7 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <signal.h>
+#include <time.h>
 #include <limits.h> /* PATH_MAX */
 #include <linux/input.h>   /* /usr/include/linux/input.h */
 /* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
@@ -68,6 +69,9 @@
 #define FALSE 0
 #define TRUE (!FALSE)
 
+/* These identifiers were present in linux/input.h since at least kernel version 3.7 (released
+   in 2012), and probably earlier: It may make sense to remove these definitions now
+   -- tonyg 2025-09-03 */
 #ifndef EV_SYN
 #define EV_SYN 0
 #endif
@@ -108,12 +112,38 @@ static void setSqueakModifierState();
 
 /* Mouse */
 
+#define NUM_SUPPORTED_SLOTS 32 /* We need to use EVIOCGABS to discover the actual number of
+                                  slots on a device, so this hardcoded limit is lazy */
 struct ms
 {
   char 		  *msName;
   int		   fd;
   struct libevdev *dev;
+
+  /*
+    Emulation of a relative mouse device using a (multi- or single-touch!) absolute device.
+    See Multitouch.md.
+  */
+
+  double touch_change_time; /* used for tap detection and drag lock */
+  int touching;         /* tracks BTN_TOUCH; we use this in tap detection. */
+  int moved;
+  int old_x;            /* -1 for none */
+  int old_y;            /* -1 for none */
+  int new_x;
+  int new_y;
+
+  int abs_type;         /* 0 => simple (singletouch), 1 => type A, 2 => type B */
+  int slots[NUM_SUPPORTED_SLOTS];
+  int primary_tracking_id; /* -1 for none */
+  int current_slot;     /* -1 for none */
+
+  double tap_release_deadline;
+  int tap_bit;
 };
+
+#define TAP_START_TIMEOUT 0.18
+#define TAP_END_TIMEOUT 0.3
 
 static struct ms mouseDev;
 
@@ -175,10 +205,20 @@ static void ms_close(struct ms *mouseSelf)
 }
 
 
+static void reset_abs_tracking(void) {
+  int i;
+  mouseDev.moved = 0;
+  mouseDev.old_x = mouseDev.old_y = mouseDev.new_x = mouseDev.new_y = -1;
+  for (i = 0; i < NUM_SUPPORTED_SLOTS; i++) mouseDev.slots[i] = -1;
+  mouseDev.primary_tracking_id = -1;
+  mouseDev.current_slot = 0;
+}
+
 static struct ms *ms_new(void)
 {
+  memset(&mouseDev, 0, sizeof(mouseDev));
   mouseDev.fd= -1;
-  mouseDev.dev= 0;
+  reset_abs_tracking();
   return &mouseDev;
 }
 
@@ -196,40 +236,9 @@ static int wheelDelta = 0;  /* reset in clearMouseButtons() */
 static void clearMouseWheel() {  wheelDelta = 0 ; }
 static int  mouseWheelDelta() { return ( wheelDelta ) ; }
 
-/* this is done by enqueueMouseEvent() 
-static void setSqueakMousePosition( int newX, int newY ) {
-  mousePosition.x = newX;
-  mousePosition.y = newY;
-  } */
-
 static void copyMousePositionInto(SqPoint *mousePt) {
   mousePt->x = mousePosition.x;
   mousePt->y = mousePosition.y;
-}
-
-static void updateSqueakMousePosition(struct input_event* evt) {
-/* Nota Bene: up => deltaY UP is negative; {0,0} at topLeft of screen */
-  if (evt->type == EV_REL) {
-    switch (evt->code) {
-      case REL_X:
-	/* no less than 0 */
-	mousePosition.x = max(0, mousePosition.x + evt->value) ;
-	break;
-      case REL_Y:
-	/* no less than 0 */
-	mousePosition.y = max(0, mousePosition.y + evt->value) ; 
-	break;
-      case REL_WHEEL:
-	wheelDelta += evt->value;
-	DPRINTF( "*** Wheel VALUE: %d; DELTA: %d ",
-		 mouseWheelDelta(),
-		 evt->value ) ;
-		mousePosition.y = max(0, mousePosition.y + evt->value) ;  
-	break;
-      default:
-	break;
-    }
-  }
 }
 
 #ifdef DEBUG_EVENTS
@@ -257,13 +266,40 @@ static void printMouseState() {
 
 static void clearMouseButtons() { buttonState = 0 ; wheelDelta = 0; }
 
+static void register_touch(int touch_count, double timestamp) {
+  if (mouseDev.tap_bit != 0) {
+    mouseDev.touching = mouseDev.tap_bit;
+    mouseDev.tap_release_deadline = 0;
+  } else if (mouseDev.touching < touch_count) {
+    mouseDev.touching = touch_count;
+  }
+  mouseDev.touch_change_time = timestamp;
+  mouseDev.moved = 0;
+}
+
+static double timestamp(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
+    perror("clock_gettime");
+    abort();
+  }
+  return ts.tv_sec + ((double) ts.tv_nsec / 1000000000.0);
+}
+
 static void updateMouseButtons(struct input_event* evt) {
   if (evt->type == EV_KEY) {
+    double now = evt->input_event_sec + ((double) evt->input_event_usec / 1000000.0);
     if ((evt->value == 1) || (evt->value == 2)) { /* button down|repeat */
       switch (evt->code) {
 	case BTN_LEFT:   buttonState |= LeftMouseButtonBit;  break;
 	case BTN_MIDDLE: buttonState |= MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState |= RightMouseButtonBit; break;
+
+        case BTN_TOUCH:          register_touch(1, now); break;
+        case BTN_TOOL_DOUBLETAP: register_touch(2, now); break;
+        case BTN_TOOL_TRIPLETAP: register_touch(3, now); break;
+        case BTN_TOOL_QUADTAP:   register_touch(4, now); break;
+
 	default: break;
       }
     } else if (evt->value == 0) { /* button up */
@@ -271,6 +307,32 @@ static void updateMouseButtons(struct input_event* evt) {
 	case BTN_LEFT:   buttonState &= ~LeftMouseButtonBit;  break;
 	case BTN_MIDDLE: buttonState &= ~MidMouseButtonBit;   break;
 	case BTN_RIGHT:  buttonState &= ~RightMouseButtonBit; break;
+
+        case BTN_TOUCH:
+          if (mouseDev.touching > 0) {
+            if (mouseDev.tap_bit != 0) {
+              // Release of a previous drag lock.
+              mouseDev.tap_release_deadline = timestamp() + TAP_END_TIMEOUT;
+            } else if ((now - mouseDev.touch_change_time) <= TAP_START_TIMEOUT) {
+              // A tap.
+              int bit = LeftMouseButtonBit;
+              if (mouseDev.touching == 2) bit = 0;
+              if (mouseDev.touching == 3) bit = RightMouseButtonBit;
+              if (mouseDev.touching == 4) bit = MidMouseButtonBit;
+              if (bit != 0) {
+                enqueueMouseEvent(buttonState | bit, 0, 0);
+                mouseDev.tap_bit = bit;
+                mouseDev.tap_release_deadline = timestamp() + TAP_END_TIMEOUT;
+              }
+            }
+          }
+          mouseDev.touching = 0;
+          mouseDev.touch_change_time = now;
+          mouseDev.moved = 0;
+          mouseDev.old_x = mouseDev.old_y = mouseDev.new_x = mouseDev.new_y = -1;
+          mouseDev.primary_tracking_id = -1;
+          break;
+
 	default: break;
       }
     }
@@ -278,6 +340,21 @@ static void updateMouseButtons(struct input_event* evt) {
 }
 
 /* Translate between libevdev and OpenSmalltalk/Squeak VM view of keystrokes */
+
+
+struct kb
+{
+  char			 *kbName;
+  int			  fd;
+  int			  kbMode;
+  int			  state;
+  struct libevdev	 *dev;
+  int			  altKeyBit;
+  int			  metaKeyBit;
+};
+
+static struct kb kbDev;
+
 
 /*==================*/
 /* Keyboard Key     */
@@ -460,14 +537,14 @@ static void updateModifierState(struct input_event* evt)
       printEvtModifierKey(evt);
 #endif
       switch (evt->code) {
-	case KEY_LEFTMETA:   leftAdjuncts  |= CommandKeyBit; break;
-	case KEY_LEFTALT:    leftAdjuncts  |= OptionKeyBit;  break;
-	case KEY_LEFTCTRL:   leftAdjuncts  |= CtrlKeyBit;    break;
-	case KEY_LEFTSHIFT:  leftAdjuncts  |= ShiftKeyBit;   break;
-	case KEY_RIGHTMETA:  rightAdjuncts |= CommandKeyBit; break;
-	case KEY_RIGHTALT:   rightAdjuncts |= OptionKeyBit;  break;
-	case KEY_RIGHTCTRL:  rightAdjuncts |= CtrlKeyBit;    break;
-	case KEY_RIGHTSHIFT: rightAdjuncts |= ShiftKeyBit;   break;
+	case KEY_LEFTMETA:   leftAdjuncts  |= kbDev.metaKeyBit;  break;
+	case KEY_LEFTALT:    leftAdjuncts  |= kbDev.altKeyBit;   break;
+	case KEY_LEFTCTRL:   leftAdjuncts  |= CtrlKeyBit;        break;
+	case KEY_LEFTSHIFT:  leftAdjuncts  |= ShiftKeyBit;       break;
+	case KEY_RIGHTMETA:  rightAdjuncts |= kbDev.metaKeyBit;  break;
+	case KEY_RIGHTALT:   rightAdjuncts |= kbDev.altKeyBit;   break;
+	case KEY_RIGHTCTRL:  rightAdjuncts |= CtrlKeyBit;        break;
+	case KEY_RIGHTSHIFT: rightAdjuncts |= ShiftKeyBit;       break;
 	default: break;
 	}
      } else if (evt->value == 0) { /* button up */
@@ -475,31 +552,20 @@ static void updateModifierState(struct input_event* evt)
        printEvtModifierKey(evt);
 #endif
        switch (evt->code) {
-	case KEY_LEFTMETA:   leftAdjuncts  &= ~CommandKeyBit; break;
-	case KEY_LEFTALT:    leftAdjuncts  &= ~OptionKeyBit;  break;
-	case KEY_LEFTCTRL:   leftAdjuncts  &= ~CtrlKeyBit;    break;
-	case KEY_LEFTSHIFT:  leftAdjuncts  &= ~ShiftKeyBit;   break;
-	case KEY_RIGHTMETA:  rightAdjuncts &= ~CommandKeyBit; break;
-	case KEY_RIGHTALT:   rightAdjuncts &= ~OptionKeyBit;  break;
-	case KEY_RIGHTCTRL:  rightAdjuncts &= ~CtrlKeyBit;    break;
-	case KEY_RIGHTSHIFT: rightAdjuncts &= ~ShiftKeyBit;   break;
+	case KEY_LEFTMETA:   leftAdjuncts  &= ~kbDev.metaKeyBit;  break;
+	case KEY_LEFTALT:    leftAdjuncts  &= ~kbDev.altKeyBit;   break;
+	case KEY_LEFTCTRL:   leftAdjuncts  &= ~CtrlKeyBit;        break;
+	case KEY_LEFTSHIFT:  leftAdjuncts  &= ~ShiftKeyBit;       break;
+	case KEY_RIGHTMETA:  rightAdjuncts &= ~kbDev.metaKeyBit;  break;
+	case KEY_RIGHTALT:   rightAdjuncts &= ~kbDev.altKeyBit;   break;
+	case KEY_RIGHTCTRL:  rightAdjuncts &= ~CtrlKeyBit;        break;
+	case KEY_RIGHTSHIFT: rightAdjuncts &= ~ShiftKeyBit;       break;
 	default: break;
         }
      }
   } 
 }
 
-
-struct kb
-{
-  char			 *kbName;
-  int			  fd;
-  int			  kbMode;
-  int			  state;
-  struct libevdev	 *dev;  
-};
-
-static struct kb kbDev;
 
 
 /* NB: Distinguish (libevdev keycode) -> (squeak keycode)
@@ -540,7 +606,7 @@ static void kb_freeGraphics(struct kb *kbdSelf)
 }
 
 
-void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
+void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock, int kbSwapMeta)
 {
   int rc;
 
@@ -569,6 +635,9 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 	      }*/
 
   /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
+
+  kbDev.altKeyBit = kbSwapMeta ? CommandKeyBit : OptionKeyBit;
+  kbDev.metaKeyBit = kbSwapMeta ? OptionKeyBit : CommandKeyBit;
 }
 
 
@@ -610,10 +679,20 @@ static void processLibEvdevKeyEvents() {
   }
 }
 
+static int should_attend_to_multitouch_position(void) {
+  return (mouseDev.abs_type != 2) || (mouseDev.primary_tracking_id == mouseDev.slots[mouseDev.current_slot]);
+}
+
 static void processLibEvdevMouseEvents() {
   struct input_event evt[64];
   int i, read_size;
   int arrowCode, modifierBits; /* for Wheel delta sent as arrow keys */
+
+  if ((mouseDev.tap_release_deadline != 0) && (timestamp() >= mouseDev.tap_release_deadline)) {
+    enqueueMouseEvent(buttonState & ~mouseDev.tap_bit, 0, 0);
+    mouseDev.tap_bit = 0;
+    mouseDev.tap_release_deadline = 0;
+  }
 
   read_size = read(mouseDev.fd, evt, sizeof(evt));
   if (read_size < (int) sizeof(struct input_event)) {
@@ -645,8 +724,45 @@ static void processLibEvdevMouseEvents() {
 #ifdef DEBUG_EVENTS
       /*      printMouseState(); */
 #endif
-    } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
-      continue; /* skip me, keep looking */
+    } else if (type == EV_SYN) {
+      switch (code) {
+        case SYN_MT_REPORT:
+          mouseDev.abs_type = 1;
+          mouseDev.current_slot++;
+          break;
+        case SYN_REPORT:
+          if (mouseDev.abs_type == 1) {
+            mouseDev.current_slot = 0;
+          }
+          if (mouseDev.old_x == -1) mouseDev.old_x = mouseDev.new_x;
+          if (mouseDev.old_y == -1) mouseDev.old_y = mouseDev.new_y;
+          if ((mouseDev.new_x != -1) && (mouseDev.new_y != -1)) {
+            int dx = (mouseDev.new_x - mouseDev.old_x) >> 2;
+            int dy = (mouseDev.new_y - mouseDev.old_y) >> 2;
+            if (!mouseDev.moved) {
+              mouseDev.moved = (dx*dx + dy*dy) > (16*16);
+            }
+            if (mouseDev.moved) {
+              if (mouseDev.touching == 2) {
+                recordMouseWheelEvent(0 /* we *could* supply dx here */, dy);
+              } else {
+                enqueueMouseEvent(buttonState, dx, dy);
+              }
+              mouseDev.old_x = mouseDev.new_x;
+              mouseDev.old_y = mouseDev.new_y;
+            }
+          }
+          break;
+        case SYN_DROPPED:
+          buttonState = 0;
+          mouseDev.touching = 0;
+          reset_abs_tracking();
+          break;
+        default:
+          break;
+      }
+    } else if (type == EV_MSC) {
+      /* skip me, keep looking */
     } else {
       updateMouseButtons(&evt[i]); 
       setSqueakModifierState();
@@ -683,6 +799,35 @@ static void processLibEvdevMouseEvents() {
 	default:
 	  break;
 	}
+      }
+
+      if (type == EV_ABS) {
+        switch (code) {
+          case ABS_MT_SLOT:
+            mouseDev.abs_type = 2;
+            mouseDev.current_slot = value;
+            break;
+          case ABS_MT_TRACKING_ID:
+            if (mouseDev.primary_tracking_id == -1) mouseDev.primary_tracking_id = value;
+            if (mouseDev.current_slot < NUM_SUPPORTED_SLOTS) {
+              mouseDev.slots[mouseDev.current_slot] = value;
+            }
+            break;
+          case ABS_MT_POSITION_X:
+            if (should_attend_to_multitouch_position()) mouseDev.new_x = value;
+            break;
+          case ABS_X:
+            if (mouseDev.abs_type == 0) mouseDev.new_x = value;
+            break;
+          case ABS_MT_POSITION_Y:
+            if (should_attend_to_multitouch_position()) mouseDev.new_y = value;
+            break;
+          case ABS_Y:
+            if (mouseDev.abs_type == 0) mouseDev.new_y = value;
+            break;
+          default:
+            break;
+        }
       }
     }
   }

@@ -276,7 +276,7 @@ static void kb_freeGraphics(_self)
 }
 
 
-void kb_open(_self, int vtSwitch, int vtLock)
+void kb_open(_self, int vtSwitch, int vtLock, int kbSwapMeta)
 {
   struct termios nattr;
 

@@ -170,6 +170,7 @@ static char *kmPath=   0;
 static char *fbDev=    0;
 static int   vtLock=   0;
 static int   vtSwitch= 0;
+static int   kbSwapMeta= 0;
 
 struct kb;
 struct ms;
@@ -226,7 +227,7 @@ static void enqueueKeyCharEvent(int key, int modifiers)
 static void openKeyboard(void)
 {
   kb= kb_new();
-  kb_open(kb, vtSwitch, vtLock);
+  kb_open(kb, vtSwitch, vtLock, kbSwapMeta);
 #ifdef NOEVDEV
   kb_setCallback(kb, enqueueKeyboardEvent);
 #endif
@@ -438,6 +439,9 @@ static void display_printUsage(void)
   printf("  -kbdev <dev>          use keyboard device <dev> (default: /dev/input/event0)\n");
   /*  printf("  -vtlock               disallow all vt switching (for any reason)\n");
       printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n"); */
+#ifndef NOEVDEV
+  printf("  -kbswapmeta           swap alt and meta keys\n");
+#endif
 }
 
 
@@ -457,6 +461,7 @@ static void display_parseEnvironment(void)
   if ((ev= getenv("SQUEAK_MSPROTO")))	msProto=  strdup(ev);
   if ((ev= getenv("SQUEAK_VTLOCK")))	vtLock=   1;
   if ((ev= getenv("SQUEAK_VTSWITCH")))	vtSwitch= 1;
+  if ((ev= getenv("SQUEAK_KBSWAPMETA")))	kbSwapMeta= 1;
 }
 
 
@@ -467,6 +472,7 @@ static int display_parseArgument(int argc, char **argv)
 
   if      (!strcmp(arg, "-vtlock"))	 vtLock=   1;
   else if (!strcmp(arg, "-vtswitch"))	 vtSwitch= 1;
+  else if (!strcmp(arg, "-kbswapmeta"))	 kbSwapMeta= 1;
   else if (argv[1])	/* option requires an argument */
     {
       n= 2;
