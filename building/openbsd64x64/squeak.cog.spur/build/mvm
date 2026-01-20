@@ -3,7 +3,7 @@ set -e
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqcogspur64linuxht
 # Some gcc versions create a broken VM using -O2
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 
 # Prefer clang over gcc if available
 if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
@@ -12,8 +12,6 @@ if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 # Many Linux systems supply empty library files 
 # but OpenBSD does not.
 LIBRT=""
-
-OPT="$OPT -DMUSL"
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
