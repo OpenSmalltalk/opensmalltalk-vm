@@ -1,7 +1,8 @@
+
 #!/usr/bin/env bash
 set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqstkspur64ARMv8linuxht
+INSTALLDIR=sqstkspur64ARMv8openbsdht
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"

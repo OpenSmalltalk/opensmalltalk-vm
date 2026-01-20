@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # debug Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/sqstkspur64ARMv8linuxht
+INSTALLDIR=debug/sqstkspur64ARMv8openbsdht
 OPT="-g3 -O0 -DDEBUG -DDEBUGVM=1 -DAIO_DEBUG -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
