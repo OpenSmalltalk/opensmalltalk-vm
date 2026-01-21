@@ -1280,13 +1280,13 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
   sqInt success = 1;
 
   if (data == NULL) {
-	// clear
-	if (isClaiming) {
-	  relinquishClipboard();
-	} else {
-	  clearOffers();
-	}
-	return success;
+    // clear
+    if (isClaiming) {
+      relinquishClipboard();
+    } else {
+      clearOffers();
+    }
+    return success;
   }
   
   /* If claiming, clear previous offers and start fresh */
@@ -1353,8 +1353,8 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
         success = addOffer(xaCompoundText, (char *)textProperty.value, textProperty.nitems);
         XFree((void *)textProperty.value);
       } else {
-		success = 0;
-	  }
+        success = 0;
+      }
       
       free(buf);
     }
@@ -1368,7 +1368,7 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
   }
 
   if (!success) {
-	return 0;
+    return 0;
   }
 
   if (isClaiming) claimSelection();
@@ -1381,7 +1381,7 @@ static sqInt
 display_clipboardSize(void)
 {
   if (!stOwnsClipboard) {
-	getSelection();
+    getSelection();
   }
   return stPrimarySelectionSize;
 }
