@@ -10,11 +10,8 @@ LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
 DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
 # librt and libpthread functions now supplied by libc.
-# Many Linux systems supply empty library files but
-# OpenBSD does not.
-LIBRT=""
-# OpenBSD has problems with fast-bitblt under gcc and clang
-FASTBITBLT=""
+# Many Linux systems supply empty library files.
+LIBRT="-lrt"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -34,7 +31,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	INTERP=cointerpmt \
 	CC=clang \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
+	LIBS=$LIBRT
 ##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
