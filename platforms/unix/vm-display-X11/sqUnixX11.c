@@ -1231,7 +1231,7 @@ void initClipboard(void)
 }
 
 // NB: Must not put new offers in the same event loop cycle as relinquishClipboard is called
-void relinquishClipboard(void)
+static void relinquishClipboard(void)
 {
   Time ts = getXTimestamp();
 
@@ -1239,6 +1239,9 @@ void relinquishClipboard(void)
   stOwnsSelection = 0;
   stSelectionTime = ts;
   clearOffers();
+  if (stPrimarySelection != stEmptySelection) {
+    free(stPrimarySelection);
+  }
   stPrimarySelection = stEmptySelection;
   stPrimarySelectionSize = 0;
 
@@ -1313,11 +1316,17 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
     buf= (char *)malloc(len * 3 + 1);
     if (buf) {
       n= sq2uxUTF8(data, len, buf, len * 3 + 1, 1);
-      if (!addOffer(xaUTF8String, buf, n)) return 0;
+      if (!addOffer(xaUTF8String, buf, n)) {
+        free(buf);
+        return 0;
+      }
       
       /* Offer STRING (ISO Latin-1) - reuse same buffer */
       n= sq2uxText(data, len, buf, len * 3 + 1, 1);
-      if (!addOffer(XA_STRING, buf, n)) return 0;
+      if (!addOffer(XA_STRING, buf, n)) {
+        free(buf);
+        return 0;
+      }
       
       /* Offer COMPOUND_TEXT - use converted buffer
          If we don't report COMPOUND_TEXT in this list, KMail (and maybe other
@@ -1363,7 +1372,7 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
     /* Typed format: add single offer */
     type= stringToAtom(typeName, nTypeName);
     if (!(success = addOffer(type, data, ndata))) {
-      fprintf(stderr, "display_clipboardWriteWithType: failed to add offer for type %s\n", typeName);
+      fprintf(stderr, "display_clipboardWriteWithType: failed to add offer for type %.*s\n", (int)nTypeName, typeName);
     }
   }
 
