@@ -1,0 +1,6 @@
+For OpenBSD one MUST install Cog executable files under /usr/local.
+
+Otherwise the OS will report:
+
+ Could not allocate JIT Memort: Not supported
+

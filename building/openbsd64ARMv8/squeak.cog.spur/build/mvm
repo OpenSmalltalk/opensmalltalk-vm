@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -e
-# Cog Spur MT VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspurmt64ARMv8linuxht
+# Cog Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=sqcogspur64ARMv8openbsdht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
+# tpr - add enablementisation of fast bitblt ben avison code
 MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
@@ -15,6 +16,9 @@ DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
 LIBRT=""
 # OpenBSD has problems with fast-bitblt under gcc and clang
 FASTBITBLT=""
+
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -31,10 +35,10 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=src/spur64.cog \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
-	INTERP=cointerpmt \
-	CC=clang \
-	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
+	$FASTBITBLT \
+	CC=$CC \
+	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
+	LIBS=$LIBRT
 ##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

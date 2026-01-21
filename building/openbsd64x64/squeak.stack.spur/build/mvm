@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 set -e
-# Cog Spur MT VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspurmt64ARMv8linuxht
-# armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
-MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV"
+# Stack Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=sqstkspur64openbsdht
+OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
+
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
+
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+# but OpenBSD does not.
+LIBRT=""
+
+OPT="$OPT -DMUSL"
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
-DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
-# librt and libpthread functions now supplied by libc.
-# Many Linux systems supply empty library files but
-# OpenBSD does not.
-LIBRT=""
-# OpenBSD has problems with fast-bitblt under gcc and clang
-FASTBITBLT=""
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -28,14 +30,14 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 ../../../../scripts/copylinuxpluginspecfiles
 test -f config.h || ../../../../platforms/unix/config/configure \
-	--with-vmversion=5.0 --with-src=src/spur64.cog \
-	--without-npsqueak \
-	--with-scriptname=spur64 \
-	INTERP=cointerpmt \
-	CC=clang \
-	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
-##	--without-vm-display-fbdev --without-npsqueak \
+		--with-vmversion=5.0 \
+		--with-src=src/spur64.stack --disable-cogit \
+		--without-vm-display-fbdev --without-npsqueak \
+		--with-scriptname=spur64 \
+	TARGET_ARCH="-m64" \
+	CC=$CC \
+	CFLAGS="$OPT -msse2"
+
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`

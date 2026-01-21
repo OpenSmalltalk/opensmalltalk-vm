@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -e
+# assert VM with VM profiler and itimer heartbeat
+INSTALLDIR=assert/sqcogspur64openbsd
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
+
+
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
+
+# librt and libpthread funs now supplied by libc
+# Many Openbsd systems supply empty library files 
+# but OpenBSD does not.
+LIBRT=""
+
+CFLAGS="$OPT -msse2 -DCOGMTVM=0"
+LIBS=$LIBRT
+LDFLAGS=""
+
+CFLAGS="$CFLAGS -I/usr/local/include"
+LIBS="$LIBS -lexecinfo"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			test -f Makefile && make reallyclean
+esac
+../../../../scripts/copylinuxpluginspecfiles
+test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
+		--with-vmversion=5.0 \
+		--with-src=src/spur64.cog \
+		--with-scriptname=spur64 \
+	TARGET_ARCH="-m64" \
+	CC=$CC \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1"
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
+# but older openbsd readlinks lack the -f flag
+make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
