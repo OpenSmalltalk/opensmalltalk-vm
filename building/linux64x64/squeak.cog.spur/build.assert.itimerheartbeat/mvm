@@ -4,6 +4,12 @@ set -e
 INSTALLDIR=assert/sqcogspur64linux
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
+# librt and libpthread funs now supplied by libc
+# Many Linux systems supply empty library files 
+CFLAGS="$CFLAGS $OPT -msse2 -DCOGMTVM=0"
+LIBS="$LIBS -lrt"
+LDFLAGS="$LDFLAGS"
+
 # Prefer clang over gcc if available
 if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
