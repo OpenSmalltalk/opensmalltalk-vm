@@ -1277,7 +1277,7 @@ static Atom stringToAtom(char *target, size_t size)
 static sqInt
 display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
 {
-  sqInt success = 1;
+  sqInt success= 1;
 
   if (data == NULL) {
     // clear
@@ -1350,19 +1350,22 @@ display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t 
       }
       
       if (Success == xError) {
-        success = addOffer(xaCompoundText, (char *)textProperty.value, textProperty.nitems);
+        success= addOffer(xaCompoundText, (char *)textProperty.value, textProperty.nitems);
         XFree((void *)textProperty.value);
       } else {
-        success = 0;
+        success= 0;
       }
       
       free(buf);
     }
+	else {
+	  success= 0;
+	}
   }
   else {
     /* Typed format: add single offer */
     type= stringToAtom(typeName, nTypeName);
-    if (!(success = addOffer(type, data, ndata))) {
+    if (!(success= addOffer(type, data, ndata))) {
       fprintf(stderr, "display_clipboardWriteWithType: failed to add offer for type %s\n", typeName);
     }
   }
@@ -2644,7 +2647,10 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
   getSelectionChunk(chunk, inputSelection, type);
   bytes= sizeSelectionChunk(chunk);
 
-  allocateSelectionBuffer(bytes);
+  if (!allocateSelectionBuffer(bytes)) {
+	destroySelectionChunk(chunk);
+	return 1; /* out of memory */
+  }
   copySelectionChunk(chunk, stPrimarySelection);
   destroySelectionChunk(chunk);
   if (isDnd) dndHandleEvent(DndInFinished, 0);
