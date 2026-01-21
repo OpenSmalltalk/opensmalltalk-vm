@@ -2602,8 +2602,16 @@ display_clipboardGetTypeNames(void)
         for (offer= offerTable; offer; offer= offer->next) {
           char *atomName= XGetAtomName(stDisplay, offer->type);
           if (atomName) {
-            typeNames[i++]= strdup(atomName);
+            typeNames[i]= strdup(atomName);
             XFree(atomName);
+            if (!typeNames[i]) {
+              /* strdup failed; free previously allocated strings and array */
+              int j;
+              for (j= 0; j < i; j++) free(typeNames[j]);
+              free(typeNames);
+              return 0;
+            }
+            i++;
           }
         }
         typeNames[i]= 0;
