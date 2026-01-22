@@ -4,12 +4,6 @@ set -e
 INSTALLDIR=sqstkspur64linuxht
 OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
 
-# librt and libpthread funs now supplied by libc
-# Many Linux systems supply empty library files 
-CFLAGS="$CFLAGS $OPT -msse2 -DCOGMTVM=0"
-LIBS="$LIBS -lrt"
-LDFLAGS="$LDFLAGS"
-
 # Prefer clang over gcc, but use gcc if clang isn't available...
 CC=gcc
 if [ -x /usr/bin/clang ]; then CC=clang; fi
