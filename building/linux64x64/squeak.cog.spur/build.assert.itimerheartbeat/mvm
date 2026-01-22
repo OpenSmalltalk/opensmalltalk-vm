@@ -2,7 +2,7 @@
 set -e
 # assert VM with VM profiler and itimer heartbeat
 INSTALLDIR=assert/sqcogspur64linux
-OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+OPT="-g3 -O1 -DDEBUGVM=0"
 
 # librt and libpthread funs now supplied by libc
 # Many Linux systems supply empty library files 
