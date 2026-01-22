@@ -1,4 +1,4 @@
-#!/Usr/Bin/env bash
+#!/usr/bin/env bash
 set -e
 # assert Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/sqstkspur64ARMv8linuxht
