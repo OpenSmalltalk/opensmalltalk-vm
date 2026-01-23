@@ -815,6 +815,14 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
 			}
 		    }
 		}
+        xError= XChangeProperty(requestEv->display,
+              requestEv->requestor,
+              requestEv->property,
+              type,
+              32, PropModeReplace,
+              (unsigned char *)multipleAtoms,
+              numberOfItems);
+        XFree((void *)multipleAtoms);
 	    }
 	}
     }
@@ -1006,28 +1014,11 @@ static int waitNotify(XEvent *ev, int (*condition)(XEvent *ev))
 	}
 
       XNextEvent(stDisplay, ev);
-      switch (ev->type)
-	{
-	case ConfigureNotify:
-	  noteResize(ev->xconfigure.width, ev->xconfigure.height);
-	  break;
-
-        /* this is necessary so that we can supply our own selection when we
-	   are the requestor -- this could (should) be optimised to return the
-	   stored selection value instead! */
-	case SelectionRequest:
-#	 if defined(DEBUG_SELECTIONS)
-	  fprintf(stderr, "getSelection: sending own selection\n");
-#	 endif
-	  sendSelection(&ev->xselectionrequest, 0);
-	  break;
-
 #       if defined(USE_XSHM)
-	default:
 	  if (ev->type == completionType)
 	    --completions;
 #       endif
-	}
+	  handleEvent(ev);
     }
   while (!condition(ev));
 
@@ -1096,25 +1087,32 @@ static void copySelectionChunk(SelectionChunk *chunk, char *dest)
     memcpy(j, i->data, i->size);
 }
 
+static size_t bytes_for(int format, unsigned long nitems) {
+  if (format == 8)  return nitems;
+  if (format == 16) return nitems * 2;
+  if (format == 32) return nitems * sizeof(long);   // critical on 64-bit
+  return 0;
+}
 
 /* get the value of the selection from the containing property */
 static size_t getSelectionProperty(SelectionChunk *chunk, Window requestor, Atom property, Atom *actualType)
 {
-  unsigned long bytesAfter= 0, nitems= 0, nread= 0;
+  unsigned long bytesAfter= 0, nitems= 0;
   unsigned char *data= 0;
   size_t size;
   int format;
+  unsigned long offset32 = 0; // in 32-bit units
   
   do
     {
       XGetWindowProperty(stDisplay, requestor, property,
-			 nread, (MAX_SELECTION_SIZE / 4),
+			 offset32, (MAX_SELECTION_SIZE / 4),
 			 True, AnyPropertyType,
 			 actualType, &format, &nitems, &bytesAfter,
 			 &data);
       
-      size= nitems * format / 8;
-      nread += size / 4;
+	  size= bytes_for(format, nitems);
+	  offset32 += nitems;
       
 #    if defined(DEBUG_SELECTIONS)
       fprintf(stderr, "getprop type ");
