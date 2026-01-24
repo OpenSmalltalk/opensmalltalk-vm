@@ -205,6 +205,7 @@ typedef struct SelectionOffer {
   struct SelectionOffer *next;
 } SelectionOffer;
 
+/* FIFO */
 static SelectionOffer *offerTable= NULL;
 
 #define		 SELECTION_ATOM_COUNT  10
@@ -689,6 +690,7 @@ static SelectionOffer *findOffer(Atom type)
 static int addOffer(Atom type, const char *data, size_t size)
 {
   SelectionOffer *offer;
+  SelectionOffer *tail;
   
   /* Check if offer already exists - update it */
   offer= findOffer(type);
@@ -717,8 +719,17 @@ static int addOffer(Atom type, const char *data, size_t size)
   offer->data[size]= '\0';
   offer->type= type;
   offer->size= size;
-  offer->next= offerTable;
-  offerTable= offer;
+  offer->next= NULL;
+
+  /* Append to preserve FIFO order (see offerTable comment). */
+  if (!offerTable)
+    offerTable= offer;
+  else {
+    tail= offerTable;
+    while (tail->next)
+      tail= tail->next;
+    tail->next= offer;
+  }
   
   return 1;
 }
