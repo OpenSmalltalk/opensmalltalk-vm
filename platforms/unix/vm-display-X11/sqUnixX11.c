@@ -233,6 +233,47 @@ char		*selectionAtomNames[SELECTION_ATOM_COUNT]= {
 #define xaXdndSelection selectionAtoms[9]
 };
 
+/* Build a TARGETS atom list for the current offer table.
+ * The list always includes required meta targets first (TARGETS, MULTIPLE,
+ * TIMESTAMP) and then all offered types, deduplicated.
+ * Answer malloc'd array (caller must free) and set *outCount.
+ */
+static Atom *buildLocalTargets(int *outCount)
+{
+  size_t capacity= 3;
+  int targetsSize= 0;
+  SelectionOffer *offer;
+  Atom *targets;
+
+  for (offer= offerTable; offer; offer= offer->next)
+    capacity++;
+
+  targets= (Atom *)malloc(capacity * sizeof(Atom));
+  if (!targets) {
+    if (outCount) *outCount= 0;
+    return NULL;
+  }
+
+  targets[targetsSize++]= xaTargets;
+  targets[targetsSize++]= xaMultiple;
+  targets[targetsSize++]= xaTimestamp;  /* required by ICCM */
+
+  for (offer= offerTable; offer; offer= offer->next) {
+    int i, duplicate= 0;
+    for (i= 0; i < targetsSize; i++) {
+      if (targets[i] == offer->type) {
+        duplicate= 1;
+        break;
+      }
+    }
+    if (!duplicate)
+      targets[targetsSize++]= offer->type;
+  }
+
+  if (outCount) *outCount= targetsSize;
+  return targets;
+}
+
 Atom		 wmProtocolsAtom;	/* for window deletion messages */
 Atom		 wmDeleteWindowAtom;
 
@@ -725,35 +766,13 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
   }
   else if (xaTargets == requestEv->target)
     {
-      /* Report meta-formats plus offers from image */
-      size_t capacity= 3;
-      SelectionOffer *offer;
-      for (offer= offerTable; offer; offer= offer->next)
-        capacity++;
+      int targetsSize= 0;
+      Atom *targets= buildLocalTargets(&targetsSize);
 
-      Atom *targets= (Atom *)malloc(capacity * sizeof(Atom));
       if (!targets) {
         xError= BadAlloc;
         notifyEv.property= None;
       } else {
-        int targetsSize= 3;
-        targets[0]= xaTargets;
-        targets[1]= xaMultiple;
-        targets[2]= xaTimestamp;	        /* required by ICCCM */
-        /* Add all offers from the table, deduplicating against meta-formats */
-        for (offer= offerTable; offer; offer= offer->next) {
-          /* Skip if already in the list (handles user-provided meta-formats) */
-          int i, duplicate= 0;
-          for (i= 0; i < targetsSize; i++) {
-            if (targets[i] == offer->type) {
-              duplicate= 1;
-              break;
-            }
-          }
-          if (!duplicate) {
-            targets[targetsSize++]= offer->type;
-          }
-        }
         xError= XChangeProperty(requestEv->display, requestEv->requestor,
                                 targetProperty, XA_ATOM,
                                 32, PropModeReplace, (unsigned char *)targets, targetsSize);
@@ -1087,10 +1106,24 @@ static void copySelectionChunk(SelectionChunk *chunk, char *dest)
     memcpy(j, i->data, i->size);
 }
 
-static size_t bytes_for(int format, unsigned long nitems) {
+static size_t bytes_for(int format, unsigned long nitems)
+{
   if (format == 8)  return nitems;
   if (format == 16) return nitems * 2;
-  if (format == 32) return nitems * sizeof(long);   // critical on 64-bit
+  /* Xlib returns format==32 data in longs (sizeof(long) bytes each). */
+  if (format == 32) return nitems * sizeof(long);
+  return 0;
+}
+
+/* XGetWindowProperty long_offset/long_length are in 32-bit units, regardless
+ * of the property's format. Convert returned nitems (in 8/16/32-bit items)
+ * into the number of 32-bit units consumed so we can advance long_offset.
+ */
+static unsigned long units32_for(int format, unsigned long nitems)
+{
+  if (format == 8)  return (nitems + 3) / 4;
+  if (format == 16) return (nitems + 1) / 2;
+  if (format == 32) return nitems;
   return 0;
 }
 
@@ -1101,7 +1134,7 @@ static size_t getSelectionProperty(SelectionChunk *chunk, Window requestor, Atom
   unsigned char *data= 0;
   size_t size;
   int format;
-  unsigned long offset32 = 0; // in 32-bit units
+  unsigned long offset32= 0; /* in 32-bit units */
   
   do
     {
@@ -1112,7 +1145,7 @@ static size_t getSelectionProperty(SelectionChunk *chunk, Window requestor, Atom
 			 &data);
       
 	  size= bytes_for(format, nitems);
-	  offset32 += nitems;
+	  offset32 += units32_for(format, nitems);
       
 #    if defined(DEBUG_SELECTIONS)
       fprintf(stderr, "getprop type ");
@@ -2587,32 +2620,36 @@ display_clipboardGetTypeNames(void)
   else 
     {
       if (stOwnsClipboard) {
-        /* Serve from local offer table only */
-        SelectionOffer *offer;
-        int count= 0, i= 0;
-        
-        /* Count offers */
-        for (offer= offerTable; offer; offer= offer->next) count++;
-        
+        int count= 0;
+        int i= 0;
+        int outIndex= 0;
+        Atom *localTargets= buildLocalTargets(&count);
+        if (!localTargets) return 0;
+
         typeNames= calloc(count + 1, sizeof(char *));
-        if (!typeNames) return 0;
-        
-        for (offer= offerTable; offer; offer= offer->next) {
-          char *atomName= XGetAtomName(stDisplay, offer->type);
+        if (!typeNames) {
+          free(localTargets);
+          return 0;
+        }
+
+        for (i= 0; i < count; i++) {
+          char *atomName= XGetAtomName(stDisplay, localTargets[i]);
           if (atomName) {
-            typeNames[i]= strdup(atomName);
+            typeNames[outIndex]= strdup(atomName);
             XFree(atomName);
-            if (!typeNames[i]) {
-              /* strdup failed; free previously allocated strings and array */
+            if (!typeNames[outIndex]) {
               int j;
-              for (j= 0; j < i; j++) free(typeNames[j]);
+              for (j= 0; j < outIndex; j++) free(typeNames[j]);
               free(typeNames);
+              free(localTargets);
               return 0;
             }
-            i++;
+            outIndex++;
           }
         }
-        typeNames[i]= 0;
+
+        typeNames[outIndex]= 0;
+        free(localTargets);
         return typeNames;
       }
       targets= (Atom *)getSelectionData(xaClipboard, xaTargets, &bytes);
@@ -2643,9 +2680,34 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
   inputSelection= isDnd ? xaXdndSelection : xaClipboard;
 
   if ((!isDnd) && stOwnsClipboard) {
-    /* Serve from local offer table */
     SelectionOffer *offer;
     type= stringToAtom(typeName, nTypeName);
+
+    if (type == xaTargets) {
+      int count= 0;
+      Atom *targets= buildLocalTargets(&count);
+      size_t targetBytes;
+      if (!targets) return 0;
+      targetBytes= count * sizeof(Atom);
+      if (allocateSelectionBuffer(targetBytes)) {
+        memcpy(stPrimarySelection, targets, targetBytes);
+        stPrimarySelection[targetBytes]= '\0';
+        free(targets);
+        return stPrimarySelectionSize;
+      }
+      free(targets);
+      return 0;
+    }
+
+    if (type == xaTimestamp) {
+      if (allocateSelectionBuffer(sizeof(Time))) {
+        memcpy(stPrimarySelection, &stSelectionTime, sizeof(Time));
+        stPrimarySelection[sizeof(Time)]= '\0';
+        return stPrimarySelectionSize;
+      }
+      return 0;
+    }
+
     offer= findOffer(type);
     if (offer) {
       if (allocateSelectionBuffer(offer->size)) {
