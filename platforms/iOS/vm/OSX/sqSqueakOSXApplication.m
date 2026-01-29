@@ -165,7 +165,7 @@ static char *getVersionInfo(int verbose);
 	[self parseEnv: [p environment]];
 }
 
-- (int) parseArgument: (NSString *) argData peek: (char *) peek
+- (int) parseArgument: (NSString *) argData peek: (const char *) peek
 {
 	if ([argData isEqualToString: @"--"]) {
 		return 1;
@@ -268,7 +268,7 @@ static char *getVersionInfo(int verbose);
 #if COGVM
 	if ([argData isEqualToString: VMOPTIONOBJ("logplugin")]) {
 		extern char *primTracePluginName;
-		primTracePluginName = peek;
+		primTracePluginName = (char *)peek;
 		return 2;
 	}
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
@@ -331,17 +331,15 @@ static char *getVersionInfo(int verbose);
         return 2;
     }
 
-#if STACKVM || NewspeakVM
+#if STACKVM
 	if ([argData isEqualToString: VMOPTIONOBJ("breaksel")]) {
 		extern void setBreakSelector(char *);
-		setBreakSelector(peek);
+		setBreakSelector((char *)peek);
 		return 2;
 	}
-#endif
-#if STACKVM
 	if ([argData isEqualToString: VMOPTIONOBJ("breakmnu")]) {
 		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(peek);
+		setBreakMNUSelector((char *)peek);
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("eden")]) {
