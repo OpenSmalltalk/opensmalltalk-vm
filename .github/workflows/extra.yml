@@ -50,7 +50,7 @@ jobs:
 
       - name: Prepare Linux build environment
         if: startsWith(matrix.arch.name, 'linux')
-        run: sudo ./scripts/ci/actions_prepare_linux_x86.sh
+        run: sudo --preserve-env=ARCH,FLAVOUR,MODE,HEARTBEAT ./scripts/ci/actions_prepare_linux_x86.sh
 
       - name: Prepare MSYS2/Windows build environment
         if: startsWith(matrix.arch.name, 'win')

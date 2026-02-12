@@ -104,7 +104,7 @@ jobs:
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}
 
       - name: Prepare environment
-        run: sudo ./scripts/ci/actions_prepare_linux_x86.sh
+        run: sudo --preserve-env=ARCH,FLAVOUR,MODE ./scripts/ci/actions_prepare_linux_x86.sh
 
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
