@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- mode: sh; sh-basic-offset: 4 -*-
-set -e
+set -ex
 
 # This script installs all packages required to build the various VM
 # flavors in an x86-compatible environment. It supports both 32-bit
