@@ -50,6 +50,20 @@ static sqLong vmGMTOffset = 0;
 static usqLong frequencyMeasureStart = 0;
 static unsigned long heartbeats;
 
+/* Phase 4: Adaptive heartbeat for idle CPU optimization (JMM-619).
+ *
+ * When the main VM thread is idle (sleeping in ioRelinquishProcessorForMicroseconds),
+ * the heartbeat thread backs off to a longer interval since nothing needs
+ * preempting.  When the main thread is running Smalltalk code, the heartbeat
+ * runs at full speed for accurate clocks and timely preemption.
+ */
+static volatile int mainThreadIsIdle = 0;
+
+#if !defined(IDLE_BEAT_MS)
+# define IDLE_BEAT_MS 50
+#endif
+static struct timespec idleBeatperiod = { 0, IDLE_BEAT_MS * 1000 * 1000 };
+
 #define microToMilliseconds(usecs) ((((usecs) - utcStartMicroseconds) \
 									/ MicrosecondsPerMillisecond) \
 									& MillisecondClockMask)
@@ -266,7 +280,11 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 			realTimeToWait = microSeconds;
 	}
 
+	mainThreadIsIdle = 1;
+	sqLowLevelMFence();
 	aioSleepForUsecs(realTimeToWait);
+	sqLowLevelMFence();
+	mainThreadIsIdle = 0;
 
 	return 0;
 }
@@ -359,7 +377,13 @@ beatStateMachine(void *careLess)
 	beatState = active;
 	while (beatState != condemned) {
 # define MINSLEEPNS 2000 /* don't bother sleeping for short times */
-		struct timespec naptime = beatperiod;
+		struct timespec naptime;
+
+		/* Adaptive: use longer interval when main thread is idle. */
+		if (mainThreadIsIdle)
+			naptime = idleBeatperiod;
+		else
+			naptime = beatperiod;
 
 		while (nanosleep(&naptime, &naptime) == -1
 			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
