@@ -97,9 +97,14 @@
 # include <unistd.h>
 # include <sys/types.h>
 # include <sys/time.h>
-# include <sys/select.h>
 # include <sys/ioctl.h>
 # include <fcntl.h>
+# if defined(__APPLE__)
+#   include <sys/event.h>
+#   define USE_KQUEUE 1
+# else
+#   include <sys/select.h>
+# endif
 
 #endif /* !HAVE_CONFIG_H */
 
@@ -137,7 +142,23 @@ const static int epollFlagsForAIOFlags[] = {
 	EPOLLIN | EPOLLOUT | EPOLLPRI // AIO_RWX
 };
 
-#else // HAVE_CONFIG_H && HAVE_EPOLL
+#elif defined(USE_KQUEUE)
+/* kqueue-based I/O for macOS (JMM-619 Phase 4) */
+static int kqFd = -1;
+
+struct kqEventData {
+	int fd;
+	int aioMask;
+	aioHandler readHandler;
+	aioHandler writeHandler;
+	aioHandler exceptionHandler;
+	void *clientData;
+};
+
+static struct kqEventData **kqEventsByFd = NULL;
+static size_t kqEventsCount = 0;
+
+#else // select() fallback
 
 # define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
 
@@ -153,7 +174,7 @@ static fd_set rdMask;		/* handle read		 */
 static fd_set wrMask;		/* handle write		 */
 static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
-#endif // HAVE_CONFIG_H && HAVE_EPOLL
+#endif // epoll / kqueue / select
 
 static void
 undefinedHandler(int fd, void *clientData, int flags)
@@ -255,6 +276,18 @@ aioInit(void)
 	epollInit();
 	if (pthread_atfork(NULL, NULL, epollInit))
 		perror("pthread_atfork");
+#elif defined(USE_KQUEUE)
+	if (kqFd >= 0)
+		close(kqFd);
+	kqFd = kqueue();
+	if (kqFd == -1) {
+		perror("kqueue failed");
+		exit(1);
+	}
+	/* set close-on-exec */
+	fcntl(kqFd, F_SETFD, FD_CLOEXEC);
+	kqEventsCount = 0;
+	kqEventsByFd = NULL;
 #else
 	FD_ZERO(&fdMask);
 	FD_ZERO(&rdMask);
@@ -311,6 +344,14 @@ aioFini(void)
 				aioDisable(index);
 				close(index);
 			}
+		}
+	}
+#elif defined(USE_KQUEUE)
+	for (size_t i = 0; i < kqEventsCount; ++i) {
+		struct kqEventData *data = kqEventsByFd[i];
+		if (data && !(data->aioMask & AIO_EXT)) {
+			aioDisable(i);
+			close(i);
 		}
 	}
 #else
@@ -440,7 +481,55 @@ aioPoll(long microSeconds)
 	} while(microSeconds > 0);
 	return 0;
 
-#else // HAVE_CONFIG_H && HAVE_EPOLL
+#elif defined(USE_KQUEUE)
+
+	DO_TICK(SHOULD_TICK());
+
+	if (kqEventsCount == 0 && microSeconds == 0)
+		return 0;
+
+	do {
+		const usqLong start = ioUTCMicroseconds();
+		struct kevent events[128];
+		struct timespec ts;
+		ts.tv_sec  = microSeconds / 1000000;
+		ts.tv_nsec = (microSeconds % 1000000) * 1000;
+		const int nev = kevent(kqFd, NULL, 0, events, 128,
+							   microSeconds >= 0 ? &ts : NULL);
+		if (nev == -1) {
+			if (errno != EINTR) {
+				perror("kevent");
+				return 0;
+			}
+		} else if (nev > 0) {
+			for (int i = 0; i < nev; ++i) {
+				aioHandler handler;
+				struct kqEventData *data = (struct kqEventData *)events[i].udata;
+				if (!data) continue;
+				if (events[i].filter == EVFILT_READ) {
+					if ((handler = data->readHandler))
+						handler(data->fd, data->clientData, AIO_R);
+				}
+				if (events[i].filter == EVFILT_WRITE) {
+					if ((handler = data->writeHandler))
+						handler(data->fd, data->clientData, AIO_W);
+				}
+				/* EV_ERROR or EOF treated as exception */
+				if (events[i].flags & (EV_EOF | EV_ERROR)) {
+					if ((handler = data->exceptionHandler))
+						handler(data->fd, data->clientData, AIO_X);
+				}
+			}
+			return 1;
+		} else { /* nev == 0: timeout */
+			if (microSeconds > 0) addIdleUsecs(microSeconds);
+			return 0;
+		}
+		microSeconds -= max(ioUTCMicroseconds() - start, 1);
+	} while (microSeconds > 0);
+	return 0;
+
+#else // select() fallback
 
 	int	fd;
 	fd_set	rd, wr, ex;
@@ -648,7 +737,37 @@ aioEnable(int fd, void *data, int flags)
 		 */
 		makeFileDescriptorNonBlockingAndSetupSigio(fd);
 	}
-#else // HAVE_CONFIG_H && HAVE_EPOLL
+#elif defined(USE_KQUEUE)
+	if (fd >= (int)kqEventsCount) {
+		size_t newCount = kqEventsCount ? kqEventsCount * 2 : 64;
+		if ((size_t)fd >= newCount) newCount = (size_t)fd + 1;
+		struct kqEventData **newArr = (struct kqEventData **)realloc(
+			kqEventsByFd, newCount * sizeof(*kqEventsByFd));
+		if (!newArr) { perror("aioEnable realloc"); return; }
+		memset(newArr + kqEventsCount, 0,
+			   (newCount - kqEventsCount) * sizeof(*newArr));
+		kqEventsByFd = newArr;
+		kqEventsCount = newCount;
+	}
+	if (kqEventsByFd[fd]) {
+		FPRINTF((stderr, "aioEnable: descriptor %d already enabled\n", fd));
+		return;
+	}
+	struct kqEventData *kqd = (struct kqEventData *)calloc(1, sizeof(*kqd));
+	if (!kqd) { perror("aioEnable calloc"); return; }
+	kqd->fd = fd;
+	kqd->aioMask = flags & AIO_EXT;
+	kqd->readHandler = undefinedHandler;
+	kqd->writeHandler = undefinedHandler;
+	kqd->exceptionHandler = undefinedHandler;
+	kqd->clientData = data;
+	kqEventsByFd[fd] = kqd;
+	if (flags & AIO_EXT) {
+		FPRINTF((stderr, "aioEnable(%d): external\n", fd));
+	} else {
+		makeFileDescriptorNonBlockingAndSetupSigio(fd);
+	}
+#else // select() fallback
 	if (fd >= FD_SETSIZE) {
 		FPRINTF((stderr, "aioEnable(%d): fd too large\n", fd));
 		return;
@@ -679,7 +798,7 @@ aioEnable(int fd, void *data, int flags)
 		FD_CLR(fd, &xdMask);
 		makeFileDescriptorNonBlockingAndSetupSigio(fd);
 	}
-#endif // HAVE_CONFIG_H && HAVE_EPOLL
+#endif // epoll / kqueue / select
 }
 
 #if defined(AIO_DEBUG)
@@ -751,6 +870,34 @@ aioHandle(int fd, aioHandler handlerFn, int mask)
 	else {
 		FPRINTF((stderr, "aioHandle(%d, %p, %d): epoll_ctl(%d, %d, %d, %p) succeeded\n", fd, handlerFn, mask, epollFd, epoll_operation, fd, event));
 	}
+#elif defined(USE_KQUEUE)
+	if (fd >= (int)kqEventsCount || !kqEventsByFd[fd]) {
+		FPRINTF((stderr, "aioHandle(%d): NOT ENABLED\n", fd));
+		return;
+	}
+	{
+		struct kqEventData *data = kqEventsByFd[fd];
+		struct kevent changes[2];
+		int nchanges = 0;
+
+		if (mask & AIO_R) data->readHandler = handlerFn;
+		if (mask & AIO_W) data->writeHandler = handlerFn;
+		if (mask & AIO_X) data->exceptionHandler = handlerFn;
+
+		if (mask & AIO_R) {
+			EV_SET(&changes[nchanges], fd, EVFILT_READ,
+				   EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, data);
+			nchanges++;
+		}
+		if (mask & AIO_W) {
+			EV_SET(&changes[nchanges], fd, EVFILT_WRITE,
+				   EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, data);
+			nchanges++;
+		}
+		data->aioMask |= mask;
+		if (nchanges > 0 && kevent(kqFd, changes, nchanges, NULL, 0, NULL) == -1)
+			perror("aioHandle kevent");
+	}
 #else
 # undef _DO
 # define _DO(FLAG, TYPE)					\
@@ -790,6 +937,31 @@ aioSuspend(int fd, int mask)
 	else {
 		FPRINTF((stderr, "aioSuspend(%d, %d): NOTHING TO SUSPEND\n", fd, mask));
 	}
+#elif defined(USE_KQUEUE)
+	if (fd >= (int)kqEventsCount || !kqEventsByFd[fd]) {
+		FPRINTF((stderr, "aioSuspend(%d): NOT ENABLED\n", fd));
+		return;
+	}
+	{
+		struct kqEventData *data = kqEventsByFd[fd];
+		struct kevent changes[2];
+		int nchanges = 0;
+
+		if ((mask & AIO_R) && (data->aioMask & AIO_R)) {
+			EV_SET(&changes[nchanges], fd, EVFILT_READ,
+				   EV_DELETE, 0, 0, NULL);
+			nchanges++;
+		}
+		if ((mask & AIO_W) && (data->aioMask & AIO_W)) {
+			EV_SET(&changes[nchanges], fd, EVFILT_WRITE,
+				   EV_DELETE, 0, 0, NULL);
+			nchanges++;
+		}
+		data->aioMask &= ~mask;
+		if (nchanges > 0 && kevent(kqFd, changes, nchanges, NULL, 0, NULL) == -1) {
+			if (errno != ENOENT) perror("aioSuspend kevent");
+		}
+	}
 #else
 #undef _DO
 #define _DO(FLAG, TYPE)							\
@@ -827,6 +999,28 @@ aioDisable(int fd)
 	free(event->data.ptr);
 	free(event);
 	epollEventsByFileDescriptor[fd] = NULL;
+#elif defined(USE_KQUEUE)
+	if (fd >= (int)kqEventsCount || !kqEventsByFd[fd]) {
+		FPRINTF((stderr, "aioDisable(%d): NOT ENABLED\n", fd));
+		return;
+	}
+	{
+		struct kqEventData *data = kqEventsByFd[fd];
+		struct kevent changes[2];
+		int nchanges = 0;
+		if (data->aioMask & AIO_R) {
+			EV_SET(&changes[nchanges], fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+			nchanges++;
+		}
+		if (data->aioMask & AIO_W) {
+			EV_SET(&changes[nchanges], fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+			nchanges++;
+		}
+		if (nchanges > 0)
+			kevent(kqFd, changes, nchanges, NULL, 0, NULL); /* ignore ENOENT */
+		free(data);
+		kqEventsByFd[fd] = NULL;
+	}
 #else
 	aioSuspend(fd, AIO_RWX);
 	FD_CLR(fd, &xdMask);
