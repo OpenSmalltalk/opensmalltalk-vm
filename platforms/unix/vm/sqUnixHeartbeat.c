@@ -253,6 +253,49 @@ ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; 
 sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
+#if defined(USE_KQUEUE) || defined(__APPLE__)
+/* Phase 4: Condition variable to suspend heartbeat thread during idle.
+ * When kqueue handles heartbeat timing, the thread sleeps here.
+ */
+#include <sys/event.h>
+static pthread_mutex_t hbMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  hbCond  = PTHREAD_COND_INITIALIZER;
+
+/* Register/remove heartbeat timer in kqueue.
+ * Called from ioRelinquishProcessorForMicroseconds. */
+extern int kqFd;
+extern int kqHeartbeatActive;
+/* forward ref — defined later with other heartbeat state */
+#if !defined(DEFAULT_BEAT_MS)
+# define DEFAULT_BEAT_MS 2
+#endif
+static int beatMilliseconds;  /* initialized below */
+#define KQ_HEARTBEAT_IDENT 0xBEA7
+
+static void
+kqRegisterHeartbeatTimer(void)
+{
+	if (kqFd < 0 || kqHeartbeatActive) return;
+	struct kevent ev;
+	EV_SET(&ev, KQ_HEARTBEAT_IDENT, EVFILT_TIMER,
+		   EV_ADD | EV_ENABLE, NOTE_USECONDS,
+		   (intptr_t)(beatMilliseconds * 1000), NULL);
+	if (kevent(kqFd, &ev, 1, NULL, 0, NULL) == 0)
+		kqHeartbeatActive = 1;
+}
+
+static void
+kqRemoveHeartbeatTimer(void)
+{
+	if (kqFd < 0 || !kqHeartbeatActive) return;
+	struct kevent ev;
+	EV_SET(&ev, KQ_HEARTBEAT_IDENT, EVFILT_TIMER,
+		   EV_DELETE, 0, 0, NULL);
+	kevent(kqFd, &ev, 1, NULL, 0, NULL);
+	kqHeartbeatActive = 0;
+}
+#endif /* USE_KQUEUE || __APPLE__ */
+
 /*
  * On Mac OS X use the following.
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
@@ -280,6 +323,16 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 			realTimeToWait = microSeconds;
 	}
 
+	/* Phase 4: Set idle flag and register kqueue heartbeat timer.
+	 * The flag stays set between consecutive idle calls — only
+	 * cleared on return so the heartbeat thread can resume for
+	 * any active Smalltalk code that runs between calls.
+	 * The kqueue timer stays registered while idle to handle
+	 * heartbeat duties from within kevent(). */
+#if defined(USE_KQUEUE) || defined(__APPLE__)
+	if (!kqHeartbeatActive)
+		kqRegisterHeartbeatTimer();
+#endif
 	mainThreadIsIdle = 1;
 	sqLowLevelMFence();
 	aioSleepForUsecs(realTimeToWait);
@@ -298,7 +351,8 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
-static void
+/* Phase 4: heartbeat() is non-static so aio.c kqueue timer can call it */
+void
 heartbeat()
 {
 	int saved_errno = errno;
@@ -379,7 +433,20 @@ beatStateMachine(void *careLess)
 # define MINSLEEPNS 2000 /* don't bother sleeping for short times */
 		struct timespec naptime;
 
-		/* Adaptive: use longer interval when main thread is idle. */
+		/* Phase 4: When main thread is idle and kqueue handles
+		 * heartbeat timing, this thread can sleep much longer.
+		 * Use 500ms nanosleep — still wakes to check state but
+		 * dramatically fewer wakeups than 2ms. */
+#if defined(USE_KQUEUE) || defined(__APPLE__)
+		if (mainThreadIsIdle && kqHeartbeatActive) {
+			struct timespec longNap = { 0, 500000000L }; /* 500ms */
+			nanosleep(&longNap, NULL);
+			heartbeat(); /* keep clocks updated */
+			continue;
+		}
+#endif
+		/* Adaptive: use longer interval when main thread is idle
+		 * (fallback for non-kqueue or when kqueue timer not active). */
 		if (mainThreadIsIdle)
 			naptime = idleBeatperiod;
 		else

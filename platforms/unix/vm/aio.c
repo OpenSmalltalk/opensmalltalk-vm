@@ -65,6 +65,11 @@
 #   include <sys/event.h>
 # elif HAVE_EPOLL
 #   include <sys/epoll.h>
+# elif defined(__APPLE__)
+/* macOS Cocoa build: HAVE_CONFIG_H is set but no config.h exists,
+ * so HAVE_KQUEUE is never defined. Detect kqueue via __APPLE__. */
+#   include <sys/event.h>
+#   define HAVE_KQUEUE 1
 # elif HAVE_SELECT
 #   include <sys/select.h>
 # endif
@@ -108,6 +113,11 @@
 
 #endif /* !HAVE_CONFIG_H */
 
+/* Unify kqueue detection: USE_KQUEUE defined either way */
+#if !defined(USE_KQUEUE) && defined(HAVE_KQUEUE) && HAVE_KQUEUE
+# define USE_KQUEUE 1
+#endif
+
 /* function to inform the VM about idle time */
 extern void addIdleUsecs(long idleUsecs);
 
@@ -144,7 +154,7 @@ const static int epollFlagsForAIOFlags[] = {
 
 #elif defined(USE_KQUEUE)
 /* kqueue-based I/O for macOS (JMM-619 Phase 4) */
-static int kqFd = -1;
+int kqFd = -1;  /* non-static: accessed by sqUnixHeartbeat.c */
 
 struct kqEventData {
 	int fd;
@@ -157,6 +167,15 @@ struct kqEventData {
 
 static struct kqEventData **kqEventsByFd = NULL;
 static size_t kqEventsCount = 0;
+
+/* Heartbeat timer folded into kqueue (JMM-619 Phase 4).
+ * When the main thread is idle, we register EVFILT_TIMER in kqueue
+ * so kevent() delivers heartbeat events directly, eliminating the
+ * need for the heartbeat thread to wake up.
+ */
+#define KQ_HEARTBEAT_IDENT 0xBEA7  /* magic ident for timer */
+int kqHeartbeatActive = 0;  /* non-static: accessed by sqUnixHeartbeat.c */
+extern void heartbeat(void);  /* from sqUnixHeartbeat.c */
 
 #else // select() fallback
 
@@ -506,6 +525,12 @@ aioPoll(long microSeconds)
 				aioHandler handler;
 				struct kqEventData *data = (struct kqEventData *)events[i].udata;
 				if (!data) continue;
+				/* Heartbeat timer event */
+				if (events[i].filter == EVFILT_TIMER
+				    && events[i].ident == KQ_HEARTBEAT_IDENT) {
+					heartbeat();
+					continue;
+				}
 				if (events[i].filter == EVFILT_READ) {
 					if ((handler = data->readHandler))
 						handler(data->fd, data->clientData, AIO_R);
