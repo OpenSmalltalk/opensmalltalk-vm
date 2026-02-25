@@ -57,7 +57,7 @@ static unsigned long heartbeats;
  * preempting.  When the main thread is running Smalltalk code, the heartbeat
  * runs at full speed for accurate clocks and timely preemption.
  */
-static volatile int mainThreadIsIdle = 0;
+volatile int mainThreadIsIdle = 0;
 
 #if !defined(IDLE_BEAT_MS)
 # define IDLE_BEAT_MS 50
