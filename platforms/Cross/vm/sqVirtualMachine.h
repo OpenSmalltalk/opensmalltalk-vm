@@ -382,6 +382,8 @@ typedef struct VirtualMachine {
   sqInt (*fileTimesInUTC)(void);		/* for FilePlugin et al */
   sqInt (*processOSErrInstVarOffset)(void);	/* for ThreadedFFIPlugin/SqueakFFIPrims */
   sqInt (*activeProcess)(void);				/* for ThreadedFFIPlugin/SqueakFFIPrims */
+  sqInt (*getFFILastError)(void);			/* for ThreadedFFIPlugin/SqueakFFIPrims */
+  void  (*setFFILastError)(sqInt err);		/* for ThreadedFFIPlugin/SqueakFFIPrims */
 #endif
 } VirtualMachine;
 
@@ -611,6 +613,12 @@ sqInt fileTimesInUTC(void);
 sqInt processOSErrInstVarOffset(void);
 sqInt primitiveFailForwithSecondary(sqInt reasonCode,sqLong extraErrorCode);
 sqInt activeProcess(void);
+# if COGMTVM
+sqInt getFFILastError(void);
+void setFFILastError(sqInt err);
+# else
+void abortIfInvokedForFLE(void);
+# endif
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);

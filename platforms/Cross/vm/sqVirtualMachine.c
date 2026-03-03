@@ -381,6 +381,13 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fileTimesInUTC = fileTimesInUTC;
 	VM->processOSErrInstVarOffset = processOSErrInstVarOffset;
 	VM->activeProcess = activeProcess;
+# if COGMTVM
+	VM->getFFILastError = getFFILastError;
+	VM->setFFILastError = setFFILastError;
+# else
+	VM->getFFILastError = (sqInt (*)(void))abortIfInvokedForFLE;
+	VM->setFFILastError = (void (*)(sqInt))abortIfInvokedForFLE;
+# endif
 #endif
 	return VM;
 }
