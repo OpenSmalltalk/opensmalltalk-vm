@@ -39,7 +39,9 @@
 #if DUAL_MAPPED_CODE_ZONE
 # if !__APPLE__
 #    if !__OpenBSD__
+#       if !__QNX__
 #	include <sys/prctl.h>
+#		endif
 #    endif
 # endif
 #ifdef HAVE_SYS_STAT_H

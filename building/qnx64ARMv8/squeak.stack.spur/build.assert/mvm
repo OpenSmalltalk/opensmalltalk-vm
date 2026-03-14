@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 set -e
-# Cog Spur MT VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspurmt64ARMv8linuxht
-# armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
-MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DUSEEVDEV"
-CFLAGS="$CFLAGS $OPT -I/usr/local/include"
-LIBS="$LIBS -lexecinfo"
-LDFLAGS="$LDFLAGS -L/usr/local/lib"
-DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
-# librt and libpthread functions now supplied by libc.
-# Many Linux systems supply empty library files.
-LIBRT="-lrt"
+# assert Stack Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=assert/sqstkspur64ARMv8linuxht
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+
+DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -25,14 +21,13 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 ../../../../scripts/copylinuxpluginspecfiles
 test -f config.h || ../../../../platforms/unix/config/configure \
-	--with-vmversion=5.0 --with-src=src/spur64.cog \
-	--without-npsqueak \
+		--with-vmversion=5.0 \
+	--with-src=src/spur64.stack --disable-cogit \
+	--without-vm-display-fbdev --without-npsqueak \
 	--with-scriptname=spur64 \
-	INTERP=cointerpmt \
-	CC=gcc \
-	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS=$LIBRT
-##	--without-vm-display-fbdev --without-npsqueak \
+	TARGET_ARCH="-march=armv8-a" \
+	CC=$CC \
+	CFLAGS="$OPT -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__ $DUALMAP"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
