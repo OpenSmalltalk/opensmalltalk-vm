@@ -14,3 +14,8 @@ WARNING: [Incomplete Work In Progress]
 TESTED Raspberry Pi 5 Self hosted  [sudo apk add screen]
 TESTED Ubunto/Mint Linux x86_64 ==cross-compiled==> QNX 8.0 Raspberry Pi 4 aarch64
 
+Note: vm-display-qnxScreen uses _screen_ to take over the display, mouse, and keyboard.
+It requires RasPi5 self-hosting to build, but can be run without the hosted GUI.
+It is not a windowed app.  FYI
+"sudo apk add qnx-screen"
+
