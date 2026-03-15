@@ -828,6 +828,7 @@ with_gl
 enable_fast_bitblt
 with_custom_display
 with_vm_display_fbdev
+with_vm_display_qnxScreen
 with_vm_sound_OSS
 with_vm_sound_Sun
 with_custom_sound
@@ -1527,6 +1528,7 @@ Optional Packages:
   --with-x                use the X Window System
   --with-custom-display   enable custom window support default=disabled
   --without-vm-display-fbdev      disable frame buffer vm display support default=enabled
+  --without-vm-display-qnxScreen	disable QNX Screen display support
   --without-vm-sound-OSS  disable OSS vm sound support (default=enabled)
   --without-vm-sound-Sun  disable Sun vm sound support (default=enabled)
   --with-custom-sound     enable custom sound support default=disabled
@@ -17870,6 +17872,40 @@ $as_echo "no" >&6; }
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
 fi
+
+
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+plugin="vm-display-qnxScreen"
+plibs=""
+rm -f vm-display-qnxScreen.sub vm-display-qnxScreen.lib
+# -*- sh -*-
+plugin="vm-display-qnxScreen"
+plibs=""
+rm -f vm-display-qnxScreen.sub vm-display-qnxScreen.lib
+# -*- sh -*-
+
+
+# Check whether --with-vm-display-qnxScreen was given.
+if test "${with_vm_display_qnxScreen+set}" = set; then :
+  withval=$with_vm_display_qnxScreen; with_vm_display_qnxScreen="$withval"
+else
+  with_vm_display_qnxScreen="no"
+fi
+
+if test "$with_vm_display_qnxScreen" = "no"; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling vm-display-qnxScreen" >&5
+$as_echo "******** disabling vm-display-qnxScreen" >&6; }
+  disabled_plugins="${disabled_plugins} vm-display-qnxScreen";
+fi
+
+
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
