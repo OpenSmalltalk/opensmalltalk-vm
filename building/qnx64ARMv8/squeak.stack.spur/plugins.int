@@ -1,6 +1,7 @@
 # Copied, perhaps edited, from ../../../src/examplePlugins.int
 INTERNAL_PLUGINS = \
 BitBltPlugin \
+BMPReadWriterPlugin \
 FileCopyPlugin \
 FilePlugin \
 FileDialogPlugin \
@@ -8,6 +9,8 @@ Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 IA32ABI \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
 LargeIntegers \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
