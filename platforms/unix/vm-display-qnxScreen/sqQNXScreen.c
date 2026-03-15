@@ -204,11 +204,6 @@ static inline int screenHeight(void) { return displaySize[1]; }
  Future projects not addressed here.  Touch events will need VM support.
 */
 
-/*@@DEBUG@@*/
-#if !defined(DEBUG)
-# define DEBUG	1
-#endif
-
 #if (DEBUG)
 static bool DPRINTF_redirecting = false;
 typedef struct _debugmsg debugmsg;
