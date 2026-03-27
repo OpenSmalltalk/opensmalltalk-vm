@@ -7,15 +7,15 @@ Note:
 
 Interaction is similar in pattern to vm-display-fbdev
 
-WARNING: [Incomplete Work In Progress]
-  displayTest -> paints single-screen display & drawns 5 Balloon images.
-  screenTest -> as above, but also displays Keyboard and Mouse Pointer input
-
 TESTED Raspberry Pi 5 Self hosted  [sudo apk add screen]
-TESTED Ubunto/Mint Linux x86_64 ==cross-compiled==> QNX 8.0 Raspberry Pi 4 aarch64
 
 Note: vm-display-qnxScreen uses _screen_ to take over the display, mouse, and keyboard.
 It requires RasPi5 self-hosting to build, but can be run without the hosted GUI.
-It is not a windowed app.  FYI
+It is NOT (yet) a windowed app.  
+
 "sudo apk add qnx-screen"
 
+Note: at this time there are some Cursor drawing artifacts due to lack of Screen custom cursor support.
+[ screen/screen.h shows
+SCREEN_CURSOR_SHAPE_CUSTOM
+For future use.]
