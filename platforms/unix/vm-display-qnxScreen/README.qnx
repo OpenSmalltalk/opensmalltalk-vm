@@ -15,7 +15,3 @@ It is NOT (yet) a windowed app.
 
 "sudo apk add qnx-screen"
 
-Note: at this time there are some Cursor drawing artifacts due to lack of Screen custom cursor support.
-[ screen/screen.h shows
-SCREEN_CURSOR_SHAPE_CUSTOM
-For future use.]

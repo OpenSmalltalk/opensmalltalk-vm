@@ -172,6 +172,7 @@ screen_event_t   userEvent;
 screen_window_t  window;
 screen_session_t keyboardSession;
 screen_buffer_t	 buffer;
+const int screen_cursor[] = { SCREEN_CURSOR_SHAPE_NONE };
 void* bufPointer; /* buffer pointer */
 int   stride;     /* buffer stride (bytes per scan line) */
 int   displaySize[2];    /* {width,height} in pixels */
@@ -669,6 +670,8 @@ static void openDisplay(void)
 	      (const int[]){ SCREEN_BLIT_COLOR, whitePixel, SCREEN_BLIT_END });
 
   screen_set_window_property_iv(window, SCREEN_PROPERTY_VISIBLE, &alwaysTrue);
+  screen_create_session_type(keyboardSession, &screenContext, SCREEN_EVENT_POINTER );
+  screen_set_window_property_iv(window, SCREEN_PROPERTY_CURSOR, &screen_cursor);
 
   screen_flush_blits(screenContext, SCREEN_WAIT_IDLE);
   screen_post_window(window, buffer, 0, NULL, SCREEN_WAIT_IDLE);
