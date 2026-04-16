@@ -1648,6 +1648,12 @@ vm_parseArgument(int argc, char **argv)
     extern sqInt desiredEdenBytes;
     desiredEdenBytes = strtobkmg(argv[1]);
     return 2; }
+# if COGMTVM
+  else if (!strcmp(argv[0], VMOPTION("ownerLog")]) {
+	extern sqInt enableOwnerLog;
+	enableOwnerLog = 1;
+	return 1; }
+# endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
     extern sqInt checkForLeaks;
     checkForLeaks = atoi(argv[1]);	 
@@ -1817,6 +1823,9 @@ vm_printUsage(void)
 	option("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+# if COGMTVM
+	option("  "VMOPTION("ownerLog")"   log disownVM/ownVM\n");
+# endif
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     use given eden size\n");

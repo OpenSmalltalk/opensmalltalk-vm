@@ -347,6 +347,13 @@ static char *getVersionInfo(int verbose);
 		desiredEdenBytes = [self strtobkmg: peek]; 
 		return 2;
 	}
+# if COGMTVM
+	if ([argData isEqualToString: VMOPTIONOBJ("ownerLog")]) {
+		extern sqInt enableOwnerLog;
+		enableOwnerLog = 1;
+		return 1;
+	}
+# endif
 	if ([argData isEqualToString: VMOPTIONOBJ("leakcheck")]) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(peek);		 
@@ -573,6 +580,9 @@ printOptionStrings()
 #endif
 #if STACKVM
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
+# if COGMTVM
+	option("  "VMOPTION("ownerLog")"   log disownVM/ownVM\n");
+# endif
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
 	option("  "VMOPTION("leakcheck")"=flags      check for leaks in the heap\n");

@@ -3120,6 +3120,9 @@ printUsage(int level)
                    TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" flags \t(leak check on GC etc)%s")
                    TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
+# if COGMTVM
+                   TEXT("\n\t") TVMOPTION("ownerLog") TEXT(" enable collecting ownerLog)")
+# endif
                    TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
                    TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
                    TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")

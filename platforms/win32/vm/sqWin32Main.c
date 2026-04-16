@@ -2045,6 +2045,12 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredEdenBytes;
 		desiredEdenBytes = strtobkmg(argv[0]+strlen(VMOPTION("eden:")));
 		return 1; }
+# if COGMTVM
+	else if (!strcmp(argv[0], VMOPTION("ownerLog")]) {
+		extern sqInt enableOwnerLog;
+		enableOwnerLog = 1;
+		return 1; }
+# endif
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(argv[1]);

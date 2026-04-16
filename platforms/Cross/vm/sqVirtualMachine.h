@@ -317,17 +317,17 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 10
-  void *(*disownVM)(sqInt flags);
-  sqInt	(*ownVM)(void *vmThreadHandle);
-  void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
-  void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
+  sqInt   (*disownVM)(sqInt flags);
+  sqInt	  (*ownVM)(sqInt disownResult);
+  void    (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
+  void    (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);
-  void (*tenuringIncrementalGC)(void);
-  sqInt (*isYoung) (sqInt anOop);
-  sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
-  sqInt (*primitiveErrorTable)(void);
-  sqInt (*primitiveFailureCode)(void);
-  sqInt (*instanceSizeOf)(sqInt aClass);
+  void    (*tenuringIncrementalGC)(void);
+  sqInt   (*isYoung) (sqInt anOop);
+  sqInt   (*isKindOfClass)(sqInt oop, sqInt aClass);
+  sqInt   (*primitiveErrorTable)(void);
+  sqInt   (*primitiveFailureCode)(void);
+  sqInt   (*instanceSizeOf)(sqInt aClass);
 #endif
 
 #if VM_PROXY_MINOR > 11
