@@ -29,7 +29,7 @@
 
 #if defined(HAVE_OPENPTY)
 
-# include <utmp.h>		/* login_tty() */
+# include <utmpx.h>		/* login_tty() */
 # if defined(HAVE_PTY_H)
 #   include <pty.h>		/* openpty() */
 # elif defined(HAVE_UTIL_H)
