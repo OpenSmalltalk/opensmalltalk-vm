@@ -16,6 +16,9 @@ LIBRT=""
 # OpenBSD has problems with fast-bitblt under gcc and clang
 FASTBITBLT=""
 
+# Prefer clang over gcc if available
+if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
