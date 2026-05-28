@@ -5,7 +5,7 @@ INSTALLDIR=sqcogspur64ARMv8openbsdht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 # tpr - add enablementisation of fast bitblt ben avison code
 MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
+OPT="-g -O1 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV -DMUSL"
 CFLAGS="$CFLAGS $OPT -I/usr/local/include"
 LIBS="$LIBS -lexecinfo"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
