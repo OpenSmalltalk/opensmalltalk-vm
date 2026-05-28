@@ -9,10 +9,10 @@
 
 # See sdkddkver.h from Windows SDK or w32api.h from mingw-w64
 #  Windows XP  ... 0x0501
-#  Windows 7   ... 0x0601 (required for IPv6 support in SocketPlugin)
+#  Windows 7   ... 0x0601
 #  Windows 8   ... 0x0602
 #  Windows 10  ... 0x0A00
-WINVER:=-D_WIN32_WINNT=0x0601 -DWINVER=0x0601
+WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
 # Every clang for Windows (i.e. *-pc-windows-msvc or *-w64-windows-gnu) already
 # defines WIN32, WIN64, etc. So, this might just be historical overhead.

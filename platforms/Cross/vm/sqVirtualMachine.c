@@ -38,8 +38,8 @@ sqInt copyBits(void);
 sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
 
 #if VM_PROXY_MINOR > 10
-extern void *disownVM(sqInt flags);
-extern sqInt ownVM(void *vmThreadHandle);
+extern sqInt disownVM(sqInt flags);
+extern sqInt ownVM(sqInt disownResult);
 #endif // VM_PROXY_MINOR > 10
 extern sqInt isYoung(sqInt);
 
@@ -48,7 +48,7 @@ void addHighPriorityTickee(void (*ticker)(void), unsigned periodms);
 void addSynchronousTickee(void (*ticker)(void), unsigned periodms, unsigned roundms);
 
 #if SPURVM // For now these are here; perhaps they're better in the VM.
-static sqInt
+static sqLong
 interceptFetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer)
 {
 	if (fieldIndex == 0
@@ -72,7 +72,7 @@ shouldNotImplementCharacterTable(void)
 }
 #endif
 
-sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
+sqLong fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 struct VirtualMachine* sqGetInterpreterProxy(void)
 {
 	if(VM) return VM;

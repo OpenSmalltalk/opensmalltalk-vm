@@ -165,7 +165,7 @@ static char *getVersionInfo(int verbose);
 	[self parseEnv: [p environment]];
 }
 
-- (int) parseArgument: (NSString *) argData peek: (char *) peek
+- (int) parseArgument: (NSString *) argData peek: (const char *) peek
 {
 	if ([argData isEqualToString: @"--"]) {
 		return 1;
@@ -268,7 +268,7 @@ static char *getVersionInfo(int verbose);
 #if COGVM
 	if ([argData isEqualToString: VMOPTIONOBJ("logplugin")]) {
 		extern char *primTracePluginName;
-		primTracePluginName = peek;
+		primTracePluginName = (char *)peek;
 		return 2;
 	}
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
@@ -331,17 +331,15 @@ static char *getVersionInfo(int verbose);
         return 2;
     }
 
-#if STACKVM || NewspeakVM
+#if STACKVM
 	if ([argData isEqualToString: VMOPTIONOBJ("breaksel")]) {
 		extern void setBreakSelector(char *);
-		setBreakSelector(peek);
+		setBreakSelector((char *)peek);
 		return 2;
 	}
-#endif
-#if STACKVM
 	if ([argData isEqualToString: VMOPTIONOBJ("breakmnu")]) {
 		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(peek);
+		setBreakMNUSelector((char *)peek);
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("eden")]) {
@@ -349,6 +347,13 @@ static char *getVersionInfo(int verbose);
 		desiredEdenBytes = [self strtobkmg: peek]; 
 		return 2;
 	}
+# if COGMTVM
+	if ([argData isEqualToString: VMOPTIONOBJ("ownerLog")]) {
+		extern sqInt enableOwnerLog;
+		enableOwnerLog = 1;
+		return 1;
+	}
+# endif
 	if ([argData isEqualToString: VMOPTIONOBJ("leakcheck")]) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(peek);		 
@@ -575,6 +580,9 @@ printOptionStrings()
 #endif
 #if STACKVM
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
+# if COGMTVM
+	option("  "VMOPTION("ownerLog")"   log disownVM/ownVM\n");
+# endif
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
 	option("  "VMOPTION("leakcheck")"=flags      check for leaks in the heap\n");

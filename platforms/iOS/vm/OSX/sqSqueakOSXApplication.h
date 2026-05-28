@@ -49,7 +49,7 @@
 @property (nonatomic,strong) NSCursor	*squeakCursor;
 @property (nonatomic,weak) NSWindow *aboutWindow;
 
-- (int) parseArgument: (NSString *) argData peek: (char *) peek;
+- (int) parseArgument: (NSString *) argData peek: (const char *) peek;
 - (void) parseArgs: (NSArray *) args;
 - (void) parseEnv: (NSDictionary *) env;
 - (long long) strtobkm: (const char *) chr;

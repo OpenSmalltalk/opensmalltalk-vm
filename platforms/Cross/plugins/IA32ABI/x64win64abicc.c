@@ -183,7 +183,8 @@ thunkEntry(long long rcx, long long rdx,
 	int returnType;
 	long long intargs[4];
 	double fpargs[4];
-
+	sqInt ownFlags = interpreterProxy->ownVM(0 /* unidentified thread */);
+;
 	intargs[0] = rcx;
 	intargs[1] = rdx;
 	intargs[2] = r8;
@@ -193,7 +194,8 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 extern double fakeReturnDouble(double xmm0); /* see below */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
-	if (interpreterProxy->ownVM(NULL /* unidentified thread */) < 0) {
+	ownFlags = interpreterProxy->ownVM(0 /* unidentified thread */);
+	if (ownFlags < 0) {
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
 		return -1;
 	}
@@ -208,12 +210,12 @@ extern double fakeReturnDouble(double xmm0); /* see below */
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
 		setMRCC(vmcc.savedMostRecentCallbackContext);
-		interpreterProxy->disownVM(DisownVMFromCallback);
+		interpreterProxy->disownVM(ownFlags | DisownVMFromCallbackFlag);
 		return -1;
 	}
 
 	setMRCC(vmcc.savedMostRecentCallbackContext);
-	interpreterProxy->disownVM(DisownVMFromCallback);
+	interpreterProxy->disownVM(ownFlags | DisownVMFromCallbackFlag);
 
 	switch (returnType) {
 

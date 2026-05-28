@@ -10,7 +10,7 @@ APPNAME:=Squeak
 APPNAMEDEF:=$(APPNAME)
 APPIDENTIFIER:=org.squeak.$(APPNAME)
 
-APPPOST:=overwriteSqueakIcon
+APPPOST?=overwriteSqueakIcon
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #

@@ -62,7 +62,7 @@ typedef struct VirtualMachine {
 	void  *(*fetchArrayofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchClassOf)(sqInt oop);
 	double (*fetchFloatofObject)(sqInt fieldIndex, sqInt objectPointer);
-	sqInt  (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
+	sqLong (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchPointerofObject)(sqInt fieldIndex, sqInt oop);
 #if OLD_FOR_REFERENCE
 /*  sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop); *
@@ -88,7 +88,7 @@ typedef struct VirtualMachine {
 	sqInt  (*stObjectat)(sqInt array, sqInt fieldIndex);
 	sqInt  (*stObjectatput)(sqInt array, sqInt fieldIndex, sqInt value);
 	sqInt  (*stSizeOf)(sqInt oop);
-	sqInt  (*storeIntegerofObjectwithValue)(sqInt fieldIndex, sqInt oop, sqInt integer);
+	void   (*storeIntegerofObjectwithValue)(sqInt fieldIndex, sqInt oop, sqLong integer);
 	sqInt  (*storePointerofObjectwithValue)(sqInt fieldIndex, sqInt oop, sqInt valuePointer);
 
 	/* InterpreterProxy methodsFor: 'testing' */
@@ -317,17 +317,17 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 10
-  void *(*disownVM)(sqInt flags);
-  sqInt	(*ownVM)(void *vmThreadHandle);
-  void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
-  void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
+  sqInt   (*disownVM)(sqInt flags);
+  sqInt	  (*ownVM)(sqInt disownResult);
+  void    (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
+  void    (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);
-  void (*tenuringIncrementalGC)(void);
-  sqInt (*isYoung) (sqInt anOop);
-  sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
-  sqInt (*primitiveErrorTable)(void);
-  sqInt (*primitiveFailureCode)(void);
-  sqInt (*instanceSizeOf)(sqInt aClass);
+  void    (*tenuringIncrementalGC)(void);
+  sqInt   (*isYoung) (sqInt anOop);
+  sqInt   (*isKindOfClass)(sqInt oop, sqInt aClass);
+  sqInt   (*primitiveErrorTable)(void);
+  sqInt   (*primitiveFailureCode)(void);
+  sqInt   (*instanceSizeOf)(sqInt aClass);
 #endif
 
 #if VM_PROXY_MINOR > 11
@@ -411,7 +411,7 @@ sqInt  byteSizeOf(sqInt oop);
 void  *fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchClassOf(sqInt oop);
 double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
-sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
+sqLong fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchPointerofObject(sqInt index, sqInt oop);
 #if OLD_FOR_REFERENCE /* slot repurposed for error */
 /* sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);     *
@@ -437,7 +437,7 @@ sqInt  slotSizeOf(sqInt oop);
 sqInt  stObjectat(sqInt array, sqInt index);
 sqInt  stObjectatput(sqInt array, sqInt index, sqInt value);
 sqInt  stSizeOf(sqInt oop);
-sqInt  storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqInt integer);
+void   storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqLong integer);
 sqInt  storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
 
 
