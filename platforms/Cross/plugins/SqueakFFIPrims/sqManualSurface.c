@@ -127,7 +127,7 @@ createManualSurface(sqInt width, sqInt height, sqInt rowPitch, sqInt depth, sqIn
 	
 	if (width < 0
 	 || height < 0
-	 || rowPitch < (width * depth)
+	 || rowPitch < ((width * depth) / 8)
 	 || depth < 1
 	 || depth > 32
 	 || !registerSurface)
