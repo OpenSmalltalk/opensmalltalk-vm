@@ -422,7 +422,8 @@ OutputConsoleString(char *string)
 }
 
 // recommend using DPRINTF ifdef'ing to DPRINTF for debug output
-int __cdecl DPRINTF(const char *fmt, ...)
+int __cdecl
+DPRINTF(const char *fmt, ...)
 { va_list al;
 
   va_start(al, fmt);
@@ -486,17 +487,16 @@ putchar(int c) { return printf("%c",c); }
 
 static messageHook nextMessageHook = NULL;
 
-int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
+int
+ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
 {
-   if (message == WM_USERCHANGED)
-      {
-        SetSystemTrayIcon(1);
-        return 1;
-      }
+  if (message == WM_USERCHANGED) {
+	SetSystemTrayIcon(1);
+	return 1;
+  }
   if (nextMessageHook)
-    return(*nextMessageHook)(hwnd, message,wParam, lParam);
-  else
-    return 0;
+    return (*nextMessageHook)(hwnd, message,wParam, lParam);
+  return 0;
 }
 
 
@@ -504,7 +504,8 @@ int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, l
 /*                     Window Setup                                         */
 /****************************************************************************/
 /* SetSystemTrayIcon(): Set the icon in the system tray */
-void SetSystemTrayIcon(BOOL on)
+void
+SetSystemTrayIcon(BOOL on)
 {
   NOTIFYICONDATA nid;
 
@@ -523,25 +524,27 @@ void SetSystemTrayIcon(BOOL on)
 /*                      System Attributes                                   */
 /****************************************************************************/
 
-char *GetVMOption(int id)
-{
+char *
+GetVMOption(int id) {
   if (id >= 0 && id < numOptionsVM)
     return vmOptions[id];
   return NULL;
 }
 
-char *GetImageOption(int id)
-{
+char *
+GetImageOption(int id) {
   if (id >= 0 && id < numOptionsImage)
     return imageOptions[id];
   return NULL;
 }
 
-char *ioGetLogDirectory(void) {
+char *
+ioGetLogDirectory(void) {
   return vmLogDirA;
 }
 
-sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
+sqInt
+ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
   if (sz >= MAX_PATH_UTF8) return 0;
   strncpy(vmLogDirA, lblIndex, sz);
   vmLogDirA[sz] = 0;
@@ -589,7 +592,8 @@ char *hwInfoString = "";
 char *gdInfoString = "";
 char *win32VersionName = "";
 
-void RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
+void
+RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
 {
   WCHAR bufferW[MAX_PATH];
   DWORD dwSize = MAX_PATH * sizeof(WCHAR);
@@ -601,7 +605,8 @@ void RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
   }
 }
 
-void gatherSystemInfo(void) {
+void
+gatherSystemInfo(void) {
   OSVERSIONINFOEX osInfo;
   MEMORYSTATUS memStat;
   SYSTEM_INFO sysInfo;
@@ -629,7 +634,6 @@ void gatherSystemInfo(void) {
 
   screenX = GetSystemMetrics(SM_CXSCREEN);
   screenY = GetSystemMetrics(SM_CYSCREEN);
-
 
   {
     HANDLE hUser = LoadLibraryA( "user32.dll" );
@@ -1058,8 +1062,9 @@ fileHandleType(HANDLE fdHandle)
 * Allow to test whether the file handle is from a console or not
 * 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
 */
-sqInt  isFileHandleATTY(HANDLE fdHandle) {
-	sqInt res = fileHandleType(fdHandle) ;
+sqInt
+isFileHandleATTY(HANDLE fdHandle) {
+	sqInt res = fileHandleType(fdHandle);
 	return res == 1 || res == 4;
 }
 
@@ -1067,16 +1072,18 @@ sqInt  isFileHandleATTY(HANDLE fdHandle) {
 * Allow to test whether one of the standard input/output files is from a console or not
 * 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
 */
-sqInt  isOneStdioDescriptorATTY() {
-	return isFileHandleATTY(GetStdHandle(STD_INPUT_HANDLE)) ||
-		isFileHandleATTY(GetStdHandle(STD_OUTPUT_HANDLE)) || isFileHandleATTY(GetStdHandle(STD_ERROR_HANDLE));
+sqInt
+isOneStdioDescriptorATTY() {
+	return isFileHandleATTY(GetStdHandle(STD_INPUT_HANDLE))
+		|| isFileHandleATTY(GetStdHandle(STD_OUTPUT_HANDLE))
+		|| isFileHandleATTY(GetStdHandle(STD_ERROR_HANDLE));
 }
 
 static void
 versionInfo(void)
 {
 #if 0
-	/* we could create a console but to version the non-consoel VM it is
+	/* we could create a console but to version the non-console VM it is
 	 * sufficient to do e.g. Squeak.exe >foo; cat foo.  But feel free to
 	 * add the code if you have the energy ;)
 	 */
@@ -1096,7 +1103,8 @@ versionInfo(void)
 /****************************************************************************/
 /*                      Error handling                                      */
 /****************************************************************************/
-void SetupStderr()
+void
+SetupStderr()
 { WCHAR tmpName[MAX_PATH+1];
 
   *stderrName = *stdoutName = 0;
@@ -1274,7 +1282,8 @@ error(const char *msg) {
 
 static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
 
-sqInt ioExit(void) { return ioExitWithErrorCode(0); }
+sqInt
+ioExit(void) { return ioExitWithErrorCode(0); }
 
 sqInt
 ioExitWithErrorCode(int ec)
@@ -1451,7 +1460,8 @@ printCrashDebugInformation(PEXCEPTION_POINTERS exp)
   }
 }
 
-void __cdecl Cleanup(void)
+void __cdecl
+Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
   if (!inCleanExit)
@@ -1540,9 +1550,10 @@ findEmbeddedImage(void)
 #endif
 	return imageResourceFormat;
 }
-
-sqInt sqImageFileIsEmbedded() { return imageResourceName != NULL; }
 #undef theVM
+
+sqInt
+sqImageFileIsEmbedded() { return imageResourceName != NULL; }
 
 
 /****************************************************************************/
@@ -1857,7 +1868,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   sqMain(clargc, clargv);
   return 0;
 }
-
 
 /* Mingw32 automatically adds a main routine for -mconsole links.  MSVC's LINK
  * does not.  So define a main routine for the console VM, but only if not on
