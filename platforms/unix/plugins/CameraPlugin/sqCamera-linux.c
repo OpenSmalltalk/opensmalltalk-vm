@@ -98,7 +98,9 @@ struct buffer {
 	size_t  length;
 };
 
-#define CAMERA_COUNT 4
+#define CAMERA_COUNT 1024
+#define STRINGIFY2(x) #x
+#define STRINGIFY(x) STRINGIFY2(x)
 
 struct camInfo_t {
 	int	fileDesc, pixelformat, semaphoreIndex;
@@ -122,7 +124,7 @@ struct camInfo_t {
 
 typedef struct camInfo_t *camPtr;
 
-static char *videoDevName0 = "/dev/video0";
+static const char videoDevName[] = "/dev/video";
 
 struct v4l2_buffer tmpVBuf;
 
@@ -410,11 +412,10 @@ convertImage (camPtr cam)
 static int
 open_device_num (unsigned int devNum)
 {
-	char deviceName[12];
+	char deviceName[strlen(videoDevName) + sizeof(STRINGIFY(CAMERA_COUNT)) + 1];
 	struct stat st;
 
-	strcpy(deviceName, videoDevName0);
-	deviceName[10] = devNum + '0';
+	snprintf(deviceName, sizeof(deviceName), "%s%u", videoDevName, devNum);
 
 	if (stat(deviceName, &st))
 		return -1;
