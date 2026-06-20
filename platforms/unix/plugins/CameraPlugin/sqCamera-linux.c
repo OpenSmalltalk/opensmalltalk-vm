@@ -79,7 +79,7 @@ static int (*vd_close)(int);
 static int (*vd_dup)(int);
 static int (*vd_ioctl)(int, unsigned long int, ...);
 static ssize_t (*vd_read)(int, void *, size_t);
-static void * (*vd_mmap)(void *, size_t, int, int, int, int64_t);
+static void * (*vd_mmap)(void *, size_t, int, int, int, off_t);
 static int (*vd_munmap)(void *, size_t);
 
 
@@ -229,7 +229,7 @@ void __attribute__ ((destructor))
 libDes(void)
 {
   sqInt camNum;
-  for (camNum = 1; camNum < CAMERA_COUNT; ++camNum)
+  for (camNum = 1; camNum <= CAMERA_COUNT; ++camNum)
 	if (camIsOpen(&camInfo[camNum-1]))
 	  CameraClose(camNum);
 
@@ -315,11 +315,12 @@ convertImageRGB24toARGB32 (camPtr cam)
 	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
+    uint32_t i;
 
 	if (!dst)
 		return;
 
-	while (--pixelCount >= 0) {
+    for (i = 0; i < pixelCount; i++) {
 		*dst++ = 0xFF000000 | (src[0] << 16) | (src[1] << 8) | src[2];
 		src += 3;
 	}
@@ -333,13 +334,14 @@ convertImageRGB444toARGB32 (camPtr cam)
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
 	uint32_t r,g,b;
+	uint32_t i;
 
 	if (!dst)
 		return;
 
 	/* Byte0: (g)ggg(b)bbb, Byte1: xxxx(r)rrr */
 
-	while (--pixelCount >= 0) {
+	for (i = 0; i < pixelCount; i++) {
 	  r = *src << 4;
 	  g = *src++ & 0xF0;
 	  b = (*src++ & 0x0F) << 4;
@@ -404,6 +406,53 @@ convertImage (camPtr cam)
 
 
 /* >>>>>>>>>>> V4L ACCESS */
+
+static int
+open_device_num (unsigned int devNum)
+{
+	char deviceName[12];
+	struct stat st;
+
+	strcpy(deviceName, videoDevName0);
+	deviceName[10] = devNum + '0';
+
+	if (stat(deviceName, &st))
+		return -1;
+	if (!S_ISCHR(st.st_mode))
+		return -1;
+
+	return vd_open(deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
+}
+
+static int
+query_device (unsigned int devNum, struct v4l2_capability *cap)
+{
+	int fd;
+	uint32_t caps;
+
+	fd = open_device_num(devNum);
+	if (fd < 0)
+		return false;
+
+	CLEAR(*cap);
+	if (-1 == vd_ioctl(fd, VIDIOC_QUERYCAP, cap)) {
+		vd_close(fd);
+		return false;
+	}
+
+	vd_close(fd);
+
+	caps = cap->capabilities;
+	if (caps & V4L2_CAP_DEVICE_CAPS)
+		caps = cap->device_caps;
+
+	if (!(caps & V4L2_CAP_VIDEO_CAPTURE))
+		return false;
+	if (!(caps & V4L2_CAP_STREAMING))
+		return false;
+
+	return true;
+}
 
 static int
 xioctl (camPtr cam, int request, void * arg)
@@ -622,6 +671,7 @@ init_mmap (camPtr cam)
 static int
 set_format (camPtr cam, struct v4l2_format *fmt, int pixelformat, int w, int h)
 {
+	CLEAR(*fmt);
 	fmt->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	fmt->fmt.pix.width	= w;
 	fmt->fmt.pix.height	= h;
@@ -696,7 +746,7 @@ init_device (camPtr cam, int w, int h)
 		bpp = 2;
 		break;
 	  case V4L2_PIX_FMT_YUYV: /* printf("V4L2_PIX_FMT_YUYV\n"); */
-		bpp = 4;
+		bpp = 2;
 		break;
 	}
 
@@ -739,18 +789,8 @@ close_device (camPtr cam)
 static int
 open_device (camPtr cam)
 {
-	char deviceName[12];
-	struct stat st;
-
-	strcpy(deviceName, videoDevName0);
-	deviceName[10] = cam->devNum + '0';
-
-	if (stat (deviceName, &st))
-		return false;
-	if (!S_ISCHR (st.st_mode))
-		return false;
-
-	return (-1 != (cam->fileDesc = vd_open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0)));
+	cam->fileDesc = open_device_num(cam->devNum);
+	return (-1 != (cam->fileDesc));
 }
 
 
@@ -880,18 +920,34 @@ char*
 CameraName(sqInt camNum)
 {
 	camPtr cam = camera(camNum);
-	return camIsOpen(cam)
-		? (char *)&cam->cap.card[0]
-		: 0;
+
+	if (!cam)
+		return 0;
+
+	if (camIsOpen(cam))
+		return (char *)&cam->cap.card[0];
+
+	if (!query_device(cam->devNum, &cam->cap))
+		return 0;
+
+	return (char *)&cam->cap.card[0];
 }
 
 char *
 CameraUID(sqInt camNum)
 {
 	camPtr cam = camera(camNum);
-	return camIsOpen(cam)
-		? (char *)&cam->cap.bus_info[0]
-		: 0;
+
+	if (!cam)
+		return 0;
+
+	if (camIsOpen(cam))
+		return (char *)&cam->cap.bus_info[0];
+
+	if (!query_device(cam->devNum, &cam->cap))
+		return 0;
+
+	return (char *)&cam->cap.bus_info[0];
 }
 
 
@@ -913,10 +969,16 @@ sqInt
 CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 {
 	camPtr cam = camera(camNum);
+	if (!cam) {
+		FPRINTF((stderr, "bad camera number: %ld\n", camNum));
+		return false;
+	}
 
 	CameraClose(camNum);
-	if (!initCamera(cam, frameWidth, frameHeight))
+	if (!initCamera(cam, frameWidth, frameHeight)) {
+		FPRINTF((stderr, "initCamera failed: %ld\n", camNum));
 		return false;
+	}
 	cam->isOpen = true;
 
 	return true;
