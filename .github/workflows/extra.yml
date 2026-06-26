@@ -17,11 +17,11 @@ jobs:
       fail-fast: false # let them finish bc. different platforms
       matrix:
         include:
-          - arch: { name: win32x86, os: windows-2025 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.cog.v3
-          - arch: { name: win32x86, os: windows-2025 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.stack.v3
-          - arch: { name: win32x86, os: windows-2025 }
+          - arch: { name: win32x86, os: windows-2022 }
             flavor: squeak.cog.spur.lowcode
 
           - arch: { name: linux32x86, os: ubuntu-22.04 }
