@@ -6,6 +6,7 @@ AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
+CameraPlugin \
 CroquetPlugin \
 HostWindowPlugin \
 ZipPlugin \
