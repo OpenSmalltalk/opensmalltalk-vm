@@ -58,7 +58,7 @@ jobs:
           - debug
           - assert
 
-    runs-on: windows-2025
+    runs-on: windows-2022 # use clang 19 for now
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
