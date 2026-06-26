@@ -1801,6 +1801,11 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * via a MessageBox will make the system unusable.
    */
   fIsConsole = isOneStdioDescriptorATTY();
+  if (fIsConsole) {
+  	/* https://learn.microsoft.com/en-us/windows/console/console-application-issues */
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+  }
 
   /* a few things which need to be done first */
   gatherSystemInfo();
@@ -1882,6 +1887,11 @@ main(int argc, char *argv[])
    * via a MessageBox will make the system unusable.
    */
   fIsConsole = isOneStdioDescriptorATTY();
+  if (fIsConsole) {
+  	/* https://learn.microsoft.com/en-us/windows/console/console-application-issues */
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+  }
 
   /* a few things which need to be done first */
   gatherSystemInfo();

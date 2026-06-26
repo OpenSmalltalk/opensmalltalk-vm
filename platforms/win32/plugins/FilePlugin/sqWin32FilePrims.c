@@ -381,7 +381,11 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArray, size_t startIndex)
   if (!sqFileValid(f))
     FAIL();
   if (f->isStdioStream) {
-    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count,
+    /* We use the A variant of ReadConsole and configure the code-page to CP_UTF8
+     * when starting the VM. See SetConsoleCP and SetConsoleOutputCP
+     * https://learn.microsoft.com/en-us/windows/console/console-application-issues 
+     */
+    ReadConsoleA(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count,
                 &dwReallyRead, NULL);
 	/* support for skipping back 1 character for stdio streams */
 	if (f->isStdioStream)
@@ -510,8 +514,12 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArray, size_t startIndex)
   if (!(sqFileValid(f) && f->writable))
     FAIL();
 
+  /* We use the A variant of WriteConsole and configure the code-page to CP_UTF8
+   * when starting the VM. See SetConsoleCP and SetConsoleOutputCP
+   * https://learn.microsoft.com/en-us/windows/console/console-application-issues 
+   */
   if (f->isStdioStream)
-    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count, &dwReallyWritten, NULL);
+    WriteConsoleA(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count, &dwReallyWritten, NULL);
   else
     WriteFile(FILE_HANDLE(f), (LPVOID) (byteArray + startIndex), count, &dwReallyWritten, NULL);
   
