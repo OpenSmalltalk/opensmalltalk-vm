@@ -4,7 +4,7 @@
 #
 
 VMSRCDIR:= ../../../src/spur64.stack
-SOURCEFILE:=SqueakV50.sources
+SOURCEFILE:=SqueakV60.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #

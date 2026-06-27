@@ -15,6 +15,7 @@ $(SOURCESDIR)/PharoV50.sources:
 	chmod 444 $@
 	-rm $@.zip
 
+$(SOURCESDIR)/SqueakV60.sources \
 $(SOURCESDIR)/SqueakV50.sources \
 $(SOURCESDIR)/SqueakV46.sources \
 $(SOURCESDIR)/SqueakV41.sources: 

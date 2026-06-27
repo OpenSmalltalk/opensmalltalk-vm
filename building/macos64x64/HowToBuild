@@ -128,7 +128,7 @@ Makefile then includes a full Makefile from the common directory.  For example,
 squeak.cog.spur's Makefile (minus commentary) reads
 	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
 	VMSRCDIR:= ../../../src/spur64.cog
-	SOURCEFILE:=SqueakV50.sources
+	SOURCEFILE:=SqueakV60.sources
 
 	include ../common/Makefile.app.squeak.cog
 	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
