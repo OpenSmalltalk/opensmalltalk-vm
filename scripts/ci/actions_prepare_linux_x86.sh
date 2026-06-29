@@ -4,7 +4,7 @@ set -e
 
 # This script installs all packages required to build the various VM
 # flavors in an x86-compatible environment. It supports both 32-bit
-# and #64-bit architectures, which means that the host Linux platform
+# and 64-bit architectures, which means that the host Linux platform
 # has to support the older i386 packages to make 32-bit compile.
 
 DEV_PKGS=(
@@ -34,7 +34,7 @@ if [[ "${ARCH}" = "linux32x86" ]]; then
     apt-get install -y software-properties-common  # for add-apt-repository
 
     dpkg --add-architecture i386
-    add-apt-repository ppa:ondrej/php
+    # add-apt-repository ppa:ondrej/php
     ARCHCODE=":i386"
 fi
 
