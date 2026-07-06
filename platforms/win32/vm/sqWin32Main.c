@@ -2066,7 +2066,7 @@ parseVMArgument(int argc, char *argv[])
 		desiredEdenBytes = strtobkmg(argv[0]+strlen(VMOPTION("eden:")));
 		return 1; }
 # if COGMTVM
-	else if (!strcmp(argv[0], VMOPTION("ownerLog")]) {
+	else if (!strcmp(argv[0], VMOPTION("ownerLog"))) {
 		extern sqInt enableOwnerLog;
 		enableOwnerLog = 1;
 		return 1; }

@@ -21,11 +21,11 @@
  */
 #if COGVM && !defined(getReturnAddress)
 # if _MSC_VER
-#	define getReturnAddress() _ReturnAddress()
+#	define getReturnAddress() (usqIntptr_t)_ReturnAddress()
 #	include <intrin.h>
 #	pragma intrinsic(_ReturnAddress)
 # elif __GNUC__ || __clang__ /* gcc, clang, icc etc */
-#	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
+#	define getReturnAddress() (usqIntptr_t)__builtin_extract_return_addr(__builtin_return_address(0))
 # else
 #	error "Cog requires getReturnAddress to be defined for the current platform."
 # endif
