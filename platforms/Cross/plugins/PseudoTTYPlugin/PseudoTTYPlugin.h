@@ -2,7 +2,7 @@
 
 int ptyInit();
 int ptyShutdown();
-int ptyForkAndExec();
+pid_t ptyForkAndExec();
 int ptyClose();
 int ptyWindowSize();
 
