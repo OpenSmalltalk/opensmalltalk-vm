@@ -224,10 +224,27 @@ sqImageFileRead(void *ptr_arg, long sz, long count, sqImageFile f)
 	do {
 		ssize_t n = read(f, ptr, min(to_be_read-nread_in_total,OneGb));
 
-		// Don't exit!!; if snapshotting, we obviously must continue
 		if (n == (size_t)-1) {
 			perror("sqImageFileRead read");
-			return nread_in_total;
+			return nread_in_total / sz;
+		}
+		// If an image file is truncated read may answer 0 instead of an error...
+		else if (n == 0) {
+			off_t p = lseek(f, 0, SEEK_CUR);
+			off_t fsz = lseek(f, 0, SEEK_END);
+			if (p == (off_t)-1
+			 || fsz == (off_t)-1) {
+				perror("sqImageFileRead lseek");
+				return nread_in_total / sz;
+			}
+			if (p + (to_be_read - nread_in_total) > fsz) {
+				fprintf(stderr,"image file is truncated\n");
+				return nread_in_total / sz;
+			}
+			if (lseek(f, p, SEEK_SET) == (off_t)-1) {
+				perror("sqImageFileRead lseek");
+				return nread_in_total / sz;
+			}
 		}
 		nread_in_total += n;
 		ptr += n;
