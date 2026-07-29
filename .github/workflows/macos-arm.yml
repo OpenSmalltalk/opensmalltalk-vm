@@ -47,6 +47,7 @@ jobs:
           - macos64ARMv8
         flavor:
           - squeak.cog.spur
+          - squeak.livetyping.spur # LiveTyping VM (src/spur64.cog.livetyping)
           # - squeak.sista.spur # -Werror bc. decl. missing
           - squeak.stack.spur
         mode:

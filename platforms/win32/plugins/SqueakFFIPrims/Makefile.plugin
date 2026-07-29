@@ -18,7 +18,7 @@ WIN32DIR:=	$(PLATDIR)/win32/plugins/$(LIBNAME)
 	$(MAKE) -f ../common/Makefile.plugin VPATH="$(CROSSDIR) $(MAKERDIR) $(WIN32DIR) $(OBJDIR)" \
 		CROSSSRC="sqFFIPlugin.c sqFFITestFuncs.c sqManualSurface.c" \
 		MAKERSRC="SqueakFFIPrims.c" \
-		WIN32SRC="" \
+		WIN32SRC="winARM64Thunk.c" \
 		$@
 else
 include ../common/Makefile.plugin
