@@ -378,6 +378,8 @@ ioLoadFunctionFrom(char *functionName, char *pluginName)
 	return findFunctionIn(functionName, module);
 }
 
+#define MAXALLOCALEN 1023
+
 /* ioLoadExternalFunctionOfLengthFromModuleOfLength
 	Entry point for functions looked up through the VM.
 */
@@ -386,15 +388,16 @@ ioLoadExternalFunctionOfLengthFromModuleOfLength
 	(sqInt functionNameIndex, sqInt functionNameLength,
 	 sqInt moduleNameIndex, sqInt moduleNameLength)
 {
-	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
-	char *moduleNamePointer = pointerForOop((usqInt)moduleNameIndex);
-	char functionName[256], moduleName[256];
+	char *functionName = alloca(functionNameLength + 1);
+	char *moduleName = alloca(moduleNameLength + 1);
 
-	if (functionNameLength > 255 || moduleNameLength > 255)
-		return 0; /* can't cope with those */
-	strncpy(functionName, functionNamePointer, functionNameLength);
+	if (functionNameLength > MAXALLOCALEN || moduleNameLength > MAXALLOCALEN
+	 || !functionName || !moduleName)
+		return 0;
+
+	strncpy(functionName, pointerForOop(functionNameIndex), functionNameLength);
 	functionName[functionNameLength] = 0;
-	strncpy(moduleName, moduleNamePointer, moduleNameLength);
+	strncpy(moduleName, pointerForOop(moduleNameIndex), moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 	return ioLoadFunctionFrom(functionName, moduleName);
 }
@@ -435,15 +438,16 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 	(sqInt functionNameIndex, sqInt functionNameLength,
 	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *metadataPtr)
 {
-	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
-	char *moduleNamePointer = pointerForOop((usqInt)moduleNameIndex);
-	char functionName[256], moduleName[256];
+	char *functionName = alloca(functionNameLength + 1);
+	char *moduleName = alloca(moduleNameLength + 1);
 
-	if (functionNameLength > 255 || moduleNameLength > 255)
-		return 0; /* can't cope with those */
-	strncpy(functionName, functionNamePointer, functionNameLength);
+	if (functionNameLength > MAXALLOCALEN || moduleNameLength > MAXALLOCALEN
+	 || !functionName || !moduleName)
+		return 0;
+
+	strncpy(functionName, pointerForOop(functionNameIndex), functionNameLength);
 	functionName[functionNameLength] = 0;
-	strncpy(moduleName, moduleNamePointer, moduleNameLength);
+	strncpy(moduleName, pointerForOop(moduleNameIndex), moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 	return ioLoadFunctionFromMetadataInto
 			(functionName, moduleName, functionNameLength, metadataPtr);
@@ -461,13 +465,14 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
-	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
-	char functionName[256];
+	char *functionName = alloca(functionNameLength + 1);
 
-	if (functionNameLength > 255)
-		return 0; /* can't cope with those */
-	strncpy(functionName, functionNamePointer, functionNameLength);
+	if (functionNameLength > MAXALLOCALEN
+	 || !functionName)
+		return 0;
+	strncpy(functionName, pointerForOop(functionNameIndex), functionNameLength);
 	functionName[functionNameLength] = 0;
+
 	// Interpret a tagged pointer as a short-hand for an internal plugin
 	// e.g. the SqueakFFIPrims module as an internal plugin where access to
 	// the test functions is required.
@@ -491,12 +496,12 @@ void *
 ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
 	ModuleEntry *module;
-	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
-	char moduleName[256];
+	char *moduleName = alloca(moduleNameLength + 1);
 
-	if (moduleNameLength > 255)
+	if (moduleNameLength > MAXALLOCALEN
+	 || !moduleName)
 		return 0; /* can't cope with those */
-	strncpy(moduleName, moduleNamePointer, moduleNameLength);
+	strncpy(moduleName, pointerForOop(moduleNameIndex), moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 
 	module = findOrLoadModule(moduleName, 1);
@@ -587,12 +592,12 @@ ioUnloadModule(char *moduleName)
 sqInt
 ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
-	char *moduleNamePointer = pointerForOop((usqInt) moduleNameIndex);
-	char moduleName[256];
+	char *moduleName = alloca(moduleNameLength + 1);
 
-	if (moduleNameLength > 255)
+	if (moduleNameLength > MAXALLOCALEN
+	 || !moduleName)
 		return 0; /* can't cope with those */
-	strncpy(moduleName, moduleNamePointer, moduleNameLength);
+	strncpy(moduleName, pointerForOop(moduleNameIndex), moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 	return ioUnloadModule(moduleName);
 }

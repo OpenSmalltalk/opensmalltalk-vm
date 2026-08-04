@@ -1,4 +1,12 @@
 // Export of test functions when FFI is included as an internal plugin
+
+/* script to find missing entries
+for f in `grep "^EXPORT" platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c \
+			| sed -e 's/^EXPORT([^)]*)[         ]*//' -e 's/[   ]*(.*$//'`; do
+	test -z "`grep $f platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncExports.h`" && echo $f
+done
+ */
+
 #ifndef NO_FFI_TEST
 
 # define TUPLE(fn) {(void*)_m, #fn, (void*)fn},
@@ -7,6 +15,7 @@ TUPLE(ffiPrintString)
 TUPLE(ffiTest4IntSum)
 TUPLE(ffiTest8IntSum)
 TUPLE(ffiTest4LongSum)
+TUPLE(ffiTestLongs8)
 TUPLE(ffiTest8longSum)
 TUPLE(ffiTest4LongLongSum)
 TUPLE(ffiTest8LongLongSum)
