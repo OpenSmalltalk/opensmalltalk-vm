@@ -42,7 +42,8 @@ typedef struct {
 typedef struct ModuleEntry {
 	struct ModuleEntry *next;
 	void *handle;
-	sqInt ffiLoaded;
+	char ffiLoaded;
+	char internal;
 	char name[1];
 } ModuleEntry;
 
@@ -50,6 +51,25 @@ typedef struct ModuleEntry {
 static ModuleEntry *squeakModule = NULL;
 static ModuleEntry *firstModule = NULL;
 struct VirtualMachine *sqGetInterpreterProxy(void);
+
+void
+printModuleList(void)
+{
+	ModuleEntry *module = firstModule;
+
+	while (module) {
+		printf("%s: %p %s %s\n",
+				&module->name[0], module->handle,
+				module->ffiLoaded ? "ffi loaded" : "",
+				module->internal ? "internal" : "");
+		module = module->next;
+	}
+	if (squeakModule)
+		printf("VM Module: %p %s %s\n",
+				squeakModule->handle,
+				squeakModule->ffiLoaded ? "ffi loaded" : "",
+				squeakModule->internal ? "internal" : "");
+}
 
 static void *
 findLoadedModule(char *pluginName)
@@ -68,12 +88,15 @@ findLoadedModule(char *pluginName)
 static ModuleEntry *
 addToModuleList(char *pluginName, void *handle, sqInt ffiFlag)
 {
-	ModuleEntry *module;
+	ModuleEntry *module = malloc(sizeof(ModuleEntry) + strlen(pluginName));
 
-	module = (ModuleEntry*) calloc(1, sizeof(ModuleEntry) + strlen(pluginName));
-	strcpy(module->name, pluginName);
+	if (!module)
+		return module;
+
+	strcpy(&(module->name[0]), pluginName);
 	module->handle = handle;
-	module->ffiLoaded = ffiFlag;
+	module->ffiLoaded = ffiFlag != 0;
+	module->internal = !squeakModule || handle == squeakModule->handle;
 	module->next = firstModule;
 	firstModule = module;
 	return firstModule;
@@ -292,6 +315,7 @@ void ioDisableModuleLoading() {
 extern char *breakSelector;
 extern sqInt breakSelectorLength;
 
+// helper for findOrLoadModule
 static ModuleEntry *
 findAndLoadModule(char *pluginName, sqInt ffiLoad)
 {
@@ -324,7 +348,8 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 		handle = squeakModule->handle;
 	}
 	module = addToModuleList(pluginName, handle, ffiLoad);
-	if (!callInitializersIn(module)) {
+	if (module
+	 && !callInitializersIn(module)) {
 		/* Initializers failed */
 		if (handle != squeakModule->handle) /* physically unload module */
 			ioFreeModule(handle);
@@ -346,15 +371,15 @@ findOrLoadModule(char *pluginName, sqInt ffiLoad)
 
 	if (!squeakModule) {
 		/* Load intrinsics (if possible) */
-		squeakModule = addToModuleList("", NULL, 1);
+		squeakModule = addToModuleList("", NULL, ffiLoad);
 		firstModule = NULL; /* drop off module list - will never be unloaded */
+		assert(!findFunctionIn("shutdownModule", squeakModule));
 	}
 
-	/* see if the module was already loaded */
-	module = findLoadedModule(pluginName);
-	if (!module) /* if not try loading it */
-		module = findAndLoadModule(pluginName, ffiLoad);
-	return module; /* module not found */
+	/* see if the module was already loaded; if not, try loading it; answer null if failed */
+	return (module = findLoadedModule(pluginName))
+		? module
+		: findAndLoadModule(pluginName, ffiLoad);
 }
 
 /* ioLoadFunctionFrom:
@@ -371,9 +396,6 @@ ioLoadFunctionFrom(char *functionName, char *pluginName)
 		DERRPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
-	if (!functionName)
-		/* only the module was requested but not any specific function */
-	  return (void *)1;
 	/* and load the actual function */
 	return findFunctionIn(functionName, module);
 }
@@ -422,9 +444,6 @@ ioLoadFunctionFromMetadataInto(char *functionName, char *pluginName,
 		DERRPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
-	if (!functionName)
-		/* only the module was requested but not any specific function */
-	  return (void *)1;
 	/* and load the actual function */
 	function = findFunctionAndMetadataIn(functionName, module, fnameLength, metadataPtr);
 	return function;
@@ -454,17 +473,34 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 }
 #endif /* SPURVM */
 
+// Helper for ioLoadSymbolOfLengthFromModule. Answser the pluginName for an internal module,
+// otherwise answer nil. Matching either the handle, or if the handle is zero, the module
+// itself matches the return value of ioLoadModuleOfLength below.
+static char *
+nameOfInternalModule(void *moduleHandle)
+{
+	ModuleEntry *entry = firstModule;
+	while (entry) {
+		if (entry->internal
+		 && (entry->handle == moduleHandle
+			|| !entry->handle && entry == moduleHandle))
+			return &entry->name[0];
+		entry = entry->next;
+	}
+	return squeakModule->internal
+		&& (squeakModule->handle == moduleHandle
+			|| !squeakModule->handle && squeakModule == moduleHandle)
+		? &(squeakModule->name[0])
+		: 0;
+}
+
 /* ioLoadSymbolOfLengthFromModule
 	This entry point is exclusively for the FFI.
 */
-#ifdef PharoVM
-#  define IO_LOAD_GLOBAL(fn) ioLoadFunctionFrom(fn, "")
-#else 
-#  define IO_LOAD_GLOBAL(fn) 0 
-#endif
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
+	char *internalModuleName = nameOfInternalModule(moduleHandle);
 	char *functionName = alloca(functionNameLength + 1);
 
 	if (functionNameLength > MAXALLOCALEN
@@ -473,24 +509,25 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	strncpy(functionName, pointerForOop(functionNameIndex), functionNameLength);
 	functionName[functionNameLength] = 0;
 
-	// Interpret a tagged pointer as a short-hand for an internal plugin
-	// e.g. the SqueakFFIPrims module as an internal plugin where access to
-	// the test functions is required.
-	if (((sqInt)moduleHandle & 1))
-		return findInternalFunctionIn
-					(functionName, 
-					&(((ModuleEntry *)((sqInt)moduleHandle - 1))->name[0])
-					NADA);
-	return moduleHandle
-		? ioFindExternalFunctionIn(functionName, moduleHandle)
-		: IO_LOAD_GLOBAL(functionName);
+	if (functionNameLength == breakSelectorLength
+	 && !strncmp(functionName, breakSelector, breakSelectorLength))
+		warning("function load");
+
+	return internalModuleName
+		? findInternalFunctionIn(functionName, internalModuleName NADA)
+		: (moduleHandle
+			? ioFindExternalFunctionIn(functionName, moduleHandle)
+#if PharoVM
+			: ioLoadFunctionFrom(functionName, ""));
+#else
+			: 0);
+#endif
 }
 
 /* ioLoadModuleOfLength
 	This entry point is exclusively for the FFI.
 	It does *NOT* call any of the initializers nor
 	does it attempt to lookup stuff internally.
-	It answers internal plugins as a tagged pointer.
 */
 void *
 ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
@@ -505,11 +542,13 @@ ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 	moduleName[moduleNameLength] = 0;
 
 	module = findOrLoadModule(moduleName, 1);
-	if (module)
-		return module->handle
-				? module->handle
-				: (void *)((sqInt)module + 1);
-	return 0;
+	// for the FFI and the test suite, if existing as an internal plugin, answer the
+	// module itself if it has no handle. This matches nameOfInternalModule above.
+	return module
+		? (module->handle
+			? module->handle
+			: module)
+		: 0;
 }
 
 
@@ -526,9 +565,9 @@ shutdownModule(ModuleEntry *module)
 
 	/* load the actual function */
 	fn = findFunctionIn("shutdownModule", module);
-	if (fn)
-		return ((sqInt (*) (void)) fn) ();
-	return 1;
+	return fn
+		? ((sqInt (*) (void)) fn) ()
+		: 1;
 }
 
 /* ioShutdownAllModules:

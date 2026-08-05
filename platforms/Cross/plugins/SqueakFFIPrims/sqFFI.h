@@ -172,6 +172,7 @@ char  ffiTestIndirection(char *p);
 int ffiTest4IntSum(int c1, int c2, int c3, int c4);
 int ffiTest8IntSum(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8);
 long ffiTest4LongSum(long c1, long c2, long c3, long c4);
+long ffiTestLongs8(long c1, long c2, long c3, long c4, long c5, long c6, long c7, long c8);
 long ffiTest8longSum(long c1, long c2, long c3, long c4, long c5, long c6, long c7, long c8);
 long long ffiTest4LongLongSum(long long c1, long long c2, long long c3, long long c4);
 long long ffiTest8LongLongSum(long long c1, long long c2, long long c3, long long c4, long long c5, long long c6, long long c7, long long c8);
