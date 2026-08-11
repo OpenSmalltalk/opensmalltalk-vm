@@ -1,23 +1,23 @@
 #!/bin/sh
 
 # mkmf -- configure subdirectory Makefiles			-*- sh -*-
-# 
+#
 #   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
-#   
+#
 #   This file is part of Unix Squeak.
-# 
+#
 #   Permission is hereby granted, free of charge, to any person obtaining a copy
 #   of this software and associated documentation files (the "Software"), to deal
 #   in the Software without restriction, including without limitation the rights
 #   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 #   copies of the Software, and to permit persons to whom the Software is
 #   furnished to do so, subject to the following conditions:
-# 
+#
 #   The above copyright notice and this permission notice shall be included in
 #   all copies or substantial portions of the Software.
-# 
+#
 #   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,9 +25,9 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-# 
+#
 # Author: ian.piumarta@inria.fr
-# 
+#
 # Last edited: Thu Jan 21 14:10:49 PST 2010 by eliot (add support for .cpp)
 
 . ./config.sh
@@ -46,7 +46,7 @@ findDirs() {
   shift
   dirs=""
   while test $# -gt 0; do
-    dirs="${dirs} ${prefix}`dirname $1`"
+    dirs="${dirs} ${prefix}$(dirname "$1")"
     shift
   done
   echo ${dirs} | tr ' ' '\012' | sort | uniq | tr '\012' ' '
@@ -82,16 +82,16 @@ mkmf() {
     if test -d ${d}; then
       dd=${d}
       if test -f ${d}/mkmf.subdirs; then
-        subdirs="`cat ${d}/mkmf.subdirs | tr '\012' ' '`"
+        subdirs="$(cat ${d}/mkmf.subdirs | tr '\012' ' ')"
         for sd in ${subdirs}; do dd="${dd} ${topdir}/${sd}"; done
       fi
-      srcs="${srcs} `findFiles .c ${dd}`"
-      srcs="${srcs} `findFiles .cc ${dd}`"
-      srcs="${srcs} `findFiles .cpp ${dd}`"
-      srcs="${srcs} `findFiles .S ${dd}`"
-      srcs="${srcs} `findFiles .s ${dd}`"
-      srcs="${srcs} `findFiles .m ${dd}`"
-      hdrs="${hdrs} `findFiles .h ${dd}`"
+      srcs="${srcs} $(findFiles .c ${dd})"
+      srcs="${srcs} $(findFiles .cc ${dd})"
+      srcs="${srcs} $(findFiles .cpp ${dd})"
+      srcs="${srcs} $(findFiles .S ${dd})"
+      srcs="${srcs} $(findFiles .s ${dd})"
+      srcs="${srcs} $(findFiles .m ${dd})"
+      hdrs="${hdrs} $(findFiles .h ${dd})"
       # override Makefile.in
       if test -f "${d}/Makefile.in"; then
         makefile_in="${d}/Makefile.in"
@@ -103,8 +103,8 @@ mkmf() {
       test -f "${d}/Targets.exclude" && cat "${d}/Targets.exclude" >>${excluded}
     fi
   done
-  srcs="`echo ${srcs} | tr ' ' '\012' | fgrep -v '*'`"
-  hdrs="`echo ${hdrs} | tr ' ' '\012' | fgrep -v '*'`"
+  srcs="$(echo ${srcs} | tr ' ' '\012' | fgrep -v '*')"
+  hdrs="$(echo ${hdrs} | tr ' ' '\012' | fgrep -v '*')"
   # create targets and rules
   if test "${srcs}" != ""; then
     # objs is used to make the list of targets unique so that a platform can
@@ -114,7 +114,7 @@ mkmf() {
     # in the platform plugin dir)
     echo "" > ${objs}
     for c in ${srcs}; do
-      o=`basename ${c} | sed 's,\.cp*,$o,;s,\.[msS],$o,'`
+      o=$(basename ${c} | sed 's,\.cp*,$o,;s,\.[msS],$o,')
       grep -qs "^$o$" ${excluded} || grep -qs "^$o$" ${objs} || targets="${targets} ${o}"
       echo "$o" >>${objs}
       echo												>> ${make_targets}
@@ -130,7 +130,7 @@ mkmf() {
   fi
   # create includes
   if test "${hdrs}" != ""; then
-    includes="${includes} `findDirs -I ${hdrs}`"
+    includes="${includes} $(findDirs -I ${hdrs})"
   fi
   # default Makefile.in if no override
   if test ! -f "${makefile_in}"; then
@@ -167,7 +167,7 @@ s%\[make_plg\]%%g
 s%\[plibs\]%${plibs}%g
 /\[make_targets\]/r ${make_targets}
 s%\[make_targets\]%%g" > ${name}/Makefile
-  /bin/rm -f ${make_targets} makefile.in makefile.sub
+  rm -f ${make_targets} makefile.in makefile.sub
 }
 
 plibs=""
@@ -181,7 +181,7 @@ plibs=""
 if test "${ext_modules}" != ""; then
   for p in ${ext_modules}; do
     if test -f ${p}.lib; then
-      plibs="`cat ${p}.lib`"
+      plibs="$(cat ${p}.lib)"
     else
       plibs=""
     fi
@@ -200,7 +200,7 @@ plibs=""
 if test "${ext_plugins}" != ""; then
   for p in ${ext_plugins}; do
     if test -f ${p}.lib; then
-      plibs="`cat ${p}.lib`"
+      plibs="$(cat ${p}.lib)"
     else
       plibs=""
     fi

@@ -5,9 +5,9 @@ set -e
 IMAGEHASH=e6be0ea204a8409dc0976a792502ab65
 ZIPHASH=2f17e1d8eb9bec2b7554d3405652b122
 
-if [ "`quietmd5 \"$SQUEAK50\".image`" != $IMAGEHASH ]; then
+if [ "$(quietmd5 "$SQUEAK50".image)" != $IMAGEHASH ]; then
 	ZIP=Squeak-5.0-All-in-One.zip
-	if [ "`quietmd5 $ZIP`" != $ZIPHASH ]
+    if [ "$(quietmd5 $ZIP)" != $ZIPHASH ]
 	then
 		geturl http://files.squeak.org/5.0/$ZIP
 	fi
@@ -21,4 +21,4 @@ if [ "`quietmd5 \"$SQUEAK50\".image`" != $IMAGEHASH ]; then
 	unzip $ZIP
 	rm -rf __MACOSX
 fi
-test -f SqueakV50.sources || ln $SQUEAK50RESOURCES/SqueakV50.sources .
+test -f SqueakV50.sources || ln "$SQUEAK50RESOURCES/SqueakV50.sources" .

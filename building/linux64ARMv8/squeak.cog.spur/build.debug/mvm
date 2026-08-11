@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
 set -e
+set -o pipefail
 # debug Cog Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/sqcogspur64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g3 -O0 -DDEBUGVM=1 -DAIO_DEBUG=1"
 
-if [ `uname` = "OpenBSD" ]; then
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+if [ "$(uname)" = "OpenBSD" ]; then
+    export DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
 # librt and libpthread functions now supplied by libc.
 # Many Linux systems supply empty library files but
 # OpenBSD does not.
-    LIBRT=""
+    export LIBRT=""
 # OpenBSD has problems with fast-bitblt under gcc and clang
-    FASTBITBLT=""
+    export FASTBITBLT=""
 # Prefer clang over gcc if available
-    if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
+    if command -v clang > /dev/null; then CC=clang; else CC=gcc; fi
 else # non-OpenBSD Linux
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
-    LIBRT="-lrt"
+    export DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
+    export LIBRT="-lrt"
 # Linux on ARMv8 properly compiles fast-bitblt under gcc
 # but compiles-and-segfaults with clang. Use gcc for now.
-	FASTBITBLT=" --enable-fast-bitblt "
+	export FASTBITBLT=" --enable-fast-bitblt "
 	CC=gcc
 fi
 
@@ -30,7 +31,7 @@ if [ $# -ge 1 ]; then
 fi
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
-read a
+read -r a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm -f config.h; test -f Makefile && make reallyclean
@@ -45,7 +46,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	LIBS=$LIBRT
 
 rm -f vm/sqUnixMain.o # nuke version info
-rm -rf ../../../../products/$INSTALLDIR
+rm -rf "../../../../products/$INSTALLDIR"
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG ; test ${PIPESTATUS[0]} -eq 0
+make install-squeak install-plugins prefix="$(cd ../../../../;pwd)/products/$INSTALLDIR" 2>&1 | tee LOG

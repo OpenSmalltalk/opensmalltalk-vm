@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -o pipefail
 # A=all(a,d,f) T=Threaded a=assert d=debug f=fast
 A=;D=;F=;T=
 if [ $# = 0 ]; then
@@ -13,7 +14,7 @@ else
 		a)	A=1;;
 		d)	D=1;;
 		f)	F=1;;
-		*)	echo usage $0 [-A] [-a\ [-d] [-f]; exit 0;;
+		*)	echo "usage $0 [-A] [-a] [-d] [-f]"; exit 0;;
 		esac
 	done
 	if [ "$1" = -- ]; then
@@ -21,27 +22,27 @@ else
 			A=1;D=1;F=1
 		fi
 	fi
-	shift `expr $OPTIND - 1`
+	shift $(( OPTIND - 1 ))
 fi
 if ../../../scripts/checkSCCSversion ; then exit 1; fi
 if [ -z "$T" ]; then
 	if [ -n "$D" ]; then
-		make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" debug 2>&1 | tee LOGD
 	fi
 	if [ -n "$A" ]; then
-		make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" assert 2>&1 | tee LOGA
 	fi
 	if [ -n "$F" ]; then
-		make $@ 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" 2>&1 | tee LOGF
 	fi
 else
 	if [ -n "$D" ]; then
-		make $@ $T debug 2>&1 | tee LOGTD ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" "$T" debug 2>&1 | tee LOGTD
 	fi
 	if [ -n "$A" ]; then
-		make $@ $T assert 2>&1 | tee LOGTA ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" "$T" assert 2>&1 | tee LOGTA
 	fi
 	if [ -n "$F" ]; then
-		make $@ $T 2>&1 | tee LOGTF ; test ${PIPESTATUS[0]} -eq 0
+		make "$@" "$T" 2>&1 | tee LOGTF
 	fi
 fi

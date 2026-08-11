@@ -11,7 +11,7 @@ LATEST_RELEASE_URL="$RELEASES_URL/latest"
 
 for foo in once; do # allow break to jump to end of script
 
-if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
+if [ "$1" = -vm -a -n "$2" -a -x "$(which "$2")" ]; then
 	VM="$2"
 	shift;shift
 else
@@ -74,7 +74,7 @@ else
 	Darwin) 
 		if open $LATESTVM; then
 			while [ ! -d "/Volumes/$VOLUME/$VMDIR" ]; do sleep 1; done
-			rm -rf $VMDIR
+			rm -rf "$VMDIR"
 			cp -Rp "/Volumes/$VOLUME/$VMDIR" $VMDIR
 			diskutil eject "/Volumes/$VOLUME"
 		fi;;

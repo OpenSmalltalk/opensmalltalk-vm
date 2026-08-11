@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
-case "`uname -m`" in # ensure we see x86 as machine type
+set -o pipefail
+case "$(uname -m)" in # ensure we see x86 as machine type
 i86pc) ;; # we're good
-*) if type i386 2>&1 >/dev/null; then
+*) if type i386 >/dev/null 2>&1; then
 	echo "Re-exec as x86"
 	exec i386 "$0" "$@"
 fi ;;
@@ -22,11 +23,12 @@ fi
 
 if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
-read a
+read -r a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && $MAKE reallyclean
 esac
+# this logic is broken || and && are not ternary operators
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
@@ -41,7 +43,7 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 	LIBS="$LIBS" \
 	CFLAGS="$OPT -DCOGMTVM=0"
 rm -f vm/sqUnixMain.o # nuke version info
-rm -rf ../../../../products/$INSTALLDIR
+rm -rf "../../../../products/$INSTALLDIR"
 # prefer $MAKE install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-$MAKE install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+$MAKE install-squeak install-plugins prefix="$(cd ../../../../;pwd)/products/$INSTALLDIR" 2>&1 | tee LOG

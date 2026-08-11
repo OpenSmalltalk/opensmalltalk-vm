@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 if [ "$1" = "-f" ]; then
     ./mvm_configure_variant release Release
     make -C release all install
