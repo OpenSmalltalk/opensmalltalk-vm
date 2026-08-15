@@ -5120,10 +5120,38 @@ display_ioBeep(void)
 }
 
 
+#define MAX_IDLE_USECS 500000  /* 500ms cap when no Delays pending */
+
 static sqInt
 display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioSleepForUsecs(handleEvents() ? 0 : microSeconds);
+  extern usqLong getNextWakeupUsecs(void);
+  extern volatile int mainThreadIsIdle;
+
+  if (handleEvents())
+    return 0;
+
+  usqLong nextWakeupUsecs = getNextWakeupUsecs();
+  usqLong utcNow = ioUTCMicroseconds();
+  long realTimeToWait;
+
+  if (nextWakeupUsecs != 0 && nextWakeupUsecs <= utcNow)
+    return 0;  /* Delay already overdue, don't sleep */
+
+  if (nextWakeupUsecs != 0) {
+    realTimeToWait = nextWakeupUsecs - utcNow;
+    if (realTimeToWait > MAX_IDLE_USECS)
+      realTimeToWait = MAX_IDLE_USECS;
+  } else {
+    realTimeToWait = MAX_IDLE_USECS;
+  }
+
+  mainThreadIsIdle = 1;
+  __sync_synchronize();
+  aioSleepForUsecs(realTimeToWait);
+  __sync_synchronize();
+  mainThreadIsIdle = 0;
+
   return 0;
 }
 
