@@ -6,30 +6,15 @@ INSTALLDIR=sqcogspur64ARMv8linuxht
 # tpr - add enablementisation of fast bitblt ben avison code
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
-##OPT="-g -O3  -DMUSL -DNDEBUG -DDEBUGVM=0"
 
-if [ `uname` = "OpenBSD" ]; then
-    OPT="$OPT -DMUSL"
-    CFLAGS="$CFLAGS $OPT -I/usr/local/include"
-    LIBS="$LIBS -lexecinfo"
-    LDFLAGS="$LDFLAGS -L/usr/local/lib"
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
 # librt and libpthread functions now supplied by libc.
-# Many Linux systems supply empty library files but
-# OpenBSD does not.
-    LIBRT=""
-# OpenBSD has problems with fast-bitblt under gcc and clang
-    FASTBITBLT=""
-# Prefer clang over gcc if available
-    if [ -n "$(command -v clang || true)" ]; then CC=clang; else CC=gcc; fi
-else # non-OpenBSD Linux
-    DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
-    LIBRT="-lrt"
+# Many Linux systems supply empty library file.
+LIBRT="-lrt"
 # Linux on ARMv8 properly compiles fast-bitblt under gcc
 # but compiles-and-segfaults with clang. Use gcc for now.
-	FASTBITBLT=" --enable-fast-bitblt "
-	CC=gcc
-fi
+FASTBITBLT=" --enable-fast-bitblt "
+CC=gcc
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

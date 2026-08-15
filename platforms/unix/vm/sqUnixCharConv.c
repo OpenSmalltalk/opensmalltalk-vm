@@ -40,7 +40,9 @@
 #include <ctype.h>
 #include <errno.h>
 
+#if !defined(__QNX__)
 static inline int min(int x, int y) { return (x < y) ? x : y; }
+#endif
 
 static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 {

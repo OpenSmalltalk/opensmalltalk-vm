@@ -29,7 +29,12 @@
 
 #if defined(HAVE_OPENPTY)
 
+#if defined __OpenBSD__
+# include <utmp.h>
+#else
 # include <utmpx.h>		/* login_tty() */
+#endif
+
 # if defined(HAVE_PTY_H)
 #   include <pty.h>		/* openpty() */
 # elif defined(HAVE_UTIL_H)

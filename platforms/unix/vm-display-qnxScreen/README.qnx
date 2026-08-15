@@ -1,0 +1,17 @@
+This is a vm-display specialized for QNX 8.0 based on the Screen display API
+and requires QNX includes & libraries.
+
+Note:
+  https://qnx.com/getqnx
+  https://www.qnx.com/developers/docs/8.0/com.qnx.doc.screen/topic/manual/cscreen_about.html
+
+Interaction is similar in pattern to vm-display-fbdev
+
+TESTED Raspberry Pi 5 Self hosted  [sudo apk add screen]
+
+Note: vm-display-qnxScreen uses _screen_ to take over the display, mouse, and keyboard.
+It requires RasPi5 self-hosting to build, but can be run without the hosted GUI.
+It is NOT (yet) a windowed app.  
+
+"sudo apk add qnx-screen"
+

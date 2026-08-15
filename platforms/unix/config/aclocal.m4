@@ -3597,9 +3597,21 @@ newos6*)
   lt_cv_file_magic_test_file=/usr/lib/libnls.so
   ;;
 
+
 *nto* | *qnx*)
+  version_type=qnx
+  need_lib_prefix=no
+  need_version=no
+  library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
+  soname_spec='$libname$release$shared_ext$major'
+  shlibpath_var=LD_LIBRARY_PATH
+  shlibpath_overrides_runpath=no
+  hardcode_into_libs=yes
+  dynamic_linker='ldqnx.so'
   lt_cv_deplibs_check_method=pass_all
   ;;
+
+
 
 openbsd* | bitrig*)
   if test -z "`echo __ELF__ | $CC -E - | $GREP __ELF__`"; then

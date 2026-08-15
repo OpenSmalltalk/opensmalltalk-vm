@@ -39,7 +39,9 @@
 #if DUAL_MAPPED_CODE_ZONE
 # if !__APPLE__
 #    if !__OpenBSD__
+#       if !__QNX__
 #	include <sys/prctl.h>
+#		endif
 #    endif
 # endif
 #ifdef HAVE_SYS_STAT_H
@@ -105,12 +107,19 @@ int mmapErrno = 0;
 #	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
 # endif
 
+#if !defined(__QNX__)
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
 
 // a hint of the lowest possible address for mmap
-#define lowestPageAlignedAddressForMMap() \
+# define lowestPageAlignedAddressForMMap() \
 	(assert(pageSize), (void *)roundUpToPage((usqInt)sbrk(0)))
+#else
+// QNX does not usefully implement sbrk()
+# define lowestPageAlignedAddressForMMap() \
+  0
+#endif
+
 
 /* Answer the address of minHeapSize rounded up to page size bytes of memory. */
 

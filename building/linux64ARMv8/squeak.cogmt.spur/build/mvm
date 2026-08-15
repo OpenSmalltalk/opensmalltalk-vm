@@ -4,8 +4,14 @@ set -e
 INSTALLDIR=sqcogspurmt64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV"
-##OPT="-g -O3 -DNDEBUG -DDEBUGVM=0"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DUSEEVDEV"
+CFLAGS="$CFLAGS $OPT -I/usr/local/include"
+LIBS="$LIBS -lexecinfo"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+DUALMAP="-DDUAL_MAPPED_CODE_ZONE=0"
+# librt and libpthread functions now supplied by libc.
+# Many Linux systems supply empty library files.
+LIBRT="-lrt"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -23,9 +29,9 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	INTERP=cointerpmt \
-	CC=clang \
+	CC=gcc \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \
-	LIBS="-lrt"
+	LIBS=$LIBRT
 ##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

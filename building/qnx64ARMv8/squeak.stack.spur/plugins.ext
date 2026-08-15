@@ -1,0 +1,17 @@
+# Copied, perhaps edited, from ../../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+ClipboardExtendedPlugin \
+FileAttributesPlugin \
+MIDIPlugin \
+Squeak3D \
+SqueakFFIPrims \
+LocalePlugin \
+UnicodePlugin \
+UUIDPlugin \
+ImmX11Plugin \
+XDisplayControlPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
+VectorEnginePlugin 
+

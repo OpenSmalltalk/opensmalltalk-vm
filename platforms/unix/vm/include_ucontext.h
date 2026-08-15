@@ -22,6 +22,8 @@
 #elif __sun
 /* Single UNIX Specification (SUS), Version 2 specifies <ucontext.h> */
 # include <ucontext.h>
+#elif __QNX__
+# include <ucontext.h>
 #else
 # include <sys/ucontext.h>
 #endif
@@ -113,6 +115,12 @@
 # define _PC_IN_UCONTEXT sc_x[22]
 # define _FP_IN_UCONTEXT sc_x[21]
 # define _SP_IN_UCONTEXT sc_x[23]
+#elif __QNX__ && (__arm64__ || __aarch64__ || ARM64)
+/* See QNX includes: aarch64/context.h sys/ucontext.h */
+# define _PC_IN_UCONTEXT uc_mcontext.cpu.elr
+# define _FP_IN_UCONTEXT uc_mcontext.cpu.gpr[AARCH64_REG_X29]
+# define _SP_IN_UCONTEXT uc_mcontext.cpu.gpr[AARCH64_REG_SP]
+/* Note: AARCH64_REG_SP == AARCH64_REG_X31 */
 #endif
 #if !defined(_PC_IN_UCONTEXT)
 # error need to implement extracting pc from a ucontext_t on this system
