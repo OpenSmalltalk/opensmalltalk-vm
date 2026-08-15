@@ -819,10 +819,10 @@ sqInt
 clipboardSizeWithType(char *typeName, int ntypeName)
 { return dpy->clipboardSizeWithType(typeName, ntypeName); }
 
-void
+sqInt
 clipboardWriteWithType(char *data, size_t nData, char *typeName, size_t nTypeNames, int isDnd, int isClaiming)
 {
-  dpy->clipboardWriteWithType(data, nData, typeName, nTypeNames, isDnd, isClaiming);
+  return dpy->clipboardWriteWithType(data, nData, typeName, nTypeNames, isDnd, isClaiming);
 }
 
 sqInt

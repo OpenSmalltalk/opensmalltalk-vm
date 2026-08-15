@@ -496,7 +496,7 @@ static sqInt display_clipboardReadIntoAt(sqInt n, sqInt ptr, sqInt off)					{ re
 static char **display_clipboardGetTypeNames(void)								{ return 0; }
 static sqInt  display_clipboardSizeWithType(char *typeName, int ntypeName)					{ return 0; }
 
-static void  display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming) {}
+static sqInt display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming) { return 0; }
 
 static sqInt display_dndOutStart(char *types, int ntypes)	{ return 0; }
 static void  display_dndOutSend(char *bytes, int nbytes)	{ return  ; }

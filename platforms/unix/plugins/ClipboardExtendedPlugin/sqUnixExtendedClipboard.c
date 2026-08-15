@@ -41,7 +41,9 @@ char **clipboardGetTypeNames();
 sqInt clipboardSizeWithType(char *typeName, int ntypeName);
 sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
 void *firstIndexableField(sqInt oop);
-void clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming);
+sqInt clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming);
+
+int formatCounter = 0;
 
 // TODO: clipboardGetTypeNames() should be cached. And the simplest way to do
 // this is to have display_clipboardGetTypeNames do the cacheing and freeing,
@@ -57,11 +59,10 @@ sqCreateClipboard(void) { return (void *)0xB0A4D; }
 void
 sqPasteboardClear(void *inPasteboard)
 {
-// perhaps PrimErrUnsupported is better, but it's inaccurate
-// we don't yet have PrimErrUnimplemented
-
-	// i.e. this still has to be implemented
-	interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
+	int success = clipboardWriteWithType(NULL, 0, "", 0, 0, 0);
+	formatCounter = 0;
+	if (!success)
+		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 }
 
 /* Return a number of types.
@@ -112,7 +113,8 @@ sqPasteboardCopyItemFlavorsitemNumber(void *inPasteboard, sqInt formatNumber)
 void
 sqPasteboardPutItemFlavordatalengthformatTypeformatLength(void *inPasteboard, char *data, sqInt ndata, char *typeName, sqInt ntypeName)
 {
-	clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, 1);
+	if (!clipboardWriteWithType(data, ndata, typeName, ntypeName, 0, !formatCounter++))
+		interpreterProxy->primitiveFailFor(PrimErrOperationFailed);
 }
 
 
