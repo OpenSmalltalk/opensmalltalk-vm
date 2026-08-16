@@ -1,0 +1,90 @@
+How To Build For Android (aarch64)
+----------------------------------
+
+This target cross-compiles the Stack Spur 64-bit VM and its plugins for
+Android/arm64 with the Android NDK.  It runs on a Linux or macOS desktop; no
+device and no on-device toolchain are involved.
+
+The VM must stay an interpreter (--disable-cogit).  A JIT needs W^X memory,
+which Android does not grant to applications.
+
+
+What you need
+-------------
+	- Android NDK r26 or later (ANDROID_NDK)
+	- an Android sysroot with the X11/GL/glib headers and import libraries
+	  the VM and its plugins link against (ANDROID_SYSROOT), see below
+	- autoconf-generated configure (already committed), make, pkg-config
+	- patchelf, for the post-link step described further down
+
+
+The sysroot
+-----------
+Bionic ships no X11, no GL, no iconv, no uuid and no zlib headers, so they have
+to come from somewhere.  The simplest source is the Termux aarch64 package
+repository (https://packages.termux.dev/apt/termux-main), whose packages are
+built with the NDK for the same ABI.  Unpack these into $ANDROID_SYSROOT so the
+tree looks like $ANDROID_SYSROOT/usr/{include,lib}:
+
+	zlib libiconv libuuid libx11 xorgproto libxext libxrender libxrandr
+	libxcb libxau libxdmcp libxft libxi libxcursor libxfixes
+	libglvnd libglvnd-dev mesa-dev
+	glib pango libcairo libpixman harfbuzz freetype fontconfig
+	libpng pcre2 libexpat fribidi libgraphite brotli
+
+The .pc files in those packages hardcode Termux's on-device prefix
+(/data/data/com.termux/files/usr), so rewrite it to $ANDROID_SYSROOT/usr or
+pkg-config will hand the compiler paths that do not exist on the build machine.
+
+
+Building
+--------
+	export ANDROID_NDK=/path/to/android-ndk-r26
+	export ANDROID_SYSROOT=/path/to/sysroot
+	cd building/android64ARMv8/squeak.stack.spur/build
+	../../../../scripts/copylinuxpluginspecfiles	# if plugins.int/ext are absent
+	./mvm
+
+
+Things that only bite when cross-compiling
+------------------------------------------
+	- `make` ends in "Error 126".  This is expected.  The `squeak` rule runs
+	  the binary it has just linked to stamp a version string, which a build
+	  host obviously cannot do for aarch64 Android.  It happens AFTER the VM
+	  and every plugin are written, so the artifacts are complete.
+
+	- getversion is a BUILD tool but the Makefile compiles it with $(CC),
+	  i.e. the cross compiler.  mvm builds it for the host instead.
+
+	- AC_PATH_X and PKG_CHECK_MODULES both fail silently under cross
+	  compilation, and configure then quietly disables ClipboardExtendedPlugin
+	  and UnicodePlugin.  mvm passes --x-includes/--x-libraries and
+	  PKG_CONFIG_LIBDIR explicitly to avoid that.
+
+	- Bionic's API floor is real: nl_langinfo needs API 26, glob()/globfree()
+	  need 28, backtrace() needs 33.  This target builds against API 28 and
+	  passes -DNOEXECINFO.  getdtablesize() and confstr() exist at no API
+	  level at all; platforms/unix/vm/sqAndroidCompat.h supplies them and is
+	  force-included by mvm.
+
+	- CameraPlugin is dropped from plugins.int/plugins.ext: it is V4L2-only
+	  and an Android application cannot open /dev/video*.
+
+
+Installing into an Android application
+--------------------------------------
+The VM is a PIE executable that exports main(); an app loads it with dlopen()
+and enters through dlsym(handle, "main").  Android only extracts and loads
+files named lib*.so from an APK, so the binary has to be renamed:
+
+	squeak            ->  jniLibs/arm64-v8a/libsqueak.so
+	*.so (plugins)    ->  wherever the app preloads plugins from
+
+One post-link step is needed.  On a normal Unix the plugins resolve VM symbols
+(localeEncoding, interpret, ...) from the executable's dynamic symbol table, but
+here the "executable" is itself dlopen()ed, so each plugin must name it:
+
+	patchelf --add-needed libsqueak.so <plugin>.so
+
+vm-display-X11.so additionally needs libandroid-shmem.so (Bionic implements no
+SysV shared memory) and libXrandr.so.
