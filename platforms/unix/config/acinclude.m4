@@ -83,8 +83,13 @@ AC_SUBST(LD)
 
 AC_DEFUN([AC_REQUIRE_SIZEOF],[
   AC_MSG_CHECKING("size of $1")
-  AC_TRY_RUN([#include <sys/types.h>
-	      int main(){return(sizeof($1) == $2)?0:1;}],
+  dnl Check the size at COMPILE time, via a negative array size when the
+  dnl assertion fails.  AC_TRY_RUN cannot work when cross-compiling: with no
+  dnl fourth (cross) argument it aborts configure outright, which blocks every
+  dnl cross-compilation target.  The size of a type is known to the compiler,
+  dnl so there is nothing to gain by running a program to ask it.
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
+	      int sizeof_assertion[(sizeof($1) == $2) ? 1 : -1];]])],
     AC_MSG_RESULT("okay"),
     AC_MSG_RESULT("bad")
     AC_MSG_ERROR("one or more basic data types has an incompatible size: giving up"))])
