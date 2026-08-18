@@ -1,4 +1,4 @@
-How To Build On Linux
+How To Build On OpenBSD
 ---------------------
 
 
@@ -42,7 +42,7 @@ thread owns the VM at any one time, switching between threads on FFI calls and
 callbacks or on Smalltalk process switches when Smalltalk processes are owned
 by threads.  This multi-threaded support is as yet experimental.
 
-A distinction on linux is between VMs with an itimer hearbeat or a threaded
+A distinction on openbsd (& linux) is between VMs with an itimer hearbeat or a threaded
 heartbeat.  VMs with an itimer hearbeat  use setitimer to deliver a SIGALRM
 signal at regular intervals to interrupt the VM to check for events.  These
 signals can be troublesome, interrupting foreign code that cannot cope with
@@ -83,7 +83,7 @@ source). See "Installing support libraries" below.  If the configure step fails
 when "checking for C compiler default output file name", you have yet to install
 all the necessary support packages (e.g. libuuid).
 Then cd to the build directory of your choice, e.g.
-	building/linux64x64/squeak.cog.spur/build
+	building/openbsd64x64/squeak.cog.spur/build
 Then execute
 	./mvm
 
@@ -93,7 +93,7 @@ file name", you have yet to install all the necessary support (e.g. lubuuid).
 
 The subdirectories conform to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
-example, building/linux64x64/squeak.cog.v3 includes
+example, building/openbsd64x64/squeak.cog.v3 includes
 
 	build
 	build.itimerheartbeat
@@ -124,7 +124,7 @@ the supplied plugins directory (which defaults to ../../src/plugins), and which
 are to be linked into the VM (plugins.int) or compiled as external shared
 objects to be dynamically linked at run-time (plugins.ext).
 
-Finally, at the building/linux64x64 level the makeall script will run all the
+Finally, at the building/openbsd64x64 level the makeall script will run all the
 makeallclean scripts it can find.
 
 
@@ -132,13 +132,18 @@ Building the VM Simulator Support Libraries
 -------------------------------------------
 If you want to get the Cog VM simulator working you'll need to build one or more
 of the processor simulator plugins, each of which has support libraries that
+must be built, and you'll have to port the building of the support libraries.
+linux64x64 is closest:
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
 must be built:
 	Processor   Plugin           Support Library
 	x86         BochsIA32Plugin  building/linux64x64/bochsx86
 	x86_64/x64  BochsX64Plugin   building/linux64x64/bochsx64
 	ARMv5       GdbARMPlugin     building/linux64x64/gdbarm32
+	ARMv8       GdbARMv8Plugin   building/linux64x64/gdbarm64
 cd to the relevant directories; run conf.COG and then the build script, e.g.
-  $ cd building/linux64x64/bochsx86
+  $ cd building/openbsd64x64/bochsx86
   $ ./conf.COG
   $ ./makeem
 
