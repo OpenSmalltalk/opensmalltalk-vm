@@ -309,14 +309,15 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		*len = blidx;
 		return bochs_log;
 	}
+
 	void
 	storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 	{
 		/* N.B. RAX=0,RCX=1,RDX=2,RBX=3,RSP=4,RBP=5,RSI=6,RDI=7 */
 		registerState[0]  = bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx;
-		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
-		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
-		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
+		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
 		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
 		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
 		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
@@ -347,9 +348,9 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	{
 		/* N.B. RAX=0,RCX=1,RDX=2,RBX=3,RSP=4,RBP=5,RSI=6,RDI=7 */
 		registerState[0]  = bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx;
-		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
-		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
-		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
+		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
 		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
 		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
 		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;

@@ -286,9 +286,9 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	{
 		/* N.B. EAX=0,ECX=1,EDX=2,EBX=3,ESP=4,EBP=5,ESI=6,EDI=7 */
 		registerState[0] = bx_cpu.gen_reg[BX_32BIT_REG_EAX].dword.erx;
-		registerState[1] = bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx;
-		registerState[2] = bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx;
-		registerState[3] = bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx;
+		registerState[1] = bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx;
+		registerState[2] = bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx;
+		registerState[3] = bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx;
 		registerState[4] = bx_cpu.gen_reg[BX_32BIT_REG_ESP].dword.erx;
 		registerState[5] = bx_cpu.gen_reg[BX_32BIT_REG_EBP].dword.erx;
 		registerState[6] = bx_cpu.gen_reg[BX_32BIT_REG_ESI].dword.erx;
@@ -311,9 +311,9 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 	{
 		/* N.B. EAX=0,ECX=1,EDX=2,EBX=3,ESP=4,EBP=5,ESI=6,EDI=7 */
 		registerState[0] = bx_cpu.gen_reg[BX_32BIT_REG_EAX].dword.erx;
-		registerState[1] = bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx;
-		registerState[2] = bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx;
-		registerState[3] = bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx;
+		registerState[1] = bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx;
+		registerState[2] = bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx;
+		registerState[3] = bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx;
 		registerState[4] = bx_cpu.gen_reg[BX_32BIT_REG_ESP].dword.erx;
 		registerState[5] = bx_cpu.gen_reg[BX_32BIT_REG_EBP].dword.erx;
 		registerState[6] = bx_cpu.gen_reg[BX_32BIT_REG_ESI].dword.erx;
