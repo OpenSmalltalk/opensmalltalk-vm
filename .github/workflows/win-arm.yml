@@ -50,6 +50,7 @@ jobs:
           - win64ARMv8
         flavor:
           - squeak.cog.spur
+          - squeak.livetyping.spur # LiveTyping VM (src/spur64.cog.livetyping)
           - squeak.stack.spur
           - squeak.sista.spur
         mode:

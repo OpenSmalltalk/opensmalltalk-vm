@@ -1,0 +1,39 @@
+# Copied, perhaps edited, from ../../../src/examplePlugins.int
+INTERNAL_PLUGINS = \
+ADPCMCodecPlugin \
+AsynchFilePlugin \
+B2DPlugin \
+BitBltPlugin \
+BMPReadWriterPlugin \
+ClipboardExtendedPlugin \
+CroquetPlugin \
+ZipPlugin \
+DropPlugin \
+DSAPrims \
+FFTPlugin \
+FilePlugin \
+FileDialogPlugin \
+Float64ArrayPlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
+HostWindowPlugin \
+IA32ABI \
+JoystickTabletPlugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+Klatt \
+LargeIntegers \
+LocalePlugin \
+Matrix2x3Plugin \
+MIDIPlugin \
+MiscPrimitivePlugin \
+Mpeg3Plugin \
+RePlugin \
+SecurityPlugin \
+SerialPlugin \
+SocketPlugin \
+SoundCodecPrims \
+SoundGenerationPlugin \
+SoundPlugin \
+StarSqueakPlugin \
+SurfacePlugin
