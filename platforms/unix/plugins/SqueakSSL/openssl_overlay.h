@@ -544,7 +544,7 @@ static size_t _sqo_lib_paths(size_t const n, char (*libs[n]))
  * The Names part >>
  */
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__)
 static int (*_sqo_strverscmp)(const void* a, const void* b) =
     (int (*)(const void* a, const void* b))strverscmp;
 #else
