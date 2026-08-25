@@ -5,8 +5,17 @@ This target cross-compiles the Stack Spur 64-bit VM and its plugins for
 Android/arm64 with the Android NDK.  It runs on a Linux or macOS desktop; no
 device and no on-device toolchain are involved.
 
-The VM must stay an interpreter (--disable-cogit).  A JIT needs W^X memory,
-which Android does not grant to applications.
+This target builds the interpreted Stack VM.  That is a starting point, not a
+limitation of the platform: Android does allow a JIT.  codeZoneControlARM64.h in
+this tree already says so -- "Android allows the use of PROT_READ | PROT_WRITE |
+PROT_EXEC" -- and AOSP's SELinux policy grants every app domain `execmem`,
+commented "WebView and other application-specific JIT compilers", unchanged from
+API 28 through 16.  Measured inside an app's own uid and SELinux domain on
+Android 15 (API 35): anonymous RWX mmap, mprotect-to-executable, and the memfd
+dual mapping all work.  A squeak.cog.spur build boots and renders there.
+Two things do NOT work and are worth knowing: execstack and execheap are
+neverallowed for every domain, so a code zone must be anonymous mmap and never
+the thread stack or brk heap.
 
 
 What you need

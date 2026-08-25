@@ -6,8 +6,9 @@
 # or later.  See ../../HowToBuild for the sysroot the X11/GL/glib headers and
 # import libraries come from.
 #
-# The VM must stay an interpreter (--disable-cogit): a JIT needs W^X memory,
-# which Android does not grant to applications.
+# This builds the interpreted Stack VM.  Android does permit a JIT -- see
+# HowToBuild and codeZoneControlARM64.h -- so a squeak.cog.spur target is
+# possible; this one simply is not it.
 set -e
 
 INSTALLDIR="${INSTALLDIR:-sqstkspur64ARMv8android}"
