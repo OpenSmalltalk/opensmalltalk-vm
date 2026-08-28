@@ -638,7 +638,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	/* Extract the peer name */
 	sqExtractPeerName(ssl);
 
-	return SQSSL_OK;
+	return sqCopyDescToken(ssl, ssl->sbdOut, dstBuf, dstLen);
 }
 
 /* sqAcceptSSL: Start/continue an SSL server handshake.
