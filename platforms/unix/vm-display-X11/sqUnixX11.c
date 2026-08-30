@@ -1444,6 +1444,9 @@ display_clipboardSize(void)
 static sqInt
 display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
+  if (!isConnectedToXServer)
+    return 0;
+
   return display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
 }
 
@@ -2626,6 +2629,9 @@ display_clipboardGetTypeNames(void)
   Status   success= 0;
   int      nTypeNames= 0;
 
+  if (!isConnectedToXServer)
+    return 0;
+
   if (dndAvailable())
     dndGetTargets(&targets, &nTypeNames);
   else 
@@ -2686,6 +2692,9 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
   int    	  isDnd= 0;
   Atom   	  inputSelection;
   SelectionChunk *chunk;
+
+  if (!isConnectedToXServer)
+    return 0;
   
   isDnd= dndAvailable();
   inputSelection= isDnd ? xaXdndSelection : xaClipboard;
