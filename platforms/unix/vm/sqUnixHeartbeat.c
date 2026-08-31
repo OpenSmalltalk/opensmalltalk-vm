@@ -62,7 +62,7 @@ volatile int mainThreadIsIdle = 0;
 #if !defined(IDLE_BEAT_MS)
 # define IDLE_BEAT_MS 50
 #endif
-static struct timespec idleBeatperiod = { 0, IDLE_BEAT_MS * 1000 * 1000 };
+static struct timespec idleBeatPeriod = { 0, IDLE_BEAT_MS * 1000 * 1000 };
 
 #define microToMilliseconds(usecs) ((((usecs) - utcStartMicroseconds) \
 									/ MicrosecondsPerMillisecond) \
@@ -265,7 +265,7 @@ static pthread_cond_t  hbCond  = PTHREAD_COND_INITIALIZER;
  * Called from ioRelinquishProcessorForMicroseconds. */
 extern int kqFd;
 extern int kqHeartbeatActive;
-/* forward ref — defined later with other heartbeat state */
+/* forward ref - defined later with other heartbeat state */
 #if !defined(DEFAULT_BEAT_MS)
 # define DEFAULT_BEAT_MS 2
 #endif
@@ -301,39 +301,42 @@ kqRemoveHeartbeatTimer(void)
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
  */
 #if macintoshSqueak
+#if !defined(min)
+# define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 sqInt
 ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     usqLong	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();
+	usqLong utcNow;
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
-	usqLong utcNow = get64(utcMicrosecondClock);
 
-    if (nextWakeupUsecs <= utcNow) {
-		/* if nextWakeupUsecs is non-zero the next wakeup time has already
-		 * passed and we should not wait.
-		 */
-        if (nextWakeupUsecs != 0)
-			return 0;
-		realTimeToWait = microSeconds;
-    }
-    else {
-        realTimeToWait = nextWakeupUsecs - utcNow;
-		if (realTimeToWait > microSeconds)
-			realTimeToWait = microSeconds;
-	}
+	updateMicrosecondClock();
+	utcNow = get64(utcMicrosecondClock);
 
-	/* Phase 4: Set idle flag and register kqueue heartbeat timer.
-	 * The flag stays set between consecutive idle calls — only
-	 * cleared on return so the heartbeat thread can resume for
-	 * any active Smalltalk code that runs between calls.
-	 * The kqueue timer stays registered while idle to handle
-	 * heartbeat duties from within kevent(). */
+	realTimeToWait = nextWakeupUsecs
+						? (nextWakeupUsecs > utcNow
+							? min(microSeconds, nextWakeupUsecs - utcNow)
+							: 0)
+						: microSeconds;
+
+	/* Phase 4: Set idle flag and register kqueue heartbeat timer. The flag
+	 * stays set between consecutive idle calls - only cleared on return so
+	 * the heartbeat thread can resume for any active Smalltalk code that
+	 * runs between calls. The kqueue timer stays registered while idle to
+	 * handle heartbeat duties from within kevent(). */
 #if defined(USE_KQUEUE) || defined(__APPLE__)
 	if (!kqHeartbeatActive)
 		kqRegisterHeartbeatTimer();
 #endif
-	mainThreadIsIdle = 1;
+	/* If a delay is pending then don't set mainThreadIsIdle so that waits
+	 * will exit primptly and delays will fire promptly. Use this to test,
+	 * each delay should take about 20 milliseconds.
+	 * (1 to: 3) collect:[:i|[(Delay forSeconds: 0.020) wait] timeToRun] #(22 20 20)
+	 */
+	if (!nextWakeupUsecs)
+		mainThreadIsIdle = 1;
 	sqLowLevelMFence();
 	aioSleepForUsecs(realTimeToWait);
 	sqLowLevelMFence();
@@ -435,7 +438,7 @@ beatStateMachine(void *careLess)
 
 		/* Phase 4: When main thread is idle and kqueue handles
 		 * heartbeat timing, this thread can sleep much longer.
-		 * Use 500ms nanosleep — still wakes to check state but
+		 * Use 500ms nanosleep - still wakes to check state but
 		 * dramatically fewer wakeups than 2ms. */
 #if defined(USE_KQUEUE) || defined(__APPLE__)
 		if (mainThreadIsIdle && kqHeartbeatActive) {
@@ -447,8 +450,8 @@ beatStateMachine(void *careLess)
 #endif
 		/* Adaptive: use longer interval when main thread is idle
 		 * (fallback for non-kqueue or when kqueue timer not active). */
-		if (mainThreadIsIdle)
-			naptime = idleBeatperiod;
+		if (mainThreadIsIdle && !getNextWakeupUsecs())
+			naptime = idleBeatPeriod;
 		else
 			naptime = beatperiod;
 
