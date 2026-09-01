@@ -6,7 +6,7 @@
 	AbstractSound Sound-ct.102 uuid: 5b994809-12cf-4819-b8ef-e9d5ebd9e0f1
  */
 static char __buildInfo[] = "SoundGenerationPlugin VMMaker.oscog-eem.3792 uuid: b00773bb-68a0-441a-b1b0-211aa4a67e97\n\
-AbstractSound * Sound-ct.102 uuid: 5b994809-12cf-4819-b8ef-e9d5ebd9e0f1 " __DATE__ ;
+AbstractSound Sound-ct.102 uuid: 5b994809-12cf-4819-b8ef-e9d5ebd9e0f1 " __DATE__ ;
 
 
 #include "config.h"
