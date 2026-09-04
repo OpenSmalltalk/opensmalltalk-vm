@@ -308,7 +308,6 @@ sqInt
 ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     usqLong	realTimeToWait;
-	extern usqLong getNextWakeupUsecs();
 	usqLong utcNow;
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
 

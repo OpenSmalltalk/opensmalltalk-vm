@@ -27,7 +27,6 @@ static sqInt display_ioBeep(void) { return 0; }
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  extern usqLong getNextWakeupUsecs(void);
   extern volatile int mainThreadIsIdle;
 
   usqLong nextWakeupUsecs = getNextWakeupUsecs();
