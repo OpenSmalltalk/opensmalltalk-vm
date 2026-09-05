@@ -142,7 +142,6 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	#pragma unused(microSeconds)
 
 	usqLong	   realTimeToWait,now,next;
-	extern usqLong getNextWakeupUsecs(void);				//This is a VM Callback
 	extern sqInt setInterruptCheckCounter(sqInt value); //This is a VM Callback
 
 	setInterruptCheckCounter(0);

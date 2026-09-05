@@ -5137,7 +5137,6 @@ display_ioBeep(void)
 static sqInt
 display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  extern usqLong getNextWakeupUsecs(void);
   extern volatile int mainThreadIsIdle;
 
   if (handleEvents())

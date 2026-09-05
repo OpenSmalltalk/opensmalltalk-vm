@@ -131,6 +131,7 @@ unsigned int ioMicroMSecs(void);
 void initStackPagesAndContinueIntowith(void (*continuation)(void *), void *);
 // Time API, Cog uses 64-bit microseconds fron 1901 as much as possible
 void forceInterruptCheckFromHeartbeat(void);
+usqLong getNextWakeupUsecs(void);
 void ioInitTime(void);
 usqLong ioUTCMicrosecondsNow(void);
 usqLong ioUTCMicroseconds(void);
