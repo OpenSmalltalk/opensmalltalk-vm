@@ -71,17 +71,15 @@ vmIOProcessEvents(void)
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
 
+#if 0 // Disabled: [NSApp run] on the GUI thread already takes the events; taking them here too breaks the window frame on macOS 27
 	/* If this is NOT invoked from within a PRIMITIVE, we assume a PUSH
 	 * rather than a PULL model for managing user-input events in the
 	 * image. In that case, we must SIGNAL the input semaphore. Otherwise,
 	 * just pump all the events and assume that the image will ask for them
 	 * in a while-loop directly after returning from here.
 	 */
-	if (interpreterProxy->methodPrimitiveIndex() == 0) {
-		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:YES];
-	} else {
-		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:NO];
-	}
+	[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal: interpreterProxy->methodPrimitiveIndex() <= 0];
+#endif
 
 	if (gQuitNowRightNow) {
 		ioExit();  //This might not return, might call exittoshell
