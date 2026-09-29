@@ -103,11 +103,21 @@ ioProcessEvents(void)
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
 #endif
 
+	__block int lastReportedFullScreenState = -1;
 	// We need to run the vmIOProcessEvents even if we are using SDL2,
 	// otherwise we end with some double free errors in an autorelease pool.
 	[gDelegateApp runBlockOnMainThread:^{
 		vmIOProcessEvents();
+#ifdef BUILD_FOR_OSX
+		extern int takeLastReportedFullScreenState(void);
+		lastReportedFullScreenState = takeLastReportedFullScreenState();
+#endif
 	}];
+	/* Outside the block, because only the VM thread may write imageHeaderFlags. */
+	if (lastReportedFullScreenState >= 0) {
+		extern void setFullScreenFlag(sqInt);
+		setFullScreenFlag(lastReportedFullScreenState);
+	}
 
 	if (ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
 		ioProcessEventsHandler();

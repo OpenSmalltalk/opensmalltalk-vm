@@ -48,6 +48,14 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 
 static void dispatchWindowChangedHook(char *, NSWindow *, int);
 
+/* AppKit reports full screen changes on the main thread, but we can't call
+ * setFullScreenFlag from there: the VM thread may be updating imageHeaderFlags
+ * at the same time and one of the two changes would be lost. So the reported
+ * state waits here (1 full screen, 0 windowed, -1 nothing new) until
+ * ioProcessEvents applies it on the VM thread. Only touched on the main thread.
+ */
+static int lastReportedFullScreenState = -1;
+
 @interface sqSqueakOSXScreenAndWindow()
     @property (nonatomic,strong) NSView <sqSqueakOSXView> * mainViewOnWindow;
 @end
@@ -81,6 +89,14 @@ static void dispatchWindowChangedHook(char *, NSWindow *, int);
 	return NO;
 }
 
+- (void)windowDidEnterFullScreen:(NSNotification *)notice {
+	lastReportedFullScreenState = 1;
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)notice {
+	lastReportedFullScreenState = 0;
+}
+
 #define windowResizeMethod(msg,type) - (void)msg (NSNotification *)notice { \
 	dispatchWindowChangedHook(#msg,(NSWindow *)(notice.object),type); \
 }
@@ -95,6 +111,19 @@ windowResizeMethod(windowDidDeminiaturize:,WindowEventMetricChange)
 windowResizeMethod(windowDidChangeScreen:,WindowEventChangeScreen)
 
 @end
+
+/* Called by ioProcessEvents from the block it runs on the main thread.
+ * Answers the last reported state and clears it, so each report is applied
+ * once and doesn't later override what primitive 233 sets. Answers -1 when
+ * there is nothing new.
+ */
+int
+takeLastReportedFullScreenState(void)
+{
+	int state = lastReportedFullScreenState;
+	lastReportedFullScreenState = -1;
+	return state;
+}
 
 void *
 getSTWindow(void)
