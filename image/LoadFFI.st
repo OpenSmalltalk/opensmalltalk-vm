@@ -1,6 +1,8 @@
 | manifest load |
-manifest := #(	('https://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel' 'FFI-MacOS' 'FFI-Unix' 'FFI-Win32' 'FFI-Tests'))
-				('https://www.squeaksource.com/Alien'			0	('Alien-Core' 'Alien-Tests-Core' 'Alien-Win32'))
+manifest := #(	('https://source.squeak.org/FFI'		1	('FFI-Pools' 'FFI-Kernel'
+															 'FFI-MacOS' 'FFI-Unix' 'FFI-Win32'
+															 'FFI-Tests' 'FFI-Libraries'))
+				('https://www.squeaksource.com/Alien'	0	('Alien-Core' 'Alien-Tests-Core' 'Alien-Win32'))
 				).
 
 load := (manifest collect:
