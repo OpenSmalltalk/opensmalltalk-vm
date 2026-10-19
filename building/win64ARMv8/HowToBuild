@@ -84,6 +84,8 @@ Option A - WinSDK
        - https://visualstudio.microsoft.com/de/vs/community/
        - Note that recent versions come with own Clang besides MSVCC
        - Note that "C++ ATL Support" is required for the CameraPlugin
+       - Needs component "MSVC v143 - VS 2022 C++ arm64 Buildtools" (or later) for WinSDK tools
+       - Needs component "C++ Clang Compiler" for Microsoft's Clang
   3. [optional] Install another LLVM/Clang that targets *-pc-windows-msvc
        - https://github.com/llvm/llvm-project/releases
   4. Open MSYS2 shell with default MSYS environment
@@ -118,7 +120,7 @@ MSYS2 and target *-w64-windows-gnu to produce the correct .o files.
 Option C - WinSDK via arm64 Native Tools Command Prompt
   1. Do steps 1 to 3 from option A.
   2. Open an arm64 Native Tools Command Prompt
-       - Needs "MSVC v143 - VS 2022 C++ arm64 Buildtool" for "Native Tools Command Prompt"
+       - Needs "MSVC v143 - VS 2022 C++ arm64 Buildtools" (or later) for "Native Tools Command Prompt"
   3. Change to the vm flavor of your choice, e.g. squeak.cog.spur, and
      execute "..\common\SETPATH_MSYS2.BAT "
   4. Then execute the other batch files to build the VM
