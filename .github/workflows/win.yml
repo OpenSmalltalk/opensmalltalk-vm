@@ -51,12 +51,17 @@ jobs:
           - win32x86
         flavor:
           - squeak.cog.spur
+          - squeak.livetyping.spur # LiveTyping VM (src/spur64.cog.livetyping)
           - squeak.stack.spur
           - squeak.sista.spur
         mode:
           - fast
           - debug
           - assert
+        exclude:
+          # LiveTyping is a 64-bit-only variant; there is no win32x86 build dir for it
+          - arch: win32x86
+            flavor: squeak.livetyping.spur
 
     runs-on: windows-2022 # use clang 19 for now
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}

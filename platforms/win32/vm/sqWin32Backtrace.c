@@ -85,7 +85,9 @@ backtrace(void **retpcs, int nrpcs)
 
 #elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64) || defined(_M_ARM64) || defined(_M_ARM64)
 #	if defined(__GNUC__) || defined(__clang__)
-#		error "ARMv8 support for MinGW-w64 not yet implemented. Use WinSDK toolchain."
+	// On AArch64 the frame pointer is x29; __builtin_frame_address(0) yields it
+	// (frame pointers are kept: -fno-omit-frame-pointer, cFramePointerInUse=1).
+	__fp = (void **)__builtin_frame_address(0);
 # else
 #	error "don't know how to derive rbp with this compiler"
 # endif

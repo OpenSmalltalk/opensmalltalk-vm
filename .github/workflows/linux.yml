@@ -54,6 +54,7 @@ jobs:
           - linux32x86
         flavor:
           - squeak.cog.spur
+          - squeak.livetyping.spur # LiveTyping VM (src/spur64.cog.livetyping)
         heartbeat:
           - threaded
           - itimer
@@ -61,6 +62,13 @@ jobs:
           - fast
           - debug
           - assert
+        exclude:
+          # LiveTyping is a 64-bit-only, threaded-heartbeat variant:
+          # no linux32x86 build dir, and only the threaded build* dirs exist for it.
+          - arch: linux32x86
+            flavor: squeak.livetyping.spur
+          - flavor: squeak.livetyping.spur
+            heartbeat: itimer
         include:
           - arch: linux64x64
             flavor: squeak.sista.spur
