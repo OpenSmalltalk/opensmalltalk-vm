@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Stack Spur 64-bit VM for Android/arm64, cross-compiled with the Android NDK.
+#
+# Unlike the other targets this is a CROSS build: it runs on a Linux or macOS
+# desktop and produces aarch64 Android binaries.  Set ANDROID_NDK to an NDK r26
+# or later.  See ../../HowToBuild for the sysroot the X11/GL/glib headers and
+# import libraries come from.
+#
+# This builds the interpreted Stack VM.  Android does permit a JIT -- see
+# HowToBuild and codeZoneControlARM64.h -- so a squeak.cog.spur target is
+# possible; this one simply is not it.
+set -e
+
+INSTALLDIR="${INSTALLDIR:-sqstkspur64ARMv8android}"
+NDK="${ANDROID_NDK:?set ANDROID_NDK to your NDK r26+ directory}"
+SYSROOT="${ANDROID_SYSROOT:?set ANDROID_SYSROOT to the Android sysroot (see HowToBuild)}"
+# API 28: Bionic gained nl_langinfo at 26 and glob()/globfree() at 28, and the
+# plugins call both.  Building lower needs Termux's libandroid-support shims.
+API="${ANDROID_API:-28}"
+
+case "$(uname -s)" in
+	Darwin)	HOSTTAG=darwin-x86_64 ;;
+	*)		HOSTTAG=linux-x86_64 ;;
+esac
+TC="$NDK/toolchains/llvm/prebuilt/$HOSTTAG/bin"
+[ -x "$TC/aarch64-linux-android$API-clang" ] || {
+	echo "no NDK clang at $TC" >&2; exit 1; }
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+
+rm -f config.h config.cache
+test -f Makefile && make reallyclean
+
+# NOEXECINFO: Bionic declares backtrace() only from API 33.
+# The force-included sqAndroidCompat.h supplies getdtablesize() and confstr(),
+# which Bionic does not provide at any API level.
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DNOEXECINFO"
+ARCH="-D__ARM_ARCH_ISA_A64 -DARM64 -D__arm64__ -D__aarch64__ -DDUAL_MAPPED_CODE_ZONE=1"
+COMPAT="-include $(cd ../../../../platforms/unix/vm && pwd)/sqAndroidCompat.h"
+
+# 16 KB pages: required by Google Play, and NDK r26 still defaults to 4 KB.
+LDF="-L$SYSROOT/usr/lib -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+
+# AC_PATH_X and PKG_CHECK_MODULES both fail silently when cross-compiling, which
+# quietly disables ClipboardExtendedPlugin and UnicodePlugin, so say where X and
+# pkg-config are explicitly.
+export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/pkgconfig"
+export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig"
+
+../../../../platforms/unix/config/configure \
+	--host=aarch64-linux-android --build="$(../../../../platforms/unix/config/config.guess)" \
+	--with-vmversion=5.0 --with-src=src/spur64.stack --disable-cogit \
+	--without-npsqueak --with-scriptname=spur64 \
+	--x-includes="$SYSROOT/usr/include" --x-libraries="$SYSROOT/usr/lib" \
+	CC="$TC/aarch64-linux-android$API-clang" \
+	AR="$TC/llvm-ar" RANLIB="$TC/llvm-ranlib" STRIP="$TC/llvm-strip" NM="$TC/llvm-nm" \
+	CFLAGS="$OPT $ARCH $COMPAT -I$SYSROOT/usr/include" \
+	LDFLAGS="$LDF" LIBS="-liconv" \
+	"$@"
+
+# getversion is a BUILD tool: the Makefile compiles it with $(CC), which here is
+# the cross compiler, so the build host cannot run it.  Build it for the host.
+cc -DLSB_FIRST=1 -o getversion -I. -I../../../../platforms/Cross/vm \
+	-I../../../../platforms/unix/vm ../../../../platforms/unix/config/getversion.c \
+	2>/dev/null && touch getversion || true
+
+# The `squeak` rule runs the binary it has just linked in order to stamp a
+# version.  That cannot work from a cross build, so make ends in "Error 126"
+# AFTER the VM and every plugin have already been written.  Hence `|| true`.
+make -j"$(getconf _NPROCESSORS_ONLN)" || true
+
+echo
+echo "VM:      $(pwd)/squeak"
+echo "plugins: $(find . -name '*.so' | wc -l | tr -d ' ') modules"

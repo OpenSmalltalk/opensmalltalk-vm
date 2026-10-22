@@ -75,7 +75,7 @@
 
 #undef	DEBUG_MODULES
 
-#ifdef MUSL
+#if defined(MUSL) || defined(__ANDROID__)
 void
 pushOutputFile(char *fileNameOrStdioIndex)
 {;}
