@@ -1444,6 +1444,9 @@ display_clipboardSize(void)
 static sqInt
 display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
+  if (!isConnectedToXServer)
+    return 0;
+
   return display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
 }
 
@@ -2626,6 +2629,9 @@ display_clipboardGetTypeNames(void)
   Status   success= 0;
   int      nTypeNames= 0;
 
+  if (!isConnectedToXServer)
+    return 0;
+
   if (dndAvailable())
     dndGetTargets(&targets, &nTypeNames);
   else 
@@ -2686,6 +2692,9 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
   int    	  isDnd= 0;
   Atom   	  inputSelection;
   SelectionChunk *chunk;
+
+  if (!isConnectedToXServer)
+    return 0;
   
   isDnd= dndAvailable();
   inputSelection= isDnd ? xaXdndSelection : xaClipboard;
@@ -5120,6 +5129,9 @@ display_ioBeep(void)
 }
 
 
+#if !defined(min)
+# define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 #define MAX_IDLE_USECS 500000  /* 500ms cap when no Delays pending */
 
 static sqInt
@@ -5138,15 +5150,18 @@ display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
   if (nextWakeupUsecs != 0 && nextWakeupUsecs <= utcNow)
     return 0;  /* Delay already overdue, don't sleep */
 
-  if (nextWakeupUsecs != 0) {
-    realTimeToWait = nextWakeupUsecs - utcNow;
-    if (realTimeToWait > MAX_IDLE_USECS)
-      realTimeToWait = MAX_IDLE_USECS;
-  } else {
-    realTimeToWait = MAX_IDLE_USECS;
-  }
+  realTimeToWait = nextWakeupUsecs
+					? min(microSeconds, nextWakeupUsecs - utcNow)
+					: microSeconds;
+  realTimeToWait = min(realTimeToWait, MAX_IDLE_USECS);
 
-  mainThreadIsIdle = 1;
+  /* If a delay is pending then don't set mainThreadIsIdle so that waits
+   * will exit promptly and delays will fire promptly. Use this to test,
+   * each delay should take about 20 milliseconds.
+   * (1 to: 3) collect:[:i|[(Delay forSeconds: 0.020) wait] timeToRun] #(22 20 20)
+   */
+  if (!nextWakeupUsecs)
+    mainThreadIsIdle = 1;
   __sync_synchronize();
   aioSleepForUsecs(realTimeToWait);
   __sync_synchronize();

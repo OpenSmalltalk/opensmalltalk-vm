@@ -194,7 +194,6 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 extern double fakeReturnDouble(double xmm0); /* see below */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
-	ownFlags = interpreterProxy->ownVM(0 /* unidentified thread */);
 	if (ownFlags < 0) {
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
 		return -1;

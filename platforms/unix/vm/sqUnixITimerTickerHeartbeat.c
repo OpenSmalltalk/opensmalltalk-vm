@@ -231,6 +231,10 @@ ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; 
 sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
+extern usqLong getNextWakeupUsecs(void);
+#if !defined(min)
+# define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 /*
  * On Mac OS X use the following.
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
@@ -239,24 +243,17 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
 sqInt
 ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-    usqLong	realTimeToWait;
-	extern usqLong getNextWakeupUsecs();
+    usqLong	realTimeToWait, utcNow;
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
-	usqLong utcNow = get64(utcMicrosecondClock);
 
-    if (nextWakeupUsecs <= utcNow) {
-		/* if nextWakeupUsecs is non-zero the next wakeup time has already
-		 * passed and we should not wait.
-		 */
-        if (nextWakeupUsecs != 0)
-			return 0;
-		realTimeToWait = microSeconds;
-    }
-    else {
-        realTimeToWait = nextWakeupUsecs - utcNow;
-		if (realTimeToWait > microSeconds)
-			realTimeToWait = microSeconds;
-	}
+	updateMicrosecondClock();
+	utcNow = get64(utcMicrosecondClock);
+
+	realTimeToWait = nextWakeupUsecs
+						? (nextWakeupUsecs > utcNow
+							? min(microSeconds, nextWakeupUsecs - utcNow)
+							: 0)
+						: microSeconds;
 
 	aioSleepForUsecs(realTimeToWait);
 

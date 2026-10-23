@@ -1829,7 +1829,7 @@ vm_printUsage(void)
 	option("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	option("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	option("  "VMOPTION("eden")" <size>[kmg]     use given eden size\n");
-	option("  "VMOPTION("leakcheck")"=flags      check for leaks in the heap\n");
+	option("  "VMOPTION("leakcheck")" flags      check for leaks in the heap\n");
 	{ extern const char *leakCheckFlagsMeanings[];
 		i = 0;
 		while (leakCheckFlagsMeanings[i]) {
