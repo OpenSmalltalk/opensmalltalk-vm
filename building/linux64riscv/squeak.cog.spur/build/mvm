@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 set -e
 # Cog Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspur64ARMv8linuxht
-# armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
-# tpr - add enablementisation of fast bitblt ben avison code
-MACHINE="-march=armv8-a -mtune=cortex-a72"
+INSTALLDIR=sqcogspurRiscV64linuxht
+MACHINE="--with-arch=rv64gc --with-abi=lp64d"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DUSEEVDEV"
 
 DUALMAP="-DDUAL_MAPPED_CODE_ZONE=1"
 # librt and libpthread functions now supplied by libc.
 # Many Linux systems supply empty library file.
 LIBRT="-lrt"
-# Linux on ARMv8 properly compiles fast-bitblt under gcc
-# but compiles-and-segfaults with clang. Use gcc for now.
+# Linux on arm64 properly compiles fast-bitblt under gcc
+# but compiles-and-segfaults with clang. Assume same here.
+# Use gcc for now.
 FASTBITBLT=" --enable-fast-bitblt "
 CC=gcc
 
@@ -32,10 +31,10 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--with-scriptname=spur64 \
 	$FASTBITBLT \
-	CC=$CC \
-	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" \
-	LIBS=$LIBRT
-##	--without-vm-display-fbdev --without-npsqueak \
+	CC=gcc \
+	VM_WORD_SIZE="64" \
+	VM_CFLAGS="$OPT"
+	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 $DUALMAP" 
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
