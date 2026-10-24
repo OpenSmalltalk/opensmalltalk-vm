@@ -194,6 +194,17 @@ oilRegisterSelectors
 		(kind = (objectMemory integerObjectOf: 8) and: [objectMemory isIntegerObject: sel]) ifTrue:
 			[self oilDisqualifyLimit: (objectMemory integerValueOf: sel)]]! !
 
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
+oilMethod: aMethodObj receiverClass: classObj
+	"Compile aMethodObj with the Oil optimizing JIT for receivers of class classObj
+	 and answer the resulting CogMethod, or nil if compilation fails."
+	<api>
+	<option: #ProfilingCogit>
+	<returnTypeC: #'CogMethod *'>
+	(self oilCompile: aMethodObj receiverClass: classObj) ~= OilOK ifTrue: [^nil].
+	(self oilGenerate: aMethodObj) ~= OilOK ifTrue: [^nil].
+	^coInterpreter cogMethodOf: aMethodObj! !
+
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
 oilCompile: aMethodObj receiverClass: classObj
 	"Run Pass 1 of Oil (inlining, linear IR, deopt states) on aMethodObj for receivers of class classObj.  This must
@@ -206,10 +217,11 @@ oilCompile: aMethodObj receiverClass: classObj
 		ifTrue: [OilOK]
 		ifFalse: [self oilFailureCode]! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
 oilGenerate: aMethodObj
-	"Run Pass 3 of Oil on the IR just produced by oilCompile:receiverClass: and install the resulting CogMethod as
-	 aMethodObj's machine code, which must have none.  Answer OilOK or a failure code.
+	"Run the optimization pipeline (#pipe) and Pass 3 of Oil on the IR just produced by oilCompile:receiverClass:
+	 and install the resulting CogMethod as aMethodObj's machine code, which must have none.
+	 Answer OilOK or a failure code.
 	 N.B. Like cog:selector: this never reclaims the method zone (it calls for a compaction if it is full)."
 	<api>
 	<option: #ProfilingCogit>
@@ -218,7 +230,8 @@ oilGenerate: aMethodObj
 		[^OilFailInternal].
 	methodObj := aMethodObj.
 	methodHeader := objectMemory methodHeaderOf: aMethodObj.
-	(result := self pass2Optimize) ~= OilOK ifTrue:
+	result := self pipe.
+	result ~= OilOK ifTrue:
 		[^result].
 	(result := self prepareNativeCode) ~= OilOK ifTrue:
 		[^result].
@@ -566,14 +579,14 @@ maybeMarkCountersIn: cogMethod
 numTrampolines
 	^super numTrampolines + 2 "ceOilTripTrampoline ceOilBailoutTrampoline"! !
 
-!ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
-	 Oil's optimizing compiler (its scanner, Pass 1 and Pass 3), which emits Cogit abstract instructions."
-	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilCompiler}! !
+	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, numeric compiler)."
+	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilBaseCompiler. OilLoopCompiler. OilNumericCompiler}! !
 
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 estimateOpcodes
 	"An upper bound of the number of abstract instructions oilGenerate: emits (they are allocated on the C stack)."
 	| i op n |
@@ -596,7 +609,7 @@ estimateOpcodes
 		 i := i + (self instructionLengthAt: i)].
 	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 19:20'!
 metadataSize
 	"The number of slots of the deoptimization metadata (see fillMetadata:cogMethod:)."
 	| n |
@@ -606,17 +619,17 @@ metadataSize
 			[n := n + OilMDSiteHeaderSize + (2 * (self siteStateSize: s))]].
 	^n! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index put: value
 	<inline: true>
 	objectMemory storePointer: index ofObject: md withValue: value! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index putInt: value
 	<inline: true>
 	objectMemory storePointer: index ofObject: md withValue: (objectMemory integerObjectOf: value)! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index putKind: kind value: value
 	"A descriptor: its kind and its value, an object for a constant, a SmallInteger (register or virtual object) otherwise."
 	self md: md at: index putInt: kind.
@@ -624,7 +637,7 @@ md: md at: index putKind: kind value: value
 		ifTrue: [self md: md at: index + 1 put: value]
 		ifFalse: [self md: md at: index + 1 putInt: value]! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 fillMetadata: md cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their

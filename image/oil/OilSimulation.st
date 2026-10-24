@@ -1,4 +1,4 @@
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printIROn: aStream
 	"Dump the flattened linear IR buffer: frames, instructions (index, opcode, operands, deopt site), deopt sites, statistics."
 	<doNotGenerate>
@@ -38,7 +38,7 @@ printIROn: aStream
 	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printInstructionAt: i on: aStream
 	<doNotGenerate>
 	| op a b c name site |
@@ -100,24 +100,24 @@ printInstructionAt: i on: aStream
 		[aStream nextPutAll: '   ; deopt#'; print: site; nextPutAll: ' #'; print: (siteFrame at: site); nextPutAll: ' pc '; print: (sitePC at: site)].
 	aStream cr! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 hexWord: w
 	<doNotGenerate>
 	| s |
 	s := (w printStringBase: 16) asUppercase.
 	^(String new: (8 - s size max: 0) withAll: $0), s! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 reg: r
 	<doNotGenerate>
 	^'r', r printString! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 condName: c
 	<doNotGenerate>
 	^#('<' '>' '<=' '>=' '=' '~=' '==' '~~') at: c! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printHandle: h
 	<doNotGenerate>
 	| o |
@@ -126,7 +126,7 @@ printHandle: h
 		ifTrue: [o printString]
 		ifFalse: [o printString contractTo: 60]! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 packedArgsAt: index count: n
 	<doNotGenerate>
 	^String streamContents:
@@ -137,12 +137,12 @@ packedArgsAt: index count: n
 			j > 0 ifTrue: [s space].
 			s nextPutAll: (self reg: ((w bitShift: (3 - (j \\ 4)) * -8) bitAnd: 255))]]! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 irString
 	<doNotGenerate>
 	^String streamContents: [:s| self printIROn: s]! !
 
-!OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
 opcodeHistogram
 	"Answer a Bag of the opcode names in the buffer (for tests)."
 	<doNotGenerate>

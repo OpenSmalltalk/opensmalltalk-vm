@@ -1,8 +1,23 @@
-"Oil Milestone 4: Pass 2 of OilCompiler, the streaming optimizer.  It reads the linear IR Pass 1 produced in Buffer 1
+"Pass 2 of Oil (OilLoopCompiler), the streaming loop optimizer.  It reads the linear IR Pass 1 produced in Buffer 1
  (oilIRBuffer1) and writes the optimized IR into Buffer 2 (oilIRBuffer2), which Pass 3 (OilCompilerBackend.st) then
  translates to machine code.  All its tables are static; it allocates nothing.  Author: cb."!
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+OilBaseCompiler subclass: #OilLoopCompiler
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Cogit-Oil'!
+
+!OilLoopCompiler commentStamp: 'cb 10/24/2026 19:35' prior: 0!
+I add Pass 2, the streaming loop optimizer, to OilBaseCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via pass2Optimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, removes dead pure instructions, and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
+
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
+pipe
+	<inline: true>
+	super pipe.
+	^self pass2Optimize! !
+
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Optimize
 	"Pass 2: optimize the IR of Buffer 1 into Buffer 2 and make Buffer 2 the current IR.
 	 1. Analysis: the definitions of each virtual register, the branch targets, the registers that always hold
@@ -53,22 +68,22 @@ pass2Optimize
 		 self p2EliminateDeadCode].
 	^self p2Emit! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2IsCall: op
 	<inline: true>
 	^op = OilCall0 or: [op = OilCall1 or: [op = OilCallN or: [op = OilCallSuper]]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2Flag: i has: mask
 	<inline: true>
 	^((oilIRFlag at: i) bitAnd: mask) ~= 0! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2Mark: i with: mask
 	<inline: true>
 	oilIRFlag at: i put: ((oilIRFlag at: i) bitOr: mask)! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2IsPureAt: i
 	"Does the instruction at i only compute its destination (no side effect, no bailout, no control flow)?"
 	| op |
@@ -76,7 +91,7 @@ p2IsPureAt: i
 	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilLoadField
 		or: [op = OilAddImmTagged and: [self p2Flag: i has: OilP2NoCheck]]]]]]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2RegionStartBefore: loopHead
 	"Answer the start of the straight-line code that falls into loopHead: the instructions from there to loopHead
 	 are entered only at their start (no branch target among them but the first) and contain no branch, so each
@@ -91,7 +106,7 @@ p2RegionStartBefore: loopHead
 		 i := i + (self instructionLengthAt: i)].
 	^start! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2OptimizeLoop: loopHead backJump: backJump
 	"Optimize the loop from loopHead to the Jump at backJump, if it is innermost, free of calls and only entered by
 	 falling into loopHead, and its header is pure code then OilCmpTagged and an OilBranchFalse that leaves the loop."
@@ -190,7 +205,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 				 sizeAlias := self fieldAAt: i]].
 		 i := i + (self instructionLengthAt: i)]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
 p2RemoveInvariantChecksInLoop: loopHead backJump: backJump
 	"In an innermost, call-free loop entered only by falling into loopHead: a class guard of a register that is never
 	 assigned (the receiver or an argument) is redundant if the straight-line code falling into the loop, free of
@@ -220,7 +235,7 @@ p2RemoveInvariantChecksInLoop: loopHead backJump: backJump
 			 oilNumSizesShared := oilNumSizesShared + 1].
 		 i := i + (self instructionLengthAt: i)]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
 p2IsGuarded: r class: classHandle from: start to: end
 	"Is there an OilGuardClass of register r for classHandle in the instructions from start to end?"
 	| i |
@@ -233,7 +248,7 @@ p2IsGuarded: r class: classHandle from: start to: end
 		 i := i + (self instructionLengthAt: i)].
 	^false! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
 p2SizeRegisterOf: x op: sizeOp from: start to: end
 	"Answer a register assigned only once, by a sizeOp (OilLoadSize or OilLoadByteSize) of x in the instructions from
 	 start to end, or -1."
@@ -247,14 +262,14 @@ p2SizeRegisterOf: x op: sizeOp from: start to: end
 		 i := i + (self instructionLengthAt: i)].
 	^-1! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2IsLiveSite: s
 	"Is deopt site s still attached to an instruction that can bail out?"
 	| i |
 	i := siteIR at: s.
 	^i >= 0 and: [(siteSnapBase at: s) >= 0 and: [(self p2Flag: i has: OilP2Delete + OilP2NoCheck) not]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2CountMetadataUses
 	"Count the registers the deoptimization metadata refers to: the states of the live deopt sites, the receivers
 	 of the inlined frames and of the virtual objects, and the values the virtual objects captured."
@@ -278,7 +293,7 @@ p2CountMetadataUses
 			[:j| (capturedKind at: (vobjCopiedBase at: v) + j) = OilDescReg ifTrue:
 				[self p2Use: (capturedValue at: (vobjCopiedBase at: v) + j)]]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2EliminateDeadCode
 	"Delete the pure instructions whose destination nothing reads (anywhere, or before it is assigned again in the
 	 straight-line code that follows), until there are none."
@@ -309,7 +324,7 @@ p2EliminateDeadCode
 				 changed := true].
 			 i := i + (self instructionLengthAt: i)]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2IsOverwrittenBeforeUse: r after: def
 	"Is register r, assigned by the instruction at def, assigned again before anything reads it?  Only the straight-line
 	 code after def is examined (up to a branch target, a branch, a return or a call, where r is assumed live).
@@ -335,7 +350,7 @@ p2IsOverwrittenBeforeUse: r after: def
 		 i := i + (self instructionLengthAt: i)].
 	^false! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2State: s refersTo: r
 	"Does the deopt state of site s refer to register r?"
 	| base n |
@@ -345,7 +360,7 @@ p2State: s refersTo: r
 		[:j| ((sitePoolKind at: base + j) = OilDescReg and: [(sitePoolValue at: base + j) = r]) ifTrue: [^true]].
 	^false! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2RotatedHeaderCompareOf: backJump
 	"The OilCmpTagged of the header of the rotated loop closed by the Jump at backJump (see p2OptimizeLoop:backJump:)."
 	| i |
@@ -354,7 +369,7 @@ p2RotatedHeaderCompareOf: backJump
 		[i := i + (self instructionLengthAt: i)].
 	^i! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2SizeOfRotatedBackJump: backJump
 	"The size of what replaces the back jump of a rotated loop: a copy of the header (its live instructions) and of
 	 its test, a branch back if the test holds, and a jump to the exit if the exit does not follow the loop."
@@ -370,7 +385,7 @@ p2SizeOfRotatedBackJump: backJump
 		[n := n + 1].
 	^n! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2EmitInstructionAt: i at: n
 	"Copy the instruction at i of Buffer 1 to n in Buffer 2, applying its Pass 2 rewrites and remapping its branch
 	 target.  Answer the index following it in Buffer 2."
@@ -389,7 +404,7 @@ p2EmitInstructionAt: i at: n
 		[:k| oilIRBuffer2 at: n + k put: (oilIRBuffer1 at: i + k)].
 	^n + len! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2EmitRotatedBackJump: backJump at: start
 	"The bottom of a rotated loop: the header and its test again, then branch back to the first instruction after the
 	 header's test if it holds, else go to the exit."
@@ -410,7 +425,7 @@ p2EmitRotatedBackJump: backJump at: start
 		 n := n + 1].
 	^n! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2Emit
 	"Stream Buffer 1 into Buffer 2: lay out (the index in Buffer 2 of every instruction of Buffer 1, in oilIRMap),
 	 then emit, then remap the deopt sites, whose instructions were deleted or no longer bail out (dead, -2) or moved.
@@ -451,7 +466,7 @@ p2Emit
 	irIndex := n.
 	^OilOK! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Statistics: index
 	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
 	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos."
@@ -464,3 +479,20 @@ pass2Statistics: index
 	index = 6 ifTrue: [^oilNumGuardsRemoved].
 	index = 7 ifTrue: [^oilNumUndos].
 	^0! !
+
+OilLoopCompiler subclass: #OilNumericCompiler
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Cogit-Oil'!
+
+!OilNumericCompiler commentStamp: 'cb 10/24/2026 19:35' prior: 0!
+I am the leaf class of the Oil optimizing compiler hierarchy (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilNumericCompiler).!
+
+!OilNumericCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
+pipe
+	<inline: true>
+	^super pipe! !
+
+Smalltalk globals removeKey: #OilCompiler ifAbsent: [].
+Smalltalk at: #OilCompiler put: OilNumericCompiler!

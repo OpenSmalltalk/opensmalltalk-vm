@@ -2,7 +2,7 @@
  into the Cogit's abstract instructions (CogAbstractInstruction), which the Cogit then assembles into a CogMethod.
  See ProfilingCogit>>oilCog:receiverClass: (oil/oil-m3-native-backend.st) for the driver.  Author: cb."!
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 prepareNativeCode
 	"Pass 3, step 1.  Analyse the IR: branch targets, loop nesting, the deopt site of each instruction.
 	 Weigh every virtual register by its uses, ten times more per loop nesting level, give the heaviest ones
@@ -87,23 +87,23 @@ prepareNativeCode
 		 ^failureCode].
 	^OilOK! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 isBranch: op
 	<inline: true>
 	^op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 computeIRSites
 	0 to: irIndex - 1 do: [:j| oilIRSite at: j put: -1].
 	0 to: numSites - 1 do:
 		[:s| (siteIR at: s) >= 0 ifTrue: [oilIRSite at: (siteIR at: s) put: s]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 siteStateSize: s
 	<inline: true>
 	^(siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s))! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 p2Use: r
 	"Count a use of register r (weighted by oilUseWeight), or, when probing for reads of oilUseProbe, note it."
 	<inline: true>
@@ -113,7 +113,7 @@ p2Use: r
 			[r < OilFlagsReg ifTrue:
 				[oilVRegUses at: r put: (oilVRegUses at: r) + oilUseWeight]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 p2CountUsesAt: i
 	"Count the registers the instruction at i reads."
 	<inline: false>
@@ -154,7 +154,7 @@ p2CountUsesAt: i
 		[self p2Use: ((oilIRBuffer at: i + 3) bitAnd: 255).
 		 0 to: c - 1 do: [:k| self p2Use: b + k]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 weighInstructionAt: i
 	"Count the registers the instruction at i defines or reads, weighted by loop depth."
 	| d |
@@ -164,14 +164,14 @@ weighInstructionAt: i
 		[self p2Use: (self fieldAAt: i)].
 	self p2CountUsesAt: i! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 packedArg: k at: i
 	"The register of argument k (0-based) of the OilCallN/OilCallSuper at i: four per word after the selector."
 	| word |
 	word := oilIRBuffer at: i + 3 + (k // 4).
 	^(word bitShift: (3 - (k \\ 4)) * -8) bitAnd: 255! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
 markMetadataRegisters
 	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a home."
 	| base n r |
@@ -201,7 +201,7 @@ markMetadataRegisters
 				[r := capturedValue at: (vobjCopiedBase at: v) + j.
 				 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 src: r scratch: scratch
 	"Answer a machine register holding virtual register r: its own, or scratch loaded from its home."
 	| reg |
@@ -213,14 +213,14 @@ src: r scratch: scratch
 	cogit MoveMw: (oilVRegHome at: r) r: FPReg R: scratch.
 	^scratch! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 dst: r scratch: scratch
 	"Answer the machine register to compute virtual register r into (its own, or scratch, then see setDst:from:)."
 	| reg |
 	reg := oilVRegReg at: r.
 	^reg ~= NoReg ifTrue: [reg] ifFalse: [scratch]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 setDst: r from: reg
 	"Virtual register r has been computed into the machine register reg: move it to r's location."
 	| own |
@@ -231,21 +231,21 @@ setDst: r from: reg
 			[(oilVRegHome at: r) = 0 ifTrue: [^self abortCompilation: OilFailInternal].
 			 cogit MoveR: reg Mw: (oilVRegHome at: r) r: FPReg]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 spillAll
 	"Store every register-allocated virtual register into its home (before a call or a bailout)."
 	0 to: OilMaxReg do:
 		[:r| (oilVRegReg at: r) ~= NoReg ifTrue:
 			[cogit MoveR: (oilVRegReg at: r) Mw: (oilVRegHome at: r) r: FPReg]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 reloadAll
 	"Reload every register-allocated virtual register from its home (after a call: the GC may have moved objects)."
 	0 to: OilMaxReg do:
 		[:r| (oilVRegReg at: r) ~= NoReg ifTrue:
 			[cogit MoveMw: (oilVRegHome at: r) r: FPReg R: (oilVRegReg at: r)]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 bail: jump site: s
 	"jump branches to the bailout stub of deopt site s (stubs are emitted after the method body)."
 	<var: #jump type: #'AbstractInstruction *'>
@@ -258,7 +258,7 @@ bail: jump site: s
 	oilNumStubJumps := oilNumStubJumps + 1.
 	oilSiteUsed at: s put: 1! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 branch: jump to: target
 	<var: #jump type: #'AbstractInstruction *'>
 	oilNumFixups >= OilBufferWords ifTrue:
@@ -267,19 +267,19 @@ branch: jump to: target
 	oilFixupTarget at: oilNumFixups put: target.
 	oilNumFixups := oilNumFixups + 1! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genTagCheck: reg site: s
 	"Bail out unless reg holds a SmallInteger."
 	cogit TstCq: objectMemory smallIntegerTag R: reg.
 	self bail: (cogit JumpZero: 0) site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genTagCheckOf: va in: ra site: s
 	"Bail out unless virtual register va (in machine register ra) holds a SmallInteger, unless it always does."
 	(self isTagged: va) ifFalse:
 		[self genTagCheck: ra site: s]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genTagCheckOf: va in: ra and: vb in: rb site: s
 	(self isTagged: va) ifTrue: [^self genTagCheckOf: vb in: rb site: s].
 	((self isTagged: vb) or: [ra = rb]) ifTrue: [^self genTagCheck: ra site: s].
@@ -287,7 +287,7 @@ genTagCheckOf: va in: ra and: vb in: rb site: s
 	cogit AndR: rb R: SendNumArgsReg.
 	self genTagCheck: SendNumArgsReg site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 generateNativeCode
 	"Pass 3, step 2.  Emit the method body: copy the receiver and arguments into their locations, initialize the
 	 other allocated registers (they are spilled at calls and bailouts, so they must always hold objects), then
@@ -326,7 +326,7 @@ generateNativeCode
 		(oilFixupJump at: k) jmpTarget: target].
 	^OilOK! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genInstructionAt: i
 	"Translate the IR instruction at i.  Answer the index of the next instruction to translate."
 	<inline: false>
@@ -388,14 +388,14 @@ genInstructionAt: i
 		otherwise: [self abortCompilation: OilFailBackend].
 	^next! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genConstTagged: a value: tagged
 	| dst |
 	dst := self dst: a scratch: TempReg.
 	cogit MoveCq: tagged R: dst.
 	self setDst: a from: dst! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genConst64: a value: oop
 	"An object literal: annotated so that the GC can update it (and the method is a young referrer if need be)."
 	| dst |
@@ -403,13 +403,13 @@ genConst64: a value: oop
 	cogit genMoveConstant: oop R: dst.
 	self setDst: a from: dst! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genMove: a from: b
 	| src |
 	src := self src: b scratch: TempReg.
 	self setDst: a from: src! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genAddTagged: a b: b c: c site: s
 	"(8x+1) - 1 + (8y+1) = 8(x+y)+1; the 64-bit add overflows exactly when x+y is not a SmallInteger.
 	 Computed in a scratch register: on bailout the operands (and a) are intact.  But an accumulation, a := a + c
@@ -434,7 +434,7 @@ genAddTagged: a b: b c: c site: s
 	self bail: (cogit JumpOverflow: 0) site: s.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
 undoBail: jump site: s reg: reg src: src
 	"jump (an overflow of reg := reg + src) branches to an undo stub, which restores reg (reg - src) and branches to the
 	 bailout stub of deopt site s.  The stubs are emitted after the method body."
@@ -448,7 +448,7 @@ undoBail: jump site: s reg: reg src: src
 	oilNumUndos := oilNumUndos + 1.
 	oilSiteUsed at: s put: 1! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genSubTagged: a b: b c: c site: s
 	"(8x+1) - (8y+1) = 8(x-y), overflowing exactly when x-y is not a SmallInteger; then restore the tag."
 	| rb rc |
@@ -461,7 +461,7 @@ genSubTagged: a b: b c: c site: s
 	cogit AddCq: 1 R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:00'!
 genModTagged: a b: b c: c site: s
 	"x \\ y, the floored modulo (the result has the sign of y): untag both, divide (the back end's genDivR:R:Quo:Rem:,
 	 which saves and restores the registers the division needs), and add y to a non-zero remainder whose sign differs
@@ -490,7 +490,7 @@ genModTagged: a b: b c: c site: s
 	cogit OrCq: objectMemory smallIntegerTag R: ClassReg.
 	self setDst: a from: ClassReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
 genAllocate: numBytes header: header site: s
 	"Bump allocate numBytes in eden into ClassReg (TempReg is clobbered) and store its header.  If the new freeStart
 	 would reach the scavenge threshold, bail out at the allocation's deopt site instead (an OilSiteAlloc, which does
@@ -503,7 +503,7 @@ genAllocate: numBytes header: header site: s
 	cogit MoveR: TempReg Aw: objectMemory freeStartAddress.
 	cogit oilGenStoreHeader: header into: ClassReg scratch: TempReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
 genNewArray: a first: b size: n site: s
 	"A brace array of the n values in registers b..b+n-1, or (b = OilFlagsReg) an Array of n nils (a temp vector in
 	 eager mode).  Young, so its stores need no store check."
@@ -525,7 +525,7 @@ genNewArray: a first: b size: n site: s
 				cogit MoveR: reg Mw: k * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]].
 	self setDst: a from: ClassReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
 genMakeClosureAt: i site: s
 	"An escaping FullBlockClosure (eager mode): [OilMakeClosure|Dest|FirstCopied|NumCopied] block (64 bits)
 	 [frame:16|ignoreOuterContext:8|selfReg:8].  Its outerContext is the root frame's context (the frame is married
@@ -570,20 +570,20 @@ genMakeClosureAt: i site: s
 		cogit MoveR: reg Mw: FullClosureFirstCopiedValueIndex + k * objectMemory wordSize + slot r: ClassReg].
 	self setDst: a from: ClassReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
 spillMachineReg: reg
 	"Store the virtual register allocated to reg, if any, into its home (reg is about to be used as a scratch)."
 	0 to: OilMaxReg do:
 		[:r| (oilVRegReg at: r) = reg ifTrue:
 			[cogit MoveR: reg Mw: (oilVRegHome at: r) r: FPReg]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
 reloadMachineReg: reg
 	0 to: OilMaxReg do:
 		[:r| (oilVRegReg at: r) = reg ifTrue:
 			[cogit MoveMw: (oilVRegHome at: r) r: FPReg R: reg]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
 genStreamNextAt: i
 	"a := b next (ReadStream>>next, primitive 65): collection (field 0) a ByteString (answer a Character) or an Array,
 	 position (1) < readLimit (2) and the next index within the collection: answer the element and increment the
@@ -652,7 +652,7 @@ genStreamNextAt: i
 	self genSendAt: i numArgs: 0 super: false.
 	jumpDone jmpTarget: cogit Label! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
 genStreamNextPutAt: i
 	"a := b nextPut: c (WriteStream>>nextPut:, primitive 66): collection (field 0) a mutable ByteString, c a Character of
 	 code 0..255, position (1) < writeLimit (3) and position + 1 within the collection: store the byte, increment the
@@ -722,7 +722,7 @@ genStreamNextPutAt: i
 	self genSendAt: i numArgs: 1 super: false.
 	jumpDone jmpTarget: cogit Label! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
 genCharValue: a of: b
 	"The SmallInteger value of the Character in b (its class was guarded): 8v+2 -> 8v+1."
 	| rb dst |
@@ -732,7 +732,7 @@ genCharValue: a of: b
 	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: dst.
 	self setDst: a from: dst! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
 genLoadByteSize: a object: b
 	"The number of bytes of a byte object, tagged."
 	| rb |
@@ -742,7 +742,7 @@ genLoadByteSize: a object: b
 	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
 genLoadByte: a array: b index: c tag: tag
 	"Byte i (1-based, bounds checked) of a byte object is at array + 8 + i - 1: untag the index, add 7, load the byte
 	 zero extended (MoveXbr writes the low byte only: clear the register first) and tag it (SmallInteger or Character)."
@@ -758,7 +758,7 @@ genLoadByte: a array: b index: c tag: tag
 	cogit OrCq: tag R: ClassReg.
 	self setDst: a from: ClassReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
 genStoreByte: a array: b index: c character: isChar site: s
 	"Store the SmallInteger 0..255 (or Character of code 0..255) in a into byte c of the byte object b (bounds checked).
 	 Bail out if b is read-only or the value does not fit (the interpreter then fails or grows the string)."
@@ -785,7 +785,7 @@ genStoreByte: a array: b index: c character: isChar site: s
 	self bail: (cogit JumpAbove: 0) site: s.
 	cogit MoveR: ClassReg Xbr: SendNumArgsReg R: rb! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
 genCompareBytes: a with: b with: c site: s
 	"Primitive 158 (compareWith:) inlined: b, a byte object (its class was guarded), and c, which must be a byte
 	 object too (else bail out): answer the difference of the first differing bytes, else of the sizes.  All the
@@ -860,7 +860,7 @@ genCompareBytes: a with: b with: c site: s
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLogicTagged: op a: a b: b c: c site: s
 	"bitAnd:/bitOr: on tagged values need no untagging (1 and 1 = 1 or 1 = 1); bitXor: clears the tag: set it again."
 	| rb rc |
@@ -875,7 +875,7 @@ genLogicTagged: op a: a b: b c: c site: s
 		 cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg].
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genShiftTagged: a b: b shift: k site: s
 	"k > 0: x // 2^k, i.e. an arithmetic right shift: sar (3+k), shl 3, or 1 (exact floor, no overflow).
 	 k < 0: x * 2^-k: (t - 1) << -k, checked by shifting back, then or 1."
@@ -898,7 +898,7 @@ genShiftTagged: a b: b shift: k site: s
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genOddTagged: a b: b site: s
 	"x \\ 2 = x bitAnd: 1, i.e. on the tagged value (t bitAnd: 8) bitOr: 1."
 	| rb |
@@ -909,7 +909,7 @@ genOddTagged: a b: b site: s
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genAddImmTagged: a b: b imm: imm site: s
 	"x + imm on tagged values is t + 8 imm: one add, overflow checked (e.g. the loop increment, addq $8)."
 	| rb |
@@ -920,7 +920,7 @@ genAddImmTagged: a b: b imm: imm site: s
 	self bail: (cogit JumpOverflow: 0) site: s.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
 genAddImmTaggedNoCheck: a b: b imm: imm
 	"x + imm where Pass 2 proved x a SmallInteger and the sum one too (a counted loop index): addq $8imm, in place
 	 if a and b share a machine register."
@@ -931,7 +931,7 @@ genAddImmTaggedNoCheck: a b: b imm: imm
 	cogit AddCq: imm << objectMemory numTagBits R: ra.
 	self setDst: a from: ra! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLoadField: a object: b slot: index
 	| rb dst |
 	rb := self src: b scratch: TempReg.
@@ -939,14 +939,14 @@ genLoadField: a object: b slot: index
 	cogit MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize r: rb R: dst.
 	self setDst: a from: dst! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genImmutabilityCheckOf: objReg scratch: scratch site: s
 	"Bail out if the object in objReg is read-only: the interpreter then retries the store and signals the failure."
 	cogit MoveMw: 0 r: objReg R: scratch.
 	cogit TstCq: objectMemory immutableBitMask R: scratch.
 	self bail: (cogit JumpNonZero: 0) site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genStoreCheckObject: objReg value: valueReg scratch: scratch
 	"The generational write barrier: if a young object is stored into an old, not yet remembered, object, remember it.
 	 The slow path calls ceStoreCheckTrampoline (receiver in ReceiverResultReg) with every register spilled."
@@ -969,7 +969,7 @@ genStoreCheckObject: objReg value: valueReg scratch: scratch
 	self reloadAll.
 	jmpImmediate jmpTarget: (jmpDestYoung jmpTarget: (jmpSourceOld jmpTarget: (jmpRemembered jmpTarget: cogit Label)))! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genStoreField: a object: b slot: index site: s
 	| ra rb |
 	ra := self src: a scratch: TempReg.
@@ -978,7 +978,7 @@ genStoreField: a object: b slot: index site: s
 	cogit MoveR: ra Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: rb.
 	self genStoreCheckObject: rb value: ra scratch: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLoadElement: a array: b index: c
 	"Element i (1-based) of an Array (no fixed fields) is at array + 8 + 8(i-1) = array + 8i = array + tagged(i) - 1.
 	 The bounds were checked (by an OilCheckBounds, or by Pass 2)."
@@ -991,7 +991,7 @@ genLoadElement: a array: b index: c
 	cogit MoveMw: -1 r: SendNumArgsReg R: dst.
 	self setDst: a from: dst! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genStoreElement: a array: b index: c site: s
 	| ra rb rc |
 	rb := self src: b scratch: ClassReg.
@@ -1003,7 +1003,7 @@ genStoreElement: a array: b index: c site: s
 	cogit MoveR: ra Xwr: SendNumArgsReg R: rb.
 	self genStoreCheckObject: rb value: ra scratch: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLoadSize: a object: b
 	"The number of slots of an Array (no fixed fields), tagged."
 	| rb |
@@ -1013,7 +1013,7 @@ genLoadSize: a object: b
 	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genCheckBounds: a limit: b site: s
 	"Bail out unless index (a) is a SmallInteger with 1 <= index <= limit (b, a tagged size)."
 	| ra rb |
@@ -1025,7 +1025,7 @@ genCheckBounds: a limit: b site: s
 	cogit CmpR: rb R: ra.
 	self bail: (cogit JumpGreater: 0) site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genGuard: a class: classHandle site: s
 	"Bail out unless the object in a is an instance of classHandle: a tag test for immediate classes, else a
 	 compare of the class index in the header.  A forwarder (class index isForwardedObjectClassIndexPun) fails
@@ -1048,7 +1048,7 @@ genGuard: a class: classHandle site: s
 	cogit CmpCq: tag R: SendNumArgsReg.
 	self bail: (cogit JumpNonZero: 0) site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genCompareAt: i site: s
 	"A comparison (OilCmpTagged/OilCmpImmTagged, condition in field A) always immediately followed by the branch on
 	 the flags that consumes it: fuse them into one compare and one conditional jump.  Tagged values compare like
@@ -1080,7 +1080,7 @@ genCompareAt: i site: s
 	self branch: jump to: target.
 	^br + 1! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genJumpOn: cond ifTrue: onTrue
 	"Answer a conditional jump taken when (ra cond rb) = onTrue, the flags being those of ra - rb."
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1091,7 +1091,7 @@ genJumpOn: cond ifTrue: onTrue
 	(cond = OilCondEq or: [cond = OilCondIdentical]) ifTrue: [^onTrue ifTrue: [cogit JumpZero: 0] ifFalse: [cogit JumpNonZero: 0]].
 	^onTrue ifTrue: [cogit JumpNonZero: 0] ifFalse: [cogit JumpZero: 0]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genBranchOnBoolean: a ifTrue: onTrue to: target site: s
 	"A branch on a boolean in a register (not on the flags): bail out (mustBeBoolean) on a non-boolean."
 	| ra jmpTarget |
@@ -1107,14 +1107,14 @@ genBranchOnBoolean: a ifTrue: onTrue to: target site: s
 	cogit CmpR: ClassReg R: ra.
 	self bail: (cogit JumpNonZero: 0) site: s! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genReturn: a
 	| reg |
 	reg := self src: a scratch: ReceiverResultReg.
 	reg ~= ReceiverResultReg ifTrue: [cogit MoveR: reg R: ReceiverResultReg].
 	cogit oilGenReturnFrom: (self numArgsOf: rootMethod)! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 selectorIndexOf: selector
 	"The inline cache of a send holds the index of its selector, in the literals of the method (the root), negative,
 	 in the special selectors, or OilExtraSelectorBase + its index in the Oil selector table (see
@@ -1125,7 +1125,7 @@ selectorIndexOf: selector
 		[:k| (coInterpreter literal: k ofMethod: rootMethod) = selector ifTrue: [^k]].
 	^cogit oilExtraSelectorIndexOf: selector add: true! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genCallAt: i site: s
 	"An uninlined send, through the Cogit's inline cache and PIC machinery."
 	<inline: false>
@@ -1138,7 +1138,7 @@ genCallAt: i site: s
 		[^self abortCompilation: OilFailBackend].
 	self genSendAt: i numArgs: n super: isSuper! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genSendAt: i numArgs: n super: isSuper
 	"Spill everything (the callee may run the GC, which scans and updates the homes), marshal the receiver and
 	 arguments like the baseline JIT (registers for up to numRegArgs arguments, else pushed), call the send
@@ -1167,7 +1167,7 @@ genSendAt: i numArgs: n super: isSuper
 	cogit MoveR: ReceiverResultReg Mw: (oilVRegHome at: a) r: FPReg.
 	self reloadAll! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 callArg: k at: i
 	"The register of argument k (0-based) of the call at i."
 	| op |
@@ -1175,7 +1175,7 @@ callArg: k at: i
 	(op = OilCall1 or: [op = OilStreamNextPut]) ifTrue: [^self fieldCAt: i].
 	^self packedArg: k at: i! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genBailoutStubs
 	"After the body: one stub per deopt site used, passing the site index, and the common bailout sequence:
 	 spill everything (the deoptimizer reads the virtual registers from their homes), call ceOilBailoutTrampoline,
@@ -1206,13 +1206,13 @@ genBailoutStubs
 		(cogit Jump: 0) jmpTarget: (oilSiteStub at: (oilUndoSite at: k)).
 		(oilUndoJump at: k) jmpTarget: stub]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 oilFailureCode
 	"(Named so as not to clash in C with the failureCode variable.)"
 	<inline: true>
 	^failureCode! !
 
-!OilCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 15:00'!
 oilDebugInfo: what at: index
 	"For primitiveOilLastCompilation: what = 0 failure code, 1 IR size in words, 2 IR word at index, 3 eager closures,
 	 4 IR index of the instruction the back end failed on (or -1), 5 number of deopt sites, 6 number of frames,
@@ -1232,7 +1232,7 @@ oilDebugInfo: what at: index
 	what = 13 ifTrue: [^self pass2Statistics: index].
 	^0! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 analyzeTaggedRegisters
 	"A virtual register all of whose definitions produce SmallIntegers (tagged arithmetic, tagged constants, sizes, or
 	 moves of such registers) always holds a SmallInteger (before its first definition it holds the SmallInteger 0 the
@@ -1256,7 +1256,7 @@ analyzeTaggedRegisters
 				 changed := true].
 			 i := i + (self instructionLengthAt: i)]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 definitionIsTaggedAt: i
 	"Does the instruction at i (which has a destination) always produce a SmallInteger?"
 	| op |
@@ -1269,7 +1269,7 @@ definitionIsTaggedAt: i
 	 or: [op = OilLoadByteSize or: [op = OilLoadByte or: [op = OilCompareBytes or: [op = OilCharValue]]]]]]]]) ifTrue: [^true].
 	^false! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 isTagged: r
 	<inline: true>
 	^(oilTagged at: r) ~= 0! !
