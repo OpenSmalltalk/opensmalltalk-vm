@@ -18,6 +18,7 @@ Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableName
 Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 #('sumScores: aCollection | sum | sum := 0. aCollection do: [:each | sum := sum + each score]. ^sum'
   'braceOf: a and: b ^{a. b. a + b. nil}'
+  'constLeft: x ^(200 + (x * 3)) + ((1000 < (x * 3)) ifTrue: [10] ifFalse: [20])'
   'makeCounter | count | count := 0. ^[count := count + 1]'
   'adderFor: x ^[:y | x + y + total]'
   'cleanBlock ^[:a :b | a + b]'
@@ -203,6 +204,8 @@ out nextPutAll: 'benchmarkHashProbe (Oil home method, the loop is in the timeToR
 check value: 'benchmarkHashProbe still runs' value: (t allSatisfy: [:e | e isInteger]).
 
 Smalltalk garbageCollect.
+check value: 'constLeft: compiles' value: (res value: #constLeft: value: [model constLeft: 10]) = 0.
+check value: 'constLeft: 200 + (x * 3) and 1000 < (x * 3)' value: ((model constLeft: 10) = 250 and: [(model constLeft: 400) = 1410]).
 check value: 'full GC after all tests' value: (model braceOf: 1 and: 2) = {1. 2. 3. nil}.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.

@@ -28,7 +28,7 @@ prepareNativeCode
 		oilVRegWeight at: r put: 0.
 		oilVRegReg at: r put: NoReg.
 		oilVRegHome at: r put: 0].
-	0 to: irIndex do:
+	0 to: irIndex - 1 do:
 		[:j|
 		oilIRTarget at: j put: 0.
 		oilLoopDepth at: j put: 0.
@@ -49,7 +49,7 @@ prepareNativeCode
 		[op := self opcodeAt: i.
 		 (op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]) ifTrue:
 			[t := self imm16At: i.
-			 t > irIndex ifTrue:
+			 t >= irIndex ifTrue:
 				[self abortCompilation: OilFailInternal.
 				 ^failureCode].
 			 oilIRTarget at: t put: 1.
@@ -321,14 +321,12 @@ generateNativeCode
 		 i := next].
 	failed ifTrue: [^failureCode].
 	oilFailIndex := -1.
-	(oilIRTarget at: irIndex) ~= 0 ifTrue: "a branch to the end of the IR (should not happen: the IR ends with a return)"
-		[^self abortCompilation: OilFailInternal].
 	self genBailoutStubs.
 	failed ifTrue: [^failureCode].
 	0 to: oilNumFixups - 1 do:
 		[:k| | target |
 		target := oilIRLabel at: (oilFixupTarget at: k).
-		target = nil ifTrue: [^self abortCompilation: OilFailInternal].
+		target = nil ifTrue: [self abortCompilation: OilFailInternal. ^failureCode].
 		(oilFixupJump at: k) jmpTarget: target].
 	^OilOK! !
 

@@ -1754,9 +1754,9 @@ genCompare: cond identity: isIdentity frame: f next: next
 	"Tagged SmallInteger comparison (or identity comparison).  Folds constants; fuses with a following
 	 conditional jump (OilCmpTagged/OilCmpImmTagged + OilBranchTrue/False on the flags, r255);
 	 otherwise materializes true/false.  Answer the pc to continue at."
-	| a b ka va kb vb c ra rb useImm imm brTag brTarget brNext dest result |
-	a := simStackTop - 1.
-	b := simStackTop.
+	| a b sa sb ka va kb vb c ra rb useImm imm brTag brTarget brNext dest result |
+	a := sa := simStackTop - 1.
+	b := sb := simStackTop.
 	ka := slotKind at: a. va := slotValue at: a.
 	kb := slotKind at: b. vb := slotValue at: b.
 	c := cond.
@@ -1775,14 +1775,15 @@ genCompare: cond identity: isIdentity frame: f next: next
 		["constant on the left: swap the operands and reverse the condition"
 		 | tk tv |
 		 tk := ka. tv := va. ka := kb. va := vb. kb := tk. vb := tv.
+		 sa := b. sb := a.
 		 c := self reversedCondition: c].
 	useImm := isIdentity not
 				and: [kb = OilDescConst
 				and: [(self smallIntegerValueOf: vb) between: -128 and: 127]].
-	ra := self regForKind: ka value: va scratch: a.
+	ra := self regForKind: ka value: va scratch: sa.
 	useImm
 		ifTrue: [imm := (self smallIntegerValueOf: vb) bitAnd: 255]
-		ifFalse: [rb := self regForKind: kb value: vb scratch: b].
+		ifFalse: [rb := self regForKind: kb value: vb scratch: sb].
 	simStackTop := a - 1.
 	(next >= 0 and: [self canFuseBranchAt: next frame: f]) ifTrue:
 		[brTag := opcodeTag. brTarget := oilTargetPC. brNext := oilNextPC.
@@ -2035,7 +2036,7 @@ genAddConstant: c to: operandSlot result: resultSlot
 			[self recordSite: OilSiteArith.
 			 idx := self emitOp: OilAddImmTagged a: dest b: base c: (total bitAnd: 255)]
 		ifFalse:
-			[scratch := dest + 1.
+			[scratch := operandSlot + 1.
 			 self emitConst: (self handleForSmallInteger: total) into: scratch.
 			 self recordSite: OilSiteArith.
 			 idx := self emitOp: OilAddTagged a: dest b: base c: scratch].
