@@ -87,6 +87,10 @@ printInstructionAt: i on: aStream
 		[OilCallN]			-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' ', (self printHandle: (self word64At: i + 1)), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilCallSuper]		-> [aStream nextPutAll: (self reg: a), ' := super ', (self printHandle: (self word64At: i + 1)), ' rcvr ', (self reg: b), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilAddImmTagged]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ')'].
+		[OilTrap]			-> [aStream nextPutAll: 'uncommon trap'].
+		[OilStreamNext]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' next   (inlined, else sent)'].
+		[OilStreamNextPut]	-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' nextPut: ', (self reg: c), '   (inlined, else sent)'].
+		[OilCharValue]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' asInteger'].
 		[OilLoadByteSize]	-> [aStream nextPutAll: (self reg: a), ' := byteSize(', (self reg: b), ')'].
 		[OilLoadByte]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), '[', (self reg: c), '] (byte)'].
 		[OilLoadChar]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), '[', (self reg: c), '] (Character)'].
@@ -266,6 +270,10 @@ step: i
 	op = OilAddImmTagged ifTrue:
 		[x := self r: b. (self smallInt: x) ifFalse: [^#deopt -> i].
 		 v := self tagged: x + (c signed8: cc). v ifNil: [^#deopt -> i]. self r: a put: v. ^next].
+	op = OilTrap ifTrue: [^#deopt -> i].
+	op = OilStreamNext ifTrue: [self r: a put: (self r: b) next. ^next].
+	op = OilStreamNextPut ifTrue: [self r: a put: ((self r: b) nextPut: (self r: cc)). ^next].
+	op = OilCharValue ifTrue: [self r: a put: (self r: b) asInteger. ^next].
 	op = OilLoadByteSize ifTrue: [self r: a put: (self r: b) basicSize. ^next].
 	op = OilLoadByte ifTrue: [self r: a put: ((self r: b) basicAt: (self r: cc)). ^next].
 	op = OilLoadChar ifTrue: [self r: a put: (Character value: ((self r: b) basicAt: (self r: cc))). ^next].

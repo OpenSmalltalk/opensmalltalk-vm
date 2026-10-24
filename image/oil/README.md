@@ -117,6 +117,14 @@ the heaviest virtual registers machine registers for the whole method).
   `OilCompareBytes`: 8 bytes at a time, then byte by byte, exact primitive result), so `String>>=` inlines without
   calls when its argument's class is known. Counted loops over `size` of byte objects get Pass 2's bounds check
   elimination too.
-- Not done: inline `,` (concatenation), SWAR delimiter scanning, dead nil-store elimination.
+- **Uncommon traps** (`OilTrap`): a send that cannot be encoded and whose baseline inline cache was never linked
+  (`Cogit>>oilSendSiteNeverSentAt:in:`) becomes a trap that deoptimizes if reached, rather than refusing the inlining.
+- **Streams and characters**: intrinsics for `ReadStream>>next` (prim 65, `OilStreamNext`) and `WriteStream>>nextPut:`
+  (prim 66, `OilStreamNextPut`). The fast path handles a ByteString or Array collection in bounds; anything else sends
+  the selector out of line. `Character>>asInteger`/`value` (prim 171) is `OilCharValue`. `atEnd` (prim 67) is inlined
+  from its Smalltalk body.
+- **Literal limit**: `CoInterpreter>>oilRaiseMaxLiteralCountForCompile` raises `maxLiteralCountForCompile` to 512 at
+  start-up, because a VMMaker option can't hold an integer.
+- Not done: inline `,` (concatenation), SWAR delimiter scanning, `isSeparator` bitmask, dead nil-store elimination.
 
 Tests: `oil/test_oil_m5.st` (native, ALL PASS), `oil-m4-test.st` (in image, byte probes added), test_oil_m3 ALL PASS.

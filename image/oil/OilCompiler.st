@@ -889,7 +889,8 @@ opcodeHasDest: op
 	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [(op between: OilAddTagged and: OilOddTagged)
 		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
 		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged
-		or: [(op between: OilLoadByteSize and: OilLoadChar) or: [op = OilCompareBytes]]]]]]]]]]]]]]! !
+		or: [(op between: OilLoadByteSize and: OilLoadChar) or: [op = OilCompareBytes or: [op = OilCharValue
+		or: [op = OilStreamNext or: [op = OilStreamNextPut]]]]]]]]]]]]]]]]]! !
 
 !OilCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -1455,6 +1456,7 @@ genSend: selector numArgs: n super: isSuper frame: f
 	method := self lookup: selector inClass: cls.
 	method = 0 ifTrue: [^self genCall: selector numArgs: n receiver: s super: isSuper].
 	prim := self oilPrimitiveIndexOf: method.
+	prim = 67 ifTrue: [prim := 0]. "PositionableStream>>atEnd: its code (^position >= readLimit) does what the primitive does"
 	(self oilIsQuickPrimitiveIndex: prim) ifTrue:
 		[guard ifTrue: [self emitGuardOn: (self regForSlot: s) class: cls].
 		 ^self genQuickMethod: prim receiver: s numArgs: n].
@@ -1530,6 +1532,28 @@ isInLoopFrame: f pc: pc
 		 g := frameParent at: g].
 	^false! !
 
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
+isNeverSentAt: pc
+	"Has the method of the current frame machine code whose send at pc was never executed (an unlinked inline cache)?"
+	^self
+		cCode: [cogit oilSendSiteNeverSentAt: pc in: (frameMethod at: currentFrame)]
+		inSmalltalk: [typeFeedback notNil and: [(typeFeedback hasSiteAt: pc in: (frameMethod at: currentFrame)) not]]! !
+
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
+genUncommonTrapForSendAt: s numArgs: n
+	"A send in an inlined frame that the back end cannot encode, but that never executed: instead of a call, bail out
+	 there (an uncommon trap: the interpreter then performs the send; this counts as a deoptimization).  The send's
+	 result is an unknown own register (the code after the trap is unreachable)."
+	| site dest idx |
+	s to: s + n do: [:i| self materializeSlot: i].
+	failed ifTrue: [^self].
+	site := self recordSite: OilSiteCall.
+	self emitOp: OilTrap a: 0 b: 0 c: site.
+	simStackTop := s - 1.
+	dest := self pushOwnSlot.
+	idx := self emitOp: OilConstTagged a: dest b: 0 c: 1. "SmallInteger 0, never used"
+	self noteDef: dest at: idx! !
+
 !OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isNoInline: aMethod
 	0 to: oilNumNoInline - 1 do:
@@ -1573,7 +1597,9 @@ genCall: selector numArgs: n receiver: s super: isSuper
 	 then the 64-bit selector; then, for OilCallN/OilCallSuper, the packed argument registers."
 	| idx |
 	(self isEncodableCall: selector super: isSuper) ifFalse:
-		[^self refuseInliningOfFrameOf: currentFrame].
+		[(currentFrame > 0 and: [self isNeverSentAt: currentPC]) ifTrue:
+			[^self genUncommonTrapForSendAt: s numArgs: n].
+		 ^self refuseInliningOfFrameOf: currentFrame].
 	s to: s + n do: [:i| self materializeSlot: i].
 	failed ifTrue: [^self].
 	self recordSite: OilSiteCall.
@@ -1632,6 +1658,10 @@ canInlineIntrinsic: prim class: cls numArgs: n
 		[^spec = 2 or: [spec >= 16 and: [spec <= 23]]].
 	((prim = 63 and: [n = 1]) or: [(prim = 64 and: [n = 2]) or: [prim = 158 and: [n = 1]]]) ifTrue:
 		[^spec >= 16 and: [spec <= 23]].
+	(prim = 171 and: [n = 0]) ifTrue: "Character>>asInteger / value (immediate format)"
+		[^spec = 7].
+	((prim = 65 and: [n = 0]) or: [prim = 66 and: [n = 1]]) ifTrue: "ReadStream>>next, WriteStream>>nextPut: (fixed pointer fields)"
+		[^spec = 1].
 	^false! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
@@ -1642,6 +1672,24 @@ genIntrinsic: prim receiver: s numArgs: n bytes: isBytes
 	prim = 110 ifTrue:
 		[^self genCompare: OilCondIdentical identity: true frame: currentFrame next: -1].
 	arr := self regForSlot: s.
+	(prim = 65 or: [prim = 66]) ifTrue: "the back end falls back to the send itself, so no deopt site"
+		[prim = 66 ifTrue: [index := self regForSlot: s + 1].
+		 s to: s + n do: [:i| self materializeSlot: i].
+		 simStackTop := s - 1.
+		 dest := self pushOwnSlot.
+		 idx := prim = 65
+				ifTrue: [self emitOp: OilStreamNext a: dest b: s c: 0]
+				ifFalse: [self emitOp: OilStreamNextPut a: dest b: s c: s + 1].
+		 self emit64: (self specialSelectorHandle: (prim = 65 ifTrue: [19] ifFalse: [20])).
+		 self noteDef: dest at: idx.
+		 ^self].
+	prim = 171 ifTrue:
+		[simStackTop := s - 1.
+		 dest := self pushOwnSlot.
+		 idx := self emitOp: OilCharValue a: dest b: arr c: 0.
+		 self noteDef: dest at: idx.
+		 knownClass at: dest put: smallIntegerClassHandle.
+		 ^self].
 	prim = 158 ifTrue: "rcvr compareWith: arg, both byte objects: the first byte difference, or the size difference"
 		[index := self regForSlot: s + 1.
 		 simStackTop := s - 1.
@@ -2274,7 +2322,7 @@ word64At: index
 instructionLengthAt: index
 	| op |
 	op := self opcodeAt: index.
-	(op = OilConst64 or: [op = OilGuardClass or: [op = OilCall0 or: [op = OilCall1]]]) ifTrue: [^3].
+	(op = OilConst64 or: [op = OilGuardClass or: [op = OilCall0 or: [op = OilCall1 or: [op = OilStreamNext or: [op = OilStreamNextPut]]]]]) ifTrue: [^3].
 	op = OilMakeClosure ifTrue: [^4].
 	(op = OilCallN or: [op = OilCallSuper]) ifTrue: [^3 + ((self fieldCAt: index) + 3 // 4)].
 	^1! !

@@ -115,7 +115,7 @@ weighInstructionAt: i
 	(op = OilConstTagged or: [op = OilConst64 or: [op = OilReturn or: [op = OilGuardClass]]]) ifTrue:
 		[^self weigh: a at: i].
 	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilStoreField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCheckBounds]]]]]]]]]) ifTrue:
+	 or: [op = OilLoadField or: [op = OilStoreField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCheckBounds or: [op = OilCharValue]]]]]]]]]]) ifTrue:
 		[self weigh: a at: i.
 		 ^self weigh: b at: i].
 	((op between: OilAddTagged and: OilXorTagged)
@@ -138,6 +138,10 @@ weighInstructionAt: i
 		[self weigh: a at: i.
 		 self weigh: b at: i.
 		 1 to: c do: [:k| self weigh: (self packedArg: k - 1 at: i) at: i]].
+	(op = OilStreamNext or: [op = OilStreamNextPut]) ifTrue:
+		[self weigh: a at: i.
+		 self weigh: b at: i.
+		 op = OilStreamNextPut ifTrue: [self weigh: c at: i]].
 	op = OilNewArray ifTrue:
 		[self weigh: a at: i.
 		 b ~= OilFlagsReg ifTrue:
@@ -360,6 +364,10 @@ genInstructionAt: i
 		[OilStoreByte]		-> [self genStoreByte: a array: b index: c character: false site: s].
 		[OilStoreChar]		-> [self genStoreByte: a array: b index: c character: true site: s].
 		[OilCompareBytes]	-> [self genCompareBytes: a with: b with: c site: s].
+		[OilTrap]			-> [self bail: (cogit Jump: 0) site: s].
+		[OilStreamNext]		-> [self genStreamNextAt: i].
+		[OilStreamNextPut]	-> [self genStreamNextPutAt: i].
+		[OilCharValue]		-> [self genCharValue: a of: b].
 		[OilMakeClosure]	-> [self genMakeClosureAt: i site: s].
 		[OilLoadField]		-> [self genLoadField: a object: b slot: c].
 		[OilStoreField]		-> [self genStoreField: a object: b slot: c site: s].
@@ -567,6 +575,183 @@ genMakeClosureAt: i site: s
 		reg := self src: b + k scratch: TempReg.
 		cogit MoveR: reg Mw: FullClosureFirstCopiedValueIndex + k * objectMemory wordSize + slot r: ClassReg].
 	self setDst: a from: ClassReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+spillMachineReg: reg
+	"Store the virtual register allocated to reg, if any, into its home (reg is about to be used as a scratch)."
+	0 to: OilMaxReg do:
+		[:r| (oilVRegReg at: r) = reg ifTrue:
+			[cogit MoveR: reg Mw: (oilVRegHome at: r) r: FPReg]]! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+reloadMachineReg: reg
+	0 to: OilMaxReg do:
+		[:r| (oilVRegReg at: r) = reg ifTrue:
+			[cogit MoveMw: (oilVRegHome at: r) r: FPReg R: reg]]! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+genSlowSend: selector numArgs: n receiver: b arg: c result: a
+	"A send (0 or 1 argument) from the slow path of an intrinsic: like genCallAt:site:, with the operands in homes."
+	| selIndex |
+	selIndex := self selectorIndexOf: selector.
+	selIndex = OilNoLink ifTrue:
+		[^self abortCompilation: OilFailBackend].
+	self spillAll.
+	n >= 1 ifTrue: [cogit MoveMw: (oilVRegHome at: c) r: FPReg R: Arg0Reg].
+	cogit MoveMw: (oilVRegHome at: b) r: FPReg R: ReceiverResultReg.
+	cogit oilGenSend: selIndex numArgs: n super: false.
+	cogit MoveR: ReceiverResultReg Mw: (oilVRegHome at: a) r: FPReg.
+	self reloadAll! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+genStreamNextAt: i
+	"a := b next (ReadStream>>next, primitive 65): collection (field 0) a ByteString (answer a Character) or an Array,
+	 position (1) < readLimit (2) and the next index within the collection: answer the element and increment the
+	 position.  Otherwise send next.  Scratch: Extra0Reg (the stream) and Extra1Reg (the collection), whose virtual
+	 registers are spilled around, TempReg, ClassReg (the position) and SendNumArgsReg."
+	| a b rs jumps nj jumpPtr jumpDone slow |
+	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
+	<var: #jumpPtr type: #'AbstractInstruction *'>
+	<var: #jumpDone type: #'AbstractInstruction *'>
+	<var: #slow type: #'AbstractInstruction *'>
+	a := self fieldAAt: i.
+	b := self fieldBAt: i.
+	nj := 0.
+	rs := self src: b scratch: TempReg.
+	self spillMachineReg: Extra0Reg.
+	self spillMachineReg: Extra1Reg.
+	rs ~= Extra0Reg ifTrue: [cogit MoveR: rs R: Extra0Reg].
+	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
+	cogit MoveMw: 2 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
+	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
+	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	cogit CmpR: SendNumArgsReg R: ClassReg.
+	jumps at: nj put: (cogit JumpGreaterOrEqual: 0). nj := nj + 1.
+	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
+	cogit TstCq: objectMemory tagMask R: Extra1Reg.
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	cogit MoveM32: 0 r: Extra1Reg R: TempReg.
+	cogit AndCq: objectMemory classIndexMask R: TempReg.
+	cogit CmpCq: ClassByteStringCompactIndex R: TempReg.
+	jumpPtr := cogit JumpNonZero: 0.
+	"ByteString: index = position + 1 <= numBytes; byte at collection + 8 + index - 1, as a Character"
+	cogit oilGenGetNumBytesOf: Extra1Reg into: SendNumArgsReg.
+	cogit MoveR: ClassReg R: TempReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: TempReg.
+	cogit AddCq: 1 R: TempReg.
+	cogit CmpR: SendNumArgsReg R: TempReg.
+	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	cogit AddCq: objectMemory baseHeaderSize - 1 R: TempReg.
+	cogit MoveCq: 0 R: SendNumArgsReg.
+	cogit MoveXbr: TempReg R: Extra1Reg R: SendNumArgsReg.
+	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
+	cogit OrCq: objectMemory characterTag R: SendNumArgsReg.
+	jumpDone := cogit Jump: 0.
+	"Array: index = position + 1 <= numSlots; slot index"
+	jumpPtr jmpTarget: (cogit CmpCq: ClassArrayCompactIndex R: TempReg).
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	cogit oilGenGetNumSlotsOf: Extra1Reg into: SendNumArgsReg.
+	cogit MoveR: ClassReg R: TempReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: TempReg.
+	cogit AddCq: 1 R: TempReg.
+	cogit CmpR: SendNumArgsReg R: TempReg.
+	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	cogit MoveXwr: TempReg R: Extra1Reg R: SendNumArgsReg.
+	jumpDone jmpTarget: (cogit AddCq: 1 << objectMemory numTagBits R: ClassReg).
+	cogit MoveR: ClassReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
+	self reloadMachineReg: Extra0Reg.
+	self reloadMachineReg: Extra1Reg.
+	self setDst: a from: SendNumArgsReg.
+	jumpDone := cogit Jump: 0.
+	slow := cogit Label.
+	0 to: nj - 1 do: [:k| (jumps at: k) jmpTarget: slow].
+	self reloadMachineReg: Extra0Reg.
+	self reloadMachineReg: Extra1Reg.
+	self genSlowSend: (self word64At: i + 1) numArgs: 0 receiver: b arg: 0 result: a.
+	jumpDone jmpTarget: cogit Label! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+genStreamNextPutAt: i
+	"a := b nextPut: c (WriteStream>>nextPut:, primitive 66): collection (field 0) a mutable ByteString, c a Character of
+	 code 0..255, position (1) < writeLimit (3) and position + 1 within the collection: store the byte, increment the
+	 position and answer c.  Otherwise send nextPut:.  Scratch registers as in genStreamNextAt:."
+	| a b c rs rv jumps nj jumpDone slow |
+	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
+	<var: #jumpDone type: #'AbstractInstruction *'>
+	<var: #slow type: #'AbstractInstruction *'>
+	a := self fieldAAt: i.
+	b := self fieldBAt: i.
+	c := self fieldCAt: i.
+	nj := 0.
+	self spillMachineReg: Extra0Reg.
+	self spillMachineReg: Extra1Reg.
+	rv := self src: c scratch: ClassReg.
+	rv ~= ClassReg ifTrue: [cogit MoveR: rv R: ClassReg]. "the value, then the position"
+	"a Character (tag 2r010) of code 0..255"
+	cogit TstCq: objectMemory tagMask - objectMemory characterTag R: ClassReg.
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	cogit TstCq: objectMemory characterTag R: ClassReg.
+	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	cogit CmpCq: (255 << objectMemory numTagBits) + objectMemory characterTag R: ClassReg.
+	jumps at: nj put: (cogit JumpAbove: 0). nj := nj + 1.
+	rs := self src: b scratch: TempReg.
+	rs ~= Extra0Reg ifTrue: [cogit MoveR: rs R: Extra0Reg].
+	cogit MoveR: ClassReg R: Extra1Reg. "keep the value in Extra1Reg until the collection is needed"
+	cogit LogicalShiftRightCq: objectMemory numTagBits R: Extra1Reg. "the byte"
+	cogit MoveR: Extra1Reg R: TempReg. "TempReg: the byte"
+	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
+	cogit MoveMw: 3 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
+	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
+	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	cogit CmpR: SendNumArgsReg R: ClassReg.
+	jumps at: nj put: (cogit JumpGreaterOrEqual: 0). nj := nj + 1.
+	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
+	cogit TstCq: objectMemory tagMask R: Extra1Reg.
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	cogit MoveM32: 0 r: Extra1Reg R: SendNumArgsReg.
+	cogit TstCq: objectMemory immutableBitMask R: SendNumArgsReg.
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	cogit AndCq: objectMemory classIndexMask R: SendNumArgsReg.
+	cogit CmpCq: ClassByteStringCompactIndex R: SendNumArgsReg.
+	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	"index = position + 1 <= numBytes (genGetNumBytesOf: uses TempReg: save the byte in the stack)"
+	cogit PushR: TempReg.
+	cogit oilGenGetNumBytesOf: Extra1Reg into: SendNumArgsReg.
+	cogit PopR: TempReg.
+	cogit AddCq: 1 << objectMemory numTagBits R: ClassReg. "the new position, tagged"
+	cogit PushR: ClassReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: ClassReg.
+	cogit CmpR: SendNumArgsReg R: ClassReg.
+	cogit PopR: SendNumArgsReg. "the new position, tagged"
+	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	cogit AddCq: objectMemory baseHeaderSize - 1 R: ClassReg.
+	cogit MoveR: TempReg Xbr: ClassReg R: Extra1Reg.
+	cogit MoveR: SendNumArgsReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
+	self reloadMachineReg: Extra0Reg.
+	self reloadMachineReg: Extra1Reg.
+	rv := self src: c scratch: ClassReg.
+	self setDst: a from: rv.
+	jumpDone := cogit Jump: 0.
+	slow := cogit Label.
+	0 to: nj - 1 do: [:k| (jumps at: k) jmpTarget: slow].
+	self reloadMachineReg: Extra0Reg.
+	self reloadMachineReg: Extra1Reg.
+	self genSlowSend: (self word64At: i + 1) numArgs: 1 receiver: b arg: c result: a.
+	jumpDone jmpTarget: cogit Label! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+genCharValue: a of: b
+	"The SmallInteger value of the Character in b (its class was guarded): 8v+2 -> 8v+1."
+	| rb dst |
+	rb := self src: b scratch: TempReg.
+	dst := self dst: a scratch: SendNumArgsReg.
+	dst ~= rb ifTrue: [cogit MoveR: rb R: dst].
+	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: dst.
+	self setDst: a from: dst! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
 genLoadByteSize: a object: b
@@ -1137,7 +1322,7 @@ definitionIsTaggedAt: i
 	op = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: i)) ~= 0].
 	((op between: OilAddTagged and: OilOddTagged)
 	 or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC or: [op = OilLoadSize or: [op = OilModTagged
-	 or: [op = OilLoadByteSize or: [op = OilLoadByte or: [op = OilCompareBytes]]]]]]]) ifTrue: [^true].
+	 or: [op = OilLoadByteSize or: [op = OilLoadByte or: [op = OilCompareBytes or: [op = OilCharValue]]]]]]]]) ifTrue: [^true].
 	^false! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!

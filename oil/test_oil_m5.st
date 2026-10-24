@@ -23,6 +23,9 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
   'escapeAndCall: aCollection | blk | blk := [:e | e score * 2]. ^aCollection collect: blk'
   'allocLoop: count | last | 1 to: count do: [:i | last := {i. i + 1. i + 2}]. ^last'
   'total: n total := n'
+  'skipSpaces: aStream [aStream atEnd] whileFalse: [| c | c := aStream peek. c isSeparator ifFalse: [^c]. aStream next]. ^nil'
+  'words: aString | in out words c | in := ReadStream on: aString. words := 0. [in atEnd] whileFalse: [out := WriteStream on: String new. [in atEnd not and: [(c := in peek) isSeparator not]] whileTrue: [out nextPut: in next]. out contents isEmpty ifFalse: [words := words + 1]. [in atEnd not and: [in peek isSeparator]] whileTrue: [in next]]. ^words'
+  'copyChars: aString | in out | in := ReadStream on: aString. out := WriteStream on: (String new: aString size). [in atEnd] whileFalse: [out nextPut: in next]. ^out contents'
   'countA: aString | n | n := 0. 1 to: aString size do: [:i | (aString at: i) == $a ifTrue: [n := n + 1]]. ^n'
   'countEqual: aString in: anArray | n | n := 0. anArray do: [:e | e = aString ifTrue: [n := n + 1]]. ^n'
   'fillBytes: aByteArray 1 to: aByteArray size do: [:i | aByteArray at: i put: i BS 256]. ^aByteArray'
@@ -147,6 +150,29 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  oil := Time millisecondsToRun: [1000 timesRepeat: [model countEqual: '3abcdefghijklmnopqrstuvwxyz' in: strs]].
  base := Time millisecondsToRun: [1000 timesRepeat: [strs count: [:e | e = '3abcdefghijklmnopqrstuvwxyz']]].
  out nextPutAll: 'countEqual:in: 1000 x 1000 strings: Oil '; print: oil; nextPutAll: ' ms (count: with = in Cogit '; print: base; nextPutAll: ' ms)'; cr] value.
+
+"--- 5b. Streams: ReadStream next/peek/atEnd, WriteStream nextPut:, Character isSeparator ---"
+[| text base oil r1 |
+ text := String new: 20000 withAll: $x. 1 to: 20000 by: 9 do: [:k | text at: k put: $ ].
+ check value: 'skipSpaces: compiles' value: (res value: #skipSpaces: value: [model skipSpaces: (ReadStream on: '   a')]) = 0.
+ check value: 'skipSpaces: result' value: (model skipSpaces: (ReadStream on: '  	 abc')) = $a.
+ check value: 'skipSpaces: at end' value: (model skipSpaces: (ReadStream on: '   ')) isNil.
+ check value: 'skipSpaces: on an Array stream' value: (model skipSpaces: (ReadStream on: {Character space. $z})) = $z.
+ 3 timesRepeat: [model copyChars: text. model words: text].
+ base := {Time millisecondsToRun: [100 timesRepeat: [model copyChars: text]]. Time millisecondsToRun: [100 timesRepeat: [model words: text]]}.
+ out nextPutAll: 'baseline copyChars:/words: 100 x 20000 chars: '; print: base; nextPutAll: ' ms'; cr.
+ check value: 'copyChars: compiles' value: (res value: #copyChars: value: [model copyChars: 'hello']) = 0.
+ check value: 'copyChars: result' value: (model copyChars: text) = text.
+ check value: 'copyChars: empty' value: (model copyChars: '') = ''.
+ check value: 'words: compiles' value: (res value: #words: value: [model words: 'a b c']) = 0.
+ r1 := text substrings size.
+ check value: 'words: result' value: (model words: text) = r1.
+ check value: 'words: small' value: (model words: ' hello  world foo ') = 3.
+ out nextPutAll: 'words: deopts '; print: (((Smalltalk at: #OilTestModel) >> #words:) oilInfo ifNotNil: [:x | x at: 1]); cr.
+ oil := Time millisecondsToRun: [100 timesRepeat: [model copyChars: text]].
+ out nextPutAll: 'copyChars: 100 x 20000 chars: Oil '; print: oil; nextPutAll: ' ms'; cr.
+ oil := Time millisecondsToRun: [100 timesRepeat: [model words: text]].
+ out nextPutAll: 'words: 100 x 20000 chars: Oil '; print: oil; nextPutAll: ' ms'; cr] value.
 
 "--- 6. benchmarkHashProbe compiles ---"
 before := model benchmarkHashProbe.

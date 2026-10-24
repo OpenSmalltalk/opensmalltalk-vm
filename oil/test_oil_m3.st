@@ -24,7 +24,7 @@ CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.
 irDump := [:ir | | s i names |
-	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes).
+	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut).
 	s := WriteStream on: String new.
 	i := 1.
 	[i <= ir size] whileTrue:
@@ -32,7 +32,7 @@ irDump := [:ir | | s i names |
 		 w := ir at: i. op := w >> 24.
 		 s tab; nextPutAll: ((i - 1) printPaddedWith: $0 to: 4); tab; nextPutAll: ((op between: 1 and: names size) ifTrue: [names at: op] ifFalse: ['?']); tab;
 			print: (w >> 16 bitAnd: 255); space; print: (w >> 8 bitAnd: 255); space; print: (w bitAnd: 255); cr.
-		 len := (#(2 20 22 23) includes: op) ifTrue: [3] ifFalse: [op = 28 ifTrue: [4] ifFalse: [(op = 24 or: [op = 30]) ifTrue: [3 + ((w bitAnd: 255) + 3 // 4)] ifFalse: [1]]].
+		 len := (#(2 20 22 23 41 42) includes: op) ifTrue: [3] ifFalse: [op = 28 ifTrue: [4] ifFalse: [(op = 24 or: [op = 30]) ifTrue: [3 + ((w bitAnd: 255) + 3 // 4)] ifFalse: [1]]].
 		 i := i + len].
 	s contents].
 

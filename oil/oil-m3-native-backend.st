@@ -50,6 +50,8 @@ generateRunTimeTrampolines
 	 SendNumArgsReg to ceOilBailout:, which answers the address to resume at in TempReg, unless it deoptimizes,
 	 in which case it does not return)."
 	super generateRunTimeTrampolines.
+	"Let large (e.g. parser) methods get machine code, hence inline caches for Oil (the default limit is 60 literals)."
+	coInterpreter oilRaiseMaxLiteralCountForCompile.
 	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
 								called: 'ceOilTripTrampoline'
 								arg: SendNumArgsReg
@@ -355,6 +357,17 @@ oilSendSiteUnlinkedAt: bcpc in: aMethodObj
 	^entryPoint <= methodZoneBase! !
 
 
+!ProfilingCogit methodsFor: 'oil support' stamp: 'cb 10/24/2026 18:30'!
+oilSendSiteNeverSentAt: bcpc in: aMethodObj
+	"Does aMethodObj have baseline machine code in which the send at bcpc was never executed (unlinked inline cache)?
+	 (Unknown, e.g. without machine code: false.)"
+	<api>
+	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse:
+		[^false].
+	(self isOilMethod: (coInterpreter cogMethodOf: aMethodObj)) ifTrue:
+		[^false].
+	^self oilSendSiteUnlinkedAt: bcpc in: aMethodObj! !
+
 !ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 15:00'!
 maybeFreeCountersOf: aCogMethod
 	"Free the pinned object holding the method's trip counters, or its Oil deoptimization metadata, if any."
@@ -411,7 +424,10 @@ estimateOpcodes
 							ifFalse:
 								[(op = OilNewArray or: [op = OilMakeClosure])
 									ifTrue: [40 + (2 * (self fieldCAt: i)) + (2 * OilMaxReg // 16)]
-									ifFalse: [20]]]).
+									ifFalse:
+										[(op = OilStreamNext or: [op = OilStreamNextPut or: [op = OilCompareBytes]])
+											ifTrue: [140]
+											ifFalse: [20]]]]).
 		 i := i + (self instructionLengthAt: i)].
 	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
@@ -637,6 +653,13 @@ ceOilBailout: siteIndex
 	cogit ceInvokeInterpret.
 	"NOTREACHED"
 	^0! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 18:30'!
+oilRaiseMaxLiteralCountForCompile
+	"Methods with more literals than maxLiteralCountForCompile are not JIT-compiled.  Raise the limit to 512 literals."
+	<api>
+	<essential: #ProfilingCogit>
+	maxLiteralCountForCompile := maxLiteralCountForCompile max: 512! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 17:30'!
 oilDisqualifyCogMethod: cogMethod

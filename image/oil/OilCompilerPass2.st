@@ -281,7 +281,7 @@ p2CountUsesAt: i
 	(self p2Flag: i has: OilP2ToMove) ifTrue:
 		[^self p2Use: (oilIRAux at: i)].
 	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0]]]]]]]]]) ifTrue:
+	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0 or: [op = OilCharValue]]]]]]]]]]) ifTrue:
 		[^self p2Use: b].
 	((op between: OilAddTagged and: OilXorTagged)
 	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1
@@ -291,6 +291,11 @@ p2CountUsesAt: i
 	(op = OilStoreByte or: [op = OilStoreChar]) ifTrue:
 		[self p2Use: a.
 		 self p2Use: b.
+		 ^self p2Use: c].
+	op = OilStreamNext ifTrue:
+		[^self p2Use: b].
+	op = OilStreamNextPut ifTrue:
+		[self p2Use: b.
 		 ^self p2Use: c].
 	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
 		[self p2Use: a.
