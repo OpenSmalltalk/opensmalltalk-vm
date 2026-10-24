@@ -1,5 +1,5 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog'
+	instanceVariableNames: 'numCounters counters counterIndex ceOilTripTrampoline oilTripLog ceOilBailoutTrampoline oilSelectors oilExtraSelectors'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'Cogit-Oil'!
@@ -8,33 +8,17 @@ A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSm
 
 Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful block entries (compileBlockFrameBuild: and compileFullBlockMethodFrameBuild:).  Straight-line code and conditional branches carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (65535), held in a pinned object on the Spur heap allocated with objectRepresentation allocateCounters: and referenced from the counters field of the method's header (a SistaCogMethod).  The site code is
 	counter := counter - 1. counter = 0 ifTrue: [ceOilTripTrampoline]
-so a site trips exactly once, when its counter reaches zero; afterwards the counter wraps to 16rFFFFFFFF and effectively never trips again.  The trampoline calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context) and samples a live element at the loop's current position.  Nothing on the trip path allocates, collects garbage or changes the stack.
+so a site trips exactly once, when its counter reaches zero; afterwards the counter wraps to 16rFFFFFFFF and effectively never trips again.  The trampoline calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context).  Nothing on the trip path allocates, collects garbage or changes the stack.
 
 Instance Variables
+	ceOilBailoutTrampoline:	<Integer>
 	ceOilTripTrampoline:	<Integer>
 	counterIndex:			<Integer>
 	counters:				<Integer>
-	initialCounterValue:	<Integer>
 	numCounters:			<Integer>
+	oilExtraSelectors:		<Integer oop>
+	oilSelectors:			<Integer oop>
 	oilTripLog:				<Integer oop>
-
-ceOilTripTrampoline
-	- the address of the trampoline called when a trip counter reaches zero
-
-counterIndex
-	- the index of the next counter to be assigned while compiling a method
-
-counters
-	- the address of the first counter of the method being compiled, or 0 if it has none
-
-initialCounterValue
-	- the value each counter starts from
-
-numCounters
-	- the number of counters allocated for the method being compiled (an upper bound on the number of sites)
-
-oilTripLog
-	- an Array supplied by the image through primitiveOilTripLog into which CoInterpreter>>ceOilTrip: records trips, or 0 if none has ever been supplied.  Registered as an extra GC root once set.
 !
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
@@ -96,14 +80,6 @@ genOilTripCounter: kind
 	^0! !
 
 
-!ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 10:00'!
-maybeFreeCountersOf: aCogMethod
-	"Free the pinned object holding the method's trip counters, if any."
-	<var: #aCogMethod type: #'CogMethod *'>
-	<inline: true>
-	self freeOilCounters: aCogMethod counters! !
-
-
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
 compileBlockFrameBuild: blockStart
 	"Count frameful (vanilla) block activations once the frame is complete."
@@ -129,13 +105,6 @@ compileFullBlockMethodFrameBuild: numCopied
 	super compileFullBlockMethodFrameBuild: numCopied.
 	needsFrame ifTrue:
 		[self genOilTripCounter: OilTripBlockEntry]! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-freeOilCounters: theCounters
-	<var: #theCounters type: #usqInt>
-	<inline: true>
-	theCounters ~= 0 ifTrue:
-		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
 maybeAllocAndInitCounters
@@ -200,16 +169,6 @@ scanMethod
 	^numBlocks! !
 
 
-!ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/24/2026 10:00'!
-maybeMarkCountersIn: cogMethod
-	"The trip counters are held in pinned objects on the heap which must be marked to
-	 avoid them being collected."
-	<var: #cogMethod type: #'CogMethod *'>
-	<inline: true>
-	cogMethod counters ~= 0 ifTrue:
-		[objectMemory markAndTrace: cogMethod counters - objectMemory baseHeaderSize]! !
-
-
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
 fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
 	pic counters: 0.
@@ -221,7 +180,7 @@ fillInCounters: nCounters atStartAddress: startAddress
 		to: startAddress + (nCounters - 1 * OilCounterBytes)
 		by: OilCounterBytes
 		do: [:address|
-			objectMemory long32At: address put: initialCounterValue]! !
+			objectMemory long32At: address put: OilInitialCounterValue]! !
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
 fillInMethodHeader: method size: size selector: selector
@@ -237,67 +196,6 @@ fillInOPICHeader: pic numArgs: numArgs selector: selector
 
 
 !ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 10:00'!
-linkedMonomorphicSendAt: bcpc in: cogMethod
-	"Answer the return address (mcpc) of the ordinary send at the 0-relative bytecode pc
-	 bcpc in cogMethod if that send is linked to a method (i.e. its inline cache is
-	 monomorphic), or 0 if it is unlinked, linked to a PIC, or not found.  Only sends in
-	 the method's own code are found, not those in embedded vanilla blocks."
-	<var: #cogMethod type: #'CogMethod *'>
-	<returnTypeC: #usqInt>
-	| mcpc entryPoint targetMethod |
-	<var: #targetMethod type: #'CogMethod *'>
-	cogMethod stackCheckOffset = 0 ifTrue: "frameless methods contain no sends"
-		[^0].
-	mcpc := self
-				mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
-				bcpc: (coInterpreter startPCOfMethodHeader: cogMethod methodHeader)
-				performUntil: #oilFindSendAt:Annotation:Mcpc:Bcpc:Method:
-				arg: (self cCoerceSimple: bcpc to: #'void *').
-	mcpc = 0 ifTrue:
-		[^0].
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc.
-	entryPoint <= methodZoneBase ifTrue: "unlinked"
-		[^0].
-	self targetMethodAndSendTableFor: entryPoint
-		annotation: IsSendCall
-		into: [:target :sendTable| targetMethod := target].
-	^targetMethod isCMMethodEtAl
-		ifTrue: [mcpc]
-		ifFalse: [0]! !
-
-!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 10:00'!
-monomorphicClassFor: bcpc in: cogMethod
-	"Answer the receiver class cached in the monomorphic inline cache of the ordinary send at
-	 the 0-relative bytecode pc bcpc in cogMethod, or nil if that send is not monomorphic."
-	<api>
-	<var: #cogMethod type: #'CogMethod *'>
-	| mcpc |
-	mcpc := self linkedMonomorphicSendAt: bcpc in: cogMethod.
-	mcpc = 0 ifTrue:
-		[^objectMemory nilObject].
-	^objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: mcpc)! !
-
-!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 10:00'!
-monomorphicTargetFor: bcpc in: cogMethod
-	"Answer the CogMethod the ordinary send at the 0-relative bytecode pc bcpc in cogMethod
-	 is linked to if its inline cache is monomorphic, or nil if the send is unlinked or
-	 linked to a closed or open PIC.  This is the query the Oil optimizer uses to decide
-	 which sends to inline."
-	<api>
-	<var: #cogMethod type: #'CogMethod *'>
-	<returnTypeC: #'CogMethod *'>
-	| mcpc entryPoint targetMethod |
-	<var: #targetMethod type: #'CogMethod *'>
-	mcpc := self linkedMonomorphicSendAt: bcpc in: cogMethod.
-	mcpc = 0 ifTrue:
-		[^nil].
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc.
-	self targetMethodAndSendTableFor: entryPoint
-		annotation: IsSendCall
-		into: [:target :sendTable| targetMethod := target].
-	^targetMethod! !
-
-!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 10:00'!
 oilFindSendAt: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: targetBcpc
 	"mapFor:bcpc:performUntil:arg: function answering the mcpc of the ordinary send at targetBcpc."
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -309,31 +207,6 @@ oilFindSendAt: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc B
 	 and: [isBackwardBranchAndAnnotation >> 1 = IsSendCall]) ifFalse:
 		[^0].
 	^mcpc asUnsignedInteger! !
-
-
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:00'!
-generateRunTimeTrampolines
-	"Add the trampoline called when a trip counter reaches zero.  It passes the kind of
-	 site (OilTripBackJump or OilTripBlockEntry) in SendNumArgsReg to ceOilTrip:, and
-	 preserves ReceiverResultReg, which may hold self."
-	super generateRunTimeTrampolines.
-	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
-								called: 'ceOilTripTrampoline'
-								arg: SendNumArgsReg
-								regsToSave: (self registerMaskFor: ReceiverResultReg)! !
-
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:00'!
-initialize
-	super initialize.
-	oilTripLog := 0.
-	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
-										ifTrue: [CogSistaMethodSurrogate32]
-										ifFalse: [CogSistaMethodSurrogate64]! !
-
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:00'!
-initializeCodeZoneFrom: startAddress upTo: endAddress
-	initialCounterValue := OilInitialCounterValue.
-	super initializeCodeZoneFrom: startAddress upTo: endAddress! !
 
 "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- "!
 
@@ -352,11 +225,6 @@ initializeWithOptions: optionsDictionary
 	OilTripBlockEntry := 1! !
 
 
-!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/24/2026 10:00'!
-numTrampolines
-	^super numTrampolines + 1 "ceOilTripTrampoline"! !
-
-
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:00'!
 additionalHeadersDo: aBinaryBlock
 	"Evaluate aBinaryBlock with the names and contents of
@@ -365,11 +233,6 @@ additionalHeadersDo: aBinaryBlock
 	aBinaryBlock
 		value: 'cogmethod.h'
 		value: SistaCogMethod cogMethodHeader! !
-
-!ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:00'!
-ancilliaryClasses
-	"Answer any extra classes to be included in the translation."
-	^super ancilliaryClasses copyWith: SistaCogMethod! !
 
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:00'!
 declareCVarsIn: aCodeGen
@@ -388,11 +251,10 @@ ceOilTrip: kind
 	   in OrderedCollection>>do:), the home method of that closure, since compiling the
 	   iterator alone is useless without knowing the block it evaluates;
 	 - otherwise the method itself.
-	 Also sample a live element at the loop's current position.  This must not allocate,
-	 collect garbage, or change the stack, since it returns directly to machine code."
+	 This must not allocate, collect garbage, or change the stack, since it returns directly to machine code."
 	<api>
 	<essential: #ProfilingCogit>
-	| theFP numArgs trippedMethod closure homeContext homeMethod sample |
+	| theFP numArgs trippedMethod closure homeContext homeMethod |
 	<var: #theFP type: #'char *'>
 	theFP := framePointer.
 	self assert: (self isMachineCodeFrame: theFP).
@@ -406,12 +268,11 @@ ceOilTrip: kind
 	closure ~= objectMemory nilObject ifTrue:
 		[homeContext := self oilHomeContextOfClosure: closure.
 		 homeContext ~= objectMemory nilObject
-			ifTrue: [homeMethod := self oilFollowed: (objectMemory fetchPointer: MethodIndex ofObject: homeContext)]
+			ifTrue: [homeMethod := objectMemory followMaybeForwarded: (objectMemory fetchPointer: MethodIndex ofObject: homeContext)]
 			ifFalse:
 				[(objectMemory classIndexOf: closure) = ClassFullBlockClosureCompactIndex ifTrue: "a clean block; use the static outer code chain"
-					[homeMethod := self homeMethodOf: (self oilFollowed: (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: closure))]]].
-	sample := self oilSampleAt: theFP numArgs: numArgs isBlock: (self frameIsBlockActivation: theFP).
-	self oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext sample: sample.
+					[homeMethod := self homeMethodOf: (objectMemory followMaybeForwarded: (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: closure))]]].
+	self oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext.
 	^0! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
@@ -428,42 +289,6 @@ oilClosureArgumentOf: theFP numArgs: numArgs
 	^objectMemory nilObject! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilElementAt: index in: rcvr
-	"Answer the non-nil element at the 1-relative index of rcvr if it is an Array, or else of
-	 the first Array inst var of rcvr (e.g. the array of an OrderedCollection) in which index
-	 is in bounds.  Answer nil if there is no such element."
-	<essential: #ProfilingCogit>
-	| ivar element |
-	(index < 1
-	 or: [objectMemory isImmediate: rcvr]) ifTrue:
-		[^objectMemory nilObject].
-	(objectMemory isArrayNonImm: rcvr) ifTrue:
-		[^index <= (objectMemory numSlotsOf: rcvr)
-			ifTrue: [self oilFollowed: (objectMemory fetchPointer: index - 1 ofObject: rcvr)]
-			ifFalse: [objectMemory nilObject]].
-	(objectMemory formatOf: rcvr) = objectMemory nonIndexablePointerFormat ifFalse:
-		[^objectMemory nilObject].
-	0 to: ((objectMemory numSlotsOf: rcvr) min: 32) - 1 do:
-		[:i|
-		ivar := self oilFollowed: (objectMemory fetchPointer: i ofObject: rcvr).
-		((objectMemory isNonImmediate: ivar)
-		 and: [(objectMemory isArrayNonImm: ivar)
-		 and: [index <= (objectMemory numSlotsOf: ivar)]]) ifTrue:
-			[element := self oilFollowed: (objectMemory fetchPointer: index - 1 ofObject: ivar).
-			 element ~= objectMemory nilObject ifTrue:
-				[^element]]].
-	^objectMemory nilObject! !
-
-!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilFollowed: oop
-	<inline: true>
-	<essential: #ProfilingCogit>
-	^((objectMemory isNonImmediate: oop)
-	   and: [objectMemory isForwarded: oop])
-		ifTrue: [objectMemory followForwarded: oop]
-		ifFalse: [oop]! !
-
-!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilHomeContextOfClosure: closure
 	"Answer the home context of closure, found by walking the chain of outer contexts
 	 (through the closureOrNil of each block context) up to a method context, or nil if
@@ -471,15 +296,15 @@ oilHomeContextOfClosure: closure
 	 are fine since their method, closureOrNil and receiver fields are valid."
 	<essential: #ProfilingCogit>
 	| context outerClosure depth |
-	context := self oilFollowed: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closure).
+	context := objectMemory followMaybeForwarded: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closure).
 	depth := 0.
 	[(objectMemory isNonImmediate: context)
 	 and: [objectMemory isContextNonImm: context]] whileTrue:
-		[outerClosure := self oilFollowed: (objectMemory fetchPointer: ClosureIndex ofObject: context).
+		[outerClosure := objectMemory followMaybeForwarded: (objectMemory fetchPointer: ClosureIndex ofObject: context).
 		 ((self oilIsClosure: outerClosure) not
 		  or: [(depth := depth + 1) > 64]) ifTrue:
 			[^context].
-		 context := self oilFollowed: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: outerClosure)].
+		 context := objectMemory followMaybeForwarded: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: outerClosure)].
 	^objectMemory nilObject! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
@@ -491,12 +316,12 @@ oilIsClosure: oop
 			or: [(objectMemory classIndexOf: oop) = ClassBlockClosureCompactIndex]]! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext sample: sample
+oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext
 	"If the image has supplied a trip log (see primitiveOilTripLog) record the trip in it.
 	 The log's first slot holds the number of trips recorded so far; the remaining slots
 	 are a ring of records, each of oilTripRecordSize slots:
 		kind (0 back jump, 1 block entry), tripped method (CompiledMethod or CompiledBlock),
-		home method to optimize, home context or nil, sampled element, class of sample."
+		home method to optimize, home context or nil (slots 4 and 5 unused)."
 	<essential: #ProfilingCogit>
 	| log numRecords count base |
 	log := cogit getOilTripLog.
@@ -521,35 +346,8 @@ oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext 
 		storePointer: base + 1 ofObject: log withValue: trippedMethod;
 		storePointer: base + 2 ofObject: log withValue: homeMethod;
 		storePointer: base + 3 ofObject: log withValue: homeContext;
-		storePointer: base + 4 ofObject: log withValue: sample;
-		storePointer: base + 5 ofObject: log withValue: (objectMemory fetchClassOf: sample);
 		storePointer: 0 ofObject: log withValue: (objectMemory integerObjectOf: count + 1).
 	^nil! !
-
-!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilSampleAt: theFP numArgs: numArgs isBlock: isBlock
-	"Sample a live element at the current position of the loop that tripped.
-	 In a block with arguments that is the first argument, i.e. the element the
-	 caller (e.g. do:) is iterating over.  Otherwise look for currentPosition, a
-	 SmallInteger in the frame's temps or stack used as an index into the receiver
-	 (array at: index), which, since the loop is running, designates a live element.
-	 Answer nil if none can be found."
-	<var: #theFP type: #'char *'>
-	<essential: #ProfilingCogit>
-	| rcvr slot value sample |
-	<var: #slot type: #'char *'>
-	(isBlock and: [numArgs > 0]) ifTrue:
-		[^self temporary: 0 in: theFP].
-	rcvr := self frameReceiver: theFP.
-	slot := theFP + FoxMFReceiver - objectMemory wordSize.
-	[slot > stackPointer] whileTrue: "stackPointer points at the return address into the method"
-		[value := stackPages longAt: slot.
-		 (objectMemory isIntegerObject: value) ifTrue:
-			[sample := self oilElementAt: (objectMemory integerValueOf: value) in: rcvr.
-			 sample ~= objectMemory nilObject ifTrue:
-				[^sample]].
-		 slot := slot - objectMemory wordSize].
-	^objectMemory nilObject! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilTripRecordSize
@@ -559,44 +357,10 @@ oilTripRecordSize
 
 
 !CoInterpreterPrimitives methodsFor: '*Cogit-Oil-profiling primitives' stamp: 'cb 10/24/2026 10:00'!
-primitiveOilMonomorphicTarget
-	"Receiver: a CompiledMethod or CompiledBlock; argument: the 1-relative pc of a send in it.
-	 If the method is jitted and the send is an ordinary send whose inline cache is linked
-	 monomorphically answer { cached receiver class. target method }, otherwise answer nil."
-	<export: true>
-	<essential: #ProfilingCogit>
-	| pc bcpc methodObj cogMethod targetMethod result |
-	<var: #cogMethod type: #'CogMethod *'>
-	<var: #targetMethod type: #'CogMethod *'>
-	argumentCount ~= 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	pc := self stackTop.
-	methodObj := self stackValue: 1.
-	((objectMemory isIntegerObject: pc)
-	 and: [(objectMemory isNonImmediate: methodObj)
-	 and: [objectMemory isCompiledMethod: methodObj]]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	bcpc := (objectMemory integerValueOf: pc) - 1.
-	result := objectMemory nilObject.
-	(self methodHasCogMethod: methodObj) ifTrue:
-		[cogMethod := self cogMethodOf: methodObj.
-		 targetMethod := cogit monomorphicTargetFor: bcpc in: cogMethod.
-		 targetMethod notNil ifTrue:
-			[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 2.
-			 result ifNil:
-				[^self primitiveFailFor: PrimErrNoMemory].
-			 "Allocation neither moves objects nor frees machine code, but query after it anyway."
-			 targetMethod := cogit monomorphicTargetFor: bcpc in: cogMethod.
-			 objectMemory
-				storePointer: 0 ofObject: result withValue: (cogit monomorphicClassFor: bcpc in: cogMethod);
-				storePointer: 1 ofObject: result withValue: targetMethod methodObject]].
-	self pop: 2 thenPush: result! !
-
-!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-profiling primitives' stamp: 'cb 10/24/2026 10:00'!
 primitiveOilTripLog
 	"With no argument answer the trip log, or nil if none.  With one argument, an Array or nil,
 	 make it the trip log, answering the previous one.  ceOilTrip: records each trip in the log;
-	 see oilRecordTrip:method:home:context:sample: for its format.  The log variable is
+	 see oilRecordTrip:method:home:context: for its format.  The log variable is
 	 registered as an extra GC root the first time it is set."
 	<export: true>
 	<essential: #ProfilingCogit>

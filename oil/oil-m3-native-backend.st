@@ -15,11 +15,8 @@
 (CogObjectRepresentationFor64BitSpur sharedPools includes: OilConstants) ifFalse:
 	[CogObjectRepresentationFor64BitSpur addSharedPool: OilConstants]!
 
-StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog ceOilBailoutTrampoline oilSelectors oilExtraSelectors'
-	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
-	poolDictionaries: 'VMSqueakClassIndices OilConstants'
-	category: 'Cogit-Oil'!
+(ProfilingCogit sharedPools includes: OilConstants) ifFalse:
+	[ProfilingCogit addSharedPool: OilConstants]!
 
 !Cogit methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 15:00'!
 isOilMethod: cogMethod
@@ -260,7 +257,7 @@ oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
 	 deoptimization metadata, a hidden pinned Array, through the method's counters field (tagged with 1)."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result md selector added |
+	| codeSize headerSize mapSize totalSize startAddress result md selector added writableMethod |
 	<var: #writableMethod type: #'CogMethod *'>
 	md := coInterpreter oilAllocateMetadata: self metadataSize.
 	md = 0 ifTrue:
@@ -294,13 +291,14 @@ oilGenerateCogMethod
 	 LargeContextSlots), and note whether the bit must be cleared from the method's header when it is freed."
 	added := (coInterpreter methodNeedsLargeContext: methodObj) not.
 	methodHeader := coInterpreter oilHeaderWithLargeContext: methodHeader.
-	self fillInMethodHeader: (self writableMethodFor: startAddress)
+	writableMethod := self writableMethodFor: startAddress.
+	self fillInMethodHeader: writableMethod
 		size: totalSize
 		selector: selector.
-	(self writableMethodFor: startAddress) cmUnusedFlag: added.
+	writableMethod cmUnusedFlag: added.
 	"Oil methods are expensive to compile and hot: start with the maximum usage count."
-	(self writableMethodFor: startAddress) cmUsageCount: CMMaxUsageCount.
-	(self writableMethodFor: startAddress) counters: md + 1.
+	writableMethod cmUsageCount: CMMaxUsageCount.
+	writableMethod counters: md + 1.
 	self fillMetadata: md cogMethod: startAddress.
 	backEnd flushICacheFrom: startAddress to: startAddress + totalSize.
 	^OilOK! !
@@ -424,18 +422,37 @@ generateSendTrampolines
 
 
 !ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 15:00'!
+oilSendMcpcAt: bcpc in: cogMethod
+	"Answer the return address (mcpc) of the ordinary send at the 0-relative bytecode pc bcpc in cogMethod,
+	 or 0 if cogMethod is frameless, an Oil method, or has no such send."
+	<var: #cogMethod type: #'CogMethod *'>
+	<returnTypeC: #usqInt>
+	((self isOilMethod: cogMethod) or: [cogMethod stackCheckOffset = 0]) ifTrue:
+		[^0].
+	^self
+		mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
+		bcpc: (coInterpreter startPCOfMethodHeader: cogMethod methodHeader)
+		performUntil: #oilFindSendAt:Annotation:Mcpc:Bcpc:Method:
+		arg: (self cCoerceSimple: bcpc to: #'void *')! !
+
+!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 15:00'!
 oilMonomorphicClassAt: bcpc in: aMethodObj
 	"Type feedback for Oil's Pass 1: the receiver class of the send at the 0-relative bytecode pc bcpc of
 	 aMethodObj (a CompiledMethod or CompiledBlock) if its inline cache is monomorphic, else 0."
-	| cogMethod class |
-	<var: #cogMethod type: #'CogMethod *'>
-	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse:
-		[^0].
-	cogMethod := coInterpreter cogMethodOf: aMethodObj.
-	(self isOilMethod: cogMethod) ifTrue:
-		[^0].
-	class := self monomorphicClassFor: bcpc in: cogMethod.
+	| mcpc entryPoint targetMethod class |
+	<var: #targetMethod type: #'CogMethod *'>
+	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse: [^0].
+	mcpc := self oilSendMcpcAt: bcpc in: (coInterpreter cogMethodOf: aMethodObj).
+	mcpc = 0 ifTrue: [^0].
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc.
+	entryPoint <= methodZoneBase ifTrue: [^0].
+	self targetMethodAndSendTableFor: entryPoint
+		annotation: IsSendCall
+		into: [:target :sendTable| targetMethod := target].
+	targetMethod isCMMethodEtAl ifFalse: [^0].
+	class := objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: mcpc).
 	^class = objectMemory nilObject ifTrue: [0] ifFalse: [class]! !
+
 
 !ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 15:00'!
 oilSendSiteUnlinkedAt: bcpc in: aMethodObj
@@ -443,43 +460,26 @@ oilSendSiteUnlinkedAt: bcpc in: aMethodObj
 	 unlinked (or does the method not have machine code yet)?  The baseline JIT inlines SmallInteger arithmetic
 	 and comparisons and sends the message only for other receivers, so for those selectors an unlinked send
 	 means only SmallIntegers were seen."
-	| cogMethod mcpc entryPoint |
+	| cogMethod mcpc |
 	<var: #cogMethod type: #'CogMethod *'>
-	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse:
-		[^true].
+	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse: [^true].
 	cogMethod := coInterpreter cogMethodOf: aMethodObj.
-	(self isOilMethod: cogMethod) ifTrue:
-		[^false].
-	cogMethod stackCheckOffset = 0 ifTrue:
-		[^true].
-	mcpc := self
-				mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
-				bcpc: (coInterpreter startPCOfMethodHeader: cogMethod methodHeader)
-				performUntil: #oilFindSendAt:Annotation:Mcpc:Bcpc:Method:
-				arg: (self cCoerceSimple: bcpc to: #'void *').
-	mcpc = 0 ifTrue:
-		[^true].
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc.
-	^entryPoint <= methodZoneBase! !
+	(self isOilMethod: cogMethod) ifTrue: [^false].
+	mcpc := self oilSendMcpcAt: bcpc in: cogMethod.
+	^mcpc = 0 or: [(backEnd callTargetFromReturnAddress: mcpc) <= methodZoneBase]! !
 
 
 !ProfilingCogit methodsFor: 'oil support' stamp: 'cb 10/24/2026 18:00'!
 oilMethodHasOilCode: aMethodObj
 	"Is aMethodObj's machine code Oil code (OilCompiler>>shouldInline:selector:numArgs:receiver: then calls it)?"
-	<api>
 	^(coInterpreter methodHasCogMethod: aMethodObj)
 	  and: [self isOilMethod: (coInterpreter cogMethodOf: aMethodObj)]! !
 
 !ProfilingCogit methodsFor: 'oil support' stamp: 'cb 10/24/2026 18:30'!
 oilSendSiteNeverSentAt: bcpc in: aMethodObj
-	"Does aMethodObj have baseline machine code in which the send at bcpc was never executed (unlinked inline cache)?
-	 (Unknown, e.g. without machine code: false.)"
-	<api>
-	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse:
-		[^false].
-	(self isOilMethod: (coInterpreter cogMethodOf: aMethodObj)) ifTrue:
-		[^false].
-	^self oilSendSiteUnlinkedAt: bcpc in: aMethodObj! !
+	"Does aMethodObj have baseline machine code in which the send at bcpc was never executed (unlinked inline cache)?"
+	^(coInterpreter methodHasCogMethod: aMethodObj)
+	  and: [self oilSendSiteUnlinkedAt: bcpc in: aMethodObj]! !
 
 !ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 15:00'!
 maybeFreeCountersOf: aCogMethod
@@ -497,15 +497,23 @@ maybeFreeCountersOf: aCogMethod
 	self freeOilCounters: aCogMethod counters! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 15:00'!
-freeOilCounters: theCounters
+countersObjectOf: theCounters
 	"theCounters is the counters field of a method: 0, the address of the first counter (an 8-byte aligned slot
-	 of a pinned object), or the oop of an Oil method's metadata tagged with 1."
+	 of a pinned object), or the oop of an Oil method's metadata tagged with 1.  Answer the heap object, or 0."
 	<var: #theCounters type: #usqInt>
 	<inline: true>
-	theCounters ~= 0 ifTrue:
-		[(theCounters bitAnd: 1) ~= 0
-			ifTrue: [objectMemory freeObject: theCounters - 1]
-			ifFalse: [objectMemory freeObject: theCounters - objectMemory baseHeaderSize]]! !
+	theCounters = 0 ifTrue: [^0].
+	^(theCounters bitAnd: 1) ~= 0
+		ifTrue: [theCounters - 1]
+		ifFalse: [theCounters - objectMemory baseHeaderSize]! !
+
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 15:00'!
+freeOilCounters: theCounters
+	<var: #theCounters type: #usqInt>
+	<inline: true>
+	| obj |
+	obj := self countersObjectOf: theCounters.
+	obj ~= 0 ifTrue: [objectMemory freeObject: obj]! !
 
 !ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/24/2026 15:00'!
 maybeMarkCountersIn: cogMethod
@@ -513,10 +521,9 @@ maybeMarkCountersIn: cogMethod
 	 marked to avoid them being collected (and, for the metadata, to trace the objects it refers to)."
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
-	cogMethod counters ~= 0 ifTrue:
-		[(cogMethod counters bitAnd: 1) ~= 0
-			ifTrue: [objectMemory markAndTrace: cogMethod counters - 1]
-			ifFalse: [objectMemory markAndTrace: cogMethod counters - objectMemory baseHeaderSize]]! !
+	| obj |
+	obj := self countersObjectOf: cogMethod counters.
+	obj ~= 0 ifTrue: [objectMemory markAndTrace: obj]! !
 
 !ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/24/2026 15:00'!
 numTrampolines
@@ -848,17 +855,15 @@ oilValueAt: p metadata: md values: vals vobjs: vobjOops
 
 !CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilNeedVObjAt: p metadata: md needed: needed
-	"If the descriptor at metadata index p is a virtual object, mark it as needed.  Answer whether it was newly marked."
+	"If the descriptor at metadata index p is a virtual object, mark it as needed."
 	<essential: #ProfilingCogit>
 	<var: #needed type: #'char *'>
 	| kind v |
-	p = 0 ifTrue: [^false].
+	p = 0 ifTrue: [^self].
 	kind := self oilMD: md at: p.
-	(kind = OilDescBlock or: [kind = OilDescTempVector]) ifFalse: [^false].
+	(kind = OilDescBlock or: [kind = OilDescTempVector]) ifFalse: [^self].
 	v := self oilMD: md at: p + 1.
-	(needed at: v) ~= 0 ifTrue: [^false].
-	needed at: v put: 1.
-	^true! !
+	(needed at: v) = 0 ifTrue: [needed at: v put: 1]! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilStore: p at: address metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix
@@ -894,8 +899,8 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	 innermost frame; the caller then enters the interpreter."
 	<essential: #ProfilingCogit>
 	<var: #oilFP type: #'char *'>
-	| theFP framesBase vobjsBase homes numVObjs chain n g k base numArgs top rootMethod fr sp newFP needed vobjOops vals
-	  fixAddr fixVObj numFix p newPage words finalSP more v vr kind obj numCopied outer ctx sitePC innermost tops fps sps |
+	| theFP framesBase vobjsBase homes numVObjs chain n g k base numArgs rootMethod fr sp newFP needed vobjOops vals
+	  fixAddr fixVObj numFix newPage words finalSP more vr kind obj numCopied outer ctx sitePC innermost tops fps sps |
 	<var: #theFP type: #'char *'>
 	<var: #sp type: #'char *'>
 	<var: #newFP type: #'char *'>
@@ -1028,16 +1033,16 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 			[:i|
 			(needed at: i) = 1 ifTrue:
 				[needed at: i put: 2.
+				 more := true.
 				 vr := vobjsBase + (i * OilMDVObjSize).
 				 (self oilMD: md at: vr) = OilDescBlock
 					ifTrue:
-						[(self oilNeedVObjAt: vr + 3 metadata: md needed: needed) ifTrue: [more := true].
+						[self oilNeedVObjAt: vr + 3 metadata: md needed: needed.
 						 0 to: (self oilMD: md at: vr + 5) - 1 do:
-							[:j| (self oilNeedVObjAt: (self oilMD: md at: vr + 6) + (2 * j) metadata: md needed: needed) ifTrue: [more := true]]]
+							[:j| self oilNeedVObjAt: (self oilMD: md at: vr + 6) + (2 * j) metadata: md needed: needed]]
 					ifFalse:
 						[0 to: (self oilMD: md at: vr + 1) - 1 do:
-							[:j| (self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: md at: vr + 7) + j site: site metadata: md) metadata: md needed: needed) ifTrue: [more := true]]].
-				 more := true]]].
+							[:j| self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: md at: vr + 7) + j site: site metadata: md) metadata: md needed: needed]]]]].
 	"6. Allocate them (no GC can happen here: allocation at worst schedules a scavenge)..."
 	0 to: numVObjs - 1 do:
 		[:i|
@@ -1211,8 +1216,7 @@ primitiveOilSetSelectors
 		 cogit setOilExtraSelectors: table.
 		 (objectMemory addGCRoot: cogit oilExtraSelectorsAddress) ifFalse:
 			[cogit setOilExtraSelectors: 0.
-			 ^self primitiveFailFor: PrimErrNoMemory].
-		 sels := self stackTop].
+			 ^self primitiveFailFor: PrimErrNoMemory]].
 	previous := cogit getOilSelectors.
 	cogit setOilSelectors: sels.
 	previous = 0 ifTrue:
@@ -1260,11 +1264,11 @@ primitiveOilMethodInfo
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
-	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers. trace.
-	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:, then the number of undo stubs) }"
+	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers. nil.
+	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
 	<export: true>
 	<essential: #ProfilingCogit>
-	| n irArray result traceArray |
+	| n irArray result statsArray |
 	n := cogit oilDebugInfo: 1 at: 0.
 	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
 	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 11.
@@ -1277,14 +1281,7 @@ primitiveOilLastCompilation
 		storePointer: 1 ofObject: result withValue: irArray.
 	2 to: 7 do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: result withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: i + 1 at: 0))].
-	n := cogit oilDebugInfo: 9 at: 0.
-	traceArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
-	traceArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: n - 1 do:
-		[:i| | v |
-		 v := cogit oilDebugInfo: 10 at: i.
-		 objectMemory storePointer: i ofObject: traceArray withValue: ((objectMemory isIntegerValue: v) ifTrue: [objectMemory integerObjectOf: v] ifFalse: [objectMemory nilObject])].
-	objectMemory storePointer: 8 ofObject: result withValue: traceArray.
+	objectMemory storePointerUnchecked: 8 ofObject: result withValue: objectMemory nilObject.
 	"Pass 1's IR (Buffer 1; the IR above is Pass 2's) and Pass 2's statistics."
 	n := cogit oilDebugInfo: 11 at: 0.
 	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
@@ -1292,21 +1289,23 @@ primitiveOilLastCompilation
 	0 to: n - 1 do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: i))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	traceArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 8.
-	traceArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 8.
+	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 	0 to: 7 do:
-		[:i| objectMemory storePointerUnchecked: i ofObject: traceArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
-	objectMemory storePointer: 10 ofObject: result withValue: traceArray.
+		[:i| objectMemory storePointerUnchecked: i ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
+	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
 oilHeaderWithLargeContext: methodHeader
 	<api>
+	<essential: #ProfilingCogit>
 	^methodHeader bitOr: LargeContextBit! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
 oilHeaderWithoutLargeContext: methodHeader
 	<api>
+	<essential: #ProfilingCogit>
 	^methodHeader bitAnd: LargeContextBit bitInvert! !
 
 

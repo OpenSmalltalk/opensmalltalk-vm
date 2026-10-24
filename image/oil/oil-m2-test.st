@@ -4,11 +4,11 @@
  the real execution of each method."
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: ['/usr/local/google/home/clementbera/.gemini/jetski/brain/d1466531-7c6e-4182-90d9-4bed24e00db9/scratch/osvm/image/oil/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
-| dir out model coll arr mixed pass fail check compile run results probes c fb ok hist irs |
+| dir out model coll arr mixed pass fail check compile run results c hist |
 dir := Smalltalk at: #OilSourceDir.
 out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [dir, 'm2-test-result.txt']).
 pass := 0. fail := 0.

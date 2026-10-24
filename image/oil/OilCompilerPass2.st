@@ -17,13 +17,11 @@ pass2Optimize
 	 4. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
 	 Answer OilOK or a failure code."
 	| i op t optimize |
-	failed ifTrue: [^failureCode].
-	self cCode: [] inSmalltalk: [self p2SetUpSimulationTables].
 	oilIRBuffer := oilIRBuffer1.
 	oilPass1Words := irIndex.
-	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := 0.
+	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := oilNumUndos := 0.
 	oilUseProbe := -1.
-	0 to: irIndex do:
+	0 to: irIndex - 1 do:
 		[:j|
 		oilIRFlag at: j put: 0.
 		oilIRAux at: j put: 0.
@@ -37,18 +35,14 @@ pass2Optimize
 		 (op = OilMakeClosure or: [op = OilNewArray]) ifTrue: [optimize := false].
 		 (self opcodeHasDest: op) ifTrue:
 			[oilVRegDefs at: (self fieldAAt: i) put: (oilVRegDefs at: (self fieldAAt: i)) + 1].
-		 (self p2IsBranch: op) ifTrue:
+		 (self isBranch: op) ifTrue:
 			[t := self imm16At: i.
 			 t >= irIndex ifTrue:
 				[self abortCompilation: OilFailInternal.
 				 ^failureCode].
 			 oilIRTarget at: t put: ((oilIRTarget at: t) + 1 min: 255)].
 		 i := i + (self instructionLengthAt: i)].
-	"oilIRSite (IR index -> deopt site), a Pass 3 table, for Buffer 1 (prepareNativeCode recomputes it for Buffer 2)."
-	0 to: irIndex do:
-		[:j| oilIRSite at: j put: -1].
-	0 to: numSites - 1 do:
-		[:s| (siteIR at: s) >= 0 ifTrue: [oilIRSite at: (siteIR at: s) put: s]].
+	self computeIRSites.
 	optimize ifTrue:
 		[self analyzeTaggedRegisters.
 		 i := 0.
@@ -60,7 +54,7 @@ pass2Optimize
 	^self p2Emit! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
-p2IsBranch: op
+isBranch: op
 	<inline: true>
 	^op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]! !
 
@@ -98,7 +92,7 @@ p2RegionStartBefore: loopHead
 	[i < loopHead] whileTrue:
 		[op := self opcodeAt: i.
 		 (oilIRTarget at: i) ~= 0 ifTrue: [start := i].
-		 ((self p2IsBranch: op) or: [op = OilReturn]) ifTrue: [start := i + (self instructionLengthAt: i)].
+		 ((self isBranch: op) or: [op = OilReturn]) ifTrue: [start := i + (self instructionLengthAt: i)].
 		 i := i + (self instructionLengthAt: i)].
 	^start! !
 
@@ -113,7 +107,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 	[i < backJump] whileTrue:
 		[op := self opcodeAt: i.
 		 (self p2IsCall: op) ifTrue: [^self].
-		 ((self p2IsBranch: op) and: [(self imm16At: i) <= i]) ifTrue: [^self].
+		 ((self isBranch: op) and: [(self imm16At: i) <= i]) ifTrue: [^self].
 		 i := i + (self instructionLengthAt: i)].
 	self p2RemoveInvariantChecksInLoop: loopHead backJump: backJump.
 	"The header: pure instructions without deopt sites, nothing branching into them."
@@ -136,16 +130,15 @@ p2OptimizeLoop: loopHead backJump: backJump
 	lim := self fieldCAt: cmp.
 	"Rotation: the test is duplicated at the bottom, without its deopt site, so it must not be able to fail."
 	(cond < OilCondIdentical and: [(self isTagged: iv) and: [self isTagged: lim]]) ifTrue:
-		[self p2Mark: loopHead with: OilP2RotHead.
-		 self p2Mark: backJump with: OilP2RotBack.
+		[self p2Mark: backJump with: OilP2RotBack.
 		 oilNumRotated := oilNumRotated + 1].
 	"A counted loop?  iv <= lim (or iv < lim), lim the size of an object x that is never assigned (the receiver or
 	 an argument), lim assigned only once, before the loop; iv assigned a constant >= 1 before the loop and only
 	 incremented in the loop.  Then 1 <= iv <= lim holds after the test, and the increments cannot overflow."
 	(cond = OilCondLe or: [cond = OilCondLt]) ifFalse: [^self].
 	(iv ~= lim and: [iv < OilFlagsReg and: [lim < OilFlagsReg]]) ifFalse: [^self].
-	regionStart := self p2RegionStartBefore: loopHead.
 	(oilVRegDefs at: lim) = 1 ifFalse: [^self].
+	regionStart := self p2RegionStartBefore: loopHead.
 	limDef := -1.
 	ivInit := -1.
 	ivDefsInLoop := 0.
@@ -185,7 +178,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 	i := bf + 1.
 	[i < backJump and: [(oilIRTarget at: i) = 0]] whileTrue:
 		[op := self opcodeAt: i.
-		 ((self p2IsBranch: op) or: [op = OilReturn]) ifTrue: [^self].
+		 ((self isBranch: op) or: [op = OilReturn]) ifTrue: [^self].
 		 (op = OilCheckBounds
 		  and: [(self fieldAAt: i) = iv
 		  and: [(self fieldBAt: i) = lim or: [(self fieldBAt: i) = sizeAlias]]]) ifTrue:
@@ -315,7 +308,7 @@ p2IsLiveSite: s
 	"Is deopt site s still attached to an instruction that can bail out?"
 	| i |
 	i := siteIR at: s.
-	^i >= 0 and: [(siteSnapBase at: s) >= 0 and: [((oilIRFlag at: i) bitAnd: OilP2Delete + OilP2NoCheck) = 0]]! !
+	^i >= 0 and: [(siteSnapBase at: s) >= 0 and: [(self p2Flag: i has: OilP2Delete + OilP2NoCheck) not]]! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2CountMetadataUses
@@ -380,7 +373,7 @@ p2IsOverwrittenBeforeUse: r after: def
 	[i < irIndex] whileTrue:
 		[op := self opcodeAt: i.
 		 ((oilIRTarget at: i) ~= 0
-		  or: [(self p2IsBranch: op) or: [op = OilReturn or: [self p2IsCall: op]]]) ifTrue: [^false].
+		  or: [(self isBranch: op) or: [op = OilReturn or: [self p2IsCall: op]]]) ifTrue: [^false].
 		 (self p2Flag: i has: OilP2Delete) ifFalse:
 			[oilUseProbe := r.
 			 oilUseProbeHit := false.
@@ -440,7 +433,7 @@ p2EmitInstructionAt: i at: n
 		[word := (OilMove bitShift: 24) + ((self fieldAAt: i) bitShift: 16) + ((oilIRAux at: i) bitShift: 8)].
 	(self p2Flag: i has: OilP2NoCheck) ifTrue:
 		[word := (word bitAnd: 16rFFFFFF) + (OilAddImmTaggedNC bitShift: 24)].
-	(self p2IsBranch: op) ifTrue:
+	(self isBranch: op) ifTrue:
 		[word := (word bitAnd: 16rFFFF0000) + (oilIRMap at: (self imm16At: i))].
 	oilIRBuffer2 at: n put: word.
 	1 to: len - 1 do:
@@ -502,7 +495,7 @@ p2Emit
 		[:s|
 		si := siteIR at: s.
 		si >= 0 ifTrue:
-			[siteIR at: s put: (((oilIRFlag at: si) bitAnd: OilP2Delete + OilP2NoCheck) ~= 0
+			[siteIR at: s put: ((self p2Flag: si has: OilP2Delete + OilP2NoCheck)
 									ifTrue: [-2]
 									ifFalse: [oilIRMap at: si])]].
 	oilIRBuffer := oilIRBuffer2.
@@ -510,23 +503,9 @@ p2Emit
 	^OilOK! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
-p2SetUpSimulationTables
-	"In the image (where Pass 3 does not run) Pass 2 needs a few of Pass 3's tables too."
-	<doNotGenerate>
-	oilIRMap ifNil:
-		[oilIRMap := self newTable: OilBufferWords + 1.
-		 oilIRFlag := self newTable: OilBufferWords.
-		 oilIRAux := self newTable: OilBufferWords.
-		 oilVRegDefs := self newTable: OilNumRegs.
-		 oilVRegUses := self newTable: OilNumRegs].
-	oilIRTarget ifNil: [oilIRTarget := self newTable: OilBufferWords].
-	oilIRSite ifNil: [oilIRSite := self newTable: OilBufferWords].
-	oilTagged ifNil: [oilTagged := self newTable: OilNumRegs]! !
-
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Statistics: index
 	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
-	 5 Pass 1 IR words, 6 class guards removed."
+	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos."
 	index = 0 ifTrue: [^oilNumRotated].
 	index = 1 ifTrue: [^oilNumBoundsRemoved].
 	index = 2 ifTrue: [^oilNumDeadRemoved].
@@ -534,4 +513,5 @@ pass2Statistics: index
 	index = 4 ifTrue: [^oilNumNoCheck].
 	index = 5 ifTrue: [^oilPass1Words].
 	index = 6 ifTrue: [^oilNumGuardsRemoved].
+	index = 7 ifTrue: [^oilNumUndos].
 	^0! !

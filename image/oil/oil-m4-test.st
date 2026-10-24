@@ -4,7 +4,7 @@
  by executing it (OilIRInterpreter) against Pass 1's IR and the real execution of each method, deopts included."
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: ['/usr/local/google/home/clementbera/.gemini/jetski/brain/7ce39ff8-2a06-42fe-96ff-a75b88c4fff2/scratch/osvm/image/oil/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
@@ -121,16 +121,15 @@ OilTestModel compile: 'upcase: aString
  {{#countA:. {{'banana'}}. {{'banana'}. {''}. {'aaaa'}. {'xyz'}}}.
   {#countEqual:in:. {{'abc'. bstrs}}. {{'abc'. bstrs}. {'aaaaaaaaaaaaaaaaaaaaaaaaaaaaab'. bstrs}. {'zz'. bstrs}. {''. bstrs}. {'abc'. strs}}}.
   {#fillBytes:. {{ByteArray new: 10}}. {{ByteArray new: 300}. {ByteArray new: 0}. {#[1 2 3] copy}}}.
-  {#upcase:. {{'hello'}}. {{'hello world'}. {''}. {'ABC'}}}} do: [:spec | | sel c1 c2 h |
+  {#upcase:. {{'hello'}}. {{'hello world'}. {''}. {'ABC'}}}} do: [:spec | | sel c1 c2 |
 	sel := spec first.
 	c1 := compile value: sel value: (spec at: 2) value: false.
 	c2 := compile value: sel value: (spec at: 2) value: true.
 	out cr; nextPutAll: c2 irString.
-	h := c2 opcodeHistogram.
 	check value: sel, ' compiles without calls to at:, at:put:, size, =' value: (c2 failed not and: [(c2 irString includesSubstring: '#at:') not and: [(c2 irString includesSubstring: '#=') not and: [(c2 irString includesSubstring: '#size') not]]]).
 	(spec at: 3) do: [:args | | r1 r2 real a1 a2 |
-		a1 := args collect: [:e | (e isString and: [e isSymbol not]) ifTrue: [e copy] ifFalse: [e isArray ifTrue: [e copy] ifFalse: [e copy]]].
-		a2 := args collect: [:e | (e isString and: [e isSymbol not]) ifTrue: [e copy] ifFalse: [e isArray ifTrue: [e copy] ifFalse: [e copy]]].
+		a1 := args collect: [:e | e copy].
+		a2 := args collect: [:e | e copy].
 		r1 := run value: c1 value: sel value: a1.
 		r2 := run value: c2 value: sel value: a2.
 		real := model perform: sel withArguments: (args collect: [:e | e copy]).

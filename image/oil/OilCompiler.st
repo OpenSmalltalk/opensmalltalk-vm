@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'Cogit-Oil'!
@@ -103,6 +103,16 @@ setUpSimulationTables
 	siteSnapTop := self newTable: OilMaxSites.
 	siteSnapHigh := self newTable: OilMaxSites.
 	vobjOuter := self newTable: OilMaxVObjs.
+	oilIRMap := self newTable: OilBufferWords + 1.
+	oilIRFlag := self newTable: OilBufferWords.
+	oilIRAux := self newTable: OilBufferWords.
+	oilVRegDefs := self newTable: OilNumRegs.
+	oilVRegUses := self newTable: OilNumRegs.
+	oilVRegWeight := self newTable: OilNumRegs.
+	oilTagged := self newTable: OilNumRegs.
+	oilLoopDepth := self newTable: OilBufferWords.
+	oilIRTarget := self newTable: OilBufferWords.
+	oilIRSite := self newTable: OilBufferWords.
 	emittingCond := -1.
 	irBudget := OilIRBudget.
 	simHandles := OrderedCollection new.
@@ -138,7 +148,6 @@ setUpSimulationHandles
 registerSelector: selector kind: kind
 	"Tell Oil about a selector it treats specially (at VM startup, or from the image via a primitive):
 	 kind 0-4: value selectors by arity, 5: bitXor:, 6: collection iterators/hash probes, 7: cold (error paths)."
-	<api>
 	kind <= 4 ifTrue:
 		[valueSelectors at: kind put: selector.
 		 ^self].
@@ -197,8 +206,7 @@ resetForCompilation
 	oilDeadCode := failed := needsRestart := oilRestartNoInline := false.
 	failureCode := OilOK.
 	inlineClass := 0.
-	inlineGuard := false.
-	numInlinedFrames := numInlinedQuick := numIntrinsics := numCalls := numGuards := numFolds := 0! !
+	inlineGuard := false! !
 
 !OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 irBudget: anInteger
@@ -234,59 +242,17 @@ irWordAt: index
 	^oilIRBuffer at: index! !
 
 !OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-numCalls
-	^numCalls! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-numFolds
-	^numFolds! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 numFrames
 	^numFrames! !
 
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-numSites
-	^numSites! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-siteIR
-	^siteIR! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-siteFrame
-	^siteFrame! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-sitePC
-	^sitePC! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-frameMethod
-	^frameMethod! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-frameCallPC
-	^frameCallPC! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-frameParent
-	^frameParent! !
-
-!OilCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
-frameBase
-	^frameBase! !
-
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
 compileMethod: aMethod receiverClass: classHandle
-	<api>
 	"Pass 1: translate aMethod, the outer (home) method of a hot loop, specialized for receivers of class classHandle,
 	 into the linear IR buffer.  Closures and temp vectors are first kept virtual (dissolved when their blocks are inlined);
 	 if one escapes, compile again once with eagerClosures, materializing them.  Answer true on success."
 	| restarts |
 	eagerClosures := false.
 	irBudget = 0 ifTrue: [irBudget := OilIRBudget]. "in the VM nothing else initializes it"
-	oilTraceTop := 0.
 	oilNumNoInline := 0.
 	restarts := 0.
 	[self compileOnce: aMethod receiverClass: classHandle.
@@ -323,7 +289,7 @@ compileOnce: aMethod receiverClass: classHandle
 	0 to: numArgs do: [:r| slotFlags at: r put: OilFlagImmutable].
 	numArgs + 1 to: numTemps do:
 		[:r|
-		slotFlags at: r put: OilFlagTemp.
+		slotFlags at: r put: 0.
 		self setSlot: r kind: OilDescConst value: nilHandle].
 	frameTempStart at: f put: numArgs + 1.
 	frameStackStart at: f put: numTemps + 1.
@@ -357,7 +323,6 @@ oilDisqualifyLimit: n
 
 !OilCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
 oilIsDisqualified: aMethod
-	<api>
 	0 to: (oilNumDisqualified min: OilMaxDisqualified) - 1 do:
 		[:i| (oilDisqualified at: i) = aMethod ifTrue: [^true]].
 	^false! !
@@ -370,7 +335,6 @@ abortCompilation: code
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
 requireEagerClosures
 	"A virtual closure or temp vector must be materialized.  Restart in eager mode (or give up if already eager)."
-	self oilTrace: currentFrame with: currentPC. "why eager mode was needed (see primitiveOilLastCompilation)"
 	eagerClosures
 		ifTrue: [self abortCompilation: OilFailEagerClosuresFailed]
 		ifFalse: [needsRestart := true. failed := true]! !
@@ -424,7 +388,7 @@ preScanFrame: f
 	pc := start.
 	[pc <= end] whileTrue:
 		[self decodeAt: pc.
-		 (self isTranslatableTag: opcodeTag) ifFalse: [^false].
+		 (opcodeTag = OilTagUnknown or: [opcodeTag = OilTagExtension]) ifTrue: [^false].
 		 oilTargetPC >= 0 ifTrue:
 			[(oilTargetPC < start or: [oilTargetPC > end]) ifTrue: [^false].
 			 pcTarget at: base + oilTargetPC - start put: 1.
@@ -432,16 +396,6 @@ preScanFrame: f
 				[oilTargetPC to: instrPC do: [:k| pcLoop at: base + k - start put: 1]]].
 		 pc := oilNextPC].
 	^true! !
-
-!OilCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
-isTranslatableTag: tag
-	^(tag = OilTagUnknown
-	   or: [tag = OilTagPushThisContext
-	   or: [tag = OilTagPushEmbeddedClosure
-	   or: [tag = OilTagCallPrimitive
-	   or: [tag = OilTagTrap
-	   or: [tag = OilTagBranchOnBehavior
-	   or: [tag = OilTagExtension]]]]]]) not! !
 
 !OilCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
 isFrameActive: f
@@ -817,8 +771,7 @@ emitGuardOn: r class: classHandle
 	site := self recordSite: OilSiteGuard.
 	self emitOp: OilGuardClass a: r imm16: site.
 	self emit64: classHandle.
-	knownClass at: r put: classHandle.
-	numGuards := numGuards + 1! !
+	knownClass at: r put: classHandle! !
 
 !OilCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 recordSite: kind
@@ -1168,19 +1121,14 @@ genPushNewArray: size pop: popFlag
 	"A brace array {a. b} is allocated.  A temp vector (Array new: n, created by the bytecode compiler for
 	 temps assigned in closures) is scalar replaced: its slots become high registers."
 	| first dest idx v base |
-	popFlag ifTrue:
-		[first := simStackTop - size + 1.
-		 first to: simStackTop do: [:i| self materializeSlot: i].
-		 simStackTop := first - 1.
+	(popFlag or: [eagerClosures]) ifTrue:
+		[popFlag ifTrue:
+			[first := simStackTop - size + 1.
+			 first to: simStackTop do: [:i| self materializeSlot: i].
+			 simStackTop := first - 1].
 		 dest := self pushOwnSlot.
 		 self recordSite: OilSiteAlloc.
-		 idx := self emitOp: OilNewArray a: dest b: first c: size.
-		 self noteDef: dest at: idx.
-		 ^self].
-	eagerClosures ifTrue:
-		[dest := self pushOwnSlot.
-		 self recordSite: OilSiteAlloc.
-		 idx := self emitOp: OilNewArray a: dest b: OilFlagsReg c: size.
+		 idx := self emitOp: OilNewArray a: dest b: (popFlag ifTrue: [first] ifFalse: [OilFlagsReg]) c: size.
 		 self noteDef: dest at: idx.
 		 ^self].
 	base := highRegTop - size + 1.
@@ -1271,7 +1219,7 @@ capture: i frame: f
 		[h := highRegTop.
 		 h <= (simStackTop + 32) ifTrue: [^self abortCompilation: OilFailOutOfRegisters].
 		 highRegTop := h - 1.
-		 slotFlags at: h put: (OilFlagCapture bitOr: OilFlagImmutable).
+		 slotFlags at: h put: OilFlagImmutable.
 		 self emitMove: h from: v.
 		 self setOwn: h.
 		 v := h].
@@ -1292,7 +1240,7 @@ genReturnKind: k value: v nonLocal: isNonLocal frame: f next: next
 	"Return (k, v) from frame f, or, for a non-local return from an inlined block, from its home frame.
 	 From the compiled method this is OilReturn.  From an inlined frame the result is left in the frame's base
 	 register (or, for a single final return, kept as a lazy descriptor) and control jumps to the frame's exit."
-	| target base r isLast idx |
+	| target base r isLast idx vv |
 	oilDeadCode := true.
 	target := isNonLocal ifTrue: [frameHome at: f] ifFalse: [f].
 	(k = OilDescBlock or: [k = OilDescTempVector]) ifTrue:
@@ -1304,30 +1252,22 @@ genReturnKind: k value: v nonLocal: isNonLocal frame: f next: next
 	(self isFrameActive: target) ifFalse:
 		[^self abortCompilation: OilFailInternal].
 	base := frameBase at: target.
-	isLast := isNonLocal not
-				and: [next > (frameEndPC at: f)
-				and: [(frameExitChain at: f) = OilNoLink]].
-	isLast ifTrue:
-		[| kk vv |
-		 kk := k. vv := v.
+	isLast := isNonLocal not and: [next > (frameEndPC at: f)].
+	(isLast and: [(frameExitChain at: f) = OilNoLink]) ifTrue:
+		[vv := v.
 		 (k = OilDescReg and: [v > base and: [v <= highRegTop]]) ifTrue:
 			"the value lives in a register of the dying frame: bring it to the result register"
 			[(self retarget: v to: base) ifFalse: [self emitMove: base from: v].
 			 vv := base].
 		 frameHasLazy at: f put: true.
-		 frameLazyKind at: f put: kk.
+		 frameLazyKind at: f put: k.
 		 frameLazyValue at: f put: vv.
 		 ^self].
 	k = OilDescReg
 		ifTrue: [v ~= base ifTrue: [(self retarget: v to: base) ifFalse: [self emitMove: base from: v]]]
-		ifFalse:
-			[k = OilDescCond
-				ifTrue: [self emitCond: v booleanInto: base]
-				ifFalse: [self emitConst: v into: base]].
+		ifFalse: [self regForKind: k value: v scratch: base].
 	self flushTVSlots.
-	(isNonLocal not and: [next > (frameEndPC at: f)]) ifTrue:
-		"falls through into the exit label"
-		[^self].
+	isLast ifTrue: [^self]. "falls through into the exit label"
 	idx := self emitOp: OilJump a: 0 imm16: (frameExitChain at: target).
 	frameExitChain at: target put: idx! !
 
@@ -1353,7 +1293,6 @@ genJumpIf: aBoolean to: target frame: f
 		 ^self].
 	(k = OilDescConst and: [v = trueHandle or: [v = falseHandle]]) ifTrue:
 		["constant condition: the branch is folded"
-		 numFolds := numFolds + 1.
 		 (v = trueHandle) = aBoolean ifTrue:
 			[self genJumpTo: target frame: f].
 		 ^self].
@@ -1385,15 +1324,12 @@ canInlineSmallIntegerOpOn: a arg: b
 	"Speculate SmallInteger arithmetic if the receiver is a SmallInteger constant, is known to be a SmallInteger,
 	 or its send site only saw SmallIntegers; the argument must not be a non-SmallInteger constant or a virtual object.
 	 The tagged opcodes check their operands' tags and bail out (deopt) on failure or overflow."
-	| ka kb r c |
-	ka := slotKind at: a.
+	| kb c |
 	kb := slotKind at: b.
 	(kb = OilDescBlock or: [kb = OilDescTempVector or: [kb = OilDescCond]]) ifTrue: [^false].
 	(kb = OilDescConst and: [(self isSmallIntegerHandle: (slotValue at: b)) not]) ifTrue: [^false].
-	ka = OilDescConst ifTrue: [^self isSmallIntegerHandle: (slotValue at: a)].
-	ka = OilDescReg ifFalse: [^false].
-	r := slotValue at: a.
-	(knownClass at: r) = smallIntegerClassHandle ifTrue: [^true].
+	(self isKnownSmallInteger: a) ifTrue: [^true].
+	(slotKind at: a) = OilDescReg ifFalse: [^false].
 	"The baseline JIT inlines SmallInteger arithmetic and comparisons and only sends the message for other
 	 receivers.  So a send site whose inline cache is still unlinked has only ever seen SmallIntegers: speculate."
 	c := self profiledClassAt: currentPC.
@@ -1417,15 +1353,11 @@ isKnownSmallInteger: i
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genClassOf: i
 	"#class: fold when the receiver's class is known."
-	| k c |
-	k := slotKind at: i.
-	c := k = OilDescConst
-			ifTrue: [self classHandleOf: (slotValue at: i)]
-			ifFalse: [k = OilDescReg ifTrue: [knownClass at: (slotValue at: i)] ifFalse: [0]].
+	| c |
+	c := self staticClassOfSlot: i.
 	c = 0 ifTrue: [^false].
 	simStackTop := i - 1.
 	self push: OilDescConst value: c.
-	numFolds := numFolds + 1.
 	^true! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
@@ -1456,7 +1388,6 @@ genSend: selector numArgs: n super: isSuper frame: f
 	method := self lookup: selector inClass: cls.
 	method = 0 ifTrue: [^self genCall: selector numArgs: n receiver: s super: isSuper].
 	prim := self oilPrimitiveIndexOf: method.
-	prim = 67 ifTrue: [prim := 0]. "PositionableStream>>atEnd: its code (^position >= readLimit) does what the primitive does"
 	(self oilIsQuickPrimitiveIndex: prim) ifTrue:
 		[guard ifTrue: [self emitGuardOn: (self regForSlot: s) class: cls].
 		 ^self genQuickMethod: prim receiver: s numArgs: n].
@@ -1613,26 +1544,17 @@ genCall: selector numArgs: n receiver: s super: isSuper
 	s to: s + n do: [:i| self materializeSlot: i].
 	failed ifTrue: [^self].
 	self recordSite: OilSiteCall.
-	isSuper
+	(isSuper or: [n >= 2])
 		ifTrue:
-			[idx := self emitOp: OilCallSuper a: s b: s c: n.
+			[idx := self emitOp: (isSuper ifTrue: [OilCallSuper] ifFalse: [OilCallN]) a: s b: s c: n.
 			 self emit64: selector.
 			 self emitPackedArgs: s + 1 count: n]
 		ifFalse:
-			[n = 0 ifTrue:
-				[idx := self emitOp: OilCall0 a: s b: s c: 0.
-				 self emit64: selector].
-			 n = 1 ifTrue:
-				[idx := self emitOp: OilCall1 a: s b: s c: s + 1.
-				 self emit64: selector].
-			 n >= 2 ifTrue:
-				[idx := self emitOp: OilCallN a: s b: s c: n.
-				 self emit64: selector.
-				 self emitPackedArgs: s + 1 count: n]].
+			[idx := self emitOp: (n = 0 ifTrue: [OilCall0] ifFalse: [OilCall1]) a: s b: s c: (n = 0 ifTrue: [0] ifFalse: [s + 1]).
+			 self emit64: selector].
 	simStackTop := s.
 	self setOwn: s.
-	self noteDef: s at: idx.
-	numCalls := numCalls + 1! !
+	self noteDef: s at: idx! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genQuickMethod: prim receiver: s numArgs: n
@@ -1640,7 +1562,6 @@ genQuickMethod: prim receiver: s numArgs: n
 	| k v r dest idx |
 	k := slotKind at: s.
 	v := slotValue at: s.
-	numInlinedQuick := numInlinedQuick + 1.
 	prim = 256 ifTrue:
 		[simStackTop := s - 1.
 		 ^self push: k value: v].
@@ -1678,13 +1599,10 @@ canInlineIntrinsic: prim class: cls numArgs: n
 genIntrinsic: prim receiver: s numArgs: n bytes: isBytes
 	<inline: false>
 	| arr index val limit dest idx site k v |
-	numIntrinsics := numIntrinsics + 1.
 	prim = 110 ifTrue:
 		[^self genCompare: OilCondIdentical identity: true frame: currentFrame next: -1].
-	arr := self regForSlot: s.
 	(prim = 65 or: [prim = 66]) ifTrue: "the back end falls back to the send itself, so no deopt site"
-		[prim = 66 ifTrue: [index := self regForSlot: s + 1].
-		 s to: s + n do: [:i| self materializeSlot: i].
+		[s to: s + n do: [:i| self materializeSlot: i].
 		 simStackTop := s - 1.
 		 dest := self pushOwnSlot.
 		 idx := prim = 65
@@ -1693,6 +1611,7 @@ genIntrinsic: prim receiver: s numArgs: n bytes: isBytes
 		 self emit64: (self specialSelectorHandle: (prim = 65 ifTrue: [19] ifFalse: [20])).
 		 self noteDef: dest at: idx.
 		 ^self].
+	arr := self regForSlot: s.
 	prim = 171 ifTrue:
 		[simStackTop := s - 1.
 		 dest := self pushOwnSlot.
@@ -1769,7 +1688,6 @@ genCompare: cond identity: isIdentity frame: f next: next
 			ifFalse: [self compareSmallInteger: (self smallIntegerValueOf: va) with: (self smallIntegerValueOf: vb) cond: c].
 		 simStackTop := a - 1.
 		 self push: OilDescConst value: (result ifTrue: [trueHandle] ifFalse: [falseHandle]).
-		 numFolds := numFolds + 1.
 		 ^next].
 	(isIdentity not and: [ka = OilDescConst and: [kb ~= OilDescConst]]) ifTrue:
 		["constant on the left: swap the operands and reverse the condition"
@@ -1966,7 +1884,6 @@ foldArith: index
 	(self isSmallIntegerValue: r) ifFalse: [^false].
 	simStackTop := a - 1.
 	self push: OilDescConst value: (self handleForSmallInteger: r).
-	numFolds := numFolds + 1.
 	^true! !
 
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
@@ -2015,7 +1932,6 @@ genAddConstant: c to: operandSlot result: resultSlot
 	c = 0 ifTrue:
 		[simStackTop := resultSlot - 1.
 		 self push: k value: v.
-		 numFolds := numFolds + 1.
 		 ^true].
 	xr := self regForSlot: operandSlot.
 	base := xr.
@@ -2023,7 +1939,6 @@ genAddConstant: c to: operandSlot result: resultSlot
 	((affineBase at: xr) >= 0 and: [(affineVersion at: xr) = (regVersion at: (affineBase at: xr))]) ifTrue:
 		[base := affineBase at: xr.
 		 total := (affineConst at: xr) + c.
-		 numFolds := numFolds + 1.
 		 (xr >= resultSlot and: [xr <= simStackTop]) ifTrue: "its producer is now dead"
 			[self retractIfDeadDefinitionOf: xr]].
 	simStackTop := resultSlot - 1.
@@ -2062,7 +1977,6 @@ replaceOperandsBy: k value: v
 	"Pop receiver and argument, push (k, v)."
 	simStackTop := simStackTop - 2.
 	self push: k value: v.
-	numFolds := numFolds + 1.
 	^true! !
 
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
@@ -2233,14 +2147,13 @@ inlineMethod: aMethod receiver: rcvrReg arguments: numArgs into: resultReg depth
 	numTemps := self numTempsOf: aMethod.
 	rcvrReg + numArgs + 1 to: rcvrReg + numTemps do:
 		[:r|
-		slotFlags at: r put: OilFlagTemp.
+		slotFlags at: r put: 0.
 		self setSlot: r kind: OilDescConst value: nilHandle.
 		knownClass at: r put: 0.
 		affineBase at: r put: -1].
 	frameTempStart at: f put: rcvrReg + numArgs + 1.
 	frameStackStart at: f put: rcvrReg + numTemps + 1.
 	simStackTop := rcvrReg + numTemps.
-	numInlinedFrames := numInlinedFrames + 1.
 	self translateFrame: f.
 	self exitFrame: f.
 	currentFrame := caller.
@@ -2284,14 +2197,13 @@ inlineBlock: v receiver: closureReg numArgs: numArgs
 	numTemps := self numTempsOf: block.
 	closureReg + numArgs + numCopied + 1 to: closureReg + numTemps do:
 		[:r|
-		slotFlags at: r put: OilFlagTemp.
+		slotFlags at: r put: 0.
 		self setSlot: r kind: OilDescConst value: nilHandle.
 		knownClass at: r put: 0.
 		affineBase at: r put: -1].
 	frameTempStart at: f put: closureReg + numArgs + numCopied + 1.
 	frameStackStart at: f put: closureReg + numTemps + 1.
 	simStackTop := closureReg + numTemps.
-	numInlinedFrames := numInlinedFrames + 1.
 	self translateFrame: f.
 	self exitFrame: f.
 	currentFrame := caller.
@@ -2321,6 +2233,10 @@ imm16At: index
 !OilCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 signed8: byte
 	^byte > 127 ifTrue: [byte - 256] ifFalse: [byte]! !
+
+!OilCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+signed16: word
+	^word > 32767 ifTrue: [word - 65536] ifFalse: [word]! !
 
 !OilCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 word64At: index
@@ -2532,8 +2448,6 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilSiteStub declareC: 'static AbstractInstruction *oilSiteStub[OilMaxSites]'.
 	aCCodeGenerator var: #oilSiteUsed declareC: 'static unsigned char oilSiteUsed[OilMaxSites]'.
 	aCCodeGenerator var: #oilAllocRegs declareC: 'static sqInt oilAllocRegs[16]'.
-	aCCodeGenerator var: #oilBailoutCommon type: #'AbstractInstruction *'.
-	aCCodeGenerator var: #oilTraceBuf declareC: 'static sqInt oilTraceBuf[256]'.
 	aCCodeGenerator var: #valueSelectors declareC: 'static sqInt valueSelectors[5]'.
 	aCCodeGenerator var: #iteratorSelectors declareC: 'static sqInt iteratorSelectors[32]'.
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.

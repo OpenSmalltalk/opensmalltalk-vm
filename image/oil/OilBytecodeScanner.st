@@ -130,13 +130,6 @@ printCInitializerOn: aStream in: aCCodeGenerator
 			ifFalse: [aStream nextPut: ((value notNil and: [value]) ifTrue: [$1] ifFalse: [$0])]].
 	aStream space; nextPut: $}! !
 
-!OilBytecodeDescriptor methodsFor: 'printing' stamp: 'cb 10/24/2026 10:10'!
-printOn: aStream
-	aStream nextPutAll: 'OilBytecodeDescriptor(';
-		print: numBytes; nextPutAll: ' bytes, tag ';
-		print: opcodeTag; nextPutAll: ', mode ';
-		print: operandMode; nextPut: $)! !
-
 !OilBytecodeDescriptor class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 instVarNamesAndTypesForTranslationDo: aBinaryBlock
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an OilBytecodeDescriptor struct.  Six bytes of fields plus six flag bits: 8 bytes per entry, 2 KB for the whole 256 entry table."
@@ -159,13 +152,13 @@ structTypeName
 
 
 VMClass subclass: #OilBytecodeScanner
-	instanceVariableNames: 'coInterpreter objectMemory cogit oilGeneratorTable oilMethodObj instrPC oilBcpc oilNextPC oilTargetPC oilByte0 oilByte1 oilByte2 oilByte3 oilExtA oilExtB oilNumExtB oilDescriptor opcodeTag operand1 operand2'
+	instanceVariableNames: 'coInterpreter objectMemory cogit oilGeneratorTable oilMethodObj instrPC oilBcpc oilNextPC oilTargetPC oilByte0 oilByte1 oilByte2 oilExtA oilExtB oilNumExtB opcodeTag operand1 operand2'
 	classVariableNames: 'OilGeneratorTable'
 	poolDictionaries: 'OilConstants'
 	category: 'Cogit-Oil'!
 
 !OilBytecodeScanner commentStamp: 'cb 10/24/2026 10:10' prior: 0!
-I am Oil's zero-allocation bytecode scanner.  I mirror the Cogit's scanner architecture: a static 256-entry dispatch table, oilGeneratorTable, of OilBytecodeDescriptor structs indexed by oilByte0.  I only decode the SistaV1 bytecode set (the alternate bytecode set in the method header); Oil refuses to compile methods using any other set (see oilIsSistaV1Method:), leaving them to the baseline Cogit.  Decoding a bytecode is a table lookup plus a switch on the oilDescriptor's operandMode; extension prefixes (oilExtA, oilExtB) are folded into the bytecode they extend, so clients see one logical instruction per decodeAt:.
+I am Oil's zero-allocation bytecode scanner.  I mirror the Cogit's scanner architecture: a static 256-entry dispatch table, oilGeneratorTable, of OilBytecodeDescriptor structs indexed by oilByte0.  I only decode the SistaV1 bytecode set (the alternate bytecode set in the method header); Oil refuses to compile methods using any other set (see oilIsSistaV1Method:), leaving them to the baseline Cogit.  Decoding a bytecode is a table lookup plus a switch on the descriptor's operandMode; extension prefixes (oilExtA, oilExtB) are folded into the bytecode they extend, so clients see one logical instruction per decodeAt:.
 
 All method access goes through fetchByte:, startPCOf:, endPCOf:, literal:of: and friends, which use the VM (objectMemory/coInterpreter) when translated to C and the host image's CompiledCode objects when run in Smalltalk (in-image compilation, cf. CurrentImageCoInterpreterFacade), so the same code runs in the image and in the VM.
 
@@ -173,7 +166,6 @@ After decodeAt: pc:
 	instrPC		pc of the instruction, including its extension prefixes
 	oilBcpc		pc of the (extended) bytecode itself
 	oilNextPC		pc of the following instruction
-	oilDescriptor	the bytecode's OilBytecodeDescriptor
 	opcodeTag	its classification (OilTag*); may be refined by decoding (e.g. unsupported variants answer OilTagUnknown)
 	operand1	first operand (index, literal index, signed jump distance, integer value...)
 	operand2	second operand (number of arguments, temp vector index, closure flags...)
@@ -182,25 +174,8 @@ After decodeAt: pc:
 !OilBytecodeScanner methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:10'!
 initialize
 	<doNotGenerate>
-	self setUpScanner! !
-
-!OilBytecodeScanner methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:10'!
-setUpScanner
-	<doNotGenerate>
 	oilGeneratorTable := OilGeneratorTable ifNil: [self class initializeOilGeneratorTable].
 	oilExtA := oilExtB := oilNumExtB := 0! !
-
-!OilBytecodeScanner methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:10'!
-setInterpreter: aCoInterpreter objectMemory: anObjectMemory cogit: aCogit
-	<doNotGenerate>
-	coInterpreter := aCoInterpreter.
-	objectMemory := anObjectMemory.
-	cogit := aCogit! !
-
-!OilBytecodeScanner methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-oilDescriptor
-	<returnTypeC: #'OilBytecodeDescriptor *'>
-	^oilDescriptor! !
 
 !OilBytecodeScanner methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
 instrPC
@@ -281,22 +256,19 @@ oilSpecialSelectorNumArgs: index
 !OilBytecodeScanner methodsFor: 'decoding' stamp: 'cb 10/24/2026 10:10'!
 decodeAt: aPC
 	"Decode the instruction at aPC of oilMethodObj, folding extension prefixes into the bytecode they extend.
-	 Set oilDescriptor, opcodeTag, operand1, operand2, oilTargetPC, instrPC, oilBcpc and oilNextPC. Answer the oilDescriptor.
+	 Set opcodeTag, operand1, operand2, oilTargetPC, instrPC, oilBcpc and oilNextPC.
 	 Zero allocation: a table lookup per byte plus a switch on the operand mode."
 	| d |
 	<var: #d type: #'OilBytecodeDescriptor *'>
-	<returnTypeC: #'OilBytecodeDescriptor *'>
 	oilExtA := oilExtB := oilNumExtB := 0.
-	oilByte1 := oilByte2 := oilByte3 := 0.
+	oilByte1 := oilByte2 := 0.
 	instrPC := oilBcpc := aPC.
 	[oilByte0 := self fetchByte: oilBcpc.
 	 d := self oilGeneratorAt: oilByte0.
 	 d numBytes > 1 ifTrue:
 		[oilByte1 := self fetchByte: oilBcpc + 1.
 		 d numBytes > 2 ifTrue:
-			[oilByte2 := self fetchByte: oilBcpc + 2.
-			 d numBytes > 3 ifTrue:
-				[oilByte3 := self fetchByte: oilBcpc + 3]]].
+			[oilByte2 := self fetchByte: oilBcpc + 2]].
 	 d isExtension] whileTrue:
 		[d operandBias = 0
 			ifTrue: [oilExtA := (oilExtA bitShift: 8) + oilByte1]
@@ -306,22 +278,17 @@ decodeAt: aPC
 							ifFalse: [(oilExtB bitShift: 8) + oilByte1].
 				 oilNumExtB := oilNumExtB + 1].
 		 oilBcpc := oilBcpc + d numBytes].
-	oilDescriptor := d.
 	oilNextPC := oilBcpc + d numBytes.
 	opcodeTag := d opcodeTag.
 	operand1 := operand2 := 0.
 	oilTargetPC := -1.
-	self decodeOperands.
-	^d! !
+	self decodeOperands: d! !
 
 !OilBytecodeScanner methodsFor: 'decoding' stamp: 'cb 10/24/2026 10:10'!
-decodeOperands
-	"Extract the operands of the bytecode just fetched, according to its oilDescriptor's operandMode."
-	| d mode |
+decodeOperands: d
+	"Extract the operands of the bytecode just fetched, according to its descriptor's operandMode."
 	<var: #d type: #'OilBytecodeDescriptor *'>
-	d := oilDescriptor.
-	mode := d operandMode.
-	mode caseOf: {
+	d operandMode caseOf: {
 		[OilModeNone]			-> [].
 		[OilModeLow]			-> [operand1 := oilByte0 - d operandBase + d operandBias].
 		[OilModeByte1]			-> [operand1 := oilByte1 + (oilExtA bitShift: 8)].
@@ -329,49 +296,36 @@ decodeOperands
 		[OilModeByte1ExtB]		-> [operand1 := oilByte1 + (oilExtB bitShift: 8)].
 		[OilModeSend]			->
 			[operand1 := (oilByte1 bitShift: -3) + (oilExtA bitShift: 5).
-			 (opcodeTag = OilTagSendSuper and: [oilExtB >= 64])
-				ifTrue: "directed super send: unsupported by Oil for now"
-					[opcodeTag := OilTagUnknown.
-					 operand2 := (oilByte1 bitAnd: 7) + ((oilExtB bitAnd: 63) bitShift: 3)]
-				ifFalse: [operand2 := (oilByte1 bitAnd: 7) + (oilExtB bitShift: 3)]].
+			 operand2 := (oilByte1 bitAnd: 7) + ((oilExtB bitAnd: 63) bitShift: 3).
+			 (opcodeTag = OilTagSendSuper and: [oilExtB >= 64]) ifTrue: "directed super send: unsupported by Oil"
+				[opcodeTag := OilTagUnknown]].
 		[OilModeLowSend]		-> [operand1 := oilByte0 - d operandBase. operand2 := d operandBias].
 		[OilModeNewArray]		-> [operand1 := oilByte1 bitAnd: 127. operand2 := oilByte1 bitShift: -7].
 		[OilModeRemoteTemp]	->
 			[operand1 := oilByte1.
 			 operand2 := oilByte2 bitAnd: 127.
-			 oilByte2 > 127 ifTrue: "remote inst var access: unsupported by Oil for now"
+			 oilByte2 > 127 ifTrue: "remote inst var access: unsupported by Oil"
 				[opcodeTag := OilTagUnknown]].
-		[OilModeFullClosure]	-> [operand1 := oilByte1 + (oilExtA bitShift: 8). operand2 := oilByte2].
-		[OilModePrimitive]		-> [operand1 := oilByte1 + ((oilByte2 bitAnd: 31) bitShift: 8). operand2 := oilByte2 bitShift: -5].
-		[OilModeEmbeddedClosure] -> [self decodeEmbeddedClosure] }
+		[OilModeFullClosure]	-> [operand1 := oilByte1 + (oilExtA bitShift: 8). operand2 := oilByte2] }
 		otherwise: [].
 	(d isBranchTrue or: [d isBranchFalse or: [d isBranchUnconditional]]) ifTrue:
 		[oilTargetPC := oilNextPC + operand1].
 	opcodeTag = OilTagSendSpecial ifTrue:
 		[operand2 := self oilSpecialSelectorNumArgs: operand1]! !
 
-!OilBytecodeScanner methodsFor: 'decoding' stamp: 'cb 10/24/2026 10:10'!
-decodeEmbeddedClosure
-	"SistaV1 250: oilByte1 = eeiiikkk numCopied iii (+ oilExtA // 16 * 8), numArgs kkk (+ oilExtA \\ 16 * 8), block size = oilByte2 (+ oilExtB * 256).
-	 operand1 := numArgs, operand2 := numCopied, oilTargetPC := the pc following the embedded block."
-	operand1 := (oilByte1 bitAnd: 7) + ((oilExtA \\ 16) bitShift: 3).
-	operand2 := ((oilByte1 bitShift: -3) bitAnd: 7) + ((oilExtA // 16) bitShift: 3).
-	oilTargetPC := oilNextPC + oilByte2 + (oilExtB bitShift: 8)! !
-
 !OilBytecodeScanner methodsFor: 'scanning' stamp: 'cb 10/24/2026 10:10'!
 scanMethod: aMethod do: aBlock
-	"Evaluate aBlock with the oilDescriptor of each instruction of aMethod, from its initial pc to its end pc.
+	"Evaluate aBlock for each instruction of aMethod, from its initial pc to its end pc.
 	 Extension prefixes are folded into the bytecode they extend.  The scanner's state (instrPC, oilNextPC,
-	 opcodeTag, operand1, operand2, oilTargetPC) describes the instruction while aBlock runs.
-	 Inlined in Slang: compiles to a pointer-chasing loop with no allocation."
-	<inline: true>
+	 opcodeTag, operand1, operand2, oilTargetPC) describes the instruction while aBlock runs."
+	<doNotGenerate>
 	| pc end |
 	self setScanMethod: aMethod.
 	pc := self startPCOf: aMethod.
 	end := self oilEndPCOf: aMethod.
 	[pc <= end] whileTrue:
 		[self decodeAt: pc.
-		 aBlock value: oilDescriptor.
+		 aBlock value: nil.
 		 pc := oilNextPC]! !
 
 
@@ -423,7 +377,7 @@ sistaV1Spec
 		(1  78  78 PushFalse			None	0  1)
 		(1  79  79 PushNil			None	0  1)
 		(1  80  81 PushInteger		Low		0  1)
-		(1  82  82 PushThisContext	None	0  1)
+		(1  82  82 Unknown			None	0  0)
 		(1  83  83 Dup				None	0  1)
 		(1  84  87 Unknown			None	0  0)
 		(1  88  88 ReturnSelf		None	0  0 return)
@@ -444,8 +398,7 @@ sistaV1Spec
 		(1 200 207 PopIntoRcvrVar	Low		0 -1)
 		(1 208 215 PopIntoTemp		Low		0 -1)
 		(1 216 216 Pop				None	0 -1)
-		(1 217 217 Trap				None	0  0)
-		(1 218 223 Unknown			None	0  0)
+		(1 217 223 Unknown			None	0  0)
 		(2 224 224 Extension			None	0  0 extension)
 		(2 225 225 Extension			None	1  0 extension)
 		(2 226 226 PushRcvrVar		Byte1	0  1)
@@ -469,14 +422,13 @@ sistaV1Spec
 		(2 244 244 StoreLitVar		Byte1	0  0)
 		(2 245 245 StoreTemp			Byte1Temp 0 0)
 		(2 246 247 Unknown			None	0  0)
-		(3 248 248 CallPrimitive		Primitive 0 0)
+		(3 248 248 Unknown			None	0  0)
 		(3 249 249 PushFullClosure	FullClosure 0 1 block)
-		(3 250 250 PushEmbeddedClosure EmbeddedClosure 0 1 block)
+		(3 250 250 Unknown			None	0  0)
 		(3 251 251 PushRemoteTemp	RemoteTemp 0  1)
 		(3 252 252 StoreRemoteTemp	RemoteTemp 0  0)
 		(3 253 253 PopIntoRemoteTemp RemoteTemp 0 -1)
-		(3 254 254 BranchOnBehavior	None	0 -1)
-		(3 255 255 Unknown			None	0  0))! !
+		(3 254 255 Unknown			None	0  0))! !
 
 !OilBytecodeScanner class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 declareCVarsIn: aCCodeGenerator
@@ -492,7 +444,6 @@ declareCVarsIn: aCCodeGenerator
 							table object
 								do: [:d| s crtab. d printCInitializerOn: s in: aCCodeGenerator]
 								separatedBy: [s nextPut: $,].
-							s cr; nextPut: $}]);
-		var: #oilDescriptor type: #'OilBytecodeDescriptor *'! !
+							s cr; nextPut: $}])! !
 
 OilBytecodeScanner initializeOilGeneratorTable!

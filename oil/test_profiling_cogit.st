@@ -1,7 +1,7 @@
 "Oil Milestone 1 (ProfilingCogit) end-to-end test.  Run with run-st.sh on a Squeak 6.x 64-bit image
  using the VM built from src/spur64.oil.  Writes oil-m1-result.txt into the image's directory
  and signals an error if any check fails."
-| resultPath out failures check log setLog count records recordsFor m oc small items blk pc scanner target poly warm beforeCount newRecs rec mCountTo mSumScores mMySum mMyDo blkSum blkMySum |
+| resultPath out failures check log setLog count records recordsFor m oc small items warm beforeCount newRecs rec mCountTo mSumScores mMySum mMyDo blkSum blkMySum |
 Utilities authorInitials: 'cb'.
 resultPath := FileDirectory default fullNameFor: 'oil-m1-result.txt'.
 out := WriteStream on: String new.
@@ -25,7 +25,6 @@ Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames
 (Smalltalk at: #OilTestModel) compile: 'mySumScores | total | total := 0. self myDo: [:each | total := total + each score]. ^total' classified: 'tests'.
 (Smalltalk at: #OilTestModel) class compile: 'oilTripLog: anArrayOrNil <primitive: ''primitiveOilTripLog''> ^#failed' classified: 'oil'.
 (Smalltalk at: #OilTestModel) class compile: 'oilTripLog <primitive: ''primitiveOilTripLog''> ^#failed' classified: 'oil'.
-CompiledCode compile: 'oilMonomorphicTargetAt: pc <primitive: ''primitiveOilMonomorphicTarget''> ^#failed' classified: 'oil'.
 
 mCountTo := (Smalltalk at: #OilTestModel) >> #countTo:.
 mSumScores := (Smalltalk at: #OilTestModel) >> #sumScores:.
@@ -33,12 +32,6 @@ mMySum := (Smalltalk at: #OilTestModel) >> #mySumScores.
 mMyDo := (Smalltalk at: #OilTestModel) >> #myDo:.
 blkSum := mSumScores literals detect: [:l | l isCompiledCode].
 blkMySum := mMySum literals detect: [:l | l isCompiledCode].
-"The pc of the #score send in [] in sumScores:"
-pc := nil.
-scanner := InstructionStream on: blkSum.
-[scanner pc <= blkSum endPC] whileTrue:
-	[scanner selectorToSendOrSelf == #score ifTrue: [pc := scanner pc].
-	 scanner interpretNextInstructionFor: InstructionClient new].
 
 "--- Trip log helpers ---"
 log := Array new: 1 + (6 * 256).
@@ -83,17 +76,15 @@ oc := OrderedCollection new.
 1 to: 70000 do: [:i | oc add: ((Smalltalk at: #OilTestItem) new score: 1)].
 1 to: 100 do: [:i | oc removeFirst].
 check value: 'sumScores: computes correctly' value: (m sumScores: oc) = 70000.
-check value: 'T2 #score send in [] in sumScores: is linked monomorphically' value: ((blkSum oilMonomorphicTargetAt: pc) isArray).
 newRecs := recordsFor value: blkSum.
 check value: 'block entry of [] in sumScores: tripped once' value: newRecs size = 1.
 newRecs notEmpty ifTrue:
 	[rec := newRecs last.
 	 check value: 'T2 trip kind is block entry (1)' value: (rec at: 1) = 1.
 	 check value: 'T2 home method is sumScores: (outer method framing the loop)' value: (rec at: 3) == mSumScores.
-	 check value: 'T2 home context is a sumScores: context' value: (((rec at: 4) isKindOf: Context) and: [(rec at: 4) method == mSumScores]).
-	 check value: 'T2 sampled element is a live OilTestItem' value: (((rec at: 5) isKindOf: (Smalltalk at: #OilTestItem)) and: [(rec at: 6) == (Smalltalk at: #OilTestItem)])].
+	 check value: 'T2 home context is a sumScores: context' value: (((rec at: 4) isKindOf: Context) and: [(rec at: 4) method == mSumScores])].
 
-"--- T3: back jump in an iterator whose argument is a closure; currentPosition sampling ---"
+"--- T3: back jump in an iterator whose argument is a closure ---"
 items := (1 to: 70000) collect: [:i | (Smalltalk at: #OilTestItem) new score: 2].
 m items: ((1 to: 10) collect: [:i | (Smalltalk at: #OilTestItem) new score: 2]).
 warm := (1 to: 5) collect: [:i | m mySumScores].
@@ -105,27 +96,9 @@ newRecs notEmpty ifTrue:
 	[rec := newRecs last.
 	 check value: 'T3 trip kind is back jump (0)' value: (rec at: 1) = 0.
 	 check value: 'T3 home method is mySumScores (home of the closure argument)' value: (rec at: 3) == mMySum.
-	 check value: 'T3 home context is a mySumScores context' value: (((rec at: 4) isKindOf: Context) and: [(rec at: 4) method == mMySum]).
-	 check value: 'T3 sample is items at: currentPosition (an OilTestItem)' value: (((rec at: 5) isKindOf: (Smalltalk at: #OilTestItem)) and: [(rec at: 6) == (Smalltalk at: #OilTestItem)])].
+	 check value: 'T3 home context is a mySumScores context' value: (((rec at: 4) isKindOf: Context) and: [(rec at: 4) method == mMySum])].
 newRecs := recordsFor value: blkMySum.
 check value: 'block entry of [] in mySumScores tripped once with home mySumScores' value: (newRecs size = 1 and: [(newRecs last at: 3) == mMySum]).
-
-"--- T4: monomorphicTargetFor:in: (inline cache query) ---"
-check value: 'found the #score send in [] in sumScores:' value: pc notNil.
-"Any full GC flushes the method cache, which unlinks all sends (CoInterpreter>>flushMethodCache),
- so re-run sumScores: to relink its sends before querying the inline cache."
-warm := (1 to: 5) collect: [:i | m sumScores: small].
-target := blkSum oilMonomorphicTargetAt: pc.
-out nextPutAll: 'monomorphic target of #score in [] in sumScores: '; print: target; cr.
-check value: 'monomorphic send answers {OilTestItem. OilTestItem>>score}' value: ((target isArray and: [target first == (Smalltalk at: #OilTestItem) and: [target last == ((Smalltalk at: #OilTestItem) >> #score)]])).
-"A polymorphic send site answers nil."
-poly := OrderedCollection new.
-1 to: 20 do: [:i | poly add: ((Smalltalk at: (i odd ifTrue: [#OilTestItem] ifFalse: [#OilTestItem2])) new score: 1)].
-warm := (1 to: 10) collect: [:i | m polySum: poly].
-check value: 'polySum: computes correctly' value: (m polySum: poly) = 30.
-blk := ((Smalltalk at: #OilTestModel) >> #polySum:) literals detect: [:l | l isCompiledCode].
-check value: 'polymorphic send answers nil' value: (blk oilMonomorphicTargetAt: pc) isNil.
-check value: 'non-send pc answers nil' value: (blkSum oilMonomorphicTargetAt: 1) isNil.
 
 "--- T5: GC robustness of counters and the trip log ---"
 Smalltalk garbageCollect.

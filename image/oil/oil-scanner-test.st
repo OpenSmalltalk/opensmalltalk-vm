@@ -2,7 +2,7 @@
  Usage: run-st.sh <VMMaker image> oil-scanner-test.st  (with OIL_DIR pointing at the .st sources)"
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: ['/usr/local/google/home/clementbera/.gemini/jetski/brain/d1466531-7c6e-4182-90d9-4bed24e00db9/scratch/osvm/image/oil/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st') do: [:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | dir out methods checked errors check |
@@ -16,7 +16,7 @@ check := [:m | | scanner starts pcs ok |
 		[s pc <= m endPC] whileTrue: [starts add: s pc. s pc: (s nextPc: (m at: s pc))]].
 	scanner := OilBytecodeScanner new.
 	pcs := OrderedCollection new.
-	scanner scanMethod: m do: [:d | | sel |
+	scanner scanMethod: m do: [:d |
 		pcs add: scanner instrPC.
 		((starts includes: scanner instrPC) and: [(starts includes: scanner oilBcpc) and: [(scanner oilNextPC > m endPC) or: [starts includes: scanner oilNextPC]]]) ifFalse:
 			[ok := false. out nextPutAll: 'BOUNDARY MISMATCH '; print: m; nextPutAll: ' pc '; print: scanner instrPC; cr].

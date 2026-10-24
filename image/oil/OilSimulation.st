@@ -19,9 +19,7 @@ printIROn: aStream
 	labels := Set new.
 	i := 0.
 	[i < irIndex] whileTrue:
-		[| op |
-		 op := self opcodeAt: i.
-		 (op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]) ifTrue: [labels add: (self imm16At: i)].
+		[(self isBranch: (self opcodeAt: i)) ifTrue: [labels add: (self imm16At: i)].
 		 i := i + (self instructionLengthAt: i)].
 	aStream nextPutAll: 'IR ('; print: irInstCount; nextPutAll: ' instructions, '; print: irIndex; nextPutAll: ' words, ';
 		print: irIndex * 4; nextPutAll: ' bytes):'; cr.
@@ -37,13 +35,7 @@ printIROn: aStream
 			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch' 'store' 'alloc') at: (siteKind at: s));
 			nextPutAll: ' -> frame #'; print: (siteFrame at: s); nextPutAll: ' '; print: (frameMethod at: (siteFrame at: s));
 			nextPutAll: ' pc '; print: (sitePC at: s); cr].
-	aStream nextPutAll: 'Stats: inlined frames '; print: numInlinedFrames;
-		nextPutAll: ', inlined quick methods '; print: numInlinedQuick;
-		nextPutAll: ', intrinsics '; print: numIntrinsics;
-		nextPutAll: ', calls '; print: numCalls;
-		nextPutAll: ', guards '; print: numGuards;
-		nextPutAll: ', folds/peepholes '; print: numFolds;
-		nextPutAll: ', virtual objects '; print: numVObjs;
+	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !
 
 !OilCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
@@ -56,7 +48,7 @@ printInstructionAt: i on: aStream
 		nextPutAll: ((self hexWord: (oilIRBuffer at: i))); nextPutAll: '  ';
 		nextPutAll: (name , (String new: (14 - name size max: 1) withAll: $ )).
 	op caseOf: {
-		[OilConstTagged]	-> [| t | t := self imm16At: i. t > 32767 ifTrue: [t := t - 65536].
+		[OilConstTagged]	-> [| t | t := self signed16: (self imm16At: i).
 							 aStream nextPutAll: (self reg: a), ' := ', ((t - 1) // 8) printString, '   (tagged ', t printString, ')'].
 		[OilConst64]		-> [aStream nextPutAll: (self reg: a), ' := ', (self printHandle: (self word64At: i + 1))].
 		[OilMove]			-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b)].
@@ -100,7 +92,7 @@ printInstructionAt: i on: aStream
 		[OilModTagged]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' \\ ', (self reg: c), '   (idiv; floored)'].
 		[OilAddImmTaggedNC]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: a), ' := size(', (self reg: b), ')'].
-		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: a), ' := closure ', (self printHandle: (self word64At: i + 1)), ' self ', (self reg: ((oilIRBuffer at: i + 3) bitAnd: 255)), ' copied ', c printString, ' from ', (self reg: b)].
+		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: a), ' := closure ', (self printHandle: (self word64At: i + 1)), ' self ', (self reg: (self fieldCAt: i + 3)), ' copied ', c printString, ' from ', (self reg: b)].
 		[OilNewArray]		-> [aStream nextPutAll: (self reg: a), ' := Array new: ', c printString, (b = OilFlagsReg ifTrue: ['   (nil filled)'] ifFalse: ['   from ', (self reg: b), '..', (self reg: b + c - 1)])] }
 		otherwise: [].
 	site := (0 to: numSites - 1) detect: [:s| (siteIR at: s) = i] ifNone: [nil].
@@ -200,10 +192,6 @@ hasSiteAt: pc in: aCompiledCode
 	"Has the send at pc been executed at all (like a linked, monomorphic or polymorphic, inline cache)?"
 	^sites includesKey: {aCompiledCode. pc}! !
 
-!OilSimulatedTypeFeedback methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
-numSites
-	^sites size! !
-
 
 Object subclass: #OilIRInterpreter
 	instanceVariableNames: 'compiler regs flag steps'
@@ -256,7 +244,7 @@ step: i
 	op := c opcodeAt: i. a := c fieldAAt: i. b := c fieldBAt: i. cc := c fieldCAt: i.
 	next := i + (c instructionLengthAt: i).
 	op = OilConstTagged ifTrue:
-		[| t | t := c imm16At: i. t > 32767 ifTrue: [t := t - 65536]. self r: a put: t - 1 // 8. ^next].
+		[self r: a put: (c signed16: (c imm16At: i)) - 1 // 8. ^next].
 	op = OilConst64 ifTrue: [self r: a put: (c objectFor: (c word64At: i + 1)). ^next].
 	op = OilMove ifTrue: [self r: a put: (self r: b). ^next].
 	(op between: OilAddTagged and: OilXorTagged) ifTrue:
@@ -342,7 +330,7 @@ step: i
 			ifFalse: [(0 to: cc - 1) collect: [:j| self r: b + j]]). ^next].
 	op = OilMakeClosure ifTrue:
 		[self r: a put: (FullBlockClosure
-			receiver: (self r: ((c irWordAt: i + 3) bitAnd: 255))
+			receiver: (self r: (c fieldCAt: i + 3))
 			outerContext: nil
 			method: (c objectFor: (c word64At: i + 1))
 			copiedValues: ((0 to: cc - 1) collect: [:j| self r: b + j]) asArray). ^next].
@@ -350,7 +338,7 @@ step: i
 
 
 Object subclass: #OilTestItem
-	instanceVariableNames: 'score weight'
+	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Cogit-Oil-Debugging'!
@@ -362,14 +350,6 @@ score
 !OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 score: anInteger
 	score := anInteger! !
-
-!OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
-weight
-	^weight ifNil: [0]! !
-
-!OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
-weight: anInteger
-	weight := anInteger! !
 
 !OilTestItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe0
@@ -416,7 +396,7 @@ oilProbe3: a with: b with: c
 
 
 Object subclass: #OilTestModel
-	instanceVariableNames: 'items'
+	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Cogit-Oil-Debugging'!
