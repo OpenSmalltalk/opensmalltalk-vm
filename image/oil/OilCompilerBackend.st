@@ -39,7 +39,7 @@ prepareNativeCode
 		oilSiteUsed at: s put: 0.
 		oilSiteResume at: s put: nil.
 		oilSiteStub at: s put: nil].
-	oilNumFixups := oilNumStubJumps := 0.
+	oilNumFixups := oilNumStubJumps := oilNumUndos := 0.
 	oilBailoutCommon := nil.
 	0 to: numSites - 1 do:
 		[:s| (siteIR at: s) >= 0 ifTrue: [oilIRSite at: (siteIR at: s) put: s]].
@@ -117,8 +117,8 @@ weighInstructionAt: i
 	c := self fieldCAt: i.
 	(op = OilConstTagged or: [op = OilConst64 or: [op = OilReturn or: [op = OilGuardClass]]]) ifTrue:
 		[^self weigh: a at: i].
-	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged
-	 or: [op = OilLoadField or: [op = OilStoreField or: [op = OilLoadSize or: [op = OilCheckBounds]]]]]]]) ifTrue:
+	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
+	 or: [op = OilLoadField or: [op = OilStoreField or: [op = OilLoadSize or: [op = OilCheckBounds]]]]]]]]) ifTrue:
 		[self weigh: a at: i.
 		 ^self weigh: b at: i].
 	((op between: OilAddTagged and: OilXorTagged)
@@ -345,6 +345,7 @@ genInstructionAt: i
 		[OilShiftTagged]	-> [self genShiftTagged: a b: b shift: (self signed8: c) site: s].
 		[OilOddTagged]		-> [self genOddTagged: a b: b site: s].
 		[OilAddImmTagged]	-> [self genAddImmTagged: a b: b imm: (self signed8: c) site: s].
+		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: a b: b imm: (self signed8: c)].
 		[OilLoadField]		-> [self genLoadField: a object: b slot: c].
 		[OilStoreField]		-> [self genStoreField: a object: b slot: c site: s].
 		[OilLoadElement]	-> [self genLoadElement: a array: b index: c].
@@ -394,8 +395,19 @@ genMove: a from: b
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genAddTagged: a b: b c: c site: s
 	"(8x+1) - 1 + (8y+1) = 8(x+y)+1; the 64-bit add overflows exactly when x+y is not a SmallInteger.
-	 Computed in a scratch register: on bailout the operands (and a) are intact."
-	| rb rc |
+	 Computed in a scratch register: on bailout the operands (and a) are intact.  But an accumulation, a := a + c
+	 (or a := c + a) with a in a machine register, is computed in place, adding c - 1 (computed aside, so that the
+	 loop carried dependency is one add): on overflow an undo stub subtracts it again (from the wrapped 64-bit sum)
+	 before bailing out."
+	| rb rc ra other ro |
+	ra := oilVRegReg at: a.
+	(ra ~= NoReg and: [oilNumUndos < OilMaxUndos and: [b ~= c and: [b = a or: [c = a]]]]) ifTrue:
+		[other := b = a ifTrue: [c] ifFalse: [b].
+		 ro := self src: other scratch: ClassReg.
+		 self genTagCheckOf: a in: ra and: other in: ro site: s.
+		 cogit LoadEffectiveAddressMw: -1 r: ro R: SendNumArgsReg.
+		 cogit AddR: SendNumArgsReg R: ra.
+		 ^self undoBail: (cogit JumpOverflow: 0) site: s reg: ra src: SendNumArgsReg].
 	rb := self src: b scratch: TempReg.
 	rc := self src: c scratch: ClassReg.
 	self genTagCheckOf: b in: rb and: c in: rc site: s.
@@ -404,6 +416,20 @@ genAddTagged: a b: b c: c site: s
 	cogit AddR: rc R: SendNumArgsReg.
 	self bail: (cogit JumpOverflow: 0) site: s.
 	self setDst: a from: SendNumArgsReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
+undoBail: jump site: s reg: reg src: src
+	"jump (an overflow of reg := reg + src) branches to an undo stub, which restores reg (reg - src) and branches to the
+	 bailout stub of deopt site s.  The stubs are emitted after the method body."
+	<var: #jump type: #'AbstractInstruction *'>
+	(s < 0 or: [s >= numSites or: [(siteSnapBase at: s) < 0]]) ifTrue:
+		[^self abortCompilation: OilFailUnsafeSite].
+	oilUndoJump at: oilNumUndos put: jump.
+	oilUndoSite at: oilNumUndos put: s.
+	oilUndoReg at: oilNumUndos put: reg.
+	oilUndoSrc at: oilNumUndos put: src.
+	oilNumUndos := oilNumUndos + 1.
+	oilSiteUsed at: s put: 1! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genSubTagged: a b: b c: c site: s
@@ -478,6 +504,21 @@ genAddImmTagged: a b: b imm: imm site: s
 	self bail: (cogit JumpOverflow: 0) site: s.
 	self setDst: a from: SendNumArgsReg! !
 
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
+genAddImmTaggedNoCheck: a b: b imm: imm
+	"x + imm where Pass 2 proved x a SmallInteger and the sum one too (a counted loop index): addq $8imm, in place
+	 if a and b share a machine register."
+	| ra rb |
+	ra := oilVRegReg at: a.
+	(ra ~= NoReg and: [(oilVRegReg at: b) = ra]) ifTrue:
+		[cogit AddCq: imm << objectMemory numTagBits R: ra.
+		 ^self].
+	rb := self src: b scratch: TempReg.
+	ra := self dst: a scratch: SendNumArgsReg.
+	ra ~= rb ifTrue: [cogit MoveR: rb R: ra].
+	cogit AddCq: imm << objectMemory numTagBits R: ra.
+	self setDst: a from: ra! !
+
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLoadField: a object: b slot: index
 	| rb dst |
@@ -527,15 +568,14 @@ genStoreField: a object: b slot: index site: s
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLoadElement: a array: b index: c
-	"Element i (1-based) of an Array (no fixed fields) is at array + 8 + 8(i-1) = array + 8i: the untagged index
-	 scaled by 8.  The bounds were checked by the preceding OilCheckBounds."
+	"Element i (1-based) of an Array (no fixed fields) is at array + 8 + 8(i-1) = array + 8i = array + tagged(i) - 1:
+	 on x64 one movq -1(array,taggedIndex), else the untagged index scaled by 8 (see the back ends'
+	 oilGenMoveTaggedIndex:base:into:scratch:).  The bounds were checked (by an OilCheckBounds, or by Pass 2)."
 	| rb rc dst |
 	rb := self src: b scratch: TempReg.
 	rc := self src: c scratch: ClassReg.
-	cogit MoveR: rc R: SendNumArgsReg.
-	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	dst := self dst: a scratch: SendNumArgsReg.
-	cogit MoveXwr: SendNumArgsReg R: rb R: dst.
+	cogit backEnd oilGenMoveTaggedIndex: rc base: rb into: dst scratch: SendNumArgsReg.
 	self setDst: a from: dst! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
@@ -742,7 +782,7 @@ genBailoutStubs
 	 unforwarded the object a class guard failed on, answers the address of the guard to resume at."
 	| stub |
 	<var: #stub type: #'AbstractInstruction *'>
-	oilNumStubJumps = 0 ifTrue: [^self].
+	(oilNumStubJumps = 0 and: [oilNumUndos = 0]) ifTrue: [^self].
 	oilBailoutCommon := cogit Label.
 	self spillAll.
 	cogit MoveR: TempReg R: SendNumArgsReg.
@@ -756,7 +796,13 @@ genBailoutStubs
 			 oilSiteStub at: s put: stub.
 			 cogit Jump: oilBailoutCommon]].
 	0 to: oilNumStubJumps - 1 do:
-		[:k| (oilStubJump at: k) jmpTarget: (oilSiteStub at: (oilStubSite at: k))]! !
+		[:k| (oilStubJump at: k) jmpTarget: (oilSiteStub at: (oilStubSite at: k))].
+	"The undo stubs of the in-place tagged adds: reg := reg - src, then the site's stub."
+	0 to: oilNumUndos - 1 do:
+		[:k|
+		stub := cogit SubR: (oilUndoSrc at: k) R: (oilUndoReg at: k).
+		(cogit Jump: 0) jmpTarget: (oilSiteStub at: (oilUndoSite at: k)).
+		(oilUndoJump at: k) jmpTarget: stub]! !
 
 !OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 siteResumeLabel: s
@@ -790,6 +836,9 @@ oilDebugInfo: what at: index
 	what = 8 ifTrue: [^oilNumAllocRegs].
 	what = 9 ifTrue: [^oilTraceTop].
 	what = 10 ifTrue: [^(index between: 0 and: oilTraceTop - 1) ifTrue: [oilTraceBuf at: index] ifFalse: [0]].
+	what = 11 ifTrue: [^oilPass1Words].
+	what = 12 ifTrue: [^(index between: 0 and: oilPass1Words - 1) ifTrue: [oilIRBuffer1 at: index] ifFalse: [0]].
+	what = 13 ifTrue: [^index = 6 ifTrue: [oilNumUndos] ifFalse: [self pass2Statistics: index]].
 	^0! !
 
 !OilCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 15:00'!
@@ -835,7 +884,7 @@ definitionIsTaggedAt: i
 	op = OilConst64 ifTrue: [^self isSmallIntegerHandle: (self word64At: i + 1)].
 	op = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: i)) ~= 0].
 	((op between: OilAddTagged and: OilOddTagged)
-	 or: [op = OilAddImmTagged or: [op = OilLoadSize]]) ifTrue: [^true].
+	 or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC or: [op = OilLoadSize]]]) ifTrue: [^true].
 	^false! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!

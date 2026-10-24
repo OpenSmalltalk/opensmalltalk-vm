@@ -1,5 +1,5 @@
 "Oil Milestone 3: the native back end of the Oil optimizing JIT, its bailout stubs and the deoptimizer.
- File in after oil-m1-profiling-cogit.st and image/oil/{OilConstants,OilBytecodeScanner,OilCompiler,OilCompilerBackend}.st.
+ File in after oil-m1-profiling-cogit.st and image/oil/{OilConstants,OilBytecodeScanner,OilCompiler,OilCompilerBackend,OilCompilerPass2}.st (then oil-m4-pass2.st).
 
  - ProfilingCogit drives the compilation of an Oil method (oilCompile:receiverClass: runs Pass 1, oilGenerate: runs
    Pass 3 and builds the CogMethod and its deoptimization metadata) and owns ceOilBailoutTrampoline.
@@ -171,6 +171,8 @@ oilGenerate: aMethodObj
 		[^OilFailInternal].
 	methodObj := aMethodObj.
 	methodHeader := objectMemory methodHeaderOf: aMethodObj.
+	(result := self pass2Optimize) ~= OilOK ifTrue:
+		[^result].
 	(result := self prepareNativeCode) ~= OilOK ifTrue:
 		[^result].
 	self setHasMovableLiteral: false.
@@ -382,7 +384,7 @@ estimateOpcodes
 							ifTrue: [48]
 							ifFalse: [20]]).
 		 i := i + (self instructionLengthAt: i)].
-	^n + (4 * oilNumAllocRegs)! !
+	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
 !OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 metadataSize
@@ -1038,13 +1040,14 @@ primitiveOilMethodInfo
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
-	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers }"
+	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers. trace.
+	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:, then the number of undo stubs) }"
 	<export: true>
 	<essential: #ProfilingCogit>
 	| n irArray result traceArray |
 	n := cogit oilDebugInfo: 1 at: 0.
 	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
-	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 9.
+	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 11.
 	(irArray isNil or: [result isNil]) ifTrue:
 		[^self primitiveFailFor: PrimErrNoMemory].
 	0 to: n - 1 do:
@@ -1062,4 +1065,16 @@ primitiveOilLastCompilation
 		 v := cogit oilDebugInfo: 10 at: i.
 		 objectMemory storePointer: i ofObject: traceArray withValue: ((objectMemory isIntegerValue: v) ifTrue: [objectMemory integerObjectOf: v] ifFalse: [objectMemory nilObject])].
 	objectMemory storePointer: 8 ofObject: result withValue: traceArray.
+	"Pass 1's IR (Buffer 1; the IR above is Pass 2's) and Pass 2's statistics."
+	n := cogit oilDebugInfo: 11 at: 0.
+	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
+	irArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
+	0 to: n - 1 do:
+		[:i| objectMemory storePointerUnchecked: i ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: i))].
+	objectMemory storePointer: 9 ofObject: result withValue: irArray.
+	traceArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 7.
+	traceArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
+	0 to: 6 do:
+		[:i| objectMemory storePointerUnchecked: i ofObject: traceArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
+	objectMemory storePointer: 10 ofObject: result withValue: traceArray.
 	self pop: argumentCount + 1 thenPush: result! !

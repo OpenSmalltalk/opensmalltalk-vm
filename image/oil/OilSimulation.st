@@ -3,7 +3,7 @@ printIROn: aStream
 	"Dump the flattened linear IR buffer: frames, instructions (index, opcode, operands, deopt site), deopt sites, statistics."
 	<doNotGenerate>
 	| labels i |
-	aStream nextPutAll: '=== Oil Pass 1 IR: '; print: rootMethod; nextPutAll: ' for receiver class '; print: (self objectFor: rootClass).
+	aStream nextPutAll: (oilIRBuffer == oilIRBuffer2 ifTrue: ['=== Oil Pass 2 IR: '] ifFalse: ['=== Oil Pass 1 IR: ']); print: rootMethod; nextPutAll: ' for receiver class '; print: (self objectFor: rootClass).
 	aStream nextPutAll: (eagerClosures ifTrue: ['  [eager closures]'] ifFalse: ['  [virtual closures]']); cr.
 	failed ifTrue:
 		[aStream nextPutAll: 'FAILED: '; nextPutAll: (OilConstants failureNames at: failureCode + 1); cr].
@@ -87,6 +87,7 @@ printInstructionAt: i on: aStream
 		[OilCallN]			-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' ', (self printHandle: (self word64At: i + 1)), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilCallSuper]		-> [aStream nextPutAll: (self reg: a), ' := super ', (self printHandle: (self word64At: i + 1)), ' rcvr ', (self reg: b), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilAddImmTagged]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ')'].
+		[OilAddImmTaggedNC]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: a), ' := size(', (self reg: b), ')'].
 		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: a), ' := closure ', (self printHandle: (self word64At: i + 1)), ' self ', (self reg: (oilIRBuffer at: i + 3)), ' copied ', c printString, ' from ', (self reg: b)].
 		[OilNewArray]		-> [aStream nextPutAll: (self reg: a), ' := Array new: ', c printString, (b = OilFlagsReg ifTrue: ['   (nil filled)'] ifFalse: ['   from ', (self reg: b), '..', (self reg: b + c - 1)])] }
@@ -258,6 +259,11 @@ step: i
 	op = OilAddImmTagged ifTrue:
 		[x := self r: b. (self smallInt: x) ifFalse: [^#deopt -> i].
 		 v := self tagged: x + (c signed8: cc). v ifNil: [^#deopt -> i]. self r: a put: v. ^next].
+	op = OilAddImmTaggedNC ifTrue: "Pass 2 proved it cannot fail: if it would, Pass 2 is wrong"
+		[x := self r: b.
+		 v := x + (c signed8: cc).
+		 ((self smallInt: x) and: [self smallInt: v]) ifFalse: [^#unsound -> i].
+		 self r: a put: v. ^next].
 	op = OilShiftTagged ifTrue:
 		[| k | x := self r: b. (self smallInt: x) ifFalse: [^#deopt -> i].
 		 k := c signed8: cc.

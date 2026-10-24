@@ -24,13 +24,13 @@ CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.
 irDump := [:ir | | s i names |
-	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper).
+	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC).
 	s := WriteStream on: String new.
 	i := 1.
 	[i <= ir size] whileTrue:
 		[| w op len |
 		 w := ir at: i. op := w >> 24.
-		 s tab; nextPutAll: ((i - 1) printPaddedWith: $0 to: 4); tab; nextPutAll: ((op between: 1 and: 30) ifTrue: [names at: op] ifFalse: ['?']); tab;
+		 s tab; nextPutAll: ((i - 1) printPaddedWith: $0 to: 4); tab; nextPutAll: ((op between: 1 and: names size) ifTrue: [names at: op] ifFalse: ['?']); tab;
 			print: (w >> 16 bitAnd: 255); space; print: (w >> 8 bitAnd: 255); space; print: (w bitAnd: 255); cr.
 		 len := (#(2 20 22 23) includes: op) ifTrue: [3] ifFalse: [op = 28 ifTrue: [4] ifFalse: [(op = 24 or: [op = 30]) ifTrue: [3 + ((w bitAnd: 255) + 3 // 4)] ifFalse: [1]]].
 		 i := i + len].
@@ -73,6 +73,9 @@ last := CompiledMethod oilLastCompilation.
 out nextPutAll: 'last compilation: failure '; print: (last at: 1); nextPutAll: ' eager '; print: (last at: 3); nextPutAll: ' failed at IR '; print: (last at: 4);
 	nextPutAll: ' sites '; print: (last at: 5); nextPutAll: ' frames '; print: (last at: 6); nextPutAll: ' homes '; print: (last at: 7); nextPutAll: ' allocated registers '; print: (last at: 8); cr;
 	nextPutAll: 'IR ('; print: (last at: 2) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 2)); nextPutAll: 'trace: '; print: (last at: 9); cr; flush.
+last size >= 11 ifTrue: "Oil M4: the IR above is Pass 2's; Pass 1's and Pass 2's statistics"
+	[out nextPutAll: 'Pass 1 IR ('; print: (last at: 10) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 10));
+		nextPutAll: 'Pass 2 (loops rotated, bounds checks removed, dead instructions, sizes shared, unchecked increments, Pass 1 words, undo stubs): '; print: (last at: 11); cr; flush].
 check value: 'Oil compilation succeeds (result 0)' value: compileResult = 0.
 info := m oilInfo.
 check value: 'sumScores: now has Oil machine code' value: info notNil.

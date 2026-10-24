@@ -1,4 +1,4 @@
-# Oil Milestone 2: Pass 1 (linear IR, scanner, inlining, peepholes)
+# Oil: Pass 1 (M2), Pass 2 (M4) and Pass 3 (M3) of the optimizing compiler
 
 Clean-room Slang/Smalltalk sources for Pass 1 of Oil, the optimizing JIT for the 64-bit Spur Cog VM
 (design: `oil-jit-design.md`). Author: cb.
@@ -6,11 +6,14 @@ Clean-room Slang/Smalltalk sources for Pass 1 of Oil, the optimizing JIT for the
 | File | Contents |
 |---|---|
 | `OilConstants.st` | Shared pool: IR opcodes, condition codes, scanner tags/modes, descriptor kinds, limits, deopt site kinds, failure codes (generated from one spec). |
-| `OilBytecodeScanner.st` | `OilBytecodeDescriptor` (8-byte struct) and `OilBytecodeScanner`: a 512-entry `oilGeneratorTable` (0-255 SqueakV3PlusClosures, 256-511 SistaV1) and a zero-allocation decoder (`decodeAt:`, `scanMethod:do:`) that folds extA/extB prefixes. |
+| `OilBytecodeScanner.st` | `OilBytecodeDescriptor` (8-byte struct) and `OilBytecodeScanner`: a 256-entry SistaV1 `oilGeneratorTable` and a zero-allocation decoder (`decodeAt:`, `scanMethod:do:`) that folds extA/extB prefixes. Oil only compiles SistaV1 methods (others: `OilFailNotSistaV1`, left to the Cogit). |
 | `OilCompiler.st` | `OilCompiler` (Pass 1): static 4096 x 32-bit IR buffer, register-window virtual registers with descriptors, structural inlining, tagged SmallInteger peepholes, deopt sites, frame table. |
+| `OilCompilerBackend.st` | Pass 3 (M3): register allocation, `generateNativeCode` (IR to Cogit abstract instructions), bailout stubs, tagged-register analysis. |
+| `OilCompilerPass2.st` | Pass 2 (M4): `pass2Optimize`, streaming Buffer 1 into Buffer 2 (see below). |
 | `OilSimulation.st` | IR printer (`printIROn:`), `OilSimulatedTypeFeedback` (receiver classes recorded per send site by simulated execution, standing in for ProfilingCogit's PICs), `OilIRInterpreter` (runs the IR on host objects to validate it), test classes. |
-| `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on 9220 SistaV1 methods and blocks and 200 V3 methods. |
+| `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on 9220 SistaV1 methods and blocks. |
 | `oil-m2-test.st` | Acceptance test: compiles the probes (`sumScores:` and others), dumps the IR, checks its shape, and compares the IR interpreter's result with the real execution. |
+| `oil-m4-test.st` | Pass 2 acceptance test: IR shape of the optimized loops, and Pass 2 IR = Pass 1 IR = real execution on every probe (deopts included), plus a robustness sweep. |
 | `oil-translate.st` | Translates `OilBytecodeScanner` and `OilCompiler` to C with VMMaker's `CCodeGenerator` (standalone, not yet wired into the Cogit). |
 
 ## Running
@@ -20,6 +23,7 @@ SK=~/.gemini/config/skills/opensmalltalk-slang/scripts
 # Use a copy of image/Spur64VMMaker.image: filing in appends to its .changes file.
 nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-scanner-test.st   # -> scanner-test-result.txt
 nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-m2-test.st        # -> m2-test-result.txt (IR dumps + PASS/FAIL)
+nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-m4-test.st        # -> m4-test-result.txt
 nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-translate.st      # -> oil-pass1.c
 ```
 
@@ -52,3 +56,43 @@ first chunk to run them from somewhere else.
 - Selectors: `registerSelector:kind:` (`<api>`) tells Oil the value, bitXor:, iterator and cold selectors at startup.
 - Entry point: `compileMethod:receiverClass:` (`<api>`). The IR, the deopt site table and the frame table are then
   ready for M3's back end.
+
+## Pass 2 (Milestone 4): `OilCompiler>>pass2Optimize`
+
+Pass 1 writes `oilIRBuffer1`; Pass 2 streams it into `oilIRBuffer2` (both static, 16 KB) and makes it the current IR
+(`oilIRBuffer` points to the current buffer); Pass 3 translates it. `ProfilingCogit>>oilGenerate:` runs Pass 2 then Pass 3.
+
+1. Analysis: definition counts, branch targets, `analyzeTaggedRegisters` (registers that always hold SmallIntegers).
+2. Innermost, call-free loops entered only by falling into their header (`p2OptimizeLoop:backJump:`):
+   - Rotation: a header test that cannot fail (`CmpTagged` on SmallIntegers) is copied to the bottom as
+     `CmpTagged; BranchTrue body`, replacing the back `Jump`.
+   - Counted loops: index `iv` from a constant >= 1, only incremented, tested `iv <= lim` / `iv < lim` with
+     `lim := size(x)` assigned once before the loop and `x` never assigned. The increments become `OilAddImmTaggedNC`
+     (no tag/overflow check), `size(x)` in the loop becomes `Move lim` (shared size), and the `CheckBounds iv`
+     right after the test are deleted.
+3. Dead code: pure instructions whose destination nothing reads, globally or before it is reassigned in the
+   straight-line code that follows. Reads include the deopt states of the live sites.
+4. Emission: layout pass (`oilIRMap`), then emit, then remap `siteIR` (sites of deleted or unchecked instructions die).
+
+Pass 3 additions: `OilAddImmTaggedNC` (in place `addq $8`), in-place accumulation `a := a + c`
+(`lea -1(c), t; add t, a; jo undo`, the undo stub subtracting `t` before bailing out), and array loads with the
+x64 instruction `movq -1(arr, taggedIndex, 1)`, a new x64-specific opcode `MoveTaggedXwrRR`
+(`oil/oil-m4-pass2.st`, which patches `CogX64Compiler`; other back ends untag and scale).
+
+`sumScores:` on an Array, inner loop (16 instructions, every one needed for soundness: element class guard, score
+tag check, overflow check):
+
+```
+L: movq  -0x1(%r10,%r12,1),%r13    ; element (tagged index, -1 displacement)
+   testb $0x7,%r13b ; jne guard     ; element is an object...
+   movl  (%r13),%r9d ; andq $0x3fffff,%r9 ; cmpq $0x1433,%r9 ; jne guard   ; ...of class OilTestItem
+   movq  0x8(%r13),%r15             ; score
+   testb $0x1,%r15b ; je arith      ; score is a SmallInteger
+   leaq  -0x1(%r15),%r9 ; addq %r9,%r14 ; jo undo   ; total := total + score
+   addq  $0x8,%r12                  ; index + 1, no check
+   cmpq  %r11,%r12 ; jle L
+```
+
+Not done yet: hoisting loop invariant field loads (the OrderedCollection>>do: loop reloads its array/lastIndex
+fields and keeps its bounds check), loop unrolling, and register allocation by live ranges (Pass 3 still gives
+the heaviest virtual registers machine registers for the whole method).

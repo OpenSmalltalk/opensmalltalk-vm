@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets'
 	category: 'Cogit-Oil'!
@@ -25,7 +25,9 @@ initialize
 !OilCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
 setUpSimulationTables
 	<doNotGenerate>
-	oilIRBuffer := CArrayAccessor on: (WordArray new: OilBufferWords).
+	oilIRBuffer1 := CArrayAccessor on: (WordArray new: OilBufferWords).
+	oilIRBuffer2 := CArrayAccessor on: (WordArray new: OilBufferWords).
+	oilIRBuffer := oilIRBuffer1.
 	slotKind := self newTable: OilNumRegs.
 	slotValue := self newTable: OilNumRegs.
 	slotFlags := self newTable: OilNumRegs.
@@ -162,7 +164,9 @@ resetForCompilation
 		 trueHandle := objectMemory trueObject.
 		 falseHandle := objectMemory falseObject.
 		 smallIntegerClassHandle := objectMemory classSmallInteger].
+	oilIRBuffer := oilIRBuffer1. "Pass 1 writes Buffer 1; Pass 2 (pass2Optimize) streams it into Buffer 2"
 	irIndex := irInstCount := 0.
+	oilPass1Words := 0.
 	lastInstIR := -1.
 	lastLabelIR := 0.
 	0 to: OilNumRegs - 1 do:
@@ -842,7 +846,7 @@ retarget: src to: dst
 opcodeHasDest: op
 	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [(op between: OilAddTagged and: OilOddTagged)
 		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
-		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper]]]]]]]]]]! !
+		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC]]]]]]]]]]]! !
 
 !OilCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -2283,7 +2287,20 @@ profiledClassAt: pc
 !OilCompiler class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:30'!
 declareCVarsIn: aCCodeGenerator
 	"All of Pass 1's memory is static: the 16 KB IR buffer and fixed size tables (BSS), invisible to the GC."
-	aCCodeGenerator var: #oilIRBuffer declareC: 'static unsigned int oilIRBuffer[OilBufferWords]'.
+	"Pass 1 writes Buffer 1, Pass 2 streams it into Buffer 2; oilIRBuffer points to the current one."
+	aCCodeGenerator var: #oilIRBuffer1 declareC: 'static unsigned int oilIRBuffer1[OilBufferWords]'.
+	aCCodeGenerator var: #oilIRBuffer2 declareC: 'static unsigned int oilIRBuffer2[OilBufferWords]'.
+	aCCodeGenerator var: #oilIRBuffer type: #'unsigned int *'.
+	"Pass 2 tables."
+	aCCodeGenerator var: #oilIRMap declareC: 'static unsigned short oilIRMap[OilBufferWords + 1]'.
+	aCCodeGenerator var: #oilIRFlag declareC: 'static unsigned char oilIRFlag[OilBufferWords]'.
+	aCCodeGenerator var: #oilIRAux declareC: 'static unsigned char oilIRAux[OilBufferWords]'.
+	#(oilVRegDefs oilVRegUses) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
+	"Pass 3: in-place tagged adds and their undo stubs."
+	aCCodeGenerator var: #oilUndoJump declareC: 'static AbstractInstruction *oilUndoJump[OilMaxUndos]'.
+	#(oilUndoSite oilUndoReg oilUndoSrc) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxUndos]'].
 	#(slotKind slotValue knownClass affineBase affineConst affineVersion regVersion lastDefIR) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
 	aCCodeGenerator var: #slotFlags declareC: 'static unsigned char slotFlags[OilNumRegs]'.
