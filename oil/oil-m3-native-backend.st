@@ -1,20 +1,24 @@
-"The native back end of the Oil optimizing JIT, its bailout stubs and the deoptimizer.
- File in after oil-m1-profiling-cogit.st and image/oil/{OilConstants,OilBytecodeScanner,OilCompiler,OilCompilerBackend,OilCompilerPass2}.st.
-
+"The native back end of the Oil optimizing JIT, its deopt stubs and the deoptimizer.
  - ProfilingCogit drives the compilation of an Oil method (oilCompile:receiverClass: runs Pass 1, oilGenerate: runs
-   Pass 3 and builds the CogMethod and its deoptimization metadata) and owns ceOilBailoutTrampoline.
- - CoInterpreter>>ceOilBailout: is the deoptimizer: on a failed guard it either unforwards and resumes the machine code
+   Pass 3 and builds the CogMethod and its deoptimization metadata) and owns ceOilDeoptTrampoline.
+ - CoInterpreter>>ceOilDeoptimize: is the deoptimizer: on a failed guard it either unforwards and resumes the machine code
    (fast path), or rebuilds the interpreter frames of the method and of everything inlined into it at the guard,
    rematerializing the closures and temp vectors Oil dissolved, and continues in the interpreter.
  - primitiveOilCompile, primitiveOilSetSelectors and primitiveOilMethodInfo are the image's interface.
  Author: cb."!
 
+(CoInterpreter sharedPools includes: OilInstructionConstants) ifFalse:
+	[CoInterpreter addSharedPool: OilInstructionConstants]!
 (CoInterpreter sharedPools includes: OilConstants) ifFalse:
 	[CoInterpreter addSharedPool: OilConstants]!
 
+(CogObjectRepresentationFor64BitSpur sharedPools includes: OilInstructionConstants) ifFalse:
+	[CogObjectRepresentationFor64BitSpur addSharedPool: OilInstructionConstants]!
 (CogObjectRepresentationFor64BitSpur sharedPools includes: OilConstants) ifFalse:
 	[CogObjectRepresentationFor64BitSpur addSharedPool: OilConstants]!
 
+(ProfilingCogit sharedPools includes: OilInstructionConstants) ifFalse:
+	[ProfilingCogit addSharedPool: OilInstructionConstants]!
 (ProfilingCogit sharedPools includes: OilConstants) ifFalse:
 	[ProfilingCogit addSharedPool: OilConstants]!
 
@@ -58,30 +62,25 @@ initialize
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
 
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:30'!
 generateRunTimeTrampolines
-	"Add the trampoline called when a trip counter reaches zero (it passes the kind of site, OilTripBackJump or
-	 OilTripBlockEntry, in SendNumArgsReg to ceOilTrip:, and preserves ReceiverResultReg, which may hold self),
-	 and the trampoline called by the bailout sequence of Oil methods (it passes the deopt site index in
-	 SendNumArgsReg to ceOilBailout:, which answers the address to resume at in TempReg, unless it deoptimizes,
-	 in which case it does not return)."
+	"Add the trampoline called by the deopt sequence of Oil methods (it passes the deopt site index in
+	 SendNumArgsReg to ceOilDeoptimize:, which answers the address to resume at in TempReg, unless it deoptimizes,
+	 in which case it does not return).
+	 Trip counters share ceCheckForInterruptTrampoline (back jump) and methodAbortTrampoline (block entry)."
 	super generateRunTimeTrampolines.
 	"Let large (e.g. parser) methods get machine code, hence inline caches for Oil (the default limit is 60 literals)."
 	coInterpreter oilRaiseMaxLiteralCountForCompile.
-	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
-								called: 'ceOilTripTrampoline'
-								arg: SendNumArgsReg
-								regsToSave: (self registerMaskFor: ReceiverResultReg).
-	ceOilBailoutTrampoline := self genTrampolineFor: #ceOilBailout:
-								called: 'ceOilBailoutTrampoline'
+	ceOilDeoptTrampoline := self genTrampolineFor: #ceOilDeoptimize:
+								called: 'ceOilDeoptTrampoline'
 								arg: SendNumArgsReg
 								result: TempReg! !
 
 
-!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
-oilGenBailoutCall
-	"See OilCompiler>>genBailoutStubs."
-	^self CallRT: ceOilBailoutTrampoline! !
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 00:30'!
+oilGenDeoptCall
+	"See OilCompiler>>genDeoptStubs."
+	^self CallRT: ceOilDeoptTrampoline! !
 
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
 oilGenStoreCheckCall
@@ -575,49 +574,49 @@ maybeMarkCountersIn: cogMethod
 	obj := self countersObjectOf: cogMethod counters.
 	obj ~= 0 ifTrue: [objectMemory markAndTrace: obj]! !
 
-!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/25/2026 00:30'!
 numTrampolines
-	^super numTrampolines + 2 "ceOilTripTrampoline ceOilBailoutTrampoline"! !
+	^super numTrampolines + 1 "ceOilDeoptTrampoline"! !
 
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
-	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, numeric compiler)."
+	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
 	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilBaseCompiler. OilLoopCompiler. OilFullCompiler}! !
 
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 estimateOpcodes
 	"An upper bound of the number of abstract instructions oilGenerate: emits (they are allocated on the C stack)."
-	| i op n |
-	n := 200 + (2 * oilNumHomes) + (4 * numSites) + (4 * OilMaxReg // 16).
-	i := 0.
-	[i < irIndex] whileTrue:
-		[op := self opcodeAt: i.
-		 n := n + ((op = OilCall0 or: [op = OilCall1 or: [op = OilCallN or: [op = OilCallSuper]]])
-					ifTrue: [48 + (2 * (self fieldCAt: i))]
+	| irOffset opcode estimatedCount |
+	estimatedCount := 200 + (2 * oilNumHomes) + (4 * numSites) + (4 * OilMaxReg // 16).
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 estimatedCount := estimatedCount + ((opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]])
+					ifTrue: [48 + (2 * (self fieldCAt: irOffset))]
 					ifFalse:
-						[(op = OilStoreField or: [op = OilStoreElement])
+						[(opcode = OilStoreField or: [opcode = OilStoreElement])
 							ifTrue: [48]
 							ifFalse:
-								[(op = OilNewArray or: [op = OilMakeClosure])
-									ifTrue: [40 + (2 * (self fieldCAt: i)) + (2 * OilMaxReg // 16)]
+								[(opcode = OilNewArray or: [opcode = OilMakeClosure])
+									ifTrue: [40 + (2 * (self fieldCAt: irOffset)) + (2 * OilMaxReg // 16)]
 									ifFalse:
-										[(op = OilStreamNext or: [op = OilStreamNextPut or: [op = OilCompareBytes]])
+										[(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]])
 											ifTrue: [140]
 											ifFalse: [20]]]]).
-		 i := i + (self instructionLengthAt: i)].
-	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:30'!
 metadataSize
 	"The number of slots of the deoptimization metadata (see fillMetadata:cogMethod:)."
-	| n |
-	n := OilMDHeaderSize + (numFrames * OilMDFrameSize) + (numVObjs * OilMDVObjSize) + (capturedTop * 2) + OilNumRegs + numSites.
+	| totalSlots |
+	totalSlots := OilMDHeaderSize + (numFrames * OilMDFrameSize) + (numVObjs * OilMDVObjSize) + (capturedTop * 2) + OilNumRegs + numSites.
 	0 to: numSites - 1 do:
-		[:s| (oilSiteUsed at: s) ~= 0 ifTrue:
-			[n := n + OilMDSiteHeaderSize + (2 * (self siteStateSize: s))]].
-	^n! !
+		[:siteIndex| (oilSiteUsed at: siteIndex) ~= 0 ifTrue:
+			[totalSlots := totalSlots + OilMDSiteHeaderSize + (2 * (self siteStateSize: siteIndex))]].
+	^totalSlots! !
 
 !OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index put: value
@@ -642,7 +641,7 @@ fillMetadata: md cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their
 	 captured values, the home slot (frame offset) of every virtual register, a table from deopt site index to
-	 site record, and the records of the sites used by the bailout stubs: kind, the guarded register and class
+	 site record, and the records of the sites used by the deopt stubs: kind, the guarded register and class
 	 tag (for the unforwarding fast path), the offset of the instruction to resume at, the inlined frame and
 	 bytecode pc, and the virtual state (descriptors of the register window and of the high registers)."
 	<var: #cogMethodAddress type: #usqInt>
@@ -789,11 +788,11 @@ oilMDIncrement: index of: md
 		ofObject: md
 		withValue: (objectMemory integerObjectOf: (self oilMD: md at: index) + 1)! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-ceOilBailout: siteIndex
-	"Called from ceOilBailoutTrampoline by the bailout sequence of an Oil method (see OilCompiler>>genBailoutStubs)
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/25/2026 00:30'!
+ceOilDeoptimize: siteIndex
+	"Called from ceOilDeoptTrampoline by the deopt sequence of an Oil method (see OilCompiler>>genDeoptStubs)
 	 when a guard fails at deopt site siteIndex.  framePointer is the Oil method's frame, whose virtual registers
-	 have all been spilled to their homes; the top of stack is the return address into the bailout sequence.
+	 have all been spilled to their homes; the top of stack is the return address into the deopt sequence.
 	 Fast path: a class guard failed on a forwarder (become:) whose target passes the guard: store the target in
 	 the register's home and answer the address of the guard; the machine code reloads its registers and resumes
 	 there, without deoptimizing.
@@ -803,29 +802,29 @@ ceOilBailout: siteIndex
 	<api>
 	<essential: #ProfilingCogit>
 	<returnTypeC: #usqInt>
-	| cogMethod md site vreg home value |
+	| cogMethod metadata siteRecord virtualReg homeOffset value |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := self mframeHomeMethod: framePointer.
 	self assert: (cogit isOilMethod: cogMethod).
-	md := cogit oilMetadataOf: cogMethod.
-	site := self oilMD: md at: (self oilMD: md at: OilMDSiteTable) + siteIndex.
-	self assert: site > 0.
-	(self oilMD: md at: site) = OilSiteGuard ifTrue:
-		[vreg := self oilMD: md at: site + 1.
-		 home := self oilMD: md at: (self oilMD: md at: OilMDHomes) + vreg.
-		 value := stackPages longAt: framePointer + home.
+	metadata := cogit oilMetadataOf: cogMethod.
+	siteRecord := self oilMD: metadata at: (self oilMD: metadata at: OilMDSiteTable) + siteIndex.
+	self assert: siteRecord > 0.
+	(self oilMD: metadata at: siteRecord) = OilSiteGuard ifTrue:
+		[virtualReg := self oilMD: metadata at: siteRecord + 1.
+		 homeOffset := self oilMD: metadata at: (self oilMD: metadata at: OilMDHomes) + virtualReg.
+		 value := stackPages longAt: framePointer + homeOffset.
 		 ((objectMemory isNonImmediate: value)
 		  and: [objectMemory isForwarded: value]) ifTrue:
 			[value := objectMemory followForwarded: value.
-			 (objectMemory fetchClassTagOf: value) = (self oilMD: md at: site + 2) ifTrue:
-				[stackPages longAt: framePointer + home put: value.
-				 self oilMDIncrement: OilMDFastPaths of: md.
-				 ^cogMethod asUnsignedInteger + (self oilMD: md at: site + 3)]]].
-	(self oilMD: md at: site) ~= OilSiteAlloc ifTrue: "an allocation beyond the scavenge threshold is not a failed speculation"
-		[self oilMDIncrement: OilMDDeopts of: md].
-	instructionPointer := self popStack. "the return address into the bailout sequence"
-	self oilDeoptimizeFrame: framePointer metadata: md site: site.
-	(self oilMD: md at: OilMDDeopts) >= cogit oilDisqualifyLimit ifTrue:
+			 (objectMemory fetchClassTagOf: value) = (self oilMD: metadata at: siteRecord + 2) ifTrue:
+				[stackPages longAt: framePointer + homeOffset put: value.
+				 self oilMDIncrement: OilMDFastPaths of: metadata.
+				 ^cogMethod asUnsignedInteger + (self oilMD: metadata at: siteRecord + 3)]]].
+	(self oilMD: metadata at: siteRecord) ~= OilSiteAlloc ifTrue: "an allocation beyond the scavenge threshold is not a failed speculation"
+		[self oilMDIncrement: OilMDDeopts of: metadata].
+	instructionPointer := self popStack. "the return address into the deopt sequence"
+	self oilDeoptimizeFrame: framePointer metadata: metadata site: siteRecord.
+	(self oilMD: metadata at: OilMDDeopts) >= cogit oilDisqualifyLimit ifTrue:
 		[self oilDisqualifyCogMethod: cogMethod].
 	"and now continue in the interpreter..."
 	cogit ceInvokeInterpret.
@@ -1286,7 +1285,7 @@ primitiveOilSetSelectors
 !CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilMethodInfo
 	"Receiver: a CompiledMethod.  If its machine code was compiled by Oil answer
-	 { number of deoptimizations. number of bailouts resumed by the unforwarding fast path.
+	 { number of deoptimizations. number of deopts resumed by the unforwarding fast path.
 	   the machine code (a ByteArray, from the CogMethod header to the end of the code). its address }
 	 otherwise answer nil."
 	<export: true>
@@ -1308,7 +1307,7 @@ primitiveOilMethodInfo
 		[^self primitiveFailFor: PrimErrNoMemory].
 	"Allocation neither moves objects nor frees machine code."
 	0 to: size - 1 do:
-		[:i| objectMemory storeByte: i ofObject: code withValue: (objectMemory byteAt: cogMethod asUnsignedInteger + i)].
+		[:byteOffset| objectMemory storeByte: byteOffset ofObject: code withValue: (objectMemory byteAt: cogMethod asUnsignedInteger + byteOffset)].
 	md := cogit oilMetadataOf: cogMethod.
 	objectMemory
 		storePointerUnchecked: 0 ofObject: result withValue: (objectMemory fetchPointer: OilMDDeopts ofObject: md);
@@ -1317,7 +1316,7 @@ primitiveOilMethodInfo
 		storePointerUnchecked: 3 ofObject: result withValue: (objectMemory integerObjectOf: cogMethod asUnsignedInteger).
 	self pop: argumentCount + 1 thenPush: result! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/25/2026 00:30'!
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
@@ -1325,31 +1324,31 @@ primitiveOilLastCompilation
 	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
 	<export: true>
 	<essential: #ProfilingCogit>
-	| n irArray result statsArray |
-	n := cogit oilDebugInfo: 1 at: 0.
-	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
+	| irWordCount irArray result statsArray |
+	irWordCount := cogit oilDebugInfo: 1 at: 0.
+	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: irWordCount.
 	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 11.
 	(irArray isNil or: [result isNil]) ifTrue:
 		[^self primitiveFailFor: PrimErrNoMemory].
-	0 to: n - 1 do:
-		[:i| objectMemory storePointerUnchecked: i ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 2 at: i))].
+	0 to: irWordCount - 1 do:
+		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 2 at: wordIndex))].
 	objectMemory
 		storePointerUnchecked: 0 ofObject: result withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 0 at: 0));
 		storePointer: 1 ofObject: result withValue: irArray.
 	2 to: 7 do:
-		[:i| objectMemory storePointerUnchecked: i ofObject: result withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: i + 1 at: 0))].
+		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: result withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: slotIndex + 1 at: 0))].
 	objectMemory storePointerUnchecked: 8 ofObject: result withValue: objectMemory nilObject.
 	"Pass 1's IR (Buffer 1; the IR above is Pass 2's) and Pass 2's statistics."
-	n := cogit oilDebugInfo: 11 at: 0.
-	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: n.
+	irWordCount := cogit oilDebugInfo: 11 at: 0.
+	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: irWordCount.
 	irArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: n - 1 do:
-		[:i| objectMemory storePointerUnchecked: i ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: i))].
+	0 to: irWordCount - 1 do:
+		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
 	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 8.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 	0 to: 7 do:
-		[:i| objectMemory storePointerUnchecked: i ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
+		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !
 

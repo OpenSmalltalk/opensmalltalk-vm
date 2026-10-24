@@ -1,11 +1,11 @@
-"Oil Pass 2 acceptance test (in image): OilLoopCompiler>>pass2Optimize.
+"Oil Pass 2 acceptance test (in image): OilLoopCompiler>>loopOptimize.
  Files in the Oil sources, compiles probes with Pass 1, runs Pass 2, dumps both IRs, checks the loop optimizations
  (rotation, bounds check elimination, shared sizes, unchecked index increments, dead code), and validates Pass 2's IR
  by executing it (OilIRInterpreter) against Pass 1's IR and the real execution of each method, deopts included."
 | dir |
 Utilities authorInitials: 'cb'.
 dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
-#('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
+#('OilInstructionConstants.st' 'OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | dir out model coll arr mixed pass fail check compile run same c hist stats results probes loopHist arrWithOther arrWithInt arrOverflow |
@@ -34,7 +34,7 @@ compile := [:sel :argLists :pass2 |
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
 	comp compileMethod: OilTestModel >> sel receiverClass: (comp handleFor: OilTestModel).
-	pass2 ifTrue: [comp pass2Optimize].
+	pass2 ifTrue: [comp loopOptimize].
 	comp].
 run := [:comp :sel :args | [(OilIRInterpreter new on: comp) run: model with: args] on: Error do: [:e | #error -> e description]].
 "Pass 2's IR must behave like Pass 1's: the same result, or a deopt where Pass 1 deopts (possibly earlier, never later)."
@@ -47,7 +47,7 @@ stats := [:comp | (0 to: 5) collect: [:k | comp pass2Statistics: k]].
 "--- 1. sumScores: on an Array (the M3/M4 benchmark shape) ---"
 c := compile value: #sumScores: value: {{arr}} value: false.
 out cr; nextPutAll: c irString.
-c pass2Optimize.
+c loopOptimize.
 out cr; nextPutAll: c irString; nextPutAll: 'Pass 2 statistics (rotated, bounds removed, dead, sizes shared, unchecked increments, Pass 1 words): '; print: (stats value: c); cr; flush.
 hist := c opcodeHistogram.
 check value: 'sumScores:(Array) Pass 2 succeeds' value: c failed not.
@@ -85,7 +85,7 @@ OilTestModel compile: 'probeLoop: anArray key: key
  1 to: 4000 do: [:i | table at: (i * 17 \\ 8191) + 1 put: i * 17].
  c := compile value: #probeLoop:key: value: {{table. 68000}. {table. 5}} value: false.
  out cr; nextPutAll: c irString.
- c pass2Optimize.
+ c loopOptimize.
  out cr; nextPutAll: c irString; nextPutAll: 'Pass 2 statistics: '; print: ((0 to: 6) collect: [:k | c pass2Statistics: k]); cr; flush.
  hist := c opcodeHistogram.
  check value: 'probeLoop: probeHash:key: inlined into the caller loop (2 frames, no calls)' value: (c numFrames = 2 and: [((hist occurrencesOf: 'Call0') + (hist occurrencesOf: 'Call1') + (hist occurrencesOf: 'CallN')) = 0]).
@@ -171,7 +171,7 @@ loopHist := Array new: 6 withAll: 0.
 		comp := OilCompiler new.
 		[comp compileMethod: m receiverClass: (comp handleFor: cls).
 		 comp failed ifFalse:
-			[comp pass2Optimize.
+			[comp loopOptimize.
 			 comp failed ifFalse: [(stats value: comp) withIndexDo: [:v :k | k <= 5 ifTrue: [loopHist at: k put: (loopHist at: k) + v]]]].
 		 results add: (comp failed ifTrue: [OilConstants failureNames at: comp failureCode + 1] ifFalse: [#ok])]
 			on: Error do: [:e | results add: #ERROR. out nextPutAll: 'ERROR compiling '; print: m; nextPutAll: ': '; nextPutAll: e description; cr]]].
@@ -189,7 +189,7 @@ check value: 'robustness: Pass 2 optimized some loops' value: (loopHist at: 1) >
  fbk record: [model sumScores: arr].
  comp := OilCompiler new. comp typeFeedback: fbk.
  n := 1000.
- us := Time microsecondsToRun: [n timesRepeat: [comp compileMethod: OilTestModel >> #sumScores: receiverClass: (comp handleFor: OilTestModel). comp pass2Optimize]].
+ us := Time microsecondsToRun: [n timesRepeat: [comp compileMethod: OilTestModel >> #sumScores: receiverClass: (comp handleFor: OilTestModel). comp loopOptimize]].
  out cr; nextPutAll: 'Pass 1 + Pass 2 time for sumScores: (in image, simulated object access): '; print: (us / n) asFloat; nextPutAll: ' us per compilation'; cr] value.
 
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.

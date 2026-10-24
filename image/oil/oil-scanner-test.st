@@ -3,7 +3,7 @@
 | dir |
 Utilities authorInitials: 'cb'.
 dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
-#('OilConstants.st' 'OilBytecodeScanner.st') do: [:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
+#('OilInstructionConstants.st' 'OilConstants.st' 'OilBytecodeScanner.st') do: [:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | dir out methods checked errors check |
 dir := Smalltalk at: #OilSourceDir.

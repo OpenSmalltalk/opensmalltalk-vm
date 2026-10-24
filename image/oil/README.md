@@ -13,7 +13,8 @@ OilBytecodeScanner
 
 | File | Contents |
 |---|---|
-| `OilConstants.st` | Shared pool: IR opcodes, condition codes, scanner tags/modes, descriptor kinds, limits, deopt site kinds, failure codes (generated from one spec). |
+| `OilInstructionConstants.st` | Shared pool: IR opcodes for the 32-bit compact linear IR (`OilConstTagged`..`OilLastOpcode`). |
+| `OilConstants.st` | Shared pool: condition codes, scanner tags/modes, descriptor kinds, limits, deopt site kinds, failure codes (imports `OilInstructionConstants`). |
 | `OilBytecodeScanner.st` | `OilBytecodeDescriptor` (6-byte struct) and `OilBytecodeScanner`: a 256-entry SistaV1 `oilGeneratorTable` and a zero-allocation decoder (`decodeAt:`, `scanMethod:do:`) that folds `extA`/`extB` prefixes. Oil only compiles SistaV1 methods (`OilFailNotSistaV1` leaves others to the baseline Cogit). |
 | `OilCompiler.st` | `OilBaseCompiler` (Pass 1): static 4096 x 32-bit IR buffer, register-window virtual registers with descriptors, structural inlining, tagged SmallInteger peepholes, deopt sites, frame table, and the `#pipe` optimization hook. |
 | `OilCompilerPass2.st` | `OilLoopCompiler` (Pass 2) and `OilFullCompiler`: `pass2Optimize` streams Buffer 1 (`oilIRBuffer1`) into Buffer 2 (`oilIRBuffer2`). |

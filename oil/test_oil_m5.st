@@ -1,5 +1,5 @@
 "Oil end-to-end test (native): deopt disqualification, escaping closures and brace arrays (OilMakeClosure,
- OilNewArray, eden bump allocation with the allocation bailout), byte/stream intrinsics, selector table.
+ OilNewArray, eden bump allocation with the allocation deoptimization), byte/stream intrinsics, selector table.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m5-result.txt next to the image."
 | out failures check sels model m info res last items wrong expected t counter blk arr before |
 Utilities authorInitials: 'cb'.
@@ -100,12 +100,12 @@ check value: 'detectFirstOver:in: compiles' value: (res value: #detectFirstOver:
 check value: 'detectFirstOver:in: non-local return' value: (model detectFirstOver: 5 in: items) score = 6.
 check value: 'detectFirstOver:in: not found' value: (model detectFirstOver: 50 in: items) isNil.
 
-"--- 3. Allocation beyond the scavenge threshold: bails out (not counted), still correct ---"
+"--- 3. Allocation beyond the scavenge threshold: deoptimizes (not counted), still correct ---"
 check value: 'allocLoop: compiles' value: (res value: #allocLoop: value: [model allocLoop: 10]) = 0.
 check value: 'allocLoop: small' value: (model allocLoop: 10) = #(10 11 12).
 check value: 'allocLoop: 3,000,000 arrays (crosses the scavenge threshold)' value: (model allocLoop: 3000000) = #(3000000 3000001 3000002).
 info := ((Smalltalk at: #OilTestModel) >> #allocLoop:) oilInfo.
-check value: 'allocLoop: still Oil code (allocation bailouts do not disqualify)' value: info notNil.
+check value: 'allocLoop: still Oil code (allocation deoptimizations do not disqualify)' value: info notNil.
 check value: 'allocLoop: no deoptimization counted' value: (info notNil and: [(info at: 1) = 0]).
 check value: 'allocLoop: again' value: (model allocLoop: 3000000) = #(3000000 3000001 3000002).
 t := Time millisecondsToRun: [model allocLoop: 3000000].

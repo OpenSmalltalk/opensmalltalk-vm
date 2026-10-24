@@ -1,14 +1,14 @@
 "Pass 3 of Oil (OilBaseCompiler), the native back end.  It translates the linear IR in oilIRBuffer
  into the Cogit's abstract instructions (CogAbstractInstruction), which the Cogit then assembles into a CogMethod.
- See ProfilingCogit>>oilMethod:receiverClass: (oil/oil-m3-native-backend.st) for the driver.  Author: cb."!
+ See ProfilingCogit>>oilMethod:receiverClass: for the driver.  Author: cb."!
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 prepareNativeCode
 	"Pass 3, step 1.  Analyse the IR: branch targets, loop nesting, the deopt site of each instruction.
 	 Weigh every virtual register by its uses, ten times more per loop nesting level, give the heaviest ones
 	 machine registers and every live virtual register a home slot in the frame (where it is spilled around
-	 calls and bailouts; the GC scans it, so it always holds an object).  Answer OilOK or a failure code."
-	| i op t n best bestWeight homeBase |
+	 calls and deopts; the GC scans it, so it always holds an object).  Answer OilOK or a failure code."
+	| irOffset opcode branchTarget regsAllocated bestVReg bestWeight homeBase |
 	oilFailIndex := -2.
 	"Machine registers available to virtual registers.  TempReg, ClassReg and SendNumArgsReg are the back
 	 end's scratch registers, VarBaseReg (if any), FPReg and SPReg are reserved."
@@ -24,62 +24,62 @@ prepareNativeCode
 	oilNumAllocRegs := 9.
 	oilUseProbe := -1.
 	0 to: OilNumRegs - 1 do:
-		[:r|
-		oilVRegUses at: r put: 0.
-		oilVRegReg at: r put: NoReg.
-		oilVRegHome at: r put: 0].
+		[:vreg|
+		oilVRegUses at: vreg put: 0.
+		oilVRegReg at: vreg put: NoReg.
+		oilVRegHome at: vreg put: 0].
 	0 to: irIndex - 1 do:
-		[:j|
-		oilIRTarget at: j put: 0.
-		oilLoopDepth at: j put: 0.
-		oilIRLabel at: j put: nil].
+		[:targetOffset|
+		oilIRTarget at: targetOffset put: 0.
+		oilLoopDepth at: targetOffset put: 0.
+		oilIRLabel at: targetOffset put: nil].
 	0 to: OilMaxSites - 1 do:
-		[:s| oilSiteUsed at: s put: 0].
+		[:siteIndex| oilSiteUsed at: siteIndex put: 0].
 	oilNumFixups := oilNumStubJumps := oilNumUndos := 0.
 	self computeIRSites.
 	"Branch targets, loops (a backward branch closes a loop) and supported opcodes."
-	i := 0.
-	[i < irIndex] whileTrue:
-		[op := self opcodeAt: i.
-		 (self isBranch: op) ifTrue:
-			[t := self imm16At: i.
-			 t >= irIndex ifTrue:
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (self isBranch: opcode) ifTrue:
+			[branchTarget := self imm16At: irOffset.
+			 branchTarget >= irIndex ifTrue:
 				[self abortCompilation: OilFailInternal.
 				 ^failureCode].
-			 oilIRTarget at: t put: 1.
-			 t <= i ifTrue:
-				[t to: i do: [:j| oilLoopDepth at: j put: ((oilLoopDepth at: j) + 1 min: 3)]]].
-		 i := i + (self instructionLengthAt: i)].
-	i := 0.
-	[i < irIndex] whileTrue:
-		[self weighInstructionAt: i.
-		 i := i + (self instructionLengthAt: i)].
+			 oilIRTarget at: branchTarget put: 1.
+			 branchTarget <= irOffset ifTrue:
+				[branchTarget to: irOffset do: [:targetOffset| oilLoopDepth at: targetOffset put: ((oilLoopDepth at: targetOffset) + 1 min: 3)]]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[self weighInstructionAt: irOffset.
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	"The receiver and arguments are copied in from the frame; registers referenced by deopt states need homes."
 	0 to: (self numArgsOf: rootMethod) do:
-		[:r| oilVRegUses at: r put: (oilVRegUses at: r) + 1].
+		[:vreg| oilVRegUses at: vreg put: (oilVRegUses at: vreg) + 1].
 	self markMetadataRegisters.
 	self analyzeTaggedRegisters.
 	"Allocate machine registers, heaviest first."
-	n := 0.
-	[n < oilNumAllocRegs] whileTrue:
-		[best := -1. bestWeight := 0.
+	regsAllocated := 0.
+	[regsAllocated < oilNumAllocRegs] whileTrue:
+		[bestVReg := -1. bestWeight := 0.
 		 0 to: OilMaxReg do:
-			[:r|
-			((oilVRegReg at: r) = NoReg and: [(oilVRegUses at: r) > bestWeight]) ifTrue:
-				[best := r. bestWeight := oilVRegUses at: r]].
-		 best < 0
-			ifTrue: [oilNumAllocRegs := n]
+			[:vreg|
+			((oilVRegReg at: vreg) = NoReg and: [(oilVRegUses at: vreg) > bestWeight]) ifTrue:
+				[bestVReg := vreg. bestWeight := oilVRegUses at: vreg]].
+		 bestVReg < 0
+			ifTrue: [oilNumAllocRegs := regsAllocated]
 			ifFalse:
-				[oilVRegReg at: best put: (oilAllocRegs at: n).
-				 n := n + 1]].
+				[oilVRegReg at: bestVReg put: (oilAllocRegs at: regsAllocated).
+				 regsAllocated := regsAllocated + 1]].
 	"Home slots, below the frame's receiver and temps (the frame of an ordinary machine code method)."
 	oilNumHomes := 0.
 	homeBase := FoxMFReceiver - ((self numTempsOf: rootMethod) - (self numArgsOf: rootMethod) * objectMemory wordSize).
 	0 to: OilMaxReg do:
-		[:r|
-		(oilVRegUses at: r) > 0 ifTrue:
+		[:vreg|
+		(oilVRegUses at: vreg) > 0 ifTrue:
 			[oilNumHomes := oilNumHomes + 1.
-			 oilVRegHome at: r put: homeBase - (oilNumHomes * objectMemory wordSize)]].
+			 oilVRegHome at: vreg put: homeBase - (oilNumHomes * objectMemory wordSize)]].
 	"Marrying or divorcing the frame copies its temps, homes and pushed values into a context, which is large (see
 	 ProfilingCogit>>oilGenerateCogMethod): they must fit.  Calls push the receiver and up to 15 arguments."
 	(self numTempsOf: rootMethod) + oilNumHomes + 16 > (LargeContextSlots - ReceiverIndex - 1) ifTrue:
@@ -87,178 +87,178 @@ prepareNativeCode
 		 ^failureCode].
 	^OilOK! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
-isBranch: op
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+isBranch: opcode
 	<inline: true>
-	^op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]! !
+	^opcode = OilJump or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 computeIRSites
-	0 to: irIndex - 1 do: [:j| oilIRSite at: j put: -1].
+	0 to: irIndex - 1 do: [:targetOffset| oilIRSite at: targetOffset put: -1].
 	0 to: numSites - 1 do:
-		[:s| (siteIR at: s) >= 0 ifTrue: [oilIRSite at: (siteIR at: s) put: s]]! !
+		[:siteIndex| (siteIR at: siteIndex) >= 0 ifTrue: [oilIRSite at: (siteIR at: siteIndex) put: siteIndex]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
-siteStateSize: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+siteStateSize: siteIndex
 	<inline: true>
-	^(siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s))! !
+	^(siteSnapTop at: siteIndex) + 1 + (OilMaxReg - (siteSnapHigh at: siteIndex))! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
-p2Use: r
-	"Count a use of register r (weighted by oilUseWeight), or, when probing for reads of oilUseProbe, note it."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+recordUse: virtualReg
+	"Count a use of register virtualReg (weighted by oilUseWeight), or, when probing for reads of oilUseProbe, note it."
 	<inline: true>
 	oilUseProbe >= 0
-		ifTrue: [r = oilUseProbe ifTrue: [oilUseProbeHit := true]]
+		ifTrue: [virtualReg = oilUseProbe ifTrue: [oilUseProbeHit := true]]
 		ifFalse:
-			[r < OilFlagsReg ifTrue:
-				[oilVRegUses at: r put: (oilVRegUses at: r) + oilUseWeight]]! !
+			[virtualReg < OilFlagsReg ifTrue:
+				[oilVRegUses at: virtualReg put: (oilVRegUses at: virtualReg) + oilUseWeight]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
-p2CountUsesAt: i
-	"Count the registers the instruction at i reads."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+countUsesAt: irOffset
+	"Count the registers the instruction at irOffset reads."
 	<inline: false>
-	| op a b c |
-	op := self opcodeAt: i.
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	c := self fieldCAt: i.
-	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0 or: [op = OilCharValue]]]]]]]]]]) ifTrue:
-		[^self p2Use: b].
-	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1
-	 or: [op = OilLoadByte or: [op = OilLoadChar or: [op = OilCompareBytes]]]]]]]) ifTrue:
-		[self p2Use: b.
-		 ^self p2Use: c].
-	(op = OilStoreByte or: [op = OilStoreChar or: [op = OilStoreElement]]) ifTrue:
-		[self p2Use: a.
-		 self p2Use: b.
-		 ^self p2Use: c].
-	op = OilStreamNext ifTrue:
-		[^self p2Use: b].
-	op = OilStreamNextPut ifTrue:
-		[self p2Use: b.
-		 ^self p2Use: c].
-	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
-		[self p2Use: a.
-		 ^self p2Use: b].
-	(op = OilReturn or: [op = OilGuardClass or: [op = OilBranchTrue or: [op = OilBranchFalse]]]) ifTrue:
-		[^self p2Use: a].
-	(op = OilCallN or: [op = OilCallSuper]) ifTrue:
-		[self p2Use: b.
-		 1 to: c do: [:k| self p2Use: (self packedArg: k - 1 at: i)]].
-	op = OilNewArray ifTrue:
-		[b ~= OilFlagsReg ifTrue:
-			[0 to: c - 1 do: [:k| self p2Use: b + k]]].
-	op = OilMakeClosure ifTrue:
-		[self p2Use: ((oilIRBuffer at: i + 3) bitAnd: 255).
-		 0 to: c - 1 do: [:k| self p2Use: b + k]]! !
+	| opcode regA regB regC |
+	opcode := self opcodeAt: irOffset.
+	regA := self fieldAAt: irOffset.
+	regB := self fieldBAt: irOffset.
+	regC := self fieldCAt: irOffset.
+	(opcode = OilMove or: [opcode = OilShiftTagged or: [opcode = OilOddTagged or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC
+	 or: [opcode = OilLoadField or: [opcode = OilLoadSize or: [opcode = OilLoadByteSize or: [opcode = OilCmpImmTagged or: [opcode = OilCall0 or: [opcode = OilCharValue]]]]]]]]]]) ifTrue:
+		[^self recordUse: regB].
+	((opcode between: OilAddTagged and: OilXorTagged)
+	 or: [opcode = OilModTagged or: [opcode = OilLoadElement or: [opcode = OilCmpTagged or: [opcode = OilCall1
+	 or: [opcode = OilLoadByte or: [opcode = OilLoadChar or: [opcode = OilCompareBytes]]]]]]]) ifTrue:
+		[self recordUse: regB.
+		 ^self recordUse: regC].
+	(opcode = OilStoreByte or: [opcode = OilStoreChar or: [opcode = OilStoreElement]]) ifTrue:
+		[self recordUse: regA.
+		 self recordUse: regB.
+		 ^self recordUse: regC].
+	opcode = OilStreamNext ifTrue:
+		[^self recordUse: regB].
+	opcode = OilStreamNextPut ifTrue:
+		[self recordUse: regB.
+		 ^self recordUse: regC].
+	(opcode = OilStoreField or: [opcode = OilCheckBounds]) ifTrue:
+		[self recordUse: regA.
+		 ^self recordUse: regB].
+	(opcode = OilReturn or: [opcode = OilGuardClass or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]]) ifTrue:
+		[^self recordUse: regA].
+	(opcode = OilCallN or: [opcode = OilCallSuper]) ifTrue:
+		[self recordUse: regB.
+		 1 to: regC do: [:argIndex| self recordUse: (self packedArg: argIndex - 1 at: irOffset)]].
+	opcode = OilNewArray ifTrue:
+		[regB ~= OilFlagsReg ifTrue:
+			[0 to: regC - 1 do: [:slotIndex| self recordUse: regB + slotIndex]]].
+	opcode = OilMakeClosure ifTrue:
+		[self recordUse: ((oilIRBuffer at: irOffset + 3) bitAnd: 255).
+		 0 to: regC - 1 do: [:copiedIndex| self recordUse: regB + copiedIndex]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
-weighInstructionAt: i
-	"Count the registers the instruction at i defines or reads, weighted by loop depth."
-	| d |
-	d := oilLoopDepth at: i.
-	oilUseWeight := d = 0 ifTrue: [1] ifFalse: [d = 1 ifTrue: [10] ifFalse: [d = 2 ifTrue: [100] ifFalse: [1000]]].
-	(self opcodeHasDest: (self opcodeAt: i)) ifTrue:
-		[self p2Use: (self fieldAAt: i)].
-	self p2CountUsesAt: i! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+weighInstructionAt: irOffset
+	"Count the registers the instruction at irOffset defines or reads, weighted by loop depth."
+	| loopDepth |
+	loopDepth := oilLoopDepth at: irOffset.
+	oilUseWeight := loopDepth = 0 ifTrue: [1] ifFalse: [loopDepth = 1 ifTrue: [10] ifFalse: [loopDepth = 2 ifTrue: [100] ifFalse: [1000]]].
+	(self opcodeHasDest: (self opcodeAt: irOffset)) ifTrue:
+		[self recordUse: (self fieldAAt: irOffset)].
+	self countUsesAt: irOffset! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-packedArg: k at: i
-	"The register of argument k (0-based) of the OilCallN/OilCallSuper at i: four per word after the selector."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+packedArg: argIndex at: irOffset
+	"The register of argument argIndex (0-based) of the OilCallN/OilCallSuper at irOffset: four per word after the selector."
 	| word |
-	word := oilIRBuffer at: i + 3 + (k // 4).
-	^(word bitShift: (3 - (k \\ 4)) * -8) bitAnd: 255! !
+	word := oilIRBuffer at: irOffset + 3 + (argIndex // 4).
+	^(word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 markMetadataRegisters
 	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a home."
-	| base n r |
+	| snapBase stateSize vreg |
 	0 to: numSites - 1 do:
-		[:s|
-		((siteIR at: s) >= 0 and: [(siteSnapBase at: s) >= 0]) ifTrue:
-			[base := siteSnapBase at: s.
-			 n := self siteStateSize: s.
-			 0 to: n - 1 do:
-				[:j|
-				(sitePoolKind at: base + j) = OilDescReg ifTrue:
-					[r := sitePoolValue at: base + j.
-					 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]]]].
+		[:siteIndex|
+		((siteIR at: siteIndex) >= 0 and: [(siteSnapBase at: siteIndex) >= 0]) ifTrue:
+			[snapBase := siteSnapBase at: siteIndex.
+			 stateSize := self siteStateSize: siteIndex.
+			 0 to: stateSize - 1 do:
+				[:slotIndex|
+				(sitePoolKind at: snapBase + slotIndex) = OilDescReg ifTrue:
+					[vreg := sitePoolValue at: snapBase + slotIndex.
+					 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]]]].
 	0 to: numFrames - 1 do:
-		[:f|
-		(frameSelfKind at: f) = OilDescReg ifTrue:
-			[r := frameSelfValue at: f.
-			 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]].
+		[:frameIndex|
+		(frameSelfKind at: frameIndex) = OilDescReg ifTrue:
+			[vreg := frameSelfValue at: frameIndex.
+			 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]].
 	0 to: numVObjs - 1 do:
-		[:v|
-		(vobjSelfKind at: v) = OilDescReg ifTrue:
-			[r := vobjSelfValue at: v.
-			 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)].
-		0 to: (vobjNumCopied at: v) - 1 do:
-			[:j|
-			(capturedKind at: (vobjCopiedBase at: v) + j) = OilDescReg ifTrue:
-				[r := capturedValue at: (vobjCopiedBase at: v) + j.
-				 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]]]! !
+		[:vobjIndex|
+		(vobjSelfKind at: vobjIndex) = OilDescReg ifTrue:
+			[vreg := vobjSelfValue at: vobjIndex.
+			 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)].
+		0 to: (vobjNumCopied at: vobjIndex) - 1 do:
+			[:slotIndex|
+			(capturedKind at: (vobjCopiedBase at: vobjIndex) + slotIndex) = OilDescReg ifTrue:
+				[vreg := capturedValue at: (vobjCopiedBase at: vobjIndex) + slotIndex.
+				 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-src: r scratch: scratch
-	"Answer a machine register holding virtual register r: its own, or scratch loaded from its home."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+src: virtualReg scratch: scratchReg
+	"Answer a machine register holding virtual register virtualReg: its own, or scratchReg loaded from its home."
 	| reg |
-	reg := oilVRegReg at: r.
+	reg := oilVRegReg at: virtualReg.
 	reg ~= NoReg ifTrue: [^reg].
-	(oilVRegHome at: r) = 0 ifTrue:
+	(oilVRegHome at: virtualReg) = 0 ifTrue:
 		[self abortCompilation: OilFailInternal.
-		 ^scratch].
-	cogit MoveMw: (oilVRegHome at: r) r: FPReg R: scratch.
-	^scratch! !
+		 ^scratchReg].
+	cogit MoveMw: (oilVRegHome at: virtualReg) r: FPReg R: scratchReg.
+	^scratchReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-dst: r scratch: scratch
-	"Answer the machine register to compute virtual register r into (its own, or scratch, then see setDst:from:)."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+dst: virtualReg scratch: scratchReg
+	"Answer the machine register to compute virtual register virtualReg into (its own, or scratchReg, then see setDst:from:)."
 	| reg |
-	reg := oilVRegReg at: r.
-	^reg ~= NoReg ifTrue: [reg] ifFalse: [scratch]! !
+	reg := oilVRegReg at: virtualReg.
+	^reg ~= NoReg ifTrue: [reg] ifFalse: [scratchReg]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-setDst: r from: reg
-	"Virtual register r has been computed into the machine register reg: move it to r's location."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+setDst: virtualReg from: machineReg
+	"Virtual register virtualReg has been computed into the machine register machineReg: move it to virtualReg's location."
 	| own |
-	own := oilVRegReg at: r.
+	own := oilVRegReg at: virtualReg.
 	own ~= NoReg
-		ifTrue: [own ~= reg ifTrue: [cogit MoveR: reg R: own]]
+		ifTrue: [own ~= machineReg ifTrue: [cogit MoveR: machineReg R: own]]
 		ifFalse:
-			[(oilVRegHome at: r) = 0 ifTrue: [^self abortCompilation: OilFailInternal].
-			 cogit MoveR: reg Mw: (oilVRegHome at: r) r: FPReg]! !
+			[(oilVRegHome at: virtualReg) = 0 ifTrue: [^self abortCompilation: OilFailInternal].
+			 cogit MoveR: machineReg Mw: (oilVRegHome at: virtualReg) r: FPReg]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 spillAll
-	"Store every register-allocated virtual register into its home (before a call or a bailout)."
+	"Store every register-allocated virtual register into its home (before a call or a deopt)."
 	0 to: OilMaxReg do:
-		[:r| (oilVRegReg at: r) ~= NoReg ifTrue:
-			[cogit MoveR: (oilVRegReg at: r) Mw: (oilVRegHome at: r) r: FPReg]]! !
+		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
+			[cogit MoveR: (oilVRegReg at: vreg) Mw: (oilVRegHome at: vreg) r: FPReg]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 reloadAll
 	"Reload every register-allocated virtual register from its home (after a call: the GC may have moved objects)."
 	0 to: OilMaxReg do:
-		[:r| (oilVRegReg at: r) ~= NoReg ifTrue:
-			[cogit MoveMw: (oilVRegHome at: r) r: FPReg R: (oilVRegReg at: r)]]! !
+		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
+			[cogit MoveMw: (oilVRegHome at: vreg) r: FPReg R: (oilVRegReg at: vreg)]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-bail: jump site: s
-	"jump branches to the bailout stub of deopt site s (stubs are emitted after the method body)."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+deopt: jump site: siteIndex
+	"jump branches to the deopt stub of deopt site siteIndex (stubs are emitted after the method body)."
 	<var: #jump type: #'AbstractInstruction *'>
-	(s < 0 or: [s >= numSites or: [(siteSnapBase at: s) < 0]]) ifTrue:
+	(siteIndex < 0 or: [siteIndex >= numSites or: [(siteSnapBase at: siteIndex) < 0]]) ifTrue:
 		[^self abortCompilation: OilFailUnsafeSite].
 	oilNumStubJumps >= OilBufferWords ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	oilStubJump at: oilNumStubJumps put: jump.
-	oilStubSite at: oilNumStubJumps put: s.
+	oilStubSite at: oilNumStubJumps put: siteIndex.
 	oilNumStubJumps := oilNumStubJumps + 1.
-	oilSiteUsed at: s put: 1! !
+	oilSiteUsed at: siteIndex put: 1! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 branch: jump to: target
 	<var: #jump type: #'AbstractInstruction *'>
 	oilNumFixups >= OilBufferWords ifTrue:
@@ -267,216 +267,216 @@ branch: jump to: target
 	oilFixupTarget at: oilNumFixups put: target.
 	oilNumFixups := oilNumFixups + 1! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genTagCheck: reg site: s
-	"Bail out unless reg holds a SmallInteger."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+genTagCheck: reg site: siteIndex
+	"Deoptimize unless reg holds a SmallInteger."
 	cogit TstCq: objectMemory smallIntegerTag R: reg.
-	self bail: (cogit JumpZero: 0) site: s! !
+	self deopt: (cogit JumpZero: 0) site: siteIndex! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genTagCheckOf: va in: ra site: s
-	"Bail out unless virtual register va (in machine register ra) holds a SmallInteger, unless it always does."
-	(self isTagged: va) ifFalse:
-		[self genTagCheck: ra site: s]! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+genTagCheckOf: virtualReg in: machineReg site: siteIndex
+	"Deoptimize unless virtual register virtualReg (in machine register machineReg) holds a SmallInteger, unless it always does."
+	(self isTagged: virtualReg) ifFalse:
+		[self genTagCheck: machineReg site: siteIndex]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genTagCheckOf: va in: ra and: vb in: rb site: s
-	(self isTagged: va) ifTrue: [^self genTagCheckOf: vb in: rb site: s].
-	((self isTagged: vb) or: [ra = rb]) ifTrue: [^self genTagCheck: ra site: s].
-	cogit MoveR: ra R: SendNumArgsReg.
-	cogit AndR: rb R: SendNumArgsReg.
-	self genTagCheck: SendNumArgsReg site: s! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+genTagCheckOf: virtualRegA in: machineRegA and: virtualRegB in: machineRegB site: siteIndex
+	(self isTagged: virtualRegA) ifTrue: [^self genTagCheckOf: virtualRegB in: machineRegB site: siteIndex].
+	((self isTagged: virtualRegB) or: [machineRegA = machineRegB]) ifTrue: [^self genTagCheck: machineRegA site: siteIndex].
+	cogit MoveR: machineRegA R: SendNumArgsReg.
+	cogit AndR: machineRegB R: SendNumArgsReg.
+	self genTagCheck: SendNumArgsReg site: siteIndex! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 generateNativeCode
 	"Pass 3, step 2.  Emit the method body: copy the receiver and arguments into their locations, initialize the
-	 other allocated registers (they are spilled at calls and bailouts, so they must always hold objects), then
-	 translate each IR instruction, then the bailout stubs.  The caller has emitted the method's entry and its
+	 other allocated registers (they are spilled at calls and deopts, so they must always hold objects), then
+	 translate each IR instruction, then the deopt stubs.  The caller has emitted the method's entry and its
 	 frame build (including the home slots and the stack check).  Answer OilOK or a failure code."
-	| i numArgs |
+	| irOffset numArgs |
 	numArgs := self numArgsOf: rootMethod.
 	"The home slots follow the method's temps.  They are pushed here, after the stack check, and not in the
 	 frame build: the CoInterpreter also builds machine code frames itself (with the method's temps only, see
 	 activateNewCogMethod:inInterpreter:) and enters them at the stack check."
 	1 to: oilNumHomes do:
-		[:k| cogit PushCq: (objectMemory integerObjectOf: 0)].
+		[:homeIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
 	0 to: numArgs do:
-		[:r| | dst |
-		dst := self dst: r scratch: TempReg.
-		r = 0
+		[:vreg| | dst |
+		dst := self dst: vreg scratch: TempReg.
+		vreg = 0
 			ifTrue: [cogit MoveMw: FoxMFReceiver r: FPReg R: dst]
-			ifFalse: [cogit MoveMw: FoxCallerSavedIP + (numArgs - r + 1 * objectMemory wordSize) r: FPReg R: dst].
-		self setDst: r from: dst].
+			ifFalse: [cogit MoveMw: FoxCallerSavedIP + (numArgs - vreg + 1 * objectMemory wordSize) r: FPReg R: dst].
+		self setDst: vreg from: dst].
 	numArgs + 1 to: OilMaxReg do:
-		[:r| (oilVRegReg at: r) ~= NoReg ifTrue:
-			[cogit MoveCq: (objectMemory integerObjectOf: 0) R: (oilVRegReg at: r)]].
-	i := 0.
-	[i < irIndex and: [failed not]] whileTrue:
-		[(oilIRTarget at: i) ~= 0 ifTrue:
-			[oilIRLabel at: i put: cogit Label].
-		 i := self genInstructionAt: i].
+		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
+			[cogit MoveCq: (objectMemory integerObjectOf: 0) R: (oilVRegReg at: vreg)]].
+	irOffset := 0.
+	[irOffset < irIndex and: [failed not]] whileTrue:
+		[(oilIRTarget at: irOffset) ~= 0 ifTrue:
+			[oilIRLabel at: irOffset put: cogit Label].
+		 irOffset := self genInstructionAt: irOffset].
 	failed ifTrue: [^failureCode].
 	oilFailIndex := -1.
-	self genBailoutStubs.
+	self genDeoptStubs.
 	failed ifTrue: [^failureCode].
 	0 to: oilNumFixups - 1 do:
-		[:k| | target |
-		target := oilIRLabel at: (oilFixupTarget at: k).
+		[:fixupIndex| | target |
+		target := oilIRLabel at: (oilFixupTarget at: fixupIndex).
 		target = nil ifTrue: [self abortCompilation: OilFailInternal. ^failureCode].
-		(oilFixupJump at: k) jmpTarget: target].
+		(oilFixupJump at: fixupIndex) jmpTarget: target].
 	^OilOK! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genInstructionAt: i
-	"Translate the IR instruction at i.  Answer the index of the next instruction to translate."
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+genInstructionAt: irOffset
+	"Translate the IR instruction at irOffset.  Answer the index of the next instruction to translate."
 	<inline: false>
-	| op a b c s next |
-	op := self opcodeAt: i.
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	c := self fieldCAt: i.
-	next := i + (self instructionLengthAt: i).
-	oilFailIndex := i.
-	s := (op = OilGuardClass or: [op = OilCheckBounds])
-			ifTrue: [op = OilGuardClass ifTrue: [self imm16At: i] ifFalse: [c]]
-			ifFalse: [oilIRSite at: i].
-	s >= 0 ifTrue: "the bailout fast path (an unforwarded guard) resumes here"
-		[oilSiteResume at: s put: cogit Label].
-	op caseOf: {
-		[OilConstTagged]	-> [self genConstTagged: a value: (self signed16: (self imm16At: i))].
-		[OilConst64]		-> [self genConst64: a value: (self word64At: i + 1)].
-		[OilMove]			-> [self genMove: a from: b].
-		[OilAddTagged]		-> [self genAddTagged: a b: b c: c site: s].
-		[OilSubTagged]		-> [self genSubTagged: a b: b c: c site: s].
-		[OilAndTagged]		-> [self genLogicTagged: op a: a b: b c: c site: s].
-		[OilOrTagged]		-> [self genLogicTagged: op a: a b: b c: c site: s].
-		[OilXorTagged]		-> [self genLogicTagged: op a: a b: b c: c site: s].
-		[OilShiftTagged]	-> [self genShiftTagged: a b: b shift: (self signed8: c) site: s].
-		[OilOddTagged]		-> [self genOddTagged: a b: b site: s].
-		[OilAddImmTagged]	-> [self genAddImmTagged: a b: b imm: (self signed8: c) site: s].
-		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: a b: b imm: (self signed8: c)].
-		[OilModTagged]		-> [self genModTagged: a b: b c: c site: s].
-		[OilNewArray]		-> [self genNewArray: a first: b size: c site: s].
-		[OilLoadByteSize]	-> [self genLoadByteSize: a object: b].
-		[OilLoadByte]		-> [self genLoadByte: a array: b index: c tag: objectMemory smallIntegerTag].
-		[OilLoadChar]		-> [self genLoadByte: a array: b index: c tag: objectMemory characterTag].
-		[OilStoreByte]		-> [self genStoreByte: a array: b index: c character: false site: s].
-		[OilStoreChar]		-> [self genStoreByte: a array: b index: c character: true site: s].
-		[OilCompareBytes]	-> [self genCompareBytes: a with: b with: c site: s].
-		[OilTrap]			-> [self bail: (cogit Jump: 0) site: s].
-		[OilStreamNext]		-> [self genStreamNextAt: i].
-		[OilStreamNextPut]	-> [self genStreamNextPutAt: i].
-		[OilCharValue]		-> [self genCharValue: a of: b].
-		[OilMakeClosure]	-> [self genMakeClosureAt: i site: s].
-		[OilLoadField]		-> [self genLoadField: a object: b slot: c].
-		[OilStoreField]		-> [self genStoreField: a object: b slot: c site: s].
-		[OilLoadElement]	-> [self genLoadElement: a array: b index: c].
-		[OilStoreElement]	-> [self genStoreElement: a array: b index: c site: s].
-		[OilLoadSize]		-> [self genLoadSize: a object: b].
-		[OilCheckBounds]	-> [self genCheckBounds: a limit: b site: s].
-		[OilGuardClass]		-> [self genGuard: a class: (self word64At: i + 1) site: s].
-		[OilCmpTagged]		-> [^self genCompareAt: i site: s].
-		[OilCmpImmTagged]	-> [^self genCompareAt: i site: s].
-		[OilBranchTrue]		-> [self genBranchOnBoolean: a ifTrue: true to: (self imm16At: i) site: s].
-		[OilBranchFalse]	-> [self genBranchOnBoolean: a ifTrue: false to: (self imm16At: i) site: s].
-		[OilJump]			-> [self branch: (cogit Jump: 0) to: (self imm16At: i)].
-		[OilReturn]			-> [self genReturn: a].
-		[OilCall0]			-> [self genCallAt: i site: s].
-		[OilCall1]			-> [self genCallAt: i site: s].
-		[OilCallN]			-> [self genCallAt: i site: s].
-		[OilCallSuper]		-> [self genCallAt: i site: s] }
+	| opcode regA regB regC siteIndex nextOffset |
+	opcode := self opcodeAt: irOffset.
+	regA := self fieldAAt: irOffset.
+	regB := self fieldBAt: irOffset.
+	regC := self fieldCAt: irOffset.
+	nextOffset := irOffset + (self instructionLengthAt: irOffset).
+	oilFailIndex := irOffset.
+	siteIndex := (opcode = OilGuardClass or: [opcode = OilCheckBounds])
+			ifTrue: [opcode = OilGuardClass ifTrue: [self imm16At: irOffset] ifFalse: [regC]]
+			ifFalse: [oilIRSite at: irOffset].
+	siteIndex >= 0 ifTrue: "the deopt fast path (an unforwarded guard) resumes here"
+		[oilSiteResume at: siteIndex put: cogit Label].
+	opcode caseOf: {
+		[OilConstTagged]	-> [self genConstTagged: regA value: (self signed16: (self imm16At: irOffset))].
+		[OilConst64]		-> [self genConst64: regA value: (self word64At: irOffset + 1)].
+		[OilMove]			-> [self genMove: regA from: regB].
+		[OilAddTagged]		-> [self genAddTagged: regA b: regB c: regC site: siteIndex].
+		[OilSubTagged]		-> [self genSubTagged: regA b: regB c: regC site: siteIndex].
+		[OilAndTagged]		-> [self genLogicTagged: opcode a: regA b: regB c: regC site: siteIndex].
+		[OilOrTagged]		-> [self genLogicTagged: opcode a: regA b: regB c: regC site: siteIndex].
+		[OilXorTagged]		-> [self genLogicTagged: opcode a: regA b: regB c: regC site: siteIndex].
+		[OilShiftTagged]	-> [self genShiftTagged: regA b: regB shift: (self signed8: regC) site: siteIndex].
+		[OilOddTagged]		-> [self genOddTagged: regA b: regB site: siteIndex].
+		[OilAddImmTagged]	-> [self genAddImmTagged: regA b: regB imm: (self signed8: regC) site: siteIndex].
+		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: regA b: regB imm: (self signed8: regC)].
+		[OilModTagged]		-> [self genModTagged: regA b: regB c: regC site: siteIndex].
+		[OilNewArray]		-> [self genNewArray: regA first: regB size: regC site: siteIndex].
+		[OilLoadByteSize]	-> [self genLoadByteSize: regA object: regB].
+		[OilLoadByte]		-> [self genLoadByte: regA array: regB index: regC tag: objectMemory smallIntegerTag].
+		[OilLoadChar]		-> [self genLoadByte: regA array: regB index: regC tag: objectMemory characterTag].
+		[OilStoreByte]		-> [self genStoreByte: regA array: regB index: regC character: false site: siteIndex].
+		[OilStoreChar]		-> [self genStoreByte: regA array: regB index: regC character: true site: siteIndex].
+		[OilCompareBytes]	-> [self genCompareBytes: regA with: regB with: regC site: siteIndex].
+		[OilTrap]			-> [self deopt: (cogit Jump: 0) site: siteIndex].
+		[OilStreamNext]		-> [self genStreamNextAt: irOffset].
+		[OilStreamNextPut]	-> [self genStreamNextPutAt: irOffset].
+		[OilCharValue]		-> [self genCharValue: regA of: regB].
+		[OilMakeClosure]	-> [self genMakeClosureAt: irOffset site: siteIndex].
+		[OilLoadField]		-> [self genLoadField: regA object: regB slot: regC].
+		[OilStoreField]		-> [self genStoreField: regA object: regB slot: regC site: siteIndex].
+		[OilLoadElement]	-> [self genLoadElement: regA array: regB index: regC].
+		[OilStoreElement]	-> [self genStoreElement: regA array: regB index: regC site: siteIndex].
+		[OilLoadSize]		-> [self genLoadSize: regA object: regB].
+		[OilCheckBounds]	-> [self genCheckBounds: regA limit: regB site: siteIndex].
+		[OilGuardClass]		-> [self genGuard: regA class: (self word64At: irOffset + 1) site: siteIndex].
+		[OilCmpTagged]		-> [^self genCompareAt: irOffset site: siteIndex].
+		[OilCmpImmTagged]	-> [^self genCompareAt: irOffset site: siteIndex].
+		[OilBranchTrue]		-> [self genBranchOnBoolean: regA ifTrue: true to: (self imm16At: irOffset) site: siteIndex].
+		[OilBranchFalse]	-> [self genBranchOnBoolean: regA ifTrue: false to: (self imm16At: irOffset) site: siteIndex].
+		[OilJump]			-> [self branch: (cogit Jump: 0) to: (self imm16At: irOffset)].
+		[OilReturn]			-> [self genReturn: regA].
+		[OilCall0]			-> [self genCallAt: irOffset site: siteIndex].
+		[OilCall1]			-> [self genCallAt: irOffset site: siteIndex].
+		[OilCallN]			-> [self genCallAt: irOffset site: siteIndex].
+		[OilCallSuper]		-> [self genCallAt: irOffset site: siteIndex] }
 		otherwise: [self abortCompilation: OilFailBackend].
-	^next! !
+	^nextOffset! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genConstTagged: a value: tagged
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genConstTagged: destReg value: tagged
 	| dst |
-	dst := self dst: a scratch: TempReg.
+	dst := self dst: destReg scratch: TempReg.
 	cogit MoveCq: tagged R: dst.
-	self setDst: a from: dst! !
+	self setDst: destReg from: dst! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genConst64: a value: oop
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genConst64: destReg value: oop
 	"An object literal: annotated so that the GC can update it (and the method is a young referrer if need be)."
 	| dst |
-	dst := self dst: a scratch: TempReg.
+	dst := self dst: destReg scratch: TempReg.
 	cogit genMoveConstant: oop R: dst.
-	self setDst: a from: dst! !
+	self setDst: destReg from: dst! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genMove: a from: b
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genMove: destReg from: srcReg
 	| src |
-	src := self src: b scratch: TempReg.
-	self setDst: a from: src! !
+	src := self src: srcReg scratch: TempReg.
+	self setDst: destReg from: src! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genAddTagged: a b: b c: c site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genAddTagged: destReg b: leftReg c: rightReg site: siteIndex
 	"(8x+1) - 1 + (8y+1) = 8(x+y)+1; the 64-bit add overflows exactly when x+y is not a SmallInteger.
-	 Computed in a scratch register: on bailout the operands (and a) are intact.  But an accumulation, a := a + c
+	 Computed in a scratch register: on deopt the operands (and destReg) are intact.  But an accumulation, a := a + c
 	 (or a := c + a) with a in a machine register, is computed in place, adding c - 1 (computed aside, so that the
 	 loop carried dependency is one add): on overflow an undo stub subtracts it again (from the wrapped 64-bit sum)
-	 before bailing out."
-	| rb rc ra other ro |
-	ra := oilVRegReg at: a.
-	(ra ~= NoReg and: [oilNumUndos < OilMaxUndos and: [b ~= c and: [b = a or: [c = a]]]]) ifTrue:
-		[other := b = a ifTrue: [c] ifFalse: [b].
-		 ro := self src: other scratch: ClassReg.
-		 self genTagCheckOf: a in: ra and: other in: ro site: s.
-		 cogit LoadEffectiveAddressMw: -1 r: ro R: SendNumArgsReg.
-		 cogit AddR: SendNumArgsReg R: ra.
-		 ^self undoBail: (cogit JumpOverflow: 0) site: s reg: ra src: SendNumArgsReg].
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	self genTagCheckOf: b in: rb and: c in: rc site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
+	 before deoptimizing."
+	| leftMach rightMach destMach otherReg otherMach |
+	destMach := oilVRegReg at: destReg.
+	(destMach ~= NoReg and: [oilNumUndos < OilMaxUndos and: [leftReg ~= rightReg and: [leftReg = destReg or: [rightReg = destReg]]]]) ifTrue:
+		[otherReg := leftReg = destReg ifTrue: [rightReg] ifFalse: [leftReg].
+		 otherMach := self src: otherReg scratch: ClassReg.
+		 self genTagCheckOf: destReg in: destMach and: otherReg in: otherMach site: siteIndex.
+		 cogit LoadEffectiveAddressMw: -1 r: otherMach R: SendNumArgsReg.
+		 cogit AddR: SendNumArgsReg R: destMach.
+		 ^self undoDeopt: (cogit JumpOverflow: 0) site: siteIndex reg: destMach src: SendNumArgsReg].
+	leftMach := self src: leftReg scratch: TempReg.
+	rightMach := self src: rightReg scratch: ClassReg.
+	self genTagCheckOf: leftReg in: leftMach and: rightReg in: rightMach site: siteIndex.
+	cogit MoveR: leftMach R: SendNumArgsReg.
 	cogit SubCq: 1 R: SendNumArgsReg.
-	cogit AddR: rc R: SendNumArgsReg.
-	self bail: (cogit JumpOverflow: 0) site: s.
-	self setDst: a from: SendNumArgsReg! !
+	cogit AddR: rightMach R: SendNumArgsReg.
+	self deopt: (cogit JumpOverflow: 0) site: siteIndex.
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
-undoBail: jump site: s reg: reg src: src
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+undoDeopt: jump site: siteIndex reg: destMachReg src: srcMachReg
 	"jump (an overflow of reg := reg + src) branches to an undo stub, which restores reg (reg - src) and branches to the
-	 bailout stub of deopt site s.  The stubs are emitted after the method body."
+	 deopt stub of deopt site siteIndex.  The stubs are emitted after the method body."
 	<var: #jump type: #'AbstractInstruction *'>
-	(s < 0 or: [s >= numSites or: [(siteSnapBase at: s) < 0]]) ifTrue:
+	(siteIndex < 0 or: [siteIndex >= numSites or: [(siteSnapBase at: siteIndex) < 0]]) ifTrue:
 		[^self abortCompilation: OilFailUnsafeSite].
 	oilUndoJump at: oilNumUndos put: jump.
-	oilUndoSite at: oilNumUndos put: s.
-	oilUndoReg at: oilNumUndos put: reg.
-	oilUndoSrc at: oilNumUndos put: src.
+	oilUndoSite at: oilNumUndos put: siteIndex.
+	oilUndoReg at: oilNumUndos put: destMachReg.
+	oilUndoSrc at: oilNumUndos put: srcMachReg.
 	oilNumUndos := oilNumUndos + 1.
-	oilSiteUsed at: s put: 1! !
+	oilSiteUsed at: siteIndex put: 1! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genSubTagged: a b: b c: c site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genSubTagged: destReg b: leftReg c: rightReg site: siteIndex
 	"(8x+1) - (8y+1) = 8(x-y), overflowing exactly when x-y is not a SmallInteger; then restore the tag."
-	| rb rc |
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	self genTagCheckOf: b in: rb and: c in: rc site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
-	cogit SubR: rc R: SendNumArgsReg.
-	self bail: (cogit JumpOverflow: 0) site: s.
+	| leftMach rightMach |
+	leftMach := self src: leftReg scratch: TempReg.
+	rightMach := self src: rightReg scratch: ClassReg.
+	self genTagCheckOf: leftReg in: leftMach and: rightReg in: rightMach site: siteIndex.
+	cogit MoveR: leftMach R: SendNumArgsReg.
+	cogit SubR: rightMach R: SendNumArgsReg.
+	self deopt: (cogit JumpOverflow: 0) site: siteIndex.
 	cogit AddCq: 1 R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:00'!
-genModTagged: a b: b c: c site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genModTagged: destReg b: leftReg c: rightReg site: siteIndex
 	"x \\ y, the floored modulo (the result has the sign of y): untag both, divide (the back end's genDivR:R:Quo:Rem:,
 	 which saves and restores the registers the division needs), and add y to a non-zero remainder whose sign differs
-	 from y's.  Bail out unless both are SmallIntegers and y is not 0.  The result cannot overflow."
-	| rb rc jumpZero jumpSameSign |
+	 from y's.  Deoptimize unless both are SmallIntegers and y is not 0.  The result cannot overflow."
+	| leftMach rightMach jumpZero jumpSameSign |
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	self genTagCheckOf: b in: rb and: c in: rc site: s.
-	cogit CmpCq: (objectMemory integerObjectOf: 0) R: rc.
-	self bail: (cogit JumpZero: 0) site: s.
-	cogit MoveR: rc R: SendNumArgsReg.
+	leftMach := self src: leftReg scratch: TempReg.
+	rightMach := self src: rightReg scratch: ClassReg.
+	self genTagCheckOf: leftReg in: leftMach and: rightReg in: rightMach site: siteIndex.
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: rightMach.
+	self deopt: (cogit JumpZero: 0) site: siteIndex.
+	cogit MoveR: rightMach R: SendNumArgsReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
-	cogit MoveR: rb R: ClassReg.
+	cogit MoveR: leftMach R: ClassReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: ClassReg.
 	cogit backEnd genDivR: SendNumArgsReg R: ClassReg Quo: TempReg Rem: ClassReg.
 	cogit CmpCq: 0 R: ClassReg.
@@ -488,42 +488,42 @@ genModTagged: a b: b c: c site: s
 	jumpZero jmpTarget: (jumpSameSign jmpTarget: cogit Label).
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: ClassReg.
 	cogit OrCq: objectMemory smallIntegerTag R: ClassReg.
-	self setDst: a from: ClassReg! !
+	self setDst: destReg from: ClassReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
-genAllocate: numBytes header: header site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genAllocate: numBytes header: header site: siteIndex
 	"Bump allocate numBytes in eden into ClassReg (TempReg is clobbered) and store its header.  If the new freeStart
-	 would reach the scavenge threshold, bail out at the allocation's deopt site instead (an OilSiteAlloc, which does
+	 would reach the scavenge threshold, deoptimize at the allocation's deopt site instead (an OilSiteAlloc, which does
 	 not count as a deoptimization): the interpreter then allocates and the scavenge runs.  (Oil code has no
 	 interrupt checks, so it must not allocate beyond the threshold like the baseline JIT does.)"
 	cogit MoveAw: objectMemory freeStartAddress R: ClassReg.
 	cogit LoadEffectiveAddressMw: numBytes r: ClassReg R: TempReg.
 	cogit CmpCq: objectMemory getScavengeThreshold R: TempReg.
-	self bail: (cogit JumpAboveOrEqual: 0) site: s.
+	self deopt: (cogit JumpAboveOrEqual: 0) site: siteIndex.
 	cogit MoveR: TempReg Aw: objectMemory freeStartAddress.
 	cogit oilGenStoreHeader: header into: ClassReg scratch: TempReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
-genNewArray: a first: b size: n site: s
-	"A brace array of the n values in registers b..b+n-1, or (b = OilFlagsReg) an Array of n nils (a temp vector in
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genNewArray: destReg first: firstReg size: numSlots site: siteIndex
+	"A brace array of the numSlots values in registers firstReg..firstReg+numSlots-1, or (firstReg = OilFlagsReg) an Array of numSlots nils (a temp vector in
 	 eager mode).  Young, so its stores need no store check."
 	| reg |
-	n >= objectMemory numSlotsMask ifTrue:
+	numSlots >= objectMemory numSlotsMask ifTrue:
 		[^self abortCompilation: OilFailBackend].
-	self genAllocate: (objectMemory smallObjectBytesForSlots: n)
-		header: (objectMemory headerForSlots: n format: objectMemory arrayFormat classIndex: ClassArrayCompactIndex)
-		site: s.
-	b = OilFlagsReg ifTrue:
-		[n > 0 ifTrue:
+	self genAllocate: (objectMemory smallObjectBytesForSlots: numSlots)
+		header: (objectMemory headerForSlots: numSlots format: objectMemory arrayFormat classIndex: ClassArrayCompactIndex)
+		site: siteIndex.
+	firstReg = OilFlagsReg ifTrue:
+		[numSlots > 0 ifTrue:
 			[cogit genMoveConstant: objectMemory nilObject R: TempReg.
-			 0 to: n - 1 do:
-				[:k| cogit MoveR: TempReg Mw: k * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]]]
+			 0 to: numSlots - 1 do:
+				[:slotIndex| cogit MoveR: TempReg Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]]]
 		ifFalse:
-			[0 to: n - 1 do:
-				[:k|
-				reg := self src: b + k scratch: TempReg.
-				cogit MoveR: reg Mw: k * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]].
-	self setDst: a from: ClassReg! !
+			[0 to: numSlots - 1 do:
+				[:slotIndex|
+				reg := self src: firstReg + slotIndex scratch: TempReg.
+				cogit MoveR: reg Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]].
+	self setDst: destReg from: ClassReg! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
 genMakeClosureAt: i site: s
@@ -531,18 +531,18 @@ genMakeClosureAt: i site: s
 	 [frame:16|ignoreOuterContext:8|selfReg:8].  Its outerContext is the root frame's context (the frame is married
 	 through the baseline JIT's active context trampoline, all registers spilled around the call), or nil for a block
 	 that ignores it.  The context of an inlined frame does not exist: such closures are not supported."
-	| a b n block word selfReg ignoreContext frame reg slot |
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	n := self fieldCAt: i.
-	block := self word64At: i + 1.
+	| destReg baseReg numCopied blockMethod word selfReg ignoreContext frameIndex closureReg slotOffset |
+	destReg := self fieldAAt: i.
+	baseReg := self fieldBAt: i.
+	numCopied := self fieldCAt: i.
+	blockMethod := self word64At: i + 1.
 	word := oilIRBuffer at: i + 3.
 	selfReg := word bitAnd: 255.
 	ignoreContext := (word bitAnd: 256) ~= 0.
-	frame := word bitShift: -16.
-	(ignoreContext not and: [frame ~= 0]) ifTrue:
+	frameIndex := word bitShift: -16.
+	(ignoreContext not and: [frameIndex ~= 0]) ifTrue:
 		[^self abortCompilation: OilFailBackend].
-	FullClosureFirstCopiedValueIndex + n >= objectMemory numSlotsMask ifTrue:
+	FullClosureFirstCopiedValueIndex + numCopied >= objectMemory numSlotsMask ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	ignoreContext
 		ifTrue: [cogit genMoveConstant: objectMemory nilObject R: SendNumArgsReg]
@@ -550,68 +550,68 @@ genMakeClosureAt: i site: s
 			[self spillAll.
 			 cogit oilGenGetActiveContextInto: SendNumArgsReg.
 			 self reloadAll].
-	self genAllocate: (objectMemory smallObjectBytesForSlots: FullClosureFirstCopiedValueIndex + n)
+	self genAllocate: (objectMemory smallObjectBytesForSlots: FullClosureFirstCopiedValueIndex + numCopied)
 		header: (objectMemory
-					headerForSlots: FullClosureFirstCopiedValueIndex + n
+					headerForSlots: FullClosureFirstCopiedValueIndex + numCopied
 					format: objectMemory indexablePointersFormat
 					classIndex: ClassFullBlockClosureCompactIndex)
 		site: s.
-	slot := objectMemory baseHeaderSize.
-	cogit MoveR: SendNumArgsReg Mw: ClosureOuterContextIndex * objectMemory wordSize + slot r: ClassReg.
-	cogit genMoveConstant: block R: TempReg.
-	cogit MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory wordSize + slot r: ClassReg.
-	cogit MoveCq: (objectMemory integerObjectOf: (self numArgsOf: block)) R: TempReg.
-	cogit MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory wordSize + slot r: ClassReg.
-	reg := self src: selfReg scratch: TempReg.
-	cogit MoveR: reg Mw: FullClosureReceiverIndex * objectMemory wordSize + slot r: ClassReg.
-	0 to: n - 1 do:
-		[:k|
-		reg := self src: b + k scratch: TempReg.
-		cogit MoveR: reg Mw: FullClosureFirstCopiedValueIndex + k * objectMemory wordSize + slot r: ClassReg].
-	self setDst: a from: ClassReg! !
+	slotOffset := objectMemory baseHeaderSize.
+	cogit MoveR: SendNumArgsReg Mw: ClosureOuterContextIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	cogit genMoveConstant: blockMethod R: TempReg.
+	cogit MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	cogit MoveCq: (objectMemory integerObjectOf: (self numArgsOf: blockMethod)) R: TempReg.
+	cogit MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	closureReg := self src: selfReg scratch: TempReg.
+	cogit MoveR: closureReg Mw: FullClosureReceiverIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	0 to: numCopied - 1 do:
+		[:copiedIndex|
+		closureReg := self src: baseReg + copiedIndex scratch: TempReg.
+		cogit MoveR: closureReg Mw: FullClosureFirstCopiedValueIndex + copiedIndex * objectMemory wordSize + slotOffset r: ClassReg].
+	self setDst: destReg from: ClassReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 spillMachineReg: reg
 	"Store the virtual register allocated to reg, if any, into its home (reg is about to be used as a scratch)."
 	0 to: OilMaxReg do:
-		[:r| (oilVRegReg at: r) = reg ifTrue:
-			[cogit MoveR: reg Mw: (oilVRegHome at: r) r: FPReg]]! !
+		[:vreg| (oilVRegReg at: vreg) = reg ifTrue:
+			[cogit MoveR: reg Mw: (oilVRegHome at: vreg) r: FPReg]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 reloadMachineReg: reg
 	0 to: OilMaxReg do:
-		[:r| (oilVRegReg at: r) = reg ifTrue:
-			[cogit MoveMw: (oilVRegHome at: r) r: FPReg R: reg]]! !
+		[:vreg| (oilVRegReg at: vreg) = reg ifTrue:
+			[cogit MoveMw: (oilVRegHome at: vreg) r: FPReg R: reg]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 genStreamNextAt: i
 	"a := b next (ReadStream>>next, primitive 65): collection (field 0) a ByteString (answer a Character) or an Array,
 	 position (1) < readLimit (2) and the next index within the collection: answer the element and increment the
 	 position.  Otherwise send next.  Scratch: Extra0Reg (the stream) and Extra1Reg (the collection), whose virtual
 	 registers are spilled around, TempReg, ClassReg (the position) and SendNumArgsReg."
-	| a b rs jumps nj jumpPtr jumpDone slow |
+	| destReg streamReg streamRegMach jumps numJumps jumpPtr jumpDone slowPath |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
 	<var: #jumpPtr type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #slow type: #'AbstractInstruction *'>
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	nj := 0.
-	rs := self src: b scratch: TempReg.
+	<var: #slowPath type: #'AbstractInstruction *'>
+	destReg := self fieldAAt: i.
+	streamReg := self fieldBAt: i.
+	numJumps := 0.
+	streamRegMach := self src: streamReg scratch: TempReg.
 	self spillMachineReg: Extra0Reg.
 	self spillMachineReg: Extra1Reg.
-	rs ~= Extra0Reg ifTrue: [cogit MoveR: rs R: Extra0Reg].
+	streamRegMach ~= Extra0Reg ifTrue: [cogit MoveR: streamRegMach R: Extra0Reg].
 	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
 	cogit MoveMw: 2 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
 	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
-	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	cogit CmpR: SendNumArgsReg R: ClassReg.
-	jumps at: nj put: (cogit JumpGreaterOrEqual: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpGreaterOrEqual: 0). numJumps := numJumps + 1.
 	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
 	cogit TstCq: objectMemory tagMask R: Extra1Reg.
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit MoveM32: 0 r: Extra1Reg R: TempReg.
 	cogit AndCq: objectMemory classIndexMask R: TempReg.
 	cogit CmpCq: ClassByteStringCompactIndex R: TempReg.
@@ -622,7 +622,7 @@ genStreamNextAt: i
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: TempReg.
 	cogit AddCq: 1 R: TempReg.
 	cogit CmpR: SendNumArgsReg R: TempReg.
-	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpGreater: 0). numJumps := numJumps + 1.
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: TempReg.
 	cogit MoveCq: 0 R: SendNumArgsReg.
 	cogit MoveXbr: TempReg R: Extra1Reg R: SendNumArgsReg.
@@ -631,72 +631,72 @@ genStreamNextAt: i
 	jumpDone := cogit Jump: 0.
 	"Array: index = position + 1 <= numSlots; slot index"
 	jumpPtr jmpTarget: (cogit CmpCq: ClassArrayCompactIndex R: TempReg).
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit oilGenGetNumSlotsOf: Extra1Reg into: SendNumArgsReg.
 	cogit MoveR: ClassReg R: TempReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: TempReg.
 	cogit AddCq: 1 R: TempReg.
 	cogit CmpR: SendNumArgsReg R: TempReg.
-	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpGreater: 0). numJumps := numJumps + 1.
 	cogit MoveXwr: TempReg R: Extra1Reg R: SendNumArgsReg.
 	jumpDone jmpTarget: (cogit AddCq: 1 << objectMemory numTagBits R: ClassReg).
 	cogit MoveR: ClassReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
 	self reloadMachineReg: Extra0Reg.
 	self reloadMachineReg: Extra1Reg.
-	self setDst: a from: SendNumArgsReg.
+	self setDst: destReg from: SendNumArgsReg.
 	jumpDone := cogit Jump: 0.
-	slow := cogit Label.
-	0 to: nj - 1 do: [:k| (jumps at: k) jmpTarget: slow].
+	slowPath := cogit Label.
+	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
 	self reloadMachineReg: Extra0Reg.
 	self reloadMachineReg: Extra1Reg.
 	self genSendAt: i numArgs: 0 super: false.
 	jumpDone jmpTarget: cogit Label! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 genStreamNextPutAt: i
 	"a := b nextPut: c (WriteStream>>nextPut:, primitive 66): collection (field 0) a mutable ByteString, c a Character of
 	 code 0..255, position (1) < writeLimit (3) and position + 1 within the collection: store the byte, increment the
 	 position and answer c.  Otherwise send nextPut:.  Scratch registers as in genStreamNextAt:."
-	| a b c rs rv jumps nj jumpDone slow |
+	| destReg streamReg valReg streamRegMach valRegMach jumps numJumps jumpDone slowPath |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #slow type: #'AbstractInstruction *'>
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	c := self fieldCAt: i.
-	nj := 0.
+	<var: #slowPath type: #'AbstractInstruction *'>
+	destReg := self fieldAAt: i.
+	streamReg := self fieldBAt: i.
+	valReg := self fieldCAt: i.
+	numJumps := 0.
 	self spillMachineReg: Extra0Reg.
 	self spillMachineReg: Extra1Reg.
-	rv := self src: c scratch: ClassReg.
-	rv ~= ClassReg ifTrue: [cogit MoveR: rv R: ClassReg]. "the value, then the position"
+	valRegMach := self src: valReg scratch: ClassReg.
+	valRegMach ~= ClassReg ifTrue: [cogit MoveR: valRegMach R: ClassReg]. "the value, then the position"
 	"a Character (tag 2r010) of code 0..255"
 	cogit TstCq: objectMemory tagMask - objectMemory characterTag R: ClassReg.
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit TstCq: objectMemory characterTag R: ClassReg.
-	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	cogit CmpCq: (255 << objectMemory numTagBits) + objectMemory characterTag R: ClassReg.
-	jumps at: nj put: (cogit JumpAbove: 0). nj := nj + 1.
-	rs := self src: b scratch: TempReg.
-	rs ~= Extra0Reg ifTrue: [cogit MoveR: rs R: Extra0Reg].
+	jumps at: numJumps put: (cogit JumpAbove: 0). numJumps := numJumps + 1.
+	streamRegMach := self src: streamReg scratch: TempReg.
+	streamRegMach ~= Extra0Reg ifTrue: [cogit MoveR: streamRegMach R: Extra0Reg].
 	cogit MoveR: ClassReg R: TempReg.
 	cogit LogicalShiftRightCq: objectMemory numTagBits R: TempReg.
 	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
 	cogit MoveMw: 3 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
 	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
-	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	jumps at: nj put: (cogit JumpZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	cogit CmpR: SendNumArgsReg R: ClassReg.
-	jumps at: nj put: (cogit JumpGreaterOrEqual: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpGreaterOrEqual: 0). numJumps := numJumps + 1.
 	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
 	cogit TstCq: objectMemory tagMask R: Extra1Reg.
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit MoveM32: 0 r: Extra1Reg R: SendNumArgsReg.
 	cogit TstCq: objectMemory immutableBitMask R: SendNumArgsReg.
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit AndCq: objectMemory classIndexMask R: SendNumArgsReg.
 	cogit CmpCq: ClassByteStringCompactIndex R: SendNumArgsReg.
-	jumps at: nj put: (cogit JumpNonZero: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	"index = position + 1 <= numBytes (genGetNumBytesOf: uses TempReg: save the byte in the stack)"
 	cogit PushR: TempReg.
 	cogit oilGenGetNumBytesOf: Extra1Reg into: SendNumArgsReg.
@@ -706,92 +706,92 @@ genStreamNextPutAt: i
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: ClassReg.
 	cogit CmpR: SendNumArgsReg R: ClassReg.
 	cogit PopR: SendNumArgsReg. "the new position, tagged"
-	jumps at: nj put: (cogit JumpGreater: 0). nj := nj + 1.
+	jumps at: numJumps put: (cogit JumpGreater: 0). numJumps := numJumps + 1.
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: ClassReg.
 	cogit MoveR: TempReg Xbr: ClassReg R: Extra1Reg.
 	cogit MoveR: SendNumArgsReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
 	self reloadMachineReg: Extra0Reg.
 	self reloadMachineReg: Extra1Reg.
-	rv := self src: c scratch: ClassReg.
-	self setDst: a from: rv.
+	valRegMach := self src: valReg scratch: ClassReg.
+	self setDst: destReg from: valRegMach.
 	jumpDone := cogit Jump: 0.
-	slow := cogit Label.
-	0 to: nj - 1 do: [:k| (jumps at: k) jmpTarget: slow].
+	slowPath := cogit Label.
+	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
 	self reloadMachineReg: Extra0Reg.
 	self reloadMachineReg: Extra1Reg.
 	self genSendAt: i numArgs: 1 super: false.
 	jumpDone jmpTarget: cogit Label! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:30'!
-genCharValue: a of: b
-	"The SmallInteger value of the Character in b (its class was guarded): 8v+2 -> 8v+1."
-	| rb dst |
-	rb := self src: b scratch: TempReg.
-	dst := self dst: a scratch: SendNumArgsReg.
-	dst ~= rb ifTrue: [cogit MoveR: rb R: dst].
-	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: dst.
-	self setDst: a from: dst! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genCharValue: destReg of: srcReg
+	"The SmallInteger value of the Character in srcReg (its class was guarded): 8v+2 -> 8v+1."
+	| srcMach dstMach |
+	srcMach := self src: srcReg scratch: TempReg.
+	dstMach := self dst: destReg scratch: SendNumArgsReg.
+	dstMach ~= srcMach ifTrue: [cogit MoveR: srcMach R: dstMach].
+	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: dstMach.
+	self setDst: destReg from: dstMach! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
-genLoadByteSize: a object: b
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLoadByteSize: destReg object: objReg
 	"The number of bytes of a byte object, tagged."
-	| rb |
-	rb := self src: b scratch: ClassReg. "(not TempReg: genGetNumBytesOf:into: uses it)"
-	cogit oilGenGetNumBytesOf: rb into: SendNumArgsReg.
+	| objMach |
+	objMach := self src: objReg scratch: ClassReg. "(not TempReg: genGetNumBytesOf:into: uses it)"
+	cogit oilGenGetNumBytesOf: objMach into: SendNumArgsReg.
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
-genLoadByte: a array: b index: c tag: tag
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLoadByte: destReg array: arrayReg index: indexReg tag: tag
 	"Byte i (1-based, bounds checked) of a byte object is at array + 8 + i - 1: untag the index, add 7, load the byte
 	 zero extended (MoveXbr writes the low byte only: clear the register first) and tag it (SmallInteger or Character)."
-	| rb rc |
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	cogit MoveR: rc R: SendNumArgsReg.
+	| arrayMach indexMach |
+	arrayMach := self src: arrayReg scratch: TempReg.
+	indexMach := self src: indexReg scratch: ClassReg.
+	cogit MoveR: indexMach R: SendNumArgsReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
 	cogit MoveCq: 0 R: ClassReg.
-	cogit MoveXbr: SendNumArgsReg R: rb R: ClassReg.
+	cogit MoveXbr: SendNumArgsReg R: arrayMach R: ClassReg.
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: ClassReg.
 	cogit OrCq: tag R: ClassReg.
-	self setDst: a from: ClassReg! !
+	self setDst: destReg from: ClassReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
-genStoreByte: a array: b index: c character: isChar site: s
-	"Store the SmallInteger 0..255 (or Character of code 0..255) in a into byte c of the byte object b (bounds checked).
-	 Bail out if b is read-only or the value does not fit (the interpreter then fails or grows the string)."
-	| ra rb rc |
-	rb := self src: b scratch: TempReg.
-	self genImmutabilityCheckOf: rb scratch: SendNumArgsReg site: s.
-	rc := self src: c scratch: ClassReg.
-	cogit MoveR: rc R: SendNumArgsReg.
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genStoreByte: valReg array: arrayReg index: indexReg character: isChar site: siteIndex
+	"Store the SmallInteger 0..255 (or Character of code 0..255) in valReg into byte indexReg of the byte object arrayReg (bounds checked).
+	 Deoptimize if arrayReg is read-only or the value does not fit (the interpreter then fails or grows the string)."
+	| valMach arrayMach indexMach |
+	arrayMach := self src: arrayReg scratch: TempReg.
+	self genImmutabilityCheckOf: arrayMach scratch: SendNumArgsReg site: siteIndex.
+	indexMach := self src: indexReg scratch: ClassReg.
+	cogit MoveR: indexMach R: SendNumArgsReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
-	ra := self src: a scratch: ClassReg.
-	ra ~= ClassReg ifTrue: [cogit MoveR: ra R: ClassReg].
+	valMach := self src: valReg scratch: ClassReg.
+	valMach ~= ClassReg ifTrue: [cogit MoveR: valMach R: ClassReg].
 	isChar
 		ifTrue: "tag bits 2r010"
 			[cogit TstCq: objectMemory tagMask - objectMemory characterTag R: ClassReg.
-			 self bail: (cogit JumpNonZero: 0) site: s.
+			 self deopt: (cogit JumpNonZero: 0) site: siteIndex.
 			 cogit TstCq: objectMemory characterTag R: ClassReg.
-			 self bail: (cogit JumpZero: 0) site: s]
+			 self deopt: (cogit JumpZero: 0) site: siteIndex]
 		ifFalse:
 			[cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
-			 self bail: (cogit JumpZero: 0) site: s].
+			 self deopt: (cogit JumpZero: 0) site: siteIndex].
 	cogit LogicalShiftRightCq: objectMemory numTagBits R: ClassReg.
 	cogit CmpCq: 255 R: ClassReg.
-	self bail: (cogit JumpAbove: 0) site: s.
-	cogit MoveR: ClassReg Xbr: SendNumArgsReg R: rb! !
+	self deopt: (cogit JumpAbove: 0) site: siteIndex.
+	cogit MoveR: ClassReg Xbr: SendNumArgsReg R: arrayMach! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 18:00'!
-genCompareBytes: a with: b with: c site: s
-	"Primitive 158 (compareWith:) inlined: b, a byte object (its class was guarded), and c, which must be a byte
-	 object too (else bail out): answer the difference of the first differing bytes, else of the sizes.  All the
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genCompareBytes: destReg with: firstReg with: secondReg site: siteIndex
+	"Primitive 158 (compareWith:) inlined: firstReg, a byte object (its class was guarded), and secondReg, which must be a byte
+	 object too (else deoptimize): answer the difference of the first differing bytes, else of the sizes.  All the
 	 registers are spilled and used as scratch: Arg0Reg s1, Arg1Reg s2, Extra0Reg size difference, SendNumArgsReg
 	 the common size, ReceiverResultReg the byte index; 8 bytes are compared at a time while they are equal."
-	| rc jumpMin wordLoop jumpToBytes jumpWordDiffers byteLoop jumpEnd jumpByteDiffers jumpDone |
+	| secondMach jumpMin wordLoop jumpToBytes jumpWordDiffers byteLoop jumpEnd jumpByteDiffers jumpDone |
 	<var: #jumpMin type: #'AbstractInstruction *'>
 	<var: #wordLoop type: #'AbstractInstruction *'>
 	<var: #jumpToBytes type: #'AbstractInstruction *'>
@@ -800,18 +800,18 @@ genCompareBytes: a with: b with: c site: s
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	<var: #jumpByteDiffers type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	"Check the argument first, while the registers still hold the virtual registers (a bailout spills them)."
-	rc := self src: c scratch: ClassReg.
-	cogit TstCq: objectMemory tagMask R: rc.
-	self bail: (cogit JumpNonZero: 0) site: s.
-	cogit MoveM32: 0 r: rc R: TempReg.
+	"Check the argument first, while the registers still hold the virtual registers (a deopt spills them)."
+	secondMach := self src: secondReg scratch: ClassReg.
+	cogit TstCq: objectMemory tagMask R: secondMach.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
+	cogit MoveM32: 0 r: secondMach R: TempReg.
 	cogit LogicalShiftRightCq: objectMemory formatShift R: TempReg.
 	cogit AndCq: objectMemory formatMask R: TempReg.
 	cogit CmpCq: objectMemory firstByteFormat R: TempReg.
-	self bail: (cogit JumpLess: 0) site: s.
+	self deopt: (cogit JumpLess: 0) site: siteIndex.
 	self spillAll.
-	cogit MoveMw: (oilVRegHome at: b) r: FPReg R: Arg0Reg.
-	cogit MoveMw: (oilVRegHome at: c) r: FPReg R: Arg1Reg.
+	cogit MoveMw: (oilVRegHome at: firstReg) r: FPReg R: Arg0Reg.
+	cogit MoveMw: (oilVRegHome at: secondReg) r: FPReg R: Arg1Reg.
 	cogit oilGenGetNumBytesOf: Arg0Reg into: Extra0Reg.
 	cogit oilGenGetNumBytesOf: Arg1Reg into: Extra1Reg.
 	cogit MoveR: Extra0Reg R: SendNumArgsReg.
@@ -858,93 +858,93 @@ genCompareBytes: a with: b with: c site: s
 	self reloadAll.
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genLogicTagged: op a: a b: b c: c site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLogicTagged: opcode a: destReg b: leftReg c: rightReg site: siteIndex
 	"bitAnd:/bitOr: on tagged values need no untagging (1 and 1 = 1 or 1 = 1); bitXor: clears the tag: set it again."
-	| rb rc |
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	self genTagCheckOf: b in: rb and: c in: rc site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
-	op = OilAndTagged ifTrue: [cogit AndR: rc R: SendNumArgsReg].
-	op = OilOrTagged ifTrue: [cogit OrR: rc R: SendNumArgsReg].
-	op = OilXorTagged ifTrue:
-		[cogit XorR: rc R: SendNumArgsReg.
+	| leftMach rightMach |
+	leftMach := self src: leftReg scratch: TempReg.
+	rightMach := self src: rightReg scratch: ClassReg.
+	self genTagCheckOf: leftReg in: leftMach and: rightReg in: rightMach site: siteIndex.
+	cogit MoveR: leftMach R: SendNumArgsReg.
+	opcode = OilAndTagged ifTrue: [cogit AndR: rightMach R: SendNumArgsReg].
+	opcode = OilOrTagged ifTrue: [cogit OrR: rightMach R: SendNumArgsReg].
+	opcode = OilXorTagged ifTrue:
+		[cogit XorR: rightMach R: SendNumArgsReg.
 		 cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg].
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genShiftTagged: a b: b shift: k site: s
-	"k > 0: x // 2^k, i.e. an arithmetic right shift: sar (3+k), shl 3, or 1 (exact floor, no overflow).
-	 k < 0: x * 2^-k: (t - 1) << -k, checked by shifting back, then or 1."
-	| rb |
-	rb := self src: b scratch: TempReg.
-	self genTagCheckOf: b in: rb site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
-	k > 0
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genShiftTagged: destReg b: srcReg shift: shiftAmount site: siteIndex
+	"shiftAmount > 0: x // 2^shiftAmount, i.e. an arithmetic right shift: sar (3+shiftAmount), shl 3, or 1 (exact floor, no overflow).
+	 shiftAmount < 0: x * 2^-shiftAmount: (t - 1) << -shiftAmount, checked by shifting back, then or 1."
+	| srcMach |
+	srcMach := self src: srcReg scratch: TempReg.
+	self genTagCheckOf: srcReg in: srcMach site: siteIndex.
+	cogit MoveR: srcMach R: SendNumArgsReg.
+	shiftAmount > 0
 		ifTrue:
-			[cogit ArithmeticShiftRightCq: objectMemory numTagBits + k R: SendNumArgsReg.
+			[cogit ArithmeticShiftRightCq: objectMemory numTagBits + shiftAmount R: SendNumArgsReg.
 			 cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg]
 		ifFalse:
 			[cogit SubCq: 1 R: SendNumArgsReg.
-			 cogit LogicalShiftLeftCq: k negated R: SendNumArgsReg.
+			 cogit LogicalShiftLeftCq: shiftAmount negated R: SendNumArgsReg.
 			 cogit MoveR: SendNumArgsReg R: ClassReg.
-			 cogit ArithmeticShiftRightCq: k negated R: ClassReg.
+			 cogit ArithmeticShiftRightCq: shiftAmount negated R: ClassReg.
 			 cogit AddCq: 1 R: ClassReg.
-			 cogit CmpR: rb R: ClassReg.
-			 self bail: (cogit JumpNonZero: 0) site: s].
+			 cogit CmpR: srcMach R: ClassReg.
+			 self deopt: (cogit JumpNonZero: 0) site: siteIndex].
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genOddTagged: a b: b site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genOddTagged: destReg b: srcReg site: siteIndex
 	"x \\ 2 = x bitAnd: 1, i.e. on the tagged value (t bitAnd: 8) bitOr: 1."
-	| rb |
-	rb := self src: b scratch: TempReg.
-	self genTagCheckOf: b in: rb site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
+	| srcMach |
+	srcMach := self src: srcReg scratch: TempReg.
+	self genTagCheckOf: srcReg in: srcMach site: siteIndex.
+	cogit MoveR: srcMach R: SendNumArgsReg.
 	cogit AndCq: 1 << objectMemory numTagBits R: SendNumArgsReg.
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genAddImmTagged: a b: b imm: imm site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genAddImmTagged: destReg b: srcReg imm: imm site: siteIndex
 	"x + imm on tagged values is t + 8 imm: one add, overflow checked (e.g. the loop increment, addq $8)."
-	| rb |
-	rb := self src: b scratch: TempReg.
-	self genTagCheckOf: b in: rb site: s.
-	cogit MoveR: rb R: SendNumArgsReg.
+	| srcMach |
+	srcMach := self src: srcReg scratch: TempReg.
+	self genTagCheckOf: srcReg in: srcMach site: siteIndex.
+	cogit MoveR: srcMach R: SendNumArgsReg.
 	cogit AddCq: imm << objectMemory numTagBits R: SendNumArgsReg.
-	self bail: (cogit JumpOverflow: 0) site: s.
-	self setDst: a from: SendNumArgsReg! !
+	self deopt: (cogit JumpOverflow: 0) site: siteIndex.
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 16:00'!
-genAddImmTaggedNoCheck: a b: b imm: imm
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genAddImmTaggedNoCheck: destReg b: srcReg imm: imm
 	"x + imm where Pass 2 proved x a SmallInteger and the sum one too (a counted loop index): addq $8imm, in place
-	 if a and b share a machine register."
-	| ra rb |
-	rb := self src: b scratch: TempReg.
-	ra := self dst: a scratch: SendNumArgsReg.
-	ra ~= rb ifTrue: [cogit MoveR: rb R: ra].
-	cogit AddCq: imm << objectMemory numTagBits R: ra.
-	self setDst: a from: ra! !
+	 if destReg and srcReg share a machine register."
+	| destMach srcMach |
+	srcMach := self src: srcReg scratch: TempReg.
+	destMach := self dst: destReg scratch: SendNumArgsReg.
+	destMach ~= srcMach ifTrue: [cogit MoveR: srcMach R: destMach].
+	cogit AddCq: imm << objectMemory numTagBits R: destMach.
+	self setDst: destReg from: destMach! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genLoadField: a object: b slot: index
-	| rb dst |
-	rb := self src: b scratch: TempReg.
-	dst := self dst: a scratch: SendNumArgsReg.
-	cogit MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize r: rb R: dst.
-	self setDst: a from: dst! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLoadField: destReg object: objReg slot: slotIndex
+	| objMach dstMach |
+	objMach := self src: objReg scratch: TempReg.
+	dstMach := self dst: destReg scratch: SendNumArgsReg.
+	cogit MoveMw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: objMach R: dstMach.
+	self setDst: destReg from: dstMach! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genImmutabilityCheckOf: objReg scratch: scratch site: s
-	"Bail out if the object in objReg is read-only: the interpreter then retries the store and signals the failure."
-	cogit MoveMw: 0 r: objReg R: scratch.
-	cogit TstCq: objectMemory immutableBitMask R: scratch.
-	self bail: (cogit JumpNonZero: 0) site: s! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genImmutabilityCheckOf: objReg scratch: scratchReg site: siteIndex
+	"Deoptimize if the object in objReg is read-only: the interpreter then retries the store and signals the failure."
+	cogit MoveMw: 0 r: objReg R: scratchReg.
+	cogit TstCq: objectMemory immutableBitMask R: scratchReg.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genStoreCheckObject: objReg value: valueReg scratch: scratch
@@ -969,118 +969,118 @@ genStoreCheckObject: objReg value: valueReg scratch: scratch
 	self reloadAll.
 	jmpImmediate jmpTarget: (jmpDestYoung jmpTarget: (jmpSourceOld jmpTarget: (jmpRemembered jmpTarget: cogit Label)))! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genStoreField: a object: b slot: index site: s
-	| ra rb |
-	ra := self src: a scratch: TempReg.
-	rb := self src: b scratch: ClassReg.
-	self genImmutabilityCheckOf: rb scratch: SendNumArgsReg site: s.
-	cogit MoveR: ra Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: rb.
-	self genStoreCheckObject: rb value: ra scratch: SendNumArgsReg! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genStoreField: valReg object: objReg slot: slotIndex site: siteIndex
+	| valMach objMach |
+	valMach := self src: valReg scratch: TempReg.
+	objMach := self src: objReg scratch: ClassReg.
+	self genImmutabilityCheckOf: objMach scratch: SendNumArgsReg site: siteIndex.
+	cogit MoveR: valMach Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: objMach.
+	self genStoreCheckObject: objMach value: valMach scratch: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genLoadElement: a array: b index: c
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLoadElement: destReg array: arrayReg index: indexReg
 	"Element i (1-based) of an Array (no fixed fields) is at array + 8 + 8(i-1) = array + 8i = array + tagged(i) - 1.
 	 The bounds were checked (by an OilCheckBounds, or by Pass 2)."
-	| rb rc dst |
-	rb := self src: b scratch: TempReg.
-	rc := self src: c scratch: ClassReg.
-	dst := self dst: a scratch: SendNumArgsReg.
-	cogit MoveR: rc R: SendNumArgsReg.
-	cogit AddR: rb R: SendNumArgsReg.
-	cogit MoveMw: -1 r: SendNumArgsReg R: dst.
-	self setDst: a from: dst! !
+	| arrayMach indexMach dstMach |
+	arrayMach := self src: arrayReg scratch: TempReg.
+	indexMach := self src: indexReg scratch: ClassReg.
+	dstMach := self dst: destReg scratch: SendNumArgsReg.
+	cogit MoveR: indexMach R: SendNumArgsReg.
+	cogit AddR: arrayMach R: SendNumArgsReg.
+	cogit MoveMw: -1 r: SendNumArgsReg R: dstMach.
+	self setDst: destReg from: dstMach! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genStoreElement: a array: b index: c site: s
-	| ra rb rc |
-	rb := self src: b scratch: ClassReg.
-	self genImmutabilityCheckOf: rb scratch: TempReg site: s.
-	rc := self src: c scratch: SendNumArgsReg.
-	rc ~= SendNumArgsReg ifTrue: [cogit MoveR: rc R: SendNumArgsReg].
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genStoreElement: valReg array: arrayReg index: indexReg site: siteIndex
+	| valMach arrayMach indexMach |
+	arrayMach := self src: arrayReg scratch: ClassReg.
+	self genImmutabilityCheckOf: arrayMach scratch: TempReg site: siteIndex.
+	indexMach := self src: indexReg scratch: SendNumArgsReg.
+	indexMach ~= SendNumArgsReg ifTrue: [cogit MoveR: indexMach R: SendNumArgsReg].
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
-	ra := self src: a scratch: TempReg.
-	cogit MoveR: ra Xwr: SendNumArgsReg R: rb.
-	self genStoreCheckObject: rb value: ra scratch: SendNumArgsReg! !
+	valMach := self src: valReg scratch: TempReg.
+	cogit MoveR: valMach Xwr: SendNumArgsReg R: arrayMach.
+	self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genLoadSize: a object: b
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genLoadSize: destReg object: objReg
 	"The number of slots of an Array (no fixed fields), tagged."
-	| rb |
-	rb := self src: b scratch: TempReg.
-	cogit oilGenGetNumSlotsOf: rb into: SendNumArgsReg.
+	| objMach |
+	objMach := self src: objReg scratch: TempReg.
+	cogit oilGenGetNumSlotsOf: objMach into: SendNumArgsReg.
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: a from: SendNumArgsReg! !
+	self setDst: destReg from: SendNumArgsReg! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genCheckBounds: a limit: b site: s
-	"Bail out unless index (a) is a SmallInteger with 1 <= index <= limit (b, a tagged size)."
-	| ra rb |
-	ra := self src: a scratch: TempReg.
-	rb := self src: b scratch: ClassReg.
-	self genTagCheckOf: a in: ra site: s.
-	cogit CmpCq: (objectMemory integerObjectOf: 1) R: ra.
-	self bail: (cogit JumpLess: 0) site: s.
-	cogit CmpR: rb R: ra.
-	self bail: (cogit JumpGreater: 0) site: s! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genCheckBounds: indexReg limit: limitReg site: siteIndex
+	"Deoptimize unless index (indexReg) is a SmallInteger with 1 <= index <= limit (limitReg, a tagged size)."
+	| indexMach limitMach |
+	indexMach := self src: indexReg scratch: TempReg.
+	limitMach := self src: limitReg scratch: ClassReg.
+	self genTagCheckOf: indexReg in: indexMach site: siteIndex.
+	cogit CmpCq: (objectMemory integerObjectOf: 1) R: indexMach.
+	self deopt: (cogit JumpLess: 0) site: siteIndex.
+	cogit CmpR: limitMach R: indexMach.
+	self deopt: (cogit JumpGreater: 0) site: siteIndex! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genGuard: a class: classHandle site: s
-	"Bail out unless the object in a is an instance of classHandle: a tag test for immediate classes, else a
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genGuard: objReg class: classHandle site: siteIndex
+	"Deoptimize unless the object in objReg is an instance of classHandle: a tag test for immediate classes, else a
 	 compare of the class index in the header.  A forwarder (class index isForwardedObjectClassIndexPun) fails
-	 the guard; the bailout's fast path then follows it and resumes here."
-	| ra tag |
+	 the guard; the deopt fast path then follows it and resumes here."
+	| objMach tag |
 	tag := objectMemory classTagForClass: classHandle.
 	tag = 0 ifTrue: [^self abortCompilation: OilFailBackend].
-	ra := self src: a scratch: TempReg.
+	objMach := self src: objReg scratch: TempReg.
 	tag = objectMemory smallIntegerTag ifTrue:
-		[^self genTagCheck: ra site: s].
+		[^self genTagCheck: objMach site: siteIndex].
 	tag <= objectMemory tagMask ifTrue:
-		[cogit MoveR: ra R: SendNumArgsReg.
+		[cogit MoveR: objMach R: SendNumArgsReg.
 		 cogit AndCq: objectMemory tagMask R: SendNumArgsReg.
 		 cogit CmpCq: tag R: SendNumArgsReg.
-		 ^self bail: (cogit JumpNonZero: 0) site: s].
-	cogit TstCq: objectMemory tagMask R: ra.
-	self bail: (cogit JumpNonZero: 0) site: s.
-	cogit MoveM32: 0 r: ra R: SendNumArgsReg.
+		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
+	cogit TstCq: objectMemory tagMask R: objMach.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
+	cogit MoveM32: 0 r: objMach R: SendNumArgsReg.
 	cogit AndCq: objectMemory classIndexMask R: SendNumArgsReg.
 	cogit CmpCq: tag R: SendNumArgsReg.
-	self bail: (cogit JumpNonZero: 0) site: s! !
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genCompareAt: i site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genCompareAt: irOffset site: siteIndex
 	"A comparison (OilCmpTagged/OilCmpImmTagged, condition in field A) always immediately followed by the branch on
 	 the flags that consumes it: fuse them into one compare and one conditional jump.  Tagged values compare like
 	 the integers they represent.  Answer the index of the instruction after the branch."
 	<inline: false>
-	| op cond ra rb br target onTrue tagged jump |
+	| opcode cond leftMach rightMach branchOffset target onTrue tagged jump |
 	<var: #jump type: #'AbstractInstruction *'>
-	op := self opcodeAt: i.
-	cond := self fieldAAt: i.
-	br := i + 1.
-	(((self opcodeAt: br) = OilBranchTrue or: [(self opcodeAt: br) = OilBranchFalse])
-	 and: [(self fieldAAt: br) = OilFlagsReg
-	 and: [(oilIRTarget at: br) = 0]]) ifFalse: "nothing may jump between the compare and the branch"
+	opcode := self opcodeAt: irOffset.
+	cond := self fieldAAt: irOffset.
+	branchOffset := irOffset + 1.
+	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
+	 and: [(self fieldAAt: branchOffset) = OilFlagsReg
+	 and: [(oilIRTarget at: branchOffset) = 0]]) ifFalse: "nothing may jump between the compare and the branch"
 		[self abortCompilation: OilFailBackend.
-		 ^br].
-	onTrue := (self opcodeAt: br) = OilBranchTrue.
-	target := self imm16At: br.
-	ra := self src: (self fieldBAt: i) scratch: TempReg.
-	op = OilCmpImmTagged
+		 ^branchOffset].
+	onTrue := (self opcodeAt: branchOffset) = OilBranchTrue.
+	target := self imm16At: branchOffset.
+	leftMach := self src: (self fieldBAt: irOffset) scratch: TempReg.
+	opcode = OilCmpImmTagged
 		ifTrue:
-			[self genTagCheckOf: (self fieldBAt: i) in: ra site: s.
-			 tagged := objectMemory integerObjectOf: (self signed8: (self fieldCAt: i)).
-			 cogit CmpCq: tagged R: ra]
+			[self genTagCheckOf: (self fieldBAt: irOffset) in: leftMach site: siteIndex.
+			 tagged := objectMemory integerObjectOf: (self signed8: (self fieldCAt: irOffset)).
+			 cogit CmpCq: tagged R: leftMach]
 		ifFalse:
-			[rb := self src: (self fieldCAt: i) scratch: ClassReg.
-			 cond < OilCondIdentical ifTrue: [self genTagCheckOf: (self fieldBAt: i) in: ra and: (self fieldCAt: i) in: rb site: s].
-			 cogit CmpR: rb R: ra].
+			[rightMach := self src: (self fieldCAt: irOffset) scratch: ClassReg.
+			 cond < OilCondIdentical ifTrue: [self genTagCheckOf: (self fieldBAt: irOffset) in: leftMach and: (self fieldCAt: irOffset) in: rightMach site: siteIndex].
+			 cogit CmpR: rightMach R: leftMach].
 	jump := self genJumpOn: cond ifTrue: onTrue.
 	self branch: jump to: target.
-	^br + 1! !
+	^branchOffset + 1! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genJumpOn: cond ifTrue: onTrue
 	"Answer a conditional jump taken when (ra cond rb) = onTrue, the flags being those of ra - rb."
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1091,94 +1091,94 @@ genJumpOn: cond ifTrue: onTrue
 	(cond = OilCondEq or: [cond = OilCondIdentical]) ifTrue: [^onTrue ifTrue: [cogit JumpZero: 0] ifFalse: [cogit JumpNonZero: 0]].
 	^onTrue ifTrue: [cogit JumpNonZero: 0] ifFalse: [cogit JumpZero: 0]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genBranchOnBoolean: a ifTrue: onTrue to: target site: s
-	"A branch on a boolean in a register (not on the flags): bail out (mustBeBoolean) on a non-boolean."
-	| ra jmpTarget |
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genBranchOnBoolean: boolReg ifTrue: onTrue to: target site: siteIndex
+	"A branch on a boolean in a register (not on the flags): deoptimize (mustBeBoolean) on a non-boolean."
+	| boolMach jmpTarget |
 	<var: #jmpTarget type: #'AbstractInstruction *'>
-	a = OilFlagsReg ifTrue: "flags are always consumed by genCompareAt:site:"
+	boolReg = OilFlagsReg ifTrue: "flags are always consumed by genCompareAt:site:"
 		[^self abortCompilation: OilFailBackend].
-	ra := self src: a scratch: TempReg.
+	boolMach := self src: boolReg scratch: TempReg.
 	cogit genMoveConstant: (onTrue ifTrue: [objectMemory trueObject] ifFalse: [objectMemory falseObject]) R: ClassReg.
-	cogit CmpR: ClassReg R: ra.
+	cogit CmpR: ClassReg R: boolMach.
 	jmpTarget := cogit JumpZero: 0.
 	self branch: jmpTarget to: target.
 	cogit genMoveConstant: (onTrue ifTrue: [objectMemory falseObject] ifFalse: [objectMemory trueObject]) R: ClassReg.
-	cogit CmpR: ClassReg R: ra.
-	self bail: (cogit JumpNonZero: 0) site: s! !
+	cogit CmpR: ClassReg R: boolMach.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genReturn: a
-	| reg |
-	reg := self src: a scratch: ReceiverResultReg.
-	reg ~= ReceiverResultReg ifTrue: [cogit MoveR: reg R: ReceiverResultReg].
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genReturn: valueReg
+	| returnMach |
+	returnMach := self src: valueReg scratch: ReceiverResultReg.
+	returnMach ~= ReceiverResultReg ifTrue: [cogit MoveR: returnMach R: ReceiverResultReg].
 	cogit oilGenReturnFrom: (self numArgsOf: rootMethod)! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 selectorIndexOf: selector
 	"The inline cache of a send holds the index of its selector, in the literals of the method (the root), negative,
 	 in the special selectors, or OilExtraSelectorBase + its index in the Oil selector table (see
 	 ProfilingCogit>>oilExtraSelectorIndexOf:add:).  Answer that index, or OilNoLink if the selector is in none."
 	0 to: 31 do:
-		[:k| (coInterpreter specialSelector: k) = selector ifTrue: [^-1 - k]].
+		[:litIndex| (coInterpreter specialSelector: litIndex) = selector ifTrue: [^-1 - litIndex]].
 	0 to: (objectMemory literalCountOf: rootMethod) - 1 do:
-		[:k| (coInterpreter literal: k ofMethod: rootMethod) = selector ifTrue: [^k]].
+		[:litIndex| (coInterpreter literal: litIndex ofMethod: rootMethod) = selector ifTrue: [^litIndex]].
 	^cogit oilExtraSelectorIndexOf: selector add: true! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genCallAt: i site: s
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genCallAt: irOffset site: siteIndex
 	"An uninlined send, through the Cogit's inline cache and PIC machinery."
 	<inline: false>
-	| op n isSuper |
-	op := self opcodeAt: i.
-	n := op = OilCall0 ifTrue: [0] ifFalse: [op = OilCall1 ifTrue: [1] ifFalse: [self fieldCAt: i]].
-	isSuper := op = OilCallSuper.
+	| opcode numArgs isSuper |
+	opcode := self opcodeAt: irOffset.
+	numArgs := opcode = OilCall0 ifTrue: [0] ifFalse: [opcode = OilCall1 ifTrue: [1] ifFalse: [self fieldCAt: irOffset]].
+	isSuper := opcode = OilCallSuper.
 	"A super send binds to the method class of the frame's method, which must be the root method's."
-	(isSuper and: [s < 0 or: [(siteFrame at: s) ~= 0]]) ifTrue:
+	(isSuper and: [siteIndex < 0 or: [(siteFrame at: siteIndex) ~= 0]]) ifTrue:
 		[^self abortCompilation: OilFailBackend].
-	self genSendAt: i numArgs: n super: isSuper! !
+	self genSendAt: irOffset numArgs: numArgs super: isSuper! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genSendAt: i numArgs: n super: isSuper
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genSendAt: irOffset numArgs: numArgs super: isSuper
 	"Spill everything (the callee may run the GC, which scans and updates the homes), marshal the receiver and
 	 arguments like the baseline JIT (registers for up to numRegArgs arguments, else pushed), call the send
 	 trampoline (linked later to the target method or a PIC), store the result and reload."
 	<inline: false>
-	| a b selIndex |
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	selIndex := self selectorIndexOf: (self word64At: i + 1).
+	| destReg receiverReg selIndex |
+	destReg := self fieldAAt: irOffset.
+	receiverReg := self fieldBAt: irOffset.
+	selIndex := self selectorIndexOf: (self word64At: irOffset + 1).
 	selIndex = OilNoLink ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	self spillAll.
-	n <= cogit numRegArgs
+	numArgs <= cogit numRegArgs
 		ifTrue:
-			[n >= 1 ifTrue: [cogit MoveMw: (oilVRegHome at: (self callArg: 0 at: i)) r: FPReg R: Arg0Reg].
-			 n >= 2 ifTrue: [cogit MoveMw: (oilVRegHome at: (self callArg: 1 at: i)) r: FPReg R: Arg1Reg]]
+			[numArgs >= 1 ifTrue: [cogit MoveMw: (oilVRegHome at: (self callArg: 0 at: irOffset)) r: FPReg R: Arg0Reg].
+			 numArgs >= 2 ifTrue: [cogit MoveMw: (oilVRegHome at: (self callArg: 1 at: irOffset)) r: FPReg R: Arg1Reg]]
 		ifFalse:
-			[cogit MoveMw: (oilVRegHome at: b) r: FPReg R: TempReg.
+			[cogit MoveMw: (oilVRegHome at: receiverReg) r: FPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 0 to: n - 1 do:
-				[:k|
-				cogit MoveMw: (oilVRegHome at: (self callArg: k at: i)) r: FPReg R: TempReg.
+			 0 to: numArgs - 1 do:
+				[:argIndex|
+				cogit MoveMw: (oilVRegHome at: (self callArg: argIndex at: irOffset)) r: FPReg R: TempReg.
 				cogit PushR: TempReg]].
-	cogit MoveMw: (oilVRegHome at: b) r: FPReg R: ReceiverResultReg.
-	cogit oilGenSend: selIndex numArgs: n super: isSuper.
-	cogit MoveR: ReceiverResultReg Mw: (oilVRegHome at: a) r: FPReg.
+	cogit MoveMw: (oilVRegHome at: receiverReg) r: FPReg R: ReceiverResultReg.
+	cogit oilGenSend: selIndex numArgs: numArgs super: isSuper.
+	cogit MoveR: ReceiverResultReg Mw: (oilVRegHome at: destReg) r: FPReg.
 	self reloadAll! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-callArg: k at: i
-	"The register of argument k (0-based) of the call at i."
-	| op |
-	op := self opcodeAt: i.
-	(op = OilCall1 or: [op = OilStreamNextPut]) ifTrue: [^self fieldCAt: i].
-	^self packedArg: k at: i! !
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+callArg: argIndex at: irOffset
+	"The register of argument argIndex (0-based) of the call at irOffset."
+	| opcode |
+	opcode := self opcodeAt: irOffset.
+	(opcode = OilCall1 or: [opcode = OilStreamNextPut]) ifTrue: [^self fieldCAt: irOffset].
+	^self packedArg: argIndex at: irOffset! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-genBailoutStubs
-	"After the body: one stub per deopt site used, passing the site index, and the common bailout sequence:
-	 spill everything (the deoptimizer reads the virtual registers from their homes), call ceOilBailoutTrampoline,
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+genDeoptStubs
+	"After the body: one stub per deopt site used, passing the site index, and the common deoptimization sequence:
+	 spill everything (the deoptimizer reads the virtual registers from their homes), call ceOilDeoptTrampoline,
 	 which either deoptimizes the frame and continues in the interpreter (it does not return), or, having
 	 unforwarded the object a class guard failed on, answers the address of the guard to resume at."
 	| stub common |
@@ -1188,31 +1188,31 @@ genBailoutStubs
 	common := cogit Label.
 	self spillAll.
 	cogit MoveR: TempReg R: SendNumArgsReg.
-	cogit oilGenBailoutCall.
+	cogit oilGenDeoptCall.
 	self reloadAll.
 	cogit JumpR: TempReg.
 	0 to: numSites - 1 do:
-		[:s|
-		(oilSiteUsed at: s) ~= 0 ifTrue:
-			[stub := cogit MoveCq: s R: TempReg.
-			 oilSiteStub at: s put: stub.
+		[:siteIndex|
+		(oilSiteUsed at: siteIndex) ~= 0 ifTrue:
+			[stub := cogit MoveCq: siteIndex R: TempReg.
+			 oilSiteStub at: siteIndex put: stub.
 			 cogit Jump: common]].
 	0 to: oilNumStubJumps - 1 do:
-		[:k| (oilStubJump at: k) jmpTarget: (oilSiteStub at: (oilStubSite at: k))].
+		[:jumpIndex| (oilStubJump at: jumpIndex) jmpTarget: (oilSiteStub at: (oilStubSite at: jumpIndex))].
 	"The undo stubs of the in-place tagged adds: reg := reg - src, then the site's stub."
 	0 to: oilNumUndos - 1 do:
-		[:k|
-		stub := cogit SubR: (oilUndoSrc at: k) R: (oilUndoReg at: k).
-		(cogit Jump: 0) jmpTarget: (oilSiteStub at: (oilUndoSite at: k)).
-		(oilUndoJump at: k) jmpTarget: stub]! !
+		[:undoIndex|
+		stub := cogit SubR: (oilUndoSrc at: undoIndex) R: (oilUndoReg at: undoIndex).
+		(cogit Jump: 0) jmpTarget: (oilSiteStub at: (oilUndoSite at: undoIndex)).
+		(oilUndoJump at: undoIndex) jmpTarget: stub]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 oilFailureCode
 	"(Named so as not to clash in C with the failureCode variable.)"
 	<inline: true>
 	^failureCode! !
 
-!OilBaseCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 19:50'!
+!OilBaseCompiler methodsFor: 'debugging' stamp: 'cb 10/25/2026 00:45'!
 oilDebugInfo: what at: index
 	"For primitiveOilLastCompilation: 0 failure code, 1 IR size, 2 IR word, 3 eager closures,
 	 4 failed IR index, 5 sites, 6 frames, 7 homes, 8 allocated regs, 11/12 Pass 1 IR, 13 Pass 2 stats."
@@ -1231,44 +1231,44 @@ oilDebugInfo: what at: index
 	what = 13 ifTrue: [^self pass2Statistics: index].
 	^0! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 analyzeTaggedRegisters
 	"A virtual register all of whose definitions produce SmallIntegers (tagged arithmetic, tagged constants, sizes, or
 	 moves of such registers) always holds a SmallInteger (before its first definition it holds the SmallInteger 0 the
 	 prologue initializes it to; incoming arguments are excluded): its tag checks can be omitted.  E.g. a loop
 	 index (ConstTagged, then AddImmTagged) or an accumulator.  Flow insensitive, iterated to a fixpoint for moves."
-	| i op a changed numArgs |
+	| irOffset opcode destReg changed numArgs |
 	numArgs := self numArgsOf: rootMethod.
 	0 to: OilNumRegs - 1 do:
-		[:r| oilTagged at: r put: ((r > numArgs and: [r < OilFlagsReg]) ifTrue: [1] ifFalse: [0])].
+		[:vreg| oilTagged at: vreg put: ((vreg > numArgs and: [vreg < OilFlagsReg]) ifTrue: [1] ifFalse: [0])].
 	changed := true.
 	[changed] whileTrue:
 		[changed := false.
-		 i := 0.
-		 [i < irIndex] whileTrue:
-			[op := self opcodeAt: i.
-			 a := self fieldAAt: i.
-			 ((self opcodeHasDest: op)
-			  and: [(oilTagged at: a) ~= 0
-			  and: [(self definitionIsTaggedAt: i) not]]) ifTrue:
-				[oilTagged at: a put: 0.
+		 irOffset := 0.
+		 [irOffset < irIndex] whileTrue:
+			[opcode := self opcodeAt: irOffset.
+			 destReg := self fieldAAt: irOffset.
+			 ((self opcodeHasDest: opcode)
+			  and: [(oilTagged at: destReg) ~= 0
+			  and: [(self definitionIsTaggedAt: irOffset) not]]) ifTrue:
+				[oilTagged at: destReg put: 0.
 				 changed := true].
-			 i := i + (self instructionLengthAt: i)]]! !
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)]]! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-definitionIsTaggedAt: i
-	"Does the instruction at i (which has a destination) always produce a SmallInteger?"
-	| op |
-	op := self opcodeAt: i.
-	op = OilConstTagged ifTrue: [^true].
-	op = OilConst64 ifTrue: [^self isSmallIntegerHandle: (self word64At: i + 1)].
-	op = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: i)) ~= 0].
-	((op between: OilAddTagged and: OilOddTagged)
-	 or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC or: [op = OilLoadSize or: [op = OilModTagged
-	 or: [op = OilLoadByteSize or: [op = OilLoadByte or: [op = OilCompareBytes or: [op = OilCharValue]]]]]]]]) ifTrue: [^true].
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+definitionIsTaggedAt: irOffset
+	"Does the instruction at irOffset (which has a destination) always produce a SmallInteger?"
+	| opcode |
+	opcode := self opcodeAt: irOffset.
+	opcode = OilConstTagged ifTrue: [^true].
+	opcode = OilConst64 ifTrue: [^self isSmallIntegerHandle: (self word64At: irOffset + 1)].
+	opcode = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: irOffset)) ~= 0].
+	((opcode between: OilAddTagged and: OilOddTagged)
+	 or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC or: [opcode = OilLoadSize or: [opcode = OilModTagged
+	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue]]]]]]]]) ifTrue: [^true].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-isTagged: r
+!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+isTagged: virtualReg
 	<inline: true>
-	^(oilTagged at: r) ~= 0! !
+	^(oilTagged at: virtualReg) ~= 0! !

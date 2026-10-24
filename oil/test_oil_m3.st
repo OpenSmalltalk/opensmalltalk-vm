@@ -1,4 +1,4 @@
-"Oil end-to-end test: native code generation, bailout and deoptimization.
+"Oil end-to-end test: native code generation, deoptimization.
  Run with run-st.sh on a Squeak 6.x 64-bit image, using the VM built from src/spur64.oil.
  Writes oil-m3-result.txt (and oil-m3-code.bin, the machine code of the Oil-compiled sumScores:) next to the image."
 | irDump last dir resultPath out failures check model items wrong expected r info m t0 baseMs oilMs sels setSels compileResult before arr3 x y codeFile timeOf ocItems |
@@ -113,7 +113,7 @@ r := model sumScores: wrong.
 check value: 'deopt: result with an OilWrongItem at 5000 is correct' value: r = (expected - 5000 + 1000000).
 info := m oilInfo.
 out nextPutAll: 'deopts after OilWrongItem: '; print: (info at: 1); cr.
-check value: 'deopt: the class guard bailed out to the interpreter (deopt count +1)' value: (info at: 1) = (before + 1).
+check value: 'deopt: the class guard deoptimized to the interpreter (deopt count +1)' value: (info at: 1) = (before + 1).
 check value: 'after deopt: Oil code still runs correctly' value: (model sumScores: items) = expected.
 check value: 'after deopt: still no further deopt' value: (m oilInfo at: 1) = (before + 1).
 wrong := items copy. wrong at: 1 put: (Smalltalk at: #OilWrongItem) new.
