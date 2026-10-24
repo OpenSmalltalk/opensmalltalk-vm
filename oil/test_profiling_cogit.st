@@ -1,4 +1,4 @@
-"Oil Milestone 1 (ProfilingCogit) end-to-end test.  Run with run-st.sh on a Squeak 6.x 64-bit image
+"ProfilingCogit end-to-end test.  Run with run-st.sh on a Squeak 6.x 64-bit image
  using the VM built from src/spur64.oil.  Writes oil-m1-result.txt into the image's directory
  and signals an error if any check fails."
 | resultPath out failures check log setLog count records recordsFor m oc small items warm beforeCount newRecs rec mCountTo mSumScores mMySum mMyDo blkSum blkMySum |

@@ -1,150 +1,59 @@
-# Oil: Pass 1 (M2), Pass 2 (M4) and Pass 3 (M3) of the optimizing compiler
+# Oil Optimizing Compiler
 
-Clean-room Slang/Smalltalk sources for Pass 1 of Oil, the optimizing JIT for the 64-bit Spur Cog VM
-(design: `oil-jit-design.md`). Author: cb.
+Slang/Smalltalk sources for Oil, the optimizing JIT for the 64-bit Spur Cog VM. Author: cb.
+
+## Compiler Hierarchy
+
+```
+OilBytecodeScanner
+  └── OilBaseCompiler        (Pass 1: bytecode translation + inlining; Pass 3: native codegen)
+        └── OilLoopCompiler  (Pass 2: streaming loop optimizer)
+              └── OilNumericCompiler
+```
 
 | File | Contents |
 |---|---|
 | `OilConstants.st` | Shared pool: IR opcodes, condition codes, scanner tags/modes, descriptor kinds, limits, deopt site kinds, failure codes (generated from one spec). |
-| `OilBytecodeScanner.st` | `OilBytecodeDescriptor` (8-byte struct) and `OilBytecodeScanner`: a 256-entry SistaV1 `oilGeneratorTable` and a zero-allocation decoder (`decodeAt:`, `scanMethod:do:`) that folds extA/extB prefixes. Oil only compiles SistaV1 methods (others: `OilFailNotSistaV1`, left to the Cogit). |
-| `OilCompiler.st` | `OilCompiler` (Pass 1): static 4096 x 32-bit IR buffer, register-window virtual registers with descriptors, structural inlining, tagged SmallInteger peepholes, deopt sites, frame table. |
-| `OilCompilerBackend.st` | Pass 3 (M3): register allocation, `generateNativeCode` (IR to Cogit abstract instructions), bailout stubs, tagged-register analysis. |
-| `OilCompilerPass2.st` | Pass 2 (M4): `pass2Optimize`, streaming Buffer 1 into Buffer 2 (see below). |
-| `OilSimulation.st` | IR printer (`printIROn:`), `OilSimulatedTypeFeedback` (receiver classes recorded per send site by simulated execution, standing in for ProfilingCogit's PICs), `OilIRInterpreter` (runs the IR on host objects to validate it), test classes. |
-| `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on 9220 SistaV1 methods and blocks. |
-| `oil-m2-test.st` | Acceptance test: compiles the probes (`sumScores:` and others), dumps the IR, checks its shape, and compares the IR interpreter's result with the real execution. |
-| `oil-m4-test.st` | Pass 2 acceptance test: IR shape of the optimized loops, and Pass 2 IR = Pass 1 IR = real execution on every probe (deopts included), plus a robustness sweep. |
-| `oil-translate.st` | Translates `OilBytecodeScanner` and `OilCompiler` to C with VMMaker's `CCodeGenerator` (standalone, not yet wired into the Cogit). |
+| `OilBytecodeScanner.st` | `OilBytecodeDescriptor` (6-byte struct) and `OilBytecodeScanner`: a 256-entry SistaV1 `oilGeneratorTable` and a zero-allocation decoder (`decodeAt:`, `scanMethod:do:`) that folds `extA`/`extB` prefixes. Oil only compiles SistaV1 methods (`OilFailNotSistaV1` leaves others to the baseline Cogit). |
+| `OilCompiler.st` | `OilBaseCompiler` (Pass 1): static 4096 x 32-bit IR buffer, register-window virtual registers with descriptors, structural inlining, tagged SmallInteger peepholes, deopt sites, frame table, and the `#pipe` optimization hook. |
+| `OilCompilerPass2.st` | `OilLoopCompiler` (Pass 2) and `OilNumericCompiler`: `pass2Optimize` streams Buffer 1 (`oilIRBuffer1`) into Buffer 2 (`oilIRBuffer2`). |
+| `OilCompilerBackend.st` | `OilBaseCompiler` (Pass 3): register allocation, `generateNativeCode` (IR to Cogit abstract instructions), bailout stubs, tagged-register analysis. |
+| `OilSimulation.st` | IR printer (`printIROn:`), `OilSimulatedTypeFeedback` (receiver classes recorded per send site by simulated execution), `OilIRInterpreter` (executes the IR on host objects), test classes. |
+| `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on all SistaV1 methods and blocks. |
+| `oil-m2-test.st` | Pass 1 acceptance test: compiles probes (`sumScores:` and others), checks the IR shape, and compares `OilIRInterpreter` against real execution. |
+| `oil-m4-test.st` | Pass 2 acceptance test: checks loop rotation, bounds-check elimination, shared sizes, unchecked increments, dead code elimination, and equivalence with Pass 1 and real execution. |
 
-## Running
+## Running the In-Image Tests
 
 ```bash
-SK=~/.gemini/config/skills/opensmalltalk-slang/scripts
-# Use a copy of image/Spur64VMMaker.image: filing in appends to its .changes file.
-nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-scanner-test.st   # -> scanner-test-result.txt
-nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-m2-test.st        # -> m2-test-result.txt (IR dumps + PASS/FAIL)
-nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-m4-test.st        # -> m4-test-result.txt
-nice -n 10 $SK/run-st.sh --answer true <copy>/Spur64VMMaker.image oil-translate.st      # -> oil-pass1.c
+# Run on a copy of image/Spur64VMMaker.image:
+run-st.sh --answer true Spur64VMMaker.image image/oil/oil-scanner-test.st
+run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m2-test.st
+run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m4-test.st
 ```
 
-The scripts look for the sources in `Smalltalk at: #OilSourceDir`. The default is this directory in the M2 worktree, so edit the
-first chunk to run them from somewhere else.
+The scripts look for sources in `Smalltalk at: #OilSourceDir` (defaulting to the current working directory).
 
-## IR format notes and differences from the brief
+## Pass 1 (`OilBaseCompiler>>compileMethod:receiverClass:`)
 
-- The buffer holds 32-bit words: `unsigned int oilIRBuffer[4096]`, 16 KB, static. The brief's `sqInt` would be 64-bit.
-  A 64-bit operand (literal, selector, class tag) takes the 2 words after the instruction, low word first.
-- Branch targets are absolute IR word indices. Forward branches are chained through their 16-bit target field until the
-  label is bound, so no fixup table is needed.
-- The `OilCmpTagged` Dest field holds the condition code (`< > <= >= = ~= == ~~`). `OilBranchTrue/False` on register r255
-  branch on the flags set by the previous compare. On any other register they test a boolean (mustBeBoolean deopt).
-- The 16-bit `DeoptBC` field of `OilGuardClass` (and the 8-bit one of `OilCheckBounds`) is an index into the deopt site
-  table. Each entry holds the IR index, the inlined frame and the bytecode pc. A bytecode pc alone would be ambiguous
-  across inlined frames. Tagged arithmetic, calls and boolean branches also get sites, looked up by IR index.
-- Six opcodes were added to the core set: `OilAddImmTagged` (25), `OilCmpImmTagged` (26), `OilLoadSize` (27),
-  `OilMakeClosure` (28) and `OilNewArray` (29), used for escaping closures in eager mode and for brace arrays, and
-  `OilCallSuper` (30). `OilShiftTagged` with a negative immediate is a left shift, used for `* 2^k`, `x * 31`, `x * 9`
-  and `bitShift:`.
-- Tagged arithmetic and compare opcodes include the SmallInteger tag check and the overflow check. On failure they bail
-  out at their deopt site. Constants never need a check.
-- `OilCallN` and `OilCallSuper` put four 8-bit argument registers in each packed word.
+- **IR format**: `oilIRBuffer` holds up to `OilBufferWords` (4096) 32-bit words (`unsigned int oilIRBuffer[4096]`, 16 KB, static). Each instruction is `[Opcode:8 | Dest:8 | Src1:8 | Src2/Imm:8]`, optionally followed by a 64-bit operand (2 words, low word first) and packed argument words (`OilCallN`, `OilCallSuper`).
+- **Control flow & flags**: Branch targets are absolute IR word indices. Forward branches are chained through their 16-bit target field until the label is bound. `OilCmpTagged` / `OilCmpImmTagged` store the condition code in `Dest`; `OilBranchTrue` / `OilBranchFalse` on `OilFlagsReg` (r255) branch on the flags from the preceding compare, and on any other register test a boolean (`mustBeBoolean` deopt).
+- **Virtual registers & descriptors**: 256 virtual registers act as a register window (`r0` receiver, `r1..rN` arguments, temporaries, expression stack; scalar-replaced temp vectors allocate downwards from `r254`). Each slot has a descriptor (`slotKind`/`slotValue`): canonical register, register alias, constant, virtual closure, or virtual temp vector. If a closure escapes, compilation restarts in `eagerClosures` mode (`OilMakeClosure`, `OilNewArray`).
+- **Deopt sites**: Instructions that can bail out (class guards, bounds checks, tagged arithmetic, calls, boolean branches, allocations) record a deopt site (IR index, inlined frame, bytecode pc, snapshot of live virtual state) for `CoInterpreter>>ceOilBailout:`.
 
-## Integration points for M1 and M3
+## Pass 2 (`OilLoopCompiler>>pass2Optimize`)
 
-- Type feedback: `OilCompiler>>profiledClassAt:` calls `cogit oilMonomorphicClassAt: pc in: method` in C. This should be
-  a thin adapter over M1's `monomorphicTargetFor:in:` that answers the class tag of a monomorphic site, or 0.
-- Selectors: `registerSelector:kind:` (`<api>`) tells Oil the value, bitXor:, iterator and cold selectors at startup.
-- Entry point: `compileMethod:receiverClass:` (`<api>`). The IR, the deopt site table and the frame table are then
-  ready for M3's back end.
+Invoked via `#pipe` between Pass 1 and Pass 3, streaming `oilIRBuffer1` into `oilIRBuffer2`:
 
-## Pass 2 (Milestone 4): `OilCompiler>>pass2Optimize`
+1. **Analysis**: definition counts, branch targets, and `analyzeTaggedRegisters` (registers guaranteed to hold SmallIntegers).
+2. **Loop optimization** (`p2OptimizeLoop:backJump:` on innermost call-free loops entered by fall-through):
+   - **Invariant checks**: class guards inside the loop redundant with a pre-header guard on the same immutable register are removed.
+   - **Loop rotation**: a header compare on SmallIntegers is duplicated before the back jump as `CmpTagged; BranchTrue body`.
+   - **Counted loops**: for an induction variable initialized from a constant `>= 1`, incremented by 1, and compared `<=` or `<` against `size(x)` loaded before the loop, increments become `OilAddImmTaggedNC` (unchecked), `size(x)` inside the loop is shared with the pre-header load, and dominated `OilCheckBounds` instructions are eliminated.
+3. **Dead code elimination**: pure instructions whose destination register has no reads (neither by instructions nor by live deopt snapshots, or overwritten before use in straight-line code) are deleted.
+4. **Streaming emission**: computes `oilIRMap`, emits into `oilIRBuffer2`, and remaps `siteIR`.
 
-Pass 1 writes `oilIRBuffer1`; Pass 2 streams it into `oilIRBuffer2` (both static, 16 KB) and makes it the current IR
-(`oilIRBuffer` points to the current buffer); Pass 3 translates it. `ProfilingCogit>>oilGenerate:` runs Pass 2 then Pass 3.
+## Pass 3 (`OilBaseCompiler>>prepareNativeCode`, `generateNativeCode`)
 
-1. Analysis: definition counts, branch targets, `analyzeTaggedRegisters` (registers that always hold SmallIntegers).
-2. Innermost, call-free loops entered only by falling into their header (`p2OptimizeLoop:backJump:`):
-   - Rotation: a header test that cannot fail (`CmpTagged` on SmallIntegers) is copied to the bottom as
-     `CmpTagged; BranchTrue body`, replacing the back `Jump`.
-   - Counted loops: index `iv` from a constant >= 1, only incremented, tested `iv <= lim` / `iv < lim` with
-     `lim := size(x)` assigned once before the loop and `x` never assigned. The increments become `OilAddImmTaggedNC`
-     (no tag/overflow check), `size(x)` in the loop becomes `Move lim` (shared size), and the `CheckBounds iv`
-     right after the test are deleted.
-3. Dead code: pure instructions whose destination nothing reads, globally or before it is reassigned in the
-   straight-line code that follows. Reads include the deopt states of the live sites.
-4. Emission: layout pass (`oilIRMap`), then emit, then remap `siteIR` (sites of deleted or unchecked instructions die).
-
-Pass 3 additions: `OilAddImmTaggedNC` (in place `addq $8`), in-place accumulation `a := a + c`
-(`lea -1(c), t; add t, a; jo undo`, the undo stub subtracting `t` before bailing out), and array loads with the
-x64 instruction `movq -1(arr, taggedIndex, 1)`, a new x64-specific opcode `MoveTaggedXwrRR`
-(`oil/oil-m4-pass2.st`, which patches `CogX64Compiler`; other back ends untag and scale).
-
-`sumScores:` on an Array, inner loop (16 instructions, every one needed for soundness: element class guard, score
-tag check, overflow check):
-
-```
-L: movq  -0x1(%r10,%r12,1),%r13    ; element (tagged index, -1 displacement)
-   testb $0x7,%r13b ; jne guard     ; element is an object...
-   movl  (%r13),%r9d ; andq $0x3fffff,%r9 ; cmpq $0x1433,%r9 ; jne guard   ; ...of class OilTestItem
-   movq  0x8(%r13),%r15             ; score
-   testb $0x1,%r15b ; je arith      ; score is a SmallInteger
-   leaq  -0x1(%r15),%r9 ; addq %r9,%r14 ; jo undo   ; total := total + score
-   addq  $0x8,%r12                  ; index + 1, no check
-   cmpq  %r11,%r12 ; jle L
-```
-
-Not done yet: hoisting loop invariant field loads (the OrderedCollection>>do: loop reloads its array/lastIndex
-fields and keeps its bounds check), loop unrolling, and register allocation by live ranges (Pass 3 still gives
-the heaviest virtual registers machine registers for the whole method).
-
-## Milestone 5 (base completion)
-
-- **Deopt disqualification**: an Oil method that deoptimizes `OilDisqualifyDeopts` (2) times is freed (sends to it
-  unlinked, `CoInterpreter>>oilDisqualifyCogMethod:`) unless other activations still run it, so the baseline JIT
-  compiles its method again, and it is not Oil-compiled again (`OilFailDisqualified`, 16). The limit can be set with
-  the selector registration pair `8, <SmallInteger>` (test_oil_m3 uses 1000).
-- **Escaping closures and brace arrays** (`OilMakeClosure`, `OilNewArray`): eden bump allocation in machine code
-  (`genAllocate:header:site:`). Past the scavenge threshold the allocation bails out to the interpreter at its
-  `OilSiteAlloc` site, which is not counted as a deopt: Oil code has no interrupt checks, so it must not keep allocating
-  past the threshold the way baseline code does. A closure's outerContext is the root frame's context, which marries the
-  frame through the baseline JIT's active context trampoline, or nil for a clean block.
-- **Encodable sends**: Pass 1 compiles again without inlining the method (sent by the root) that leads to an inlined
-  frame needing a send of a selector outside the root's literals, a super send, or a closure whose outerContext would be
-  that frame's context (`refuseInliningOfFrameOf:`). `MicroBench>>benchmarkHashProbe` now compiles; its loop still runs
-  in the block's baseline code.
-- **Byte objects**: intrinsics for `at:` / `at:put:` / `size` of ByteArray and ByteString (prims 60-64; new opcodes
-  `OilLoadByteSize`, `OilLoadByte`, `OilLoadChar`, `OilStoreByte`, `OilStoreChar`) and for `compareWith:` (prim 158,
-  `OilCompareBytes`: 8 bytes at a time, then byte by byte, exact primitive result), so `String>>=` inlines without
-  calls when its argument's class is known. Counted loops over `size` of byte objects get Pass 2's bounds check
-  elimination too.
-- **Uncommon traps** (`OilTrap`): a send that cannot be encoded and whose baseline inline cache was never linked
-  (`Cogit>>oilSendSiteNeverSentAt:in:`) becomes a trap that deoptimizes if reached, rather than refusing the inlining.
-- **Streams and characters**: intrinsics for `ReadStream>>next` (prim 65, `OilStreamNext`) and `WriteStream>>nextPut:`
-  (prim 66, `OilStreamNextPut`). The fast path handles a ByteString or Array collection in bounds; anything else sends
-  the selector out of line. `Character>>asInteger`/`value` (prim 171) is `OilCharValue`. `atEnd` (prim 67) is inlined
-  from its Smalltalk body.
-- **Literal limit**: `CoInterpreter>>oilRaiseMaxLiteralCountForCompile` raises `maxLiteralCountForCompile` to 512 at
-  start-up, because a VMMaker option can't hold an integer.
-- **Oil selector table**: 64-bit inline caches hold a 32-bit selector index: a literal of the method, or negative for
-  a special selector. Oil methods also send the selectors of the methods they inline, which are not among the root's
-  literals, so their caches may hold `OilExtraSelectorBase` (16r100000) + k. That value names entry k of a VM-owned
-  Array of `OilMaxExtraSelectors` (2048) old selectors. `primitiveOilSetSelectors` allocates the Array and registers it
-  as a GC root. The send trampolines read it through a small routine placed in front of `ceDereferenceSelectorIndex`
-  (`oilWrapSelectorIndexDereferenceRoutine`), and `ProfilingCogit>>indexForSelector:in:` reads it when unlinking.
-  The leak checker's code integrity check, which is not patched, would report these caches (error 8).
-  Pass 1 now inlines such frames instead of refusing them (`refuseInliningOfFrameOf:` remains for super sends and for
-  closures in inlined frames). For example, `countEqual:in:` drops from 59 to 30 ms because the polymorphic `isString`
-  send inside the inlined `String>>=` is now encodable.
-- **Oil callees are called, not inlined**: a method that already has Oil code has lost its baseline inline caches, so
-  an inlined copy would have no type feedback and would keep its own sends as calls (`hasOilCode:`).
-- **Large contexts**: marrying or divorcing an Oil frame copies all its slots, home slots included, into the context.
-  So the Oil CogMethod's header gets the large context bit (cleared from the CompiledMethod again when the CogMethod
-  is freed, using `cmUnusedFlag`), and `prepareNativeCode` refuses frames that would not fit in `LargeContextSlots`.
-  Before this, a stack page overflow in a callee of an Oil method married the Oil frame into a small context and
-  overwrote the next object in eden.
-- Not done: inline `,` (concatenation), SWAR delimiter scanning, `isSeparator` bitmask, dead nil-store elimination.
-  Moose (parseMSE) spends about 2/3 of its time in the 2 `lseek` system calls that each `MultiByteFileStream>>peek`
-  makes (`position` / `position:`), and it reads characters one at a time through the stream. That leaves nothing for
-  an 8-byte scan to work on.
-
-Tests: `oil/test_oil_m5.st` (native, ALL PASS), `oil-m4-test.st` (in image, byte probes added), test_oil_m3 ALL PASS.
+- **Register allocation**: weighs virtual registers by use count (10x per loop nesting level), assigns the heaviest up to 9 machine registers, and gives every live virtual register a frame home slot below the method's temporaries.
+- **Native codegen**: translates IR instructions to Cogit abstract instructions, including in-place tagged accumulation with undo stubs (`oilUndoJump`), eden bump allocation (`OilMakeClosure`, `OilNewArray`), byte/character/stream intrinsics (`OilLoadByte*`, `OilStoreByte*`, `OilCompareBytes`, `OilStreamNext`, `OilStreamNextPut`), uncommon traps (`OilTrap`), and bailout stubs (`ceOilBailoutTrampoline`).

@@ -1,10 +1,10 @@
-"Oil Milestone 2 acceptance test: OilCompiler Pass 1 (linear IR, inlining, peepholes).
+"Oil Pass 1 acceptance test: linear IR, inlining, peepholes.
  Files in the Oil sources, records type feedback by simulated execution (standing in for ProfilingCogit's PICs),
  compiles the probes, dumps the flattened IR, and validates it by executing the IR (OilIRInterpreter) against
  the real execution of each method."
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
@@ -154,15 +154,6 @@ out cr; nextPutAll: 'Robustness sweep: '; print: results size; nextPutAll: ' met
 results asSet asSortedCollection do: [:k | out nextPutAll: k; nextPutAll: '='; print: (results occurrencesOf: k); space].
 out cr.
 check value: 'robustness: no Smalltalk error while compiling library methods' value: (results occurrencesOf: #ERROR) = 0.
-
-"--- 11. Pass 1 compile time (in-image simulation, i.e. Smalltalk code JIT-compiled by baseline Cog) ---"
-[| fbk comp us n |
- fbk := OilSimulatedTypeFeedback new.
- fbk record: [model sumScores: coll].
- comp := OilCompiler new. comp typeFeedback: fbk.
- n := 2000.
- us := Time microsecondsToRun: [n timesRepeat: [comp compileMethod: OilTestModel >> #sumScores: receiverClass: (comp handleFor: OilTestModel)]].
- out cr; nextPutAll: 'Pass 1 compile time for sumScores: (in-image, simulated object access): '; print: (us / n) asFloat; nextPutAll: ' us per compilation'; cr] value.
 
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!

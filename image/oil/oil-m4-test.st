@@ -1,10 +1,10 @@
-"Oil Milestone 4 acceptance test (in image): OilCompiler Pass 2 (pass2Optimize).
+"Oil Pass 2 acceptance test (in image): OilLoopCompiler>>pass2Optimize.
  Files in the Oil sources, compiles probes with Pass 1, runs Pass 2, dumps both IRs, checks the loop optimizations
  (rotation, bounds check elimination, shared sizes, unchecked index increments, dead code), and validates Pass 2's IR
  by executing it (OilIRInterpreter) against Pass 1's IR and the real execution of each method, deopts included."
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 

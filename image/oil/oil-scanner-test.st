@@ -1,8 +1,8 @@
-"Oil Milestone 2: OilBytecodeScanner verification against the image's own InstructionStream decoder.
- Usage: run-st.sh <VMMaker image> oil-scanner-test.st  (with OIL_DIR pointing at the .st sources)"
+"OilBytecodeScanner verification against the image's own InstructionStream decoder.
+ Usage: run-st.sh <VMMaker image> oil-scanner-test.st  (with Smalltalk at: #OilSourceDir pointing at the .st sources)"
 | dir |
 Utilities authorInitials: 'cb'.
-dir := Smalltalk at: #OilSourceDir ifAbsentPut: [FileDirectory default pathName, '/'].
+dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
 #('OilConstants.st' 'OilBytecodeScanner.st') do: [:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | dir out methods checked errors check |

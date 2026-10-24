@@ -1,6 +1,6 @@
-"Oil Milestone 3: Pass 3 of OilCompiler, the native back end.  It translates the linear IR produced by Pass 1
+"Pass 3 of Oil (OilBaseCompiler), the native back end.  It translates the linear IR in oilIRBuffer
  into the Cogit's abstract instructions (CogAbstractInstruction), which the Cogit then assembles into a CogMethod.
- See ProfilingCogit>>oilCog:receiverClass: (oil/oil-m3-native-backend.st) for the driver.  Author: cb."!
+ See ProfilingCogit>>oilMethod:receiverClass: (oil/oil-m3-native-backend.st) for the driver.  Author: cb."!
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 prepareNativeCode
@@ -1212,11 +1212,10 @@ oilFailureCode
 	<inline: true>
 	^failureCode! !
 
-!OilBaseCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 15:00'!
+!OilBaseCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 19:50'!
 oilDebugInfo: what at: index
-	"For primitiveOilLastCompilation: what = 0 failure code, 1 IR size in words, 2 IR word at index, 3 eager closures,
-	 4 IR index of the instruction the back end failed on (or -1), 5 number of deopt sites, 6 number of frames,
-	 7 number of virtual register homes, 8 number of register-allocated virtual registers."
+	"For primitiveOilLastCompilation: 0 failure code, 1 IR size, 2 IR word, 3 eager closures,
+	 4 failed IR index, 5 sites, 6 frames, 7 homes, 8 allocated regs, 11/12 Pass 1 IR, 13 Pass 2 stats."
 	<api>
 	what = 0 ifTrue: [^failureCode].
 	what = 1 ifTrue: [^irIndex].

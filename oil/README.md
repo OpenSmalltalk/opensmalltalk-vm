@@ -1,73 +1,31 @@
-# Oil JIT: Milestone 1 (ProfilingCogit)
+# Oil JIT: `ProfilingCogit` and Native Runtime
 
-`ProfilingCogit` is the profiling tier of Oil, the optimizing JIT for the
-OpenSmalltalk VM. It is a subclass of `StackToRegisterMappingCogit`. It adds trip
-counters at loop back jumps and frameful block entries, plus the
-`ceOilTripTrampoline` / `CoInterpreter>>ceOilTrip:` runtime that decides which
-method Oil should compile. It also answers inline cache queries
-(`monomorphicTargetFor:in:`, `monomorphicClassFor:in:`).
+`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilBaseCompiler` -> `OilLoopCompiler` -> `OilNumericCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
 
-## Files
+## Files and Load Order
 
-- `oil-m1-profiling-cogit.st`: Slang source as a chunk-format fileIn. It defines the
-  `ProfilingCogit` class, the `CoInterpreter` trip runtime, two named primitives
-  (`primitiveOilTripLog`, `primitiveOilMonomorphicTarget`) and the VMMaker
-  configuration `VMMaker class>>generateSqueakSpurCogOil64VM`. Every interpreter-side
-  method is marked `<essential: #ProfilingCogit>`, so the stock configurations
-  generate the same code as before.
-- `../src/spur64.oil/`: the C generated from it with VMMaker.oscog-eem.3817. It is not
-  committed yet, because the local git-secrets hook flags a false positive
-  (`key = fixFollowedField...`) that also appears in the stock generated C. Regenerate
-  it as shown below.
-- `../building/linux64x64/squeak.cog.spur/build.oil/mvm`: the build script. It is the
-  `build/mvm` script with `--with-src=src/spur64.oil`, and it installs into
-  `products/sqcogspur64linuxht.oil`.
-- `test_profiling_cogit.st`: an end-to-end headless test (34 checks) for a Squeak
-  6.x 64-bit image.
+To generate the 64-bit Spur Oil VM (`src/spur64.oil`), file into `Spur64VMMaker.image` in this order:
 
-## Regenerate, build, test
+1. `oil/oil-m1-profiling-cogit.st` — `ProfilingCogit` class definition, trip counters at loop back jumps and frameful block entries, `CoInterpreter>>ceOilTrip:`, `primitiveOilTripLog`, `primitiveOilMonomorphicTarget`, and `VMMaker class>>generateSqueakSpurCogOil64VM`.
+2. `image/oil/OilConstants.st` — shared pool of opcodes, descriptors, and constants.
+3. `image/oil/OilBytecodeScanner.st` — `OilBytecodeDescriptor` and `OilBytecodeScanner`.
+4. `image/oil/OilCompiler.st` — `OilBaseCompiler` (Pass 1 and `#pipe` hook).
+5. `image/oil/OilCompilerBackend.st` — `OilBaseCompiler` (Pass 3 native code generation).
+6. `image/oil/OilCompilerPass2.st` — `OilLoopCompiler` (Pass 2 loop optimizer) and `OilNumericCompiler`.
+7. `oil/oil-m3-native-backend.st` — `ProfilingCogit` Oil driver (`oilMethod:receiverClass:`, `oilCompile:receiverClass:`, `oilGenerate:`), deoptimization metadata (`fillMetadata:cogMethod:`), `CoInterpreter>>ceOilBailout:`, selector table, invalidation on selector flush (`unlinkSendsOf:isMNUSelector:`), and primitives (`primitiveOilCompile`, `primitiveOilSetSelectors`, `primitiveOilMethodInfo`, `primitiveOilLastCompilation`).
 
-```
-# in a VMMaker image (image/Spur64VMMaker.image), e.g. with run-st.sh --answer true:
-(FileStream readOnlyFileNamed: 'oil/oil-m1-profiling-cogit.st') fileIn.
-VMMaker generateSqueakSpurCogOil64VM.
+Then run `VMMaker generateSqueakSpurCogOil64VM` and build with `building/linux64x64/squeak.cog.spur/build.oil/mvm` (produces `products/sqcogspur64linuxht.oil/squeak`).
 
-cd building/linux64x64/squeak.cog.spur/build.oil && ./mvm
+## Native Tests
 
-run-st.sh --vm products/sqcogspur64linuxht.oil/squeak <Squeak6.1-64bit.image> oil/test_profiling_cogit.st
-```
+- `oil/test_profiling_cogit.st` — trip counter and inline cache query tests.
+- `oil/test_oil_m3.st` — end-to-end compilation, `sumScores:` benchmark, class guard and overflow deoptimization, forwarding fast path, and GC robustness.
+- `oil/test_oil_m5.st` — deopt disqualification, escaping closures and brace arrays (`OilMakeClosure`, `OilNewArray`), byte/stream intrinsics, selector table (`OilExtraSelectorBase`), and constant-left arithmetic/comparison probes.
 
-## Design notes
+## Key Runtime Mechanisms
 
-- **Counter sites.** Counters go only on back jumps (`genJumpBackTo:`) and frameful
-  block entries (`compileBlockFrameBuild:` and `compileFullBlockMethodFrameBuild:`).
-  Methods without loops or blocks get no counters and no counter object.
-- **Counter storage.** Each site has a 32-bit counter. The counters of a method live in
-  a pinned heap object (`objectRepresentation allocateCounters:`), and the method header
-  (`SistaCogMethod`) points to it through its `counters` field. The VM marks this object
-  in full GCs and frees it when the method is freed.
-- **Site code.** Each site runs `MoveA32 counter,T; SubCq 1,T; MoveRA32 T,counter;
-  JumpNonZero skip; MoveCq kind,SendNumArgsReg; CallRT ceOilTripTrampoline`. Counters
-  start at 65535, so a site trips once, on its 65535th execution. After that the
-  counter wraps to 16rFFFFFFFF.
-- **`ceOilTrip:`.** It finds the root method for an Oil compilation:
-  - In a block activation, it walks the closure's outer contexts up to the home
-    context. For a clean full block, it uses the static `CompiledBlock` outer-code
-    chain instead.
-  - At a back jump in a method that has a closure argument (e.g. the to:do: loop in
-    `do:`), it uses the home method of that closure.
-  - Otherwise it uses the method itself.
-
-  It also samples a live element at `currentPosition`: the block's first argument, or
-  `array at: index` taken from the frame's SmallInteger temps and the receiver (or the
-  receiver's `Array` inst var). It does not allocate, collect garbage or change the
-  stack.
-- **Trip log.** If the image has installed a trip log (an `Array`, through
-  `primitiveOilTripLog`), each trip is recorded in it as
-  `{kind. trippedMethod. homeMethod. homeContext. sample. sampleClass}`. The log
-  variable is registered as an extra GC root.
-- **Inline cache queries.** `monomorphicTargetFor:in:` answers the target `CogMethod` of
-  an ordinary send that is linked monomorphically, or nil for unlinked sends and sends
-  linked to PICs. A full GC flushes the method cache, which unlinks all sends
-  (`CoInterpreter>>flushMethodCache`), so these queries answer nil until the sends are
-  relinked.
+- **Trip counters**: 32-bit counters (initialized to 65535) are placed only at loop back jumps (`genJumpBackTo:`) and frameful block entries (`compileBlockFrameBuild:`, `compileFullBlockMethodFrameBuild:`), stored in a pinned heap object referenced by `SistaCogMethod>>counters`. When a counter reaches zero it calls `ceOilTripTrampoline` -> `CoInterpreter>>ceOilTrip:`, which identifies the outer home method and records it in `oilTripLog`.
+- **Entry points**: `ProfilingCogit>>oilMethod:receiverClass:` compiles a method and answers its `CogMethod *` (or `nil`). `primitiveOilCompile` runs `oilCompile:receiverClass:` (Pass 1) while baseline inline caches are still linked, frees the baseline `CogMethod` and divorces its frames, and runs `oilGenerate:` (`#pipe` + Pass 3).
+- **Deoptimization metadata & `ceOilBailout:`**: An Oil `CogMethod` stores the oop of a pinned metadata `Array` tagged with `1` in its `counters` field (`isOilMethod:`). On a failed guard or check, the bailout stub passes the site index to `ceOilBailoutTrampoline` -> `CoInterpreter>>ceOilBailout:`, which either unforwards a forwarded receiver/argument and resumes machine code in place, or reconstructs the interpreter frame stack (rematerializing any virtual closures and temp vectors) and continues in the interpreter. After `OilDisqualifyDeopts` deoptimizations, the Oil method is freed and disqualified from future Oil compilation.
+- **Oil selector table**: Sends of selectors from inlined methods that are not among the root method's literals are indexed via `oilExtraSelectors` (`OilExtraSelectorBase + k`) and dereferenced by `ceOilDereferenceSelectorIndex`. When a selector is flushed (`unlinkSendsOf:isMNUSelector:`), any Oil method that inlined that selector is discarded if not currently active on the stack.
+- **Code zone size**: `ProfilingCogit>>defaultCogCodeSize` defaults to 4 MB (clamped in `CoInterpreter>>checkImageHeaderLoad`) so baseline and Oil methods share ample room without premature code compactions.

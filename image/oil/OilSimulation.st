@@ -200,7 +200,7 @@ Object subclass: #OilIRInterpreter
 	category: 'Cogit-Oil-Debugging'!
 
 !OilIRInterpreter commentStamp: 'cb 10/24/2026 10:40' prior: 0!
-I execute an OilCompiler's linear IR on host objects, to validate Pass 1 end to end before the native back end exists (Milestone 3): run: receiver with: arguments answers the IR's result, or #deopt if a guard, a bounds check, a tag check or an overflow check fails (the VM would then bail out to the interpreter at the recorded deopt site).  Tagged SmallInteger opcodes are executed on untagged values with the SmallInteger checks they imply.!
+I execute an OilCompiler's linear IR on host objects: run: receiver with: arguments answers the IR's result, or #deopt if a guard, a bounds check, a tag check or an overflow check fails (the VM would then bail out to the interpreter at the recorded deopt site).  Tagged SmallInteger opcodes are executed on untagged values with the SmallInteger checks they imply.!
 
 !OilIRInterpreter methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:40'!
 on: anOilCompiler

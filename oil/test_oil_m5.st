@@ -1,5 +1,5 @@
-"Oil Milestone 5 end-to-end test (native): deopt disqualification, escaping closures and brace arrays (OilMakeClosure,
- OilNewArray, eden bump allocation with the allocation bailout), benchmarkHashProbe.
+"Oil end-to-end test (native): deopt disqualification, escaping closures and brace arrays (OilMakeClosure,
+ OilNewArray, eden bump allocation with the allocation bailout), byte/stream intrinsics, selector table.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m5-result.txt next to the image."
 | out failures check sels model m info res last items wrong expected t counter blk arr before |
 Utilities authorInitials: 'cb'.
@@ -61,6 +61,7 @@ sels add: 5; add: #bitXor:.
 #(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed:)
 	do: [:s | sels add: 7; add: s].
 check value: 'primitiveOilSetSelectors' value: ((Smalltalk at: #OilTestModel) oilSetSelectors: sels asArray) ~~ #failed.
+check value: 'code zone >= 4 MB' value: (Smalltalk vmParameterAt: 46) >= (4 * 1024 * 1024).
 model := (Smalltalk at: #OilTestModel) new total: 0; yourself.
 "compile: warm up (baseline JIT), Oil-compile, answer the compile result"
 res := [:sel :warm | | cm |
@@ -193,7 +194,10 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  check value: 'extSum: after redefining extTag (sends unlinked through the selector table)' value: (model extSum: extArr) = (exp + 50).
  Smalltalk garbageCollect.
  check value: 'extSum: after a full GC' value: (model extSum: extArr) = (exp + 50).
- check value: 'extSum: still Oil code' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo notNil] value.
+ check value: 'extSum: still Oil code' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo notNil.
+ (Smalltalk at: #OilTestModel) compile: 'extA: x ^x extTag + 10' classified: 'tests'.
+ check value: 'extSum: Oil code discarded when inlined extA: is redefined' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo isNil.
+ check value: 'extSum: uses redefined extA:' value: (model extSum: extArr) = (exp + 50 + 900)] value.
 
 "--- 6. benchmarkHashProbe compiles ---"
 before := model benchmarkHashProbe.

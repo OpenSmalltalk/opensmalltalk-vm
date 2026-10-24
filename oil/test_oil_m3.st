@@ -1,5 +1,5 @@
-"Oil Milestone 3 end-to-end test: native code generation, bailout and deoptimization.
- Run with run-st.sh on a Squeak 6.x 64-bit image, using the VM built from src/spur64.oil (with Oil M3).
+"Oil end-to-end test: native code generation, bailout and deoptimization.
+ Run with run-st.sh on a Squeak 6.x 64-bit image, using the VM built from src/spur64.oil.
  Writes oil-m3-result.txt (and oil-m3-code.bin, the machine code of the Oil-compiled sumScores:) next to the image."
 | irDump last dir resultPath out failures check model items wrong expected r info m t0 baseMs oilMs sels setSels compileResult before arr3 x y codeFile timeOf ocItems |
 Utilities authorInitials: 'cb'.

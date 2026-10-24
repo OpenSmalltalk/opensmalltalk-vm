@@ -1,5 +1,5 @@
-"Oil Milestone 3: the native back end of the Oil optimizing JIT, its bailout stubs and the deoptimizer.
- File in after oil-m1-profiling-cogit.st and image/oil/{OilConstants,OilBytecodeScanner,OilCompiler,OilCompilerBackend,OilCompilerPass2}.st (then oil-m4-pass2.st).
+"The native back end of the Oil optimizing JIT, its bailout stubs and the deoptimizer.
+ File in after oil-m1-profiling-cogit.st and image/oil/{OilConstants,OilBytecodeScanner,OilCompiler,OilCompilerBackend,OilCompilerPass2}.st.
 
  - ProfilingCogit drives the compilation of an Oil method (oilCompile:receiverClass: runs Pass 1, oilGenerate: runs
    Pass 3 and builds the CogMethod and its deoptimization metadata) and owns ceOilBailoutTrampoline.

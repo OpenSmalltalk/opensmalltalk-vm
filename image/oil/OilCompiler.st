@@ -113,6 +113,7 @@ setUpSimulationTables
 	oilIRSite := self newTable: OilBufferWords.
 	simHandles := OrderedCollection new.
 	simHandleIndex := IdentityDictionary new.
+	irBudget := OilIRBudget.
 	self setUpSimulationHandles.
 	self resetForCompilation! !
 
