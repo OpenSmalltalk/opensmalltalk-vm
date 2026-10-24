@@ -109,8 +109,8 @@ check value: 'countEven: IR result = real result' value: (run value: c value: #c
 "--- 8b. Hash probe: Set>>includes: -> scanFor: ---"
 c := compile value: #hashProbe:with: value: {{(Set withAll: (1 to: 40 by: 3)). 7}. {(Set withAll: (1 to: 40 by: 3)). 8}} value: nil.
 hist := c opcodeHistogram.
-check value: 'hashProbe: includes: and scanFor: inlined (probe loop in the IR)' value: (c numFrames >= 3 and: [(hist occurrencesOf: 'LoadElement') >= 2]).
-check value: 'hashProbe: errorNoFreeSpace is cold: a call, not inlined' value: ((c irString includesSubstring: '#errorNoFreeSpace') and: [(c irString includesSubstring: 'Object>>#error:') not]).
+check value: 'hashProbe: Set>>includes: is sent, not inlined: its scanFor: sends errorNoFreeSpace, which is not among the root method''s literals (the back end could not send it)' value: (c failed not and: [c irString includesSubstring: '#includes:']).
+check value: 'hashProbe: no send of a selector outside the root method''s literals' value: (c irString includesSubstring: '#errorNoFreeSpace') not.
 #(7 8 1 40 37 100 -3) do: [:k | | s |
 	s := Set withAll: (1 to: 40 by: 3).
 	check value: 'hashProbe: IR result = real result for key ', k printString value: (run value: c value: #hashProbe:with: value: {s. k}) = (model hashProbe: s with: k)].

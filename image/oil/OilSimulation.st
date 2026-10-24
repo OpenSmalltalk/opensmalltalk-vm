@@ -34,7 +34,7 @@ printIROn: aStream
 	0 to: numSites - 1 do:
 		[:s|
 		aStream tab; nextPutAll: 'deopt#'; print: s; nextPutAll: ' IR '; nextPutAll: ((siteIR at: s) printPaddedWith: $0 to: 4);
-			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch' 'store') at: (siteKind at: s));
+			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch' 'store' 'alloc') at: (siteKind at: s));
 			nextPutAll: ' -> frame #'; print: (siteFrame at: s); nextPutAll: ' '; print: (frameMethod at: (siteFrame at: s));
 			nextPutAll: ' pc '; print: (sitePC at: s); cr].
 	aStream nextPutAll: 'Stats: inlined frames '; print: numInlinedFrames;
@@ -90,7 +90,7 @@ printInstructionAt: i on: aStream
 		[OilModTagged]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' \\ ', (self reg: c), '   (idiv; floored)'].
 		[OilAddImmTaggedNC]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: a), ' := size(', (self reg: b), ')'].
-		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: a), ' := closure ', (self printHandle: (self word64At: i + 1)), ' self ', (self reg: (oilIRBuffer at: i + 3)), ' copied ', c printString, ' from ', (self reg: b)].
+		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: a), ' := closure ', (self printHandle: (self word64At: i + 1)), ' self ', (self reg: ((oilIRBuffer at: i + 3) bitAnd: 255)), ' copied ', c printString, ' from ', (self reg: b)].
 		[OilNewArray]		-> [aStream nextPutAll: (self reg: a), ' := Array new: ', c printString, (b = OilFlagsReg ifTrue: ['   (nil filled)'] ifFalse: ['   from ', (self reg: b), '..', (self reg: b + c - 1)])] }
 		otherwise: [].
 	site := (0 to: numSites - 1) detect: [:s| (siteIR at: s) = i] ifNone: [nil].
@@ -311,7 +311,7 @@ step: i
 			ifFalse: [(0 to: cc - 1) collect: [:j| self r: b + j]]). ^next].
 	op = OilMakeClosure ifTrue:
 		[self r: a put: (FullBlockClosure
-			receiver: (self r: (c irWordAt: i + 3))
+			receiver: (self r: ((c irWordAt: i + 3) bitAnd: 255))
 			outerContext: nil
 			method: (c objectFor: (c word64At: i + 1))
 			copiedValues: ((0 to: cc - 1) collect: [:j| self r: b + j]) asArray). ^next].

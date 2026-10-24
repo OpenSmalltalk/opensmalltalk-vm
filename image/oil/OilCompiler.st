@@ -1,7 +1,7 @@
 OilBytecodeScanner subclass: #OilCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline'
 	classVariableNames: ''
-	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets'
+	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'Cogit-Oil'!
 
 !OilCompiler commentStamp: 'cb 10/24/2026 10:30' prior: 0!
@@ -63,6 +63,10 @@ setUpSimulationTables
 	pcChain := self newTable: OilPCMapSize.
 	pcDepth := self newTable: OilPCMapSize.
 	pcLoop := self newTable: OilPCMapSize.
+	oilDisqualified := self newTable: OilMaxDisqualified.
+	oilNoInline := self newTable: 16.
+	oilNumNoInline := 0.
+	oilNumDisqualified := 0.
 	vobjKind := self newTable: OilMaxVObjs.
 	vobjLiteral := self newTable: OilMaxVObjs.
 	vobjSelfKind := self newTable: OilMaxVObjs.
@@ -190,7 +194,7 @@ resetForCompilation
 	pendingCondSlot := -1.
 	currentFrame := -1.
 	currentPC := 0.
-	oilDeadCode := failed := needsRestart := false.
+	oilDeadCode := failed := needsRestart := oilRestartNoInline := false.
 	failureCode := OilOK.
 	inlineClass := 0.
 	inlineGuard := false.
@@ -279,12 +283,18 @@ compileMethod: aMethod receiverClass: classHandle
 	"Pass 1: translate aMethod, the outer (home) method of a hot loop, specialized for receivers of class classHandle,
 	 into the linear IR buffer.  Closures and temp vectors are first kept virtual (dissolved when their blocks are inlined);
 	 if one escapes, compile again once with eagerClosures, materializing them.  Answer true on success."
+	| restarts |
 	eagerClosures := false.
 	irBudget = 0 ifTrue: [irBudget := OilIRBudget]. "in the VM nothing else initializes it"
 	oilTraceTop := 0.
+	oilNumNoInline := 0.
+	restarts := 0.
 	[self compileOnce: aMethod receiverClass: classHandle.
-	 needsRestart and: [eagerClosures not]] whileTrue:
-		[eagerClosures := true].
+	 needsRestart and: [restarts < 12]] whileTrue:
+		[restarts := restarts + 1.
+		 oilRestartNoInline ifFalse:
+			[eagerClosures ifTrue: [^false].
+			 eagerClosures := true]].
 	^failed not! !
 
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
@@ -296,6 +306,8 @@ compileOnce: aMethod receiverClass: classHandle
 	rootClass := classHandle.
 	(self oilIsSistaV1Method: aMethod) ifFalse: "Oil only decodes SistaV1: leave the method to the baseline Cogit"
 		[^self abortCompilation: OilFailNotSistaV1].
+	(self oilIsDisqualified: aMethod) ifTrue: "it deoptimized too often"
+		[^self abortCompilation: OilFailDisqualified].
 	(self oilPrimitiveIndexOf: aMethod) ~= 0 ifTrue:
 		[^self abortCompilation: OilFailPrimitiveMethod].
 	f := self newFrameFor: aMethod base: 0 isBlock: false.
@@ -323,6 +335,32 @@ compileOnce: aMethod receiverClass: classHandle
 	self takeSnapshotFrame: f pc: currentPC.
 	self emitGuardOn: 0 class: classHandle.
 	self translateFrame: f! !
+
+!OilCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+oilDisqualify: aMethod
+	"Remember that aMethod deoptimized too often: it will not be compiled again (oilDisqualified is a ring of the
+	 last OilMaxDisqualified methods; the entries are only compared, so stale ones after a compaction are harmless)."
+	<api>
+	(self oilIsDisqualified: aMethod) ifTrue: [^self].
+	oilDisqualified at: oilNumDisqualified \\ OilMaxDisqualified put: aMethod.
+	oilNumDisqualified := oilNumDisqualified + 1! !
+
+!OilCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+oilDisqualifyLimit
+	"The number of deoptimizations after which an Oil method is disqualified (see CoInterpreter>>oilDisqualify:)."
+	<api>
+	^oilDisqualifyLimitValue > 0 ifTrue: [oilDisqualifyLimitValue] ifFalse: [OilDisqualifyDeopts]! !
+
+!OilCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+oilDisqualifyLimit: n
+	oilDisqualifyLimitValue := n! !
+
+!OilCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+oilIsDisqualified: aMethod
+	<api>
+	0 to: (oilNumDisqualified min: OilMaxDisqualified) - 1 do:
+		[:i| (oilDisqualified at: i) = aMethod ifTrue: [^true]].
+	^false! !
 
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
 abortCompilation: code
@@ -1133,11 +1171,13 @@ genPushNewArray: size pop: popFlag
 		 first to: simStackTop do: [:i| self materializeSlot: i].
 		 simStackTop := first - 1.
 		 dest := self pushOwnSlot.
+		 self recordSite: OilSiteAlloc.
 		 idx := self emitOp: OilNewArray a: dest b: first c: size.
 		 self noteDef: dest at: idx.
 		 ^self].
 	eagerClosures ifTrue:
 		[dest := self pushOwnSlot.
+		 self recordSite: OilSiteAlloc.
 		 idx := self emitOp: OilNewArray a: dest b: OilFlagsReg c: size.
 		 self noteDef: dest at: idx.
 		 ^self].
@@ -1178,15 +1218,19 @@ genPushFullClosure: literalIndex flags: flags frame: f
 	first := simStackTop - numCopied + 1.
 	lowest := rcvrOnStack ifTrue: [first - 1] ifFalse: [first].
 	eagerClosures ifTrue:
-		[lowest to: simStackTop do: [:i| self materializeSlot: i].
+		[(f ~= 0 and: [(flags bitAnd: 64) = 0]) ifTrue: "its outerContext would be the context of an inlined frame"
+			[^self refuseInliningOfFrameOf: f].
+		 lowest to: simStackTop do: [:i| self materializeSlot: i].
 		 selfReg := rcvrOnStack
 						ifTrue: [first - 1]
 						ifFalse: [self selfRegOfFrame: f scratch: simStackTop + 1].
 		 simStackTop := lowest - 1.
 		 dest := self pushOwnSlot.
+		 self recordSite: OilSiteAlloc.
 		 idx := self emitOp: OilMakeClosure a: dest b: first c: numCopied.
 		 self emit64: (self handleFor: block).
-		 self emitWord: selfReg.
+		 "selfReg, the ignoreOuterContext flag and the frame whose context is the outerContext"
+		 self emitWord: selfReg + ((flags bitAnd: 64) ~= 0 ifTrue: [256] ifFalse: [0]) + (f bitShift: 16).
 		 self noteDef: dest at: idx.
 		 ^self].
 	v := self newVObj: OilDescBlock.
@@ -1457,6 +1501,7 @@ shouldInline: method selector: selector numArgs: n receiver: s
 	depth := (frameDepth at: currentFrame) + 1.
 	depth > OilMaxInlineDepth ifTrue: [^false].
 	(self isColdSelector: selector) ifTrue: [^false].
+	(self isNoInline: method) ifTrue: [^false].
 	(self isMethodOnInlineStack: method) ifTrue: [^false].
 	size := (self oilEndPCOf: method) - (self startPCOf: method) + 1.
 	irInstCount + size > irBudget ifTrue: [^false].
@@ -1484,12 +1529,50 @@ isInLoopFrame: f pc: pc
 		 g := frameParent at: g].
 	^false! !
 
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+isNoInline: aMethod
+	0 to: oilNumNoInline - 1 do:
+		[:i| (oilNoInline at: i) = aMethod ifTrue: [^true]].
+	^false! !
+
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+isEncodableCall: selector super: isSuper
+	"Can the back end emit a send of selector?  Inline caches hold the index of their selector in the literals of the
+	 method (the root) or among the special selectors, and a super send binds to the root method's class."
+	isSuper ifTrue: [^currentFrame = 0].
+	0 to: 31 do:
+		[:k| (self specialSelectorHandle: k) = selector ifTrue: [^true]].
+	0 to: (self cCode: [objectMemory literalCountOf: rootMethod] inSmalltalk: [rootMethod numLiterals]) - 1 do:
+		[:k|
+		(self cCode: [coInterpreter literal: k ofMethod: rootMethod]
+			inSmalltalk: [self handleFor: (rootMethod literalAt: k + 1)]) = selector ifTrue: [^true]].
+	^false! !
+
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+refuseInliningOfFrameOf: f
+	"Frame f (inlined) needs something the back end cannot do: a send of a selector that is not among the root
+	 method's literals, a super send, or a closure whose outerContext is f's context.  Compile again without inlining
+	 the method that the root sends and that leads to f (its send is encodable)."
+	| g |
+	g := f.
+	[g > 0 and: [(frameParent at: g) > 0]] whileTrue:
+		[g := frameParent at: g].
+	(g <= 0 or: [(frameIsBlock at: g) or: [oilNumNoInline >= 16]]) ifTrue:
+		[^self abortCompilation: OilFailBackend].
+	oilNoInline at: oilNumNoInline put: (frameMethod at: g).
+	oilNumNoInline := oilNumNoInline + 1.
+	oilRestartNoInline := true.
+	needsRestart := true.
+	failed := true! !
+
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genCall: selector numArgs: n receiver: s super: isSuper
 	"A non-inlined send: receiver and arguments in consecutive registers s..s+n, result in s.
 	 OilCall0 [Op|Dest|Rcvr|0], OilCall1 [Op|Dest|Rcvr|Arg0], OilCallN/OilCallSuper [Op|Dest|Rcvr|NumArgs];
 	 then the 64-bit selector; then, for OilCallN/OilCallSuper, the packed argument registers."
 	| idx |
+	(self isEncodableCall: selector super: isSuper) ifFalse:
+		[^self refuseInliningOfFrameOf: currentFrame].
 	s to: s + n do: [:i| self materializeSlot: i].
 	failed ifTrue: [^self].
 	self recordSite: OilSiteCall.
@@ -2334,6 +2417,8 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #pcChain declareC: 'static unsigned short pcChain[OilPCMapSize]'.
 	aCCodeGenerator var: #pcDepth declareC: 'static unsigned char pcDepth[OilPCMapSize]'.
 	aCCodeGenerator var: #pcLoop declareC: 'static unsigned char pcLoop[OilPCMapSize]'.
+	aCCodeGenerator var: #oilDisqualified declareC: 'static sqInt oilDisqualified[OilMaxDisqualified]'.
+	aCCodeGenerator var: #oilNoInline declareC: 'static sqInt oilNoInline[16]'.
 	#(vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxVObjs]'].
 	#(capturedKind capturedValue) do:

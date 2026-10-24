@@ -47,9 +47,6 @@ prepareNativeCode
 	i := 0.
 	[i < irIndex] whileTrue:
 		[op := self opcodeAt: i.
-		 (op = OilMakeClosure or: [op = OilNewArray]) ifTrue:
-			[self abortCompilation: OilFailBackend.
-			 ^failureCode].
 		 (op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]) ifTrue:
 			[t := self imm16At: i.
 			 t > irIndex ifTrue:
@@ -139,7 +136,15 @@ weighInstructionAt: i
 	(op = OilCallN or: [op = OilCallSuper]) ifTrue:
 		[self weigh: a at: i.
 		 self weigh: b at: i.
-		 1 to: c do: [:k| self weigh: (self packedArg: k - 1 at: i) at: i]]! !
+		 1 to: c do: [:k| self weigh: (self packedArg: k - 1 at: i) at: i]].
+	op = OilNewArray ifTrue:
+		[self weigh: a at: i.
+		 b ~= OilFlagsReg ifTrue:
+			[0 to: c - 1 do: [:k| self weigh: b + k at: i]]].
+	op = OilMakeClosure ifTrue:
+		[self weigh: a at: i.
+		 self weigh: ((oilIRBuffer at: i + 3) bitAnd: 255) at: i.
+		 0 to: c - 1 do: [:k| self weigh: b + k at: i]]! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 packedArg: k at: i
@@ -347,6 +352,8 @@ genInstructionAt: i
 		[OilAddImmTagged]	-> [self genAddImmTagged: a b: b imm: (self signed8: c) site: s].
 		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: a b: b imm: (self signed8: c)].
 		[OilModTagged]		-> [self genModTagged: a b: b c: c site: s].
+		[OilNewArray]		-> [self genNewArray: a first: b size: c site: s].
+		[OilMakeClosure]	-> [self genMakeClosureAt: i site: s].
 		[OilLoadField]		-> [self genLoadField: a object: b slot: c].
 		[OilStoreField]		-> [self genStoreField: a object: b slot: c site: s].
 		[OilLoadElement]	-> [self genLoadElement: a array: b index: c].
@@ -472,6 +479,86 @@ genModTagged: a b: b c: c site: s
 	jumpZero jmpTarget: (jumpSameSign jmpTarget: cogit Label).
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: ClassReg.
 	cogit OrCq: objectMemory smallIntegerTag R: ClassReg.
+	self setDst: a from: ClassReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+genAllocate: numBytes header: header site: s
+	"Bump allocate numBytes in eden into ClassReg (TempReg is clobbered) and store its header.  If the new freeStart
+	 would reach the scavenge threshold, bail out at the allocation's deopt site instead (an OilSiteAlloc, which does
+	 not count as a deoptimization): the interpreter then allocates and the scavenge runs.  (Oil code has no
+	 interrupt checks, so it must not allocate beyond the threshold like the baseline JIT does.)"
+	cogit MoveAw: objectMemory freeStartAddress R: ClassReg.
+	cogit LoadEffectiveAddressMw: numBytes r: ClassReg R: TempReg.
+	cogit CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	self bail: (cogit JumpAboveOrEqual: 0) site: s.
+	cogit MoveR: TempReg Aw: objectMemory freeStartAddress.
+	cogit oilGenStoreHeader: header into: ClassReg scratch: TempReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+genNewArray: a first: b size: n site: s
+	"A brace array of the n values in registers b..b+n-1, or (b = OilFlagsReg) an Array of n nils (a temp vector in
+	 eager mode).  Young, so its stores need no store check."
+	| reg |
+	n >= objectMemory numSlotsMask ifTrue:
+		[^self abortCompilation: OilFailBackend].
+	self genAllocate: (objectMemory smallObjectBytesForSlots: n)
+		header: (objectMemory headerForSlots: n format: objectMemory arrayFormat classIndex: ClassArrayCompactIndex)
+		site: s.
+	b = OilFlagsReg ifTrue:
+		[n > 0 ifTrue:
+			[cogit genMoveConstant: objectMemory nilObject R: TempReg.
+			 0 to: n - 1 do:
+				[:k| cogit MoveR: TempReg Mw: k * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]]]
+		ifFalse:
+			[0 to: n - 1 do:
+				[:k|
+				reg := self src: b + k scratch: TempReg.
+				cogit MoveR: reg Mw: k * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]].
+	self setDst: a from: ClassReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+genMakeClosureAt: i site: s
+	"An escaping FullBlockClosure (eager mode): [OilMakeClosure|Dest|FirstCopied|NumCopied] block (64 bits)
+	 [frame:16|ignoreOuterContext:8|selfReg:8].  Its outerContext is the root frame's context (the frame is married
+	 through the baseline JIT's active context trampoline, all registers spilled around the call), or nil for a block
+	 that ignores it.  The context of an inlined frame does not exist: such closures are not supported."
+	| a b n block word selfReg ignoreContext frame reg slot |
+	a := self fieldAAt: i.
+	b := self fieldBAt: i.
+	n := self fieldCAt: i.
+	block := self word64At: i + 1.
+	word := oilIRBuffer at: i + 3.
+	selfReg := word bitAnd: 255.
+	ignoreContext := (word bitAnd: 256) ~= 0.
+	frame := word bitShift: -16.
+	(ignoreContext not and: [frame ~= 0]) ifTrue:
+		[^self abortCompilation: OilFailBackend].
+	FullClosureFirstCopiedValueIndex + n >= objectMemory numSlotsMask ifTrue:
+		[^self abortCompilation: OilFailBackend].
+	ignoreContext
+		ifTrue: [cogit genMoveConstant: objectMemory nilObject R: SendNumArgsReg]
+		ifFalse:
+			[self spillAll.
+			 cogit oilGenGetActiveContextInto: SendNumArgsReg.
+			 self reloadAll].
+	self genAllocate: (objectMemory smallObjectBytesForSlots: FullClosureFirstCopiedValueIndex + n)
+		header: (objectMemory
+					headerForSlots: FullClosureFirstCopiedValueIndex + n
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassFullBlockClosureCompactIndex)
+		site: s.
+	slot := objectMemory baseHeaderSize.
+	cogit MoveR: SendNumArgsReg Mw: ClosureOuterContextIndex * objectMemory wordSize + slot r: ClassReg.
+	cogit genMoveConstant: block R: TempReg.
+	cogit MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory wordSize + slot r: ClassReg.
+	cogit MoveCq: (objectMemory integerObjectOf: (self numArgsOf: block)) R: TempReg.
+	cogit MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory wordSize + slot r: ClassReg.
+	reg := self src: selfReg scratch: TempReg.
+	cogit MoveR: reg Mw: FullClosureReceiverIndex * objectMemory wordSize + slot r: ClassReg.
+	0 to: n - 1 do:
+		[:k|
+		reg := self src: b + k scratch: TempReg.
+		cogit MoveR: reg Mw: FullClosureFirstCopiedValueIndex + k * objectMemory wordSize + slot r: ClassReg].
 	self setDst: a from: ClassReg! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!

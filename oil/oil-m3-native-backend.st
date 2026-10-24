@@ -78,6 +78,23 @@ oilGenJumpRemembered: objReg scratch: scratchReg
 oilGenGetNumSlotsOf: srcReg into: destReg
 	^objectRepresentation genGetNumSlotsOf: srcReg into: destReg! !
 
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 17:30'!
+oilGenStoreHeader: header into: objReg scratch: scratchReg
+	"Store the 64-bit header of a new object (see OilCompiler>>genAllocate:header:site:)."
+	^objectRepresentation genStoreHeader: header intoNewInstance: objReg using: scratchReg! !
+
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 17:30'!
+oilGenGetActiveContextInto: destReg
+	"Get the context of the current (Oil, i.e. method) frame into destReg, marrying the frame if necessary, through the
+	 baseline JIT's active context trampolines (which clobber the caller saved registers)."
+	objectRepresentation
+		genGetActiveContextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: 0.
+	destReg ~= ReceiverResultReg ifTrue:
+		[self MoveR: ReceiverResultReg R: destReg].
+	^0! !
+
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
 oilGenReturnFrom: numArgs
 	"Tear down the frame and return, popping the receiver and arguments (the result is in ReceiverResultReg)."
@@ -133,6 +150,7 @@ oilRegisterSelectors
 	 before each compilation since the garbage collector moves selectors."
 	| sels n kind sel |
 	self resetSelectorRegistry.
+	self oilDisqualifyLimit: 0.
 	sels := oilSelectors.
 	(sels = 0 or: [sels = objectMemory nilObject]) ifTrue: [^self].
 	(objectMemory isForwarded: sels) ifTrue:
@@ -145,7 +163,10 @@ oilRegisterSelectors
 		sel := objectMemory fetchPointer: i + 1 ofObject: sels.
 		((objectMemory isIntegerObject: kind) and: [objectMemory isNonImmediate: sel]) ifTrue:
 			[(objectMemory isForwarded: sel) ifTrue: [sel := objectMemory followForwarded: sel].
-			 self registerSelector: sel kind: (objectMemory integerValueOf: kind)]]! !
+			 self registerSelector: sel kind: (objectMemory integerValueOf: kind)].
+		"kind 8: the number of deoptimizations after which an Oil method is disqualified (default OilDisqualifyDeopts)"
+		(kind = (objectMemory integerObjectOf: 8) and: [objectMemory isIntegerObject: sel]) ifTrue:
+			[self oilDisqualifyLimit: (objectMemory integerValueOf: sel)]]! !
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
 oilCompile: aMethodObj receiverClass: classObj
@@ -382,7 +403,10 @@ estimateOpcodes
 					ifFalse:
 						[(op = OilStoreField or: [op = OilStoreElement])
 							ifTrue: [48]
-							ifFalse: [20]]).
+							ifFalse:
+								[(op = OilNewArray or: [op = OilMakeClosure])
+									ifTrue: [40 + (2 * (self fieldCAt: i)) + (2 * OilMaxReg // 16)]
+									ifFalse: [20]]]).
 		 i := i + (self instructionLengthAt: i)].
 	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
@@ -598,13 +622,48 @@ ceOilBailout: siteIndex
 				[stackPages longAt: framePointer + home put: value.
 				 self oilMDIncrement: OilMDFastPaths of: md.
 				 ^cogMethod asUnsignedInteger + (self oilMD: md at: site + 3)]]].
-	self oilMDIncrement: OilMDDeopts of: md.
+	(self oilMD: md at: site) ~= OilSiteAlloc ifTrue: "an allocation beyond the scavenge threshold is not a failed speculation"
+		[self oilMDIncrement: OilMDDeopts of: md].
 	instructionPointer := self popStack. "the return address into the bailout sequence"
 	self oilDeoptimizeFrame: framePointer metadata: md site: site.
+	(self oilMD: md at: OilMDDeopts) >= cogit oilDisqualifyLimit ifTrue:
+		[self oilDisqualifyCogMethod: cogMethod].
 	"and now continue in the interpreter..."
 	cogit ceInvokeInterpret.
 	"NOTREACHED"
 	^0! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 17:30'!
+oilDisqualifyCogMethod: cogMethod
+	"The Oil method cogMethod deoptimized OilDisqualifyDeopts times (its speculations do not hold): never compile its
+	 method with Oil again and, unless other activations still run it, free it, unlinking the sends to it, so that
+	 the baseline JIT compiles the method again, instead of running it in the interpreter after each deopt."
+	<essential: #ProfilingCogit>
+	<var: #cogMethod type: #'CogMethod *'>
+	| methodObj |
+	methodObj := cogMethod methodObject.
+	cogit oilDisqualify: methodObj.
+	(self oilHasFramesOf: cogMethod) ifFalse:
+		[cogit unlinkSendsTo: methodObj andFreeIf: true]! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 17:30'!
+oilHasFramesOf: cogMethod
+	"Is there a machine code frame running cogMethod on a stack page?"
+	<essential: #ProfilingCogit>
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #aPage type: #'StackPage *'>
+	<var: #theFP type: #'char *'>
+	| aPage theFP |
+	0 to: numStackPages - 1 do:
+		[:i|
+		aPage := stackPages stackPageAt: i.
+		(stackPages isFree: aPage) ifFalse:
+			[theFP := aPage = stackPage ifTrue: [framePointer] ifFalse: [aPage headFP].
+			 [theFP ~= 0] whileTrue:
+				[((self isMachineCodeFrame: theFP)
+				  and: [(self mframeHomeMethod: theFP) = cogMethod]) ifTrue: [^true].
+				 theFP := self frameCallerFP: theFP]]].
+	^false! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilDescriptorIndex: r site: site metadata: md
@@ -982,7 +1041,8 @@ primitiveOilCompile
 !CoInterpreterPrimitives methodsFor: '*Cogit-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilSetSelectors
 	"Argument: an Array of pairs kind, selector telling the Oil compiler which selectors it treats specially
-	 (0-4: value, value:, ... by arity; 5: bitXor:; 6: iterators to inline; 7: cold selectors never inlined).
+	 (0-4: value, value:, ... by arity; 5: bitXor:; 6: iterators to inline; 7: cold selectors never inlined;
+	 8 with a SmallInteger: the number of deoptimizations after which an Oil method is disqualified).
 	 Answer the previous Array, or nil."
 	<export: true>
 	<essential: #ProfilingCogit>
