@@ -2,7 +2,7 @@ OilBytecodeScanner subclass: #OilCompiler
 	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets'
-	category: 'VMMaker-Oil'!
+	category: 'Cogit-Oil'!
 
 !OilCompiler commentStamp: 'cb 10/24/2026 10:30' prior: 0!
 I am Pass 1 of Oil, the optimizing JIT of the 64-bit Spur Cog VM.  Given the outer (home) method of a hot loop and the class of its receiver, I translate its bytecodes, recursively inlining blocks, collection iterators and small methods, into a flat 32-bit compact linear IR in a preallocated static buffer, applying peephole reductions for tagged SmallInteger arithmetic on the fly.  I allocate nothing: every table is a fixed size array (static/BSS memory in the VM, invisible to the GC).
@@ -289,6 +289,8 @@ compileOnce: aMethod receiverClass: classHandle
 	self resetForCompilation.
 	rootMethod := aMethod.
 	rootClass := classHandle.
+	(self oilIsSistaV1Method: aMethod) ifFalse: "Oil only decodes SistaV1: leave the method to the baseline Cogit"
+		[^self abortCompilation: OilFailNotSistaV1].
 	(self oilPrimitiveIndexOf: aMethod) ~= 0 ifTrue:
 		[^self abortCompilation: OilFailPrimitiveMethod].
 	f := self newFrameFor: aMethod base: 0 isBlock: false.
@@ -335,6 +337,7 @@ newFrameFor: aMethod base: base isBlock: isBlock
 	"Allocate a frame for aMethod whose receiver (or closure) is in register base, and pre-scan its bytecodes
 	 for branch targets.  Answer the frame index, or -1 if the method cannot be translated or resources are exhausted."
 	| f mapSize regsNeeded |
+	(self oilIsSistaV1Method: aMethod) ifFalse: [^-1]. "not inlined: sent instead"
 	numFrames >= OilMaxFrames ifTrue: [^-1].
 	regsNeeded := base + 2 + (self frameSizeOf: aMethod).
 	regsNeeded >= highRegTop ifTrue: [^-1].
@@ -392,9 +395,7 @@ isTranslatableTag: tag
 	   or: [tag = OilTagCallPrimitive
 	   or: [tag = OilTagTrap
 	   or: [tag = OilTagBranchOnBehavior
-	   or: [tag = OilTagExtension
-	   or: [tag = OilTagV3Extended
-	   or: [tag = OilTagV3DoubleExtended]]]]]]]]) not! !
+	   or: [tag = OilTagExtension]]]]]]) not! !
 
 !OilCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
 isFrameActive: f

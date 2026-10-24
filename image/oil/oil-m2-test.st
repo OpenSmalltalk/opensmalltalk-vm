@@ -130,6 +130,17 @@ c := compile value: #escapeProbe: value: {{10}} value: nil.
 check value: 'escapeProbe: eager mode, OilMakeClosure' value: (c eagerClosures and: [(c opcodeHistogram occurrencesOf: 'MakeClosure') = 1]).
 check value: 'escapeProbe: materialized closure evaluates correctly' value: ((run value: c value: #escapeProbe: value: {10}) value: 5) = 15.
 
+"--- 9b. SistaV1 only: a method using the SqueakV3PlusClosures bytecode set is left to the baseline Cogit ---"
+[| oldEncoder v3 comp |
+ oldEncoder := CompiledCode preferredBytecodeSetEncoderClass.
+ [CompiledCode preferredBytecodeSetEncoderClass: EncoderForV3PlusClosures.
+  v3 := OilTestModel newCompiler compile: (OilTestModel >> #sumScores:) getSource asString in: OilTestModel notifying: nil ifFail: [nil]]
+	ensure: [CompiledCode preferredBytecodeSetEncoderClass: oldEncoder].
+ v3 := v3 isCompiledMethod ifTrue: [v3] ifFalse: [v3 generate].
+ comp := OilCompiler new.
+ comp compileMethod: v3 receiverClass: (comp handleFor: OilTestModel).
+ check value: 'SistaV1 only: a V3PlusClosures method is rejected (FailNotSistaV1)' value: (v3 signFlag not and: [comp failed and: [(OilConstants failureNames at: comp failureCode + 1) = #FailNotSistaV1]])] value.
+
 "--- 10. Robustness: compile every method of a few classes (receiver class known, no type feedback) ---"
 results := Bag new.
 {OrderedCollection. Set. Dictionary. Interval. String. Array. Point. Rectangle. Integer. SmallInteger. Float. Collection. SequenceableCollection} do: [:cls |

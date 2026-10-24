@@ -2,7 +2,7 @@ VMStructType subclass: #OilBytecodeDescriptor
 	instanceVariableNames: 'numBytes stackDelta opcodeTag operandMode operandBase operandBias isBranchTrue isBranchFalse isBranchUnconditional isReturn isBlockCreation isExtension'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants'
-	category: 'VMMaker-Oil'!
+	category: 'Cogit-Oil'!
 
 !OilBytecodeDescriptor commentStamp: 'cb 10/24/2026 10:10' prior: 0!
 I am an entry in Oil's bytecode dispatch table, oilGeneratorTable (256 entries, one per SistaV1 bytecode; Oil only compiles methods using the SistaV1 bytecode set).  Like Cogit's CogBytecodeDescriptor I let OilBytecodeScanner decode a bytecode in O(1) with zero allocation: one table lookup on oilByte0 gives the instruction length, its stack delta, its high level classification (opcodeTag) and how to extract its operands (operandMode, operandBase, operandBias).
@@ -162,7 +162,7 @@ VMClass subclass: #OilBytecodeScanner
 	instanceVariableNames: 'coInterpreter objectMemory cogit oilGeneratorTable oilMethodObj instrPC oilBcpc oilNextPC oilTargetPC oilByte0 oilByte1 oilByte2 oilByte3 oilExtA oilExtB oilNumExtB oilDescriptor opcodeTag operand1 operand2'
 	classVariableNames: 'OilGeneratorTable'
 	poolDictionaries: 'OilConstants'
-	category: 'VMMaker-Oil'!
+	category: 'Cogit-Oil'!
 
 !OilBytecodeScanner commentStamp: 'cb 10/24/2026 10:10' prior: 0!
 I am Oil's zero-allocation bytecode scanner.  I mirror the Cogit's scanner architecture: a static 256-entry dispatch table, oilGeneratorTable, of OilBytecodeDescriptor structs indexed by oilByte0.  I only decode the SistaV1 bytecode set (the alternate bytecode set in the method header); Oil refuses to compile methods using any other set (see oilIsSistaV1Method:), leaving them to the baseline Cogit.  Decoding a bytecode is a table lookup plus a switch on the oilDescriptor's operandMode; extension prefixes (oilExtA, oilExtB) are folded into the bytecode they extend, so clients see one logical instruction per decodeAt:.

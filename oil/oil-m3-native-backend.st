@@ -16,9 +16,9 @@ StackToRegisterMappingCogit subclass: #ProfilingCogit
 	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog ceOilBailoutTrampoline oilSelectors'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices OilConstants'
-	category: 'VMMaker-JIT'!
+	category: 'Cogit-Oil'!
 
-!Cogit methodsFor: 'oil' stamp: 'cb 10/24/2026 15:00'!
+!Cogit methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 15:00'!
 isOilMethod: cogMethod
 	"Answer whether cogMethod was compiled by the Oil optimizing JIT (see ProfilingCogit).
 	 Oil methods' machine code does not correspond to their bytecodes, so the interpreter must not
@@ -27,7 +27,7 @@ isOilMethod: cogMethod
 	<var: #cogMethod type: #'CogMethod *'>
 	^false! !
 
-!CogObjectRepresentationForSpur methodsFor: 'oil' stamp: 'cb 10/24/2026 15:00'!
+!CogObjectRepresentationForSpur methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 15:00'!
 oilGenStoreCheckTrampolineCall
 	"The slow path of an Oil store check: remember the object in ReceiverResultReg."
 	<option: #ProfilingCogit>
@@ -508,32 +508,32 @@ fillMetadata: md cogMethod: cogMethodAddress
 					index := index + 2]]]! !
 
 
-!CoInterpreter methodsFor: 'oil support' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiLookupSelector: selector inClass: class
 	<api>
 	<essential: #ProfilingCogit>
 	"lookupSelector:inClass: answers nil, i.e. 0, if not found."
 	^self lookupSelector: selector inClass: class! !
 
-!CoInterpreter methodsFor: 'oil support' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiSuperclassOf: class
 	<api>
 	<essential: #ProfilingCogit>
 	^self superclassOf: class! !
 
-!CoInterpreter methodsFor: 'oil support' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiInstSpecOfClass: class
 	<api>
 	<essential: #ProfilingCogit>
 	^objectMemory instSpecOfClass: class! !
 
-!CoInterpreter methodsFor: 'oil support' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiFetchClassOf: oop
 	<api>
 	<essential: #ProfilingCogit>
 	^objectMemory fetchClassOf: oop! !
 
-!CoInterpreter methodsFor: 'oil support' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilAllocateMetadata: numSlots
 	"Answer a hidden (class index pun), pinned, old space Array of numSlots nils for the deoptimization metadata
 	 of an Oil method, or 0.  It is referenced from the method (see ProfilingCogit>>maybeMarkCountersIn:)."
@@ -549,14 +549,14 @@ oilAllocateMetadata: numSlots
 	objectMemory fillObj: obj numSlots: numSlots with: objectMemory nilObject.
 	^obj! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilMD: md at: index
 	"Answer the SmallInteger value of slot index of Oil metadata md."
 	<inline: true>
 	<essential: #ProfilingCogit>
 	^objectMemory integerValueOf: (objectMemory fetchPointer: index ofObject: md)! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilMDIncrement: index of: md
 	<essential: #ProfilingCogit>
 	objectMemory
@@ -564,7 +564,7 @@ oilMDIncrement: index of: md
 		ofObject: md
 		withValue: (objectMemory integerObjectOf: (self oilMD: md at: index) + 1)! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 ceOilBailout: siteIndex
 	"Called from ceOilBailoutTrampoline by the bailout sequence of an Oil method (see OilCompiler>>genBailoutStubs)
 	 when a guard fails at deopt site siteIndex.  framePointer is the Oil method's frame, whose virtual registers
@@ -604,7 +604,7 @@ ceOilBailout: siteIndex
 	"NOTREACHED"
 	^0! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilDescriptorIndex: r site: site metadata: md
 	"Answer the metadata index of the descriptor of register r in the virtual state of the site record at site,
 	 or 0 if the state does not describe r."
@@ -618,7 +618,7 @@ oilDescriptorIndex: r site: site metadata: md
 		[^site + OilMDSiteHeaderSize + (2 * (top + 1)) + (2 * (r - high - 1))].
 	^0! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilValueAt: p metadata: md values: vals vobjs: vobjOops
 	"Answer the value described by the descriptor at metadata index p: a register's value (read from its home before
 	 the frame was rewritten), a constant, or a rematerialized virtual object (or nil if not yet allocated)."
@@ -636,7 +636,7 @@ oilValueAt: p metadata: md values: vals vobjs: vobjOops
 			ifFalse: [vobjOops at: (self oilMD: md at: p + 1)]].
 	^vals at: (self oilMD: md at: p + 1)! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilNeedVObjAt: p metadata: md needed: needed
 	"If the descriptor at metadata index p is a virtual object, mark it as needed.  Answer whether it was newly marked."
 	<essential: #ProfilingCogit>
@@ -650,7 +650,7 @@ oilNeedVObjAt: p metadata: md needed: needed
 	needed at: v put: 1.
 	^true! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilStore: p at: address metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix
 	"Store the value described by the descriptor at metadata index p into the frame slot at address.  A virtual
 	 object is marked as needed and the slot recorded, to be stored once the object exists.  Answer numFix."
@@ -672,7 +672,7 @@ oilStore: p at: address metadata: md values: vals vobjs: vobjOops needed: needed
 	fixVObj at: numFix put: (self oilMD: md at: p + 1).
 	^numFix + 1! !
 
-!CoInterpreter methodsFor: 'oil deoptimization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilDeoptimizeFrame: oilFP metadata: md site: site
 	"Replace the Oil method's machine code frame at oilFP (the top frame) by the interpreter frames it stands for at
 	 the deopt site record site: the root method's frame (converted in place: its receiver and arguments are already
@@ -889,7 +889,7 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	instructionPointer := innermost + objectMemory baseHeaderSize + sitePC - 1.
 	self setMethod: innermost! !
 
-!CoInterpreter methodsFor: 'initialization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-initialization' stamp: 'cb 10/24/2026 15:00'!
 attemptToSwitchToMachineCode: bcpc
 	"Attempt to convert the current interpreted activation into a machine code
 	 activation, and if this is popssible, jump into machine code.  bcpc is the
@@ -924,7 +924,7 @@ attemptToSwitchToMachineCode: bcpc
 		 cogit ceEnterCogCodePopReceiverReg]! !
 
 
-!CoInterpreterPrimitives methodsFor: 'oil primitives' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilCompile
 	"Receiver: a CompiledMethod; argument: the class of the receivers to specialize it for.
 	 Compile the method with the Oil optimizing JIT and install the result as its machine code, replacing any
@@ -977,7 +977,7 @@ primitiveOilCompile
 	instructionPointer := self popStack.
 	self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: result)! !
 
-!CoInterpreterPrimitives methodsFor: 'oil primitives' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilSetSelectors
 	"Argument: an Array of pairs kind, selector telling the Oil compiler which selectors it treats specially
 	 (0-4: value, value:, ... by arity; 5: bitXor:; 6: iterators to inline; 7: cold selectors never inlined).
@@ -1000,7 +1000,7 @@ primitiveOilSetSelectors
 		 previous := objectMemory nilObject].
 	self pop: 2 thenPush: previous! !
 
-!CoInterpreterPrimitives methodsFor: 'oil primitives' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilMethodInfo
 	"Receiver: a CompiledMethod.  If its machine code was compiled by Oil answer
 	 { number of deoptimizations. number of bailouts resumed by the unforwarding fast path.
@@ -1034,7 +1034,7 @@ primitiveOilMethodInfo
 		storePointerUnchecked: 3 ofObject: result withValue: (objectMemory integerObjectOf: cogMethod asUnsignedInteger).
 	self pop: argumentCount + 1 thenPush: result! !
 
-!CoInterpreterPrimitives methodsFor: 'oil primitives' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-primitives' stamp: 'cb 10/24/2026 15:00'!
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.

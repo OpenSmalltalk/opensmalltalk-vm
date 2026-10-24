@@ -12,12 +12,12 @@ check := [:name :bool |
 	bool == true ifFalse: [failures add: name]].
 
 "--- Test classes ---"
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'OilTest'.
+Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 (Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
 (Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'OilTest'.
+Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 (Smalltalk at: #OilWrongItem) compile: 'score ^1000000' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'OilTest'.
+Object subclass: #OilTestModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 (Smalltalk at: #OilTestModel) compile: 'sumScores: aCollection | total | total := 0. aCollection do: [:each | total := total + each score]. ^total' classified: 'tests'.
 (Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.

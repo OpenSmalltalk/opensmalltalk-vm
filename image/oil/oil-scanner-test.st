@@ -5,7 +5,7 @@ Utilities authorInitials: 'cb'.
 dir := Smalltalk at: #OilSourceDir ifAbsentPut: ['/usr/local/google/home/clementbera/.gemini/jetski/brain/d1466531-7c6e-4182-90d9-4bed24e00db9/scratch/osvm/image/oil/'].
 #('OilConstants.st' 'OilBytecodeScanner.st') do: [:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
-| dir out methods checked errors v3Methods oldEncoder check |
+| dir out methods checked errors check |
 dir := Smalltalk at: #OilSourceDir.
 out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [dir, 'scanner-test-result.txt']).
 errors := 0. checked := 0.
@@ -38,18 +38,6 @@ methods := OrderedCollection new.
 	c selectorsDo: [:s | | m | m := c >> s. m isQuick ifFalse: [methods add: m]. m literalsDo: [:l | (l isKindOf: CompiledBlock) ifTrue: [methods add: l]]]].
 methods do: [:m | check value: m].
 out nextPutAll: 'SistaV1: checked '; print: checked; nextPutAll: ' compiled methods/blocks, errors '; print: errors; cr.
-"Now V3PlusClosures: recompile a sample of methods with the V3 encoder"
-v3Methods := OrderedCollection new.
-oldEncoder := CompiledCode preferredBytecodeSetEncoderClass.
-[CompiledCode preferredBytecodeSetEncoderClass: EncoderForV3PlusClosures.
- (OrderedCollection selectors asArray, Dictionary selectors asArray, Set selectors asArray, Interval selectors asArray) do: [:s | | cls src m |
-	cls := {OrderedCollection. Dictionary. Set. Interval} detect: [:c | c includesSelector: s].
-	src := (cls >> s) getSource asString.
-	m := [cls newCompiler compile: src in: cls notifying: nil ifFail: [nil]] on: Error do: [:e | nil].
-	m := m ifNotNil: [m isCompiledMethod ifTrue: [m] ifFalse: [m generate]].
-	(m notNil and: [m signFlag not and: [m isQuick not]]) ifTrue: [v3Methods add: m]]]
-	ensure: [CompiledCode preferredBytecodeSetEncoderClass: oldEncoder].
-checked := 0. errors := 0.
-v3Methods do: [:m | check value: m].
-out nextPutAll: 'V3PlusClosures: checked '; print: checked; nextPutAll: ' compiled methods, errors '; print: errors; cr.
+"Oil decodes SistaV1 only: every scanned method must use the alternate bytecode set"
+out nextPutAll: 'non-SistaV1 methods scanned: '; print: (methods count: [:m | m signFlag not]); cr.
 out close.!

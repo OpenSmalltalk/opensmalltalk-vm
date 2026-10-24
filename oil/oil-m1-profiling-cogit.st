@@ -2,7 +2,7 @@ StackToRegisterMappingCogit subclass: #ProfilingCogit
 	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
-	category: 'VMMaker-JIT'!
+	category: 'Cogit-Oil'!
 !ProfilingCogit commentStamp: 'cb 10/24/2026 10:00' prior: 0!
 A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
 
@@ -376,7 +376,7 @@ declareCVarsIn: aCodeGen
 	aCodeGen var: 'counters' type: #usqInt! !
 
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 ceOilTrip: kind
 	"Called from ceOilTripTrampoline when a ProfilingCogit trip counter reaches zero, at a
 	 loop back jump (kind 0) or a frameful block entry (kind 1).  framePointer is the
@@ -414,7 +414,7 @@ ceOilTrip: kind
 	self oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext sample: sample.
 	^0! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilClosureArgumentOf: theFP numArgs: numArgs
 	"Answer the first argument of the frame that is a closure, or nil if none."
 	<var: #theFP type: #'char *'>
@@ -427,7 +427,7 @@ oilClosureArgumentOf: theFP numArgs: numArgs
 			[^arg]].
 	^objectMemory nilObject! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilElementAt: index in: rcvr
 	"Answer the non-nil element at the 1-relative index of rcvr if it is an Array, or else of
 	 the first Array inst var of rcvr (e.g. the array of an OrderedCollection) in which index
@@ -454,7 +454,7 @@ oilElementAt: index in: rcvr
 				[^element]]].
 	^objectMemory nilObject! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilFollowed: oop
 	<inline: true>
 	<essential: #ProfilingCogit>
@@ -463,7 +463,7 @@ oilFollowed: oop
 		ifTrue: [objectMemory followForwarded: oop]
 		ifFalse: [oop]! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilHomeContextOfClosure: closure
 	"Answer the home context of closure, found by walking the chain of outer contexts
 	 (through the closureOrNil of each block context) up to a method context, or nil if
@@ -482,7 +482,7 @@ oilHomeContextOfClosure: closure
 		 context := self oilFollowed: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: outerClosure)].
 	^objectMemory nilObject! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilIsClosure: oop
 	<inline: true>
 	<essential: #ProfilingCogit>
@@ -490,7 +490,7 @@ oilIsClosure: oop
 	  and: [(objectMemory classIndexOf: oop) = ClassFullBlockClosureCompactIndex
 			or: [(objectMemory classIndexOf: oop) = ClassBlockClosureCompactIndex]]! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext sample: sample
 	"If the image has supplied a trip log (see primitiveOilTripLog) record the trip in it.
 	 The log's first slot holds the number of trips recorded so far; the remaining slots
@@ -526,7 +526,7 @@ oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext 
 		storePointer: 0 ofObject: log withValue: (objectMemory integerObjectOf: count + 1).
 	^nil! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilSampleAt: theFP numArgs: numArgs isBlock: isBlock
 	"Sample a live element at the current position of the loop that tripped.
 	 In a block with arguments that is the first argument, i.e. the element the
@@ -551,14 +551,14 @@ oilSampleAt: theFP numArgs: numArgs isBlock: isBlock
 		 slot := slot - objectMemory wordSize].
 	^objectMemory nilObject! !
 
-!CoInterpreter methodsFor: 'oil profiling' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreter methodsFor: '*Cogit-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilTripRecordSize
 	<inline: true>
 	<essential: #ProfilingCogit>
 	^6! !
 
 
-!CoInterpreterPrimitives methodsFor: 'oil profiling primitives' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-profiling primitives' stamp: 'cb 10/24/2026 10:00'!
 primitiveOilMonomorphicTarget
 	"Receiver: a CompiledMethod or CompiledBlock; argument: the 1-relative pc of a send in it.
 	 If the method is jitted and the send is an ordinary send whose inline cache is linked
@@ -592,7 +592,7 @@ primitiveOilMonomorphicTarget
 				storePointer: 1 ofObject: result withValue: targetMethod methodObject]].
 	self pop: 2 thenPush: result! !
 
-!CoInterpreterPrimitives methodsFor: 'oil profiling primitives' stamp: 'cb 10/24/2026 10:00'!
+!CoInterpreterPrimitives methodsFor: '*Cogit-Oil-profiling primitives' stamp: 'cb 10/24/2026 10:00'!
 primitiveOilTripLog
 	"With no argument answer the trip log, or nil if none.  With one argument, an Array or nil,
 	 make it the trip log, answering the previous one.  ceOilTrip: records each trip in the log;
@@ -621,7 +621,7 @@ primitiveOilTripLog
 	self pop: 2 thenPush: previous! !
 
 
-!VMMaker class methodsFor: 'configurations' stamp: 'cb 10/24/2026 10:00'!
+!VMMaker class methodsFor: '*Cogit-Oil-configurations' stamp: 'cb 10/24/2026 10:00'!
 generateSqueakSpurCogOil64VM
 	"The 64-bit Cog Spur VM with the ProfilingCogit, the profiling tier of the Oil optimizing JIT."
 	^VMMaker
