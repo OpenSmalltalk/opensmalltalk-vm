@@ -30,13 +30,13 @@
 
 #if SUBVERSION
 # define PREFIX "r"
-static char SvnRawRevisionString[] = "$Rev: 202610240842-oil-m3-native-codegen $";
+static char SvnRawRevisionString[] = "$Rev$";
 # define REV_START (SvnRawRevisionString + 6)
 
-static char SvnRawRevisionDate[] = "$Date: Sat Oct 24 10:42:13 2026 +0200 $";
+static char SvnRawRevisionDate[] = "$Date$";
 # define DATE_START (SvnRawRevisionDate + 7)
 
-static char SvnRawRepositoryURL[] = "$URL: clementbera@clementbera.c.googlers.com:.gemini/jetski/brain/7ce39ff8-2a06-42fe-96ff-a75b88c4fff2/scratch/osvm $";
+static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
 static char *
@@ -73,17 +73,17 @@ revisionShortHash() { return "N.A."; }
 # undef URL_START
 #elif GIT
 # define PREFIX ""
-static char GitRawRevisionString[] = "$Rev: 202610240842-oil-m3-native-codegen $";
+static char GitRawRevisionString[] = "$Rev$";
 # define REV_START (GitRawRevisionString + 6)
 # define REV_TIME_START (GitRawRevisionString + 14)
 
-static char GitRawRevisionDate[] = "$Date: Sat Oct 24 10:42:13 2026 +0200 $";
+static char GitRawRevisionDate[] = "$Date$";
 # define DATE_START (GitRawRevisionDate + 7)
 
-static char GitRawRepositoryURL[] = "$URL: clementbera@clementbera.c.googlers.com:.gemini/jetski/brain/7ce39ff8-2a06-42fe-96ff-a75b88c4fff2/scratch/osvm $";
+static char GitRawRepositoryURL[] = "$URL$";
 # define URL_START (GitRawRepositoryURL + 6)
 
-static char GitRawRevisionShortHash[] = "$CommitHash: 865a36c $";
+static char GitRawRevisionShortHash[] = "$CommitHash$";
 # define SHORTHASH_START (GitRawRevisionShortHash + 13)
 
 static char *
