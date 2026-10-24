@@ -84,8 +84,8 @@ p2IsPureAt: i
 	"Does the instruction at i only compute its destination (no side effect, no bailout, no control flow)?"
 	| op |
 	op := self opcodeAt: i.
-	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [op = OilLoadSize or: [op = OilLoadField
-		or: [op = OilAddImmTagged and: [self p2Flag: i has: OilP2NoCheck]]]]]]! !
+	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilLoadField
+		or: [op = OilAddImmTagged and: [self p2Flag: i has: OilP2NoCheck]]]]]]]! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2RegionStartBefore: loopHead
@@ -164,7 +164,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 						  and: [(self signed8: (self fieldCAt: i)) > 0]]) ifFalse: [^self].
 						 ivDefsInLoop := ivDefsInLoop + 1]]].
 		 i := i + (self instructionLengthAt: i)].
-	(limDef >= 0 and: [limDef < loopHead and: [(self opcodeAt: limDef) = OilLoadSize]]) ifFalse: [^self].
+	(limDef >= 0 and: [limDef < loopHead and: [(self opcodeAt: limDef) = OilLoadSize or: [(self opcodeAt: limDef) = OilLoadByteSize]]]) ifFalse: [^self].
 	x := self fieldBAt: limDef.
 	(oilVRegDefs at: x) = 0 ifFalse: [^self].
 	(ivInit >= 0 and: [(self opcodeAt: ivInit) = OilConstTagged]) ifFalse: [^self].
@@ -194,7 +194,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 		 (self opcodeHasDest: op) ifTrue:
 			[((self fieldAAt: i) = iv or: [(self fieldAAt: i) = lim]) ifTrue: [^self].
 			 (self fieldAAt: i) = sizeAlias ifTrue: [sizeAlias := -1].
-			 (op = OilLoadSize and: [(self fieldBAt: i) = x]) ifTrue:
+			 (op = (self opcodeAt: limDef) and: [(self fieldBAt: i) = x]) ifTrue:
 				[(self p2Flag: i has: OilP2ToMove) ifFalse:
 					[oilNumSizesShared := oilNumSizesShared + 1].
 				 self p2Mark: i with: OilP2ToMove.
@@ -224,9 +224,9 @@ p2RemoveInvariantChecksInLoop: loopHead backJump: backJump
 		  and: [self p2IsGuarded: r class: (self word64At: i + 1) from: regionStart to: loopHead]]) ifTrue:
 			[self p2Mark: i with: OilP2Delete.
 			 oilNumGuardsRemoved := oilNumGuardsRemoved + 1].
-		 (op = OilLoadSize
+		 ((op = OilLoadSize or: [op = OilLoadByteSize])
 		  and: [(oilVRegDefs at: r) = 0
-		  and: [(k := self p2SizeRegisterOf: r from: regionStart to: loopHead) >= 0]]) ifTrue:
+		  and: [(k := self p2SizeRegisterOf: r op: op from: regionStart to: loopHead) >= 0]]) ifTrue:
 			[self p2Mark: i with: OilP2ToMove.
 			 oilIRAux at: i put: k.
 			 oilNumSizesShared := oilNumSizesShared + 1].
@@ -246,12 +246,13 @@ p2IsGuarded: r class: classHandle from: start to: end
 	^false! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
-p2SizeRegisterOf: x from: start to: end
-	"Answer a register assigned only once, by an OilLoadSize of x in the instructions from start to end, or -1."
+p2SizeRegisterOf: x op: sizeOp from: start to: end
+	"Answer a register assigned only once, by a sizeOp (OilLoadSize or OilLoadByteSize) of x in the instructions from
+	 start to end, or -1."
 	| i |
 	i := start.
 	[i < end] whileTrue:
-		[((self opcodeAt: i) = OilLoadSize
+		[((self opcodeAt: i) = sizeOp
 		  and: [(self fieldBAt: i) = x
 		  and: [(oilVRegDefs at: (self fieldAAt: i)) = 1
 		  and: [(self p2Flag: i has: OilP2Delete + OilP2ToMove) not]]]) ifTrue: [^self fieldAAt: i].
@@ -280,11 +281,16 @@ p2CountUsesAt: i
 	(self p2Flag: i has: OilP2ToMove) ifTrue:
 		[^self p2Use: (oilIRAux at: i)].
 	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilCmpImmTagged or: [op = OilCall0]]]]]]]]) ifTrue:
+	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0]]]]]]]]]) ifTrue:
 		[^self p2Use: b].
 	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1]]]]) ifTrue:
+	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1
+	 or: [op = OilLoadByte or: [op = OilLoadChar or: [op = OilCompareBytes]]]]]]]) ifTrue:
 		[self p2Use: b.
+		 ^self p2Use: c].
+	(op = OilStoreByte or: [op = OilStoreChar]) ifTrue:
+		[self p2Use: a.
+		 self p2Use: b.
 		 ^self p2Use: c].
 	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
 		[self p2Use: a.

@@ -23,6 +23,10 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
   'escapeAndCall: aCollection | blk | blk := [:e | e score * 2]. ^aCollection collect: blk'
   'allocLoop: count | last | 1 to: count do: [:i | last := {i. i + 1. i + 2}]. ^last'
   'total: n total := n'
+  'countA: aString | n | n := 0. 1 to: aString size do: [:i | (aString at: i) == $a ifTrue: [n := n + 1]]. ^n'
+  'countEqual: aString in: anArray | n | n := 0. anArray do: [:e | e = aString ifTrue: [n := n + 1]]. ^n'
+  'fillBytes: aByteArray 1 to: aByteArray size do: [:i | aByteArray at: i put: i BS 256]. ^aByteArray'
+  'upcase: aString | s | s := aString copy. 1 to: s size do: [:i | | c | c := s at: i. (c between: $a and: $z) ifTrue: [s at: i put: (Character value: c asInteger - 32)]]. ^s'
   'hashProbe: anArray key: key
     | index length element |
     length := anArray size.
@@ -115,7 +119,36 @@ check value: 'sumScores: correct on the original items' value: (model sumScores:
 check value: 'sumScores: back to baseline machine code, not Oil' value: m oilInfo isNil.
 check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m oilCompileFor: (Smalltalk at: #OilTestModel)) = 16.
 
-"--- 5. benchmarkHashProbe compiles ---"
+"--- 5. Byte objects: ByteString at:/size/=, ByteArray at:put: ---"
+[| text strs bytes base oil info2 |
+ text := String new: 10000 withAll: $b. 1 to: 10000 by: 7 do: [:k | text at: k put: $a].
+ check value: 'countA: compiles' value: (res value: #countA: value: [model countA: text]) = 0.
+ check value: 'countA: result' value: (model countA: text) = (text occurrencesOf: $a).
+ check value: 'countA: empty' value: (model countA: '') = 0.
+ check value: 'countA: on a WideString (deopt)' value: (model countA: 'aXa' asWideString) = 2.
+ strs := (1 to: 1000) collect: [:k | (k \\ 10) printString, 'abcdefghijklmnopqrstuvwxyz'].
+ check value: 'countEqual:in: compiles' value: (res value: #countEqual:in: value: [model countEqual: '3abcdefghijklmnopqrstuvwxyz' in: strs]) = 0.
+ check value: 'countEqual:in: result' value: (model countEqual: '3abcdefghijklmnopqrstuvwxyz' in: strs) = 100.
+ check value: 'countEqual:in: no match' value: (model countEqual: 'zzz' in: strs) = 0.
+ check value: 'countEqual:in: prefix' value: (model countEqual: '3abcdefghijklmnopqrstuvwxy' in: strs) = 0.
+ check value: 'countEqual:in: last byte differs' value: (model countEqual: '3abcdefghijklmnopqrstuvwxyZ' in: strs) = 0.
+ check value: 'countEqual:in: empty strings' value: (model countEqual: '' in: #('' 'a' '')) = 2.
+ info2 := ((Smalltalk at: #OilTestModel) >> #countEqual:in:) oilInfo.
+ out nextPutAll: 'countEqual:in: deopts: '; print: (info2 ifNotNil: [info2 at: 1]); cr.
+ bytes := ByteArray new: 1000.
+ check value: 'fillBytes: compiles' value: (res value: #fillBytes: value: [model fillBytes: (ByteArray new: 10)]) = 0.
+ check value: 'fillBytes: result' value: (model fillBytes: bytes) = ((1 to: 1000) collect: [:k | k \\ 256]) asByteArray.
+ check value: 'upcase: compiles' value: (res value: #upcase: value: [model upcase: 'hello']) = 0.
+ check value: 'upcase: result' value: (model upcase: 'hello World 123') = 'HELLO WORLD 123'.
+ check value: 'upcase: empty' value: (model upcase: '') = ''.
+ base := Time millisecondsToRun: [1000 timesRepeat: [text occurrencesOf: $a]].
+ oil := Time millisecondsToRun: [1000 timesRepeat: [model countA: text]].
+ out nextPutAll: 'countA: 1000 x 10000 chars: Oil '; print: oil; nextPutAll: ' ms (occurrencesOf: in Cogit '; print: base; nextPutAll: ' ms)'; cr.
+ oil := Time millisecondsToRun: [1000 timesRepeat: [model countEqual: '3abcdefghijklmnopqrstuvwxyz' in: strs]].
+ base := Time millisecondsToRun: [1000 timesRepeat: [strs count: [:e | e = '3abcdefghijklmnopqrstuvwxyz']]].
+ out nextPutAll: 'countEqual:in: 1000 x 1000 strings: Oil '; print: oil; nextPutAll: ' ms (count: with = in Cogit '; print: base; nextPutAll: ' ms)'; cr] value.
+
+"--- 6. benchmarkHashProbe compiles ---"
 before := model benchmarkHashProbe.
 out nextPutAll: 'benchmarkHashProbe (baseline): '; print: before; nextPutAll: ' ms'; cr.
 check value: 'benchmarkHashProbe compiles (no OilFailBackend)' value: (res value: #benchmarkHashProbe value: [model benchmarkHashProbe]) = 0.

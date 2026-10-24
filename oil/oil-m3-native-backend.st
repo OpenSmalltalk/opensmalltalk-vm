@@ -78,6 +78,11 @@ oilGenJumpRemembered: objReg scratch: scratchReg
 oilGenGetNumSlotsOf: srcReg into: destReg
 	^objectRepresentation genGetNumSlotsOf: srcReg into: destReg! !
 
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 18:00'!
+oilGenGetNumBytesOf: srcReg into: destReg
+	"The number of bytes of the byte object in srcReg (clobbers TempReg)."
+	^objectRepresentation genGetNumBytesOf: srcReg into: destReg! !
+
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 17:30'!
 oilGenStoreHeader: header into: objReg scratch: scratchReg
 	"Store the 64-bit header of a new object (see OilCompiler>>genAllocate:header:site:)."

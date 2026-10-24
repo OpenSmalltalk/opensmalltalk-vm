@@ -888,7 +888,8 @@ retarget: src to: dst
 opcodeHasDest: op
 	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [(op between: OilAddTagged and: OilOddTagged)
 		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
-		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged]]]]]]]]]]]]! !
+		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged
+		or: [(op between: OilLoadByteSize and: OilLoadChar) or: [op = OilCompareBytes]]]]]]]]]]]]]]! !
 
 !OilCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -1460,7 +1461,7 @@ genSend: selector numArgs: n super: isSuper frame: f
 	prim ~= 0 ifTrue:
 		[(self canInlineIntrinsic: prim class: cls numArgs: n) ifTrue:
 			[guard ifTrue: [self emitGuardOn: (self regForSlot: s) class: cls].
-			 self genIntrinsic: prim receiver: s numArgs: n.
+			 self genIntrinsic: prim receiver: s numArgs: n bytes: (self oilInstSpecOfClass: cls) >= 16.
 			 ^self].
 		 ^self genCall: selector numArgs: n receiver: s super: isSuper].
 	(self shouldInline: method selector: selector numArgs: n receiver: s) ifTrue:
@@ -1621,45 +1622,68 @@ genQuickMethod: prim receiver: s numArgs: n
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 canInlineIntrinsic: prim class: cls numArgs: n
-	"at: (60), at:put: (61) and size (62) of pointer indexable objects without fixed fields (Array), and == (110)."
+	"at: (60), at:put: (61) and size (62) of pointer indexable objects without fixed fields (Array) and of byte objects
+	 (ByteArray, ByteString), at: (63) and at:put: (64) of byte strings (Characters), compareWith: (158, the byte
+	 comparison of String>>=) of byte objects, and == (110)."
+	| spec |
 	prim = 110 ifTrue: [^n = 1].
-	((prim = 60 and: [n = 1]) or: [(prim = 61 and: [n = 2]) or: [prim = 62 and: [n = 0]]]) ifFalse: [^false].
-	^(self oilInstSpecOfClass: cls) = 2! !
+	spec := self oilInstSpecOfClass: cls.
+	((prim = 60 and: [n = 1]) or: [(prim = 61 and: [n = 2]) or: [prim = 62 and: [n = 0]]]) ifTrue:
+		[^spec = 2 or: [spec >= 16 and: [spec <= 23]]].
+	((prim = 63 and: [n = 1]) or: [(prim = 64 and: [n = 2]) or: [prim = 158 and: [n = 1]]]) ifTrue:
+		[^spec >= 16 and: [spec <= 23]].
+	^false! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
-genIntrinsic: prim receiver: s numArgs: n
+genIntrinsic: prim receiver: s numArgs: n bytes: isBytes
 	<inline: false>
 	| arr index val limit dest idx site k v |
 	numIntrinsics := numIntrinsics + 1.
 	prim = 110 ifTrue:
 		[^self genCompare: OilCondIdentical identity: true frame: currentFrame next: -1].
 	arr := self regForSlot: s.
+	prim = 158 ifTrue: "rcvr compareWith: arg, both byte objects: the first byte difference, or the size difference"
+		[index := self regForSlot: s + 1.
+		 simStackTop := s - 1.
+		 dest := self pushOwnSlot.
+		 self recordSite: OilSiteArith.
+		 idx := self emitOp: OilCompareBytes a: dest b: arr c: index.
+		 self noteDef: dest at: idx.
+		 knownClass at: dest put: smallIntegerClassHandle.
+		 ^self].
 	prim = 62 ifTrue:
 		[simStackTop := s - 1.
 		 dest := self pushOwnSlot.
-		 idx := self emitOp: OilLoadSize a: dest b: arr c: 0.
+		 idx := self emitOp: (isBytes ifTrue: [OilLoadByteSize] ifFalse: [OilLoadSize]) a: dest b: arr c: 0.
 		 self noteDef: dest at: idx.
 		 knownClass at: dest put: smallIntegerClassHandle.
 		 ^self].
 	index := self regForSlot: s + 1.
-	prim = 61 ifTrue:
+	(prim = 61 or: [prim = 64]) ifTrue:
 		[k := slotKind at: s + 2.
 		 v := slotValue at: s + 2.
 		 val := self regForSlot: s + 2].
 	limit := s + n + 1.
-	idx := self emitOp: OilLoadSize a: limit b: arr c: 0.
+	idx := self emitOp: (isBytes ifTrue: [OilLoadByteSize] ifFalse: [OilLoadSize]) a: limit b: arr c: 0.
 	self noteDef: limit at: idx.
 	site := self recordSite: OilSiteBounds.
 	self emitOp: OilCheckBounds a: index b: limit c: site.
 	knownClass at: index put: smallIntegerClassHandle.
 	simStackTop := s - 1.
-	prim = 60 ifTrue:
+	(prim = 60 or: [prim = 63]) ifTrue:
 		[dest := self pushOwnSlot.
-		 idx := self emitOp: OilLoadElement a: dest b: arr c: index.
+		 idx := self emitOp: (isBytes
+								ifTrue: [prim = 63 ifTrue: [OilLoadChar] ifFalse: [OilLoadByte]]
+								ifFalse: [OilLoadElement])
+				a: dest b: arr c: index.
 		 self noteDef: dest at: idx.
+		 (isBytes and: [prim = 60]) ifTrue: [knownClass at: dest put: smallIntegerClassHandle].
 		 ^self].
 	self recordSite: OilSiteStore.
-	self emitOp: OilStoreElement a: val b: arr c: index.
+	self emitOp: (isBytes
+					ifTrue: [prim = 64 ifTrue: [OilStoreChar] ifFalse: [OilStoreByte]]
+					ifFalse: [OilStoreElement])
+		a: val b: arr c: index.
 	(k = OilDescReg and: [v = (s + 2)])
 		ifTrue:
 			[dest := self pushOwnSlot.

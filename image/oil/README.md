@@ -96,3 +96,27 @@ L: movq  -0x1(%r10,%r12,1),%r13    ; element (tagged index, -1 displacement)
 Not done yet: hoisting loop invariant field loads (the OrderedCollection>>do: loop reloads its array/lastIndex
 fields and keeps its bounds check), loop unrolling, and register allocation by live ranges (Pass 3 still gives
 the heaviest virtual registers machine registers for the whole method).
+
+## Milestone 5 (base completion)
+
+- **Deopt disqualification**: an Oil method that deoptimizes `OilDisqualifyDeopts` (2) times is freed (sends to it
+  unlinked, `CoInterpreter>>oilDisqualifyCogMethod:`) unless other activations still run it, so the baseline JIT
+  compiles its method again, and it is not Oil-compiled again (`OilFailDisqualified`, 16). The limit can be set with
+  the selector registration pair `8, <SmallInteger>` (test_oil_m3 uses 1000).
+- **Escaping closures and brace arrays** (`OilMakeClosure`, `OilNewArray`): eden bump allocation in machine code
+  (`genAllocate:header:site:`). Past the scavenge threshold the allocation bails out to the interpreter at its
+  `OilSiteAlloc` site, which is not counted as a deopt: Oil code has no interrupt checks, so it must not keep allocating
+  past the threshold the way baseline code does. A closure's outerContext is the root frame's context, which marries the
+  frame through the baseline JIT's active context trampoline, or nil for a clean block.
+- **Encodable sends**: Pass 1 compiles again without inlining the method (sent by the root) that leads to an inlined
+  frame needing a send of a selector outside the root's literals, a super send, or a closure whose outerContext would be
+  that frame's context (`refuseInliningOfFrameOf:`). `MicroBench>>benchmarkHashProbe` now compiles; its loop still runs
+  in the block's baseline code.
+- **Byte objects**: intrinsics for `at:` / `at:put:` / `size` of ByteArray and ByteString (prims 60-64; new opcodes
+  `OilLoadByteSize`, `OilLoadByte`, `OilLoadChar`, `OilStoreByte`, `OilStoreChar`) and for `compareWith:` (prim 158,
+  `OilCompareBytes`: 8 bytes at a time, then byte by byte, exact primitive result), so `String>>=` inlines without
+  calls when its argument's class is known. Counted loops over `size` of byte objects get Pass 2's bounds check
+  elimination too.
+- Not done: inline `,` (concatenation), SWAR delimiter scanning, dead nil-store elimination.
+
+Tests: `oil/test_oil_m5.st` (native, ALL PASS), `oil-m4-test.st` (in image, byte probes added), test_oil_m3 ALL PASS.

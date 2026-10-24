@@ -95,6 +95,47 @@ OilTestModel compile: 'probeLoop: anArray key: key
 	check value: 'probeLoop: Pass 2 IR result = real result for key ', k printString value: (run value: c value: #probeLoop:key: value: {table. k}) = (model probeLoop: table key: k)].
  check value: 'probeLoop: Pass 2 IR deopts on an empty table (ZeroDivide)' value: ((run value: c value: #probeLoop:key: value: {#(). 5}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]])] value.
 
+"--- 1c. Byte objects: ByteString at:/size, String>>= (inlined, compareWith: as an intrinsic), ByteArray at:put: ---"
+OilTestModel compile: 'countA: aString
+	| n |
+	n := 0.
+	1 to: aString size do: [:i | (aString at: i) == $a ifTrue: [n := n + 1]].
+	^n' classified: 'probes'.
+OilTestModel compile: 'countEqual: aString in: anArray
+	| n |
+	n := 0.
+	anArray do: [:e | e = aString ifTrue: [n := n + 1]].
+	^n' classified: 'probes'.
+OilTestModel compile: 'fillBytes: aByteArray
+	1 to: aByteArray size do: [:i | aByteArray at: i put: i \\ 256].
+	^aByteArray' classified: 'probes'.
+OilTestModel compile: 'upcase: aString
+	| s |
+	s := aString copy.
+	1 to: s size do: [:i | | c | c := s at: i. (c between: $a and: $z) ifTrue: [s at: i put: (Character value: c asInteger - 32)]].
+	^s' classified: 'probes'.
+[| strs bstrs |
+ strs := #('abc' 'abd' 'ab' 'abcd' 'abc' 'xyz' #abc 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaab' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaab' 3) collect: [:e | e isString ifTrue: [e copy] ifFalse: [e]].
+ strs at: 7 put: #abc.
+ bstrs := strs select: [:e | e class == ByteString].
+ {{#countA:. {{'banana'}}. {{'banana'}. {''}. {'aaaa'}. {'xyz'}}}.
+  {#countEqual:in:. {{'abc'. bstrs}}. {{'abc'. bstrs}. {'aaaaaaaaaaaaaaaaaaaaaaaaaaaaab'. bstrs}. {'zz'. bstrs}. {''. bstrs}. {'abc'. strs}}}.
+  {#fillBytes:. {{ByteArray new: 10}}. {{ByteArray new: 300}. {ByteArray new: 0}. {#[1 2 3] copy}}}.
+  {#upcase:. {{'hello'}}. {{'hello world'}. {''}. {'ABC'}}}} do: [:spec | | sel c1 c2 h |
+	sel := spec first.
+	c1 := compile value: sel value: (spec at: 2) value: false.
+	c2 := compile value: sel value: (spec at: 2) value: true.
+	out cr; nextPutAll: c2 irString.
+	h := c2 opcodeHistogram.
+	check value: sel, ' compiles without calls to at:, at:put:, size, =' value: (c2 failed not and: [(c2 irString includesSubstring: '#at:') not and: [(c2 irString includesSubstring: '#=') not and: [(c2 irString includesSubstring: '#size') not]]]).
+	(spec at: 3) do: [:args | | r1 r2 real a1 a2 |
+		a1 := args collect: [:e | (e isString and: [e isSymbol not]) ifTrue: [e copy] ifFalse: [e isArray ifTrue: [e copy] ifFalse: [e copy]]].
+		a2 := args collect: [:e | (e isString and: [e isSymbol not]) ifTrue: [e copy] ifFalse: [e isArray ifTrue: [e copy] ifFalse: [e copy]]].
+		r1 := run value: c1 value: sel value: a1.
+		r2 := run value: c2 value: sel value: a2.
+		real := model perform: sel withArguments: (args collect: [:e | e copy]).
+		check value: sel, ' Pass 2 = Pass 1 = real for ', (args printString contractTo: 50) value: ((same value: r1 value: r2) and: [(r1 isKindOf: Association) or: [r1 = real]])]]] value.
+
 "--- 2. Every M2 probe: Pass 2 IR = Pass 1 IR = real execution ---"
 probes := {
 	{#sumScores:. {{coll}}. {{coll}. {OrderedCollection new}. {mixed}. {coll asArray}}}.

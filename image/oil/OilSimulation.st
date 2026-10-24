@@ -87,6 +87,12 @@ printInstructionAt: i on: aStream
 		[OilCallN]			-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' ', (self printHandle: (self word64At: i + 1)), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilCallSuper]		-> [aStream nextPutAll: (self reg: a), ' := super ', (self printHandle: (self word64At: i + 1)), ' rcvr ', (self reg: b), ' (', (self packedArgsAt: i + 3 count: c), ')'].
 		[OilAddImmTagged]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ')'].
+		[OilLoadByteSize]	-> [aStream nextPutAll: (self reg: a), ' := byteSize(', (self reg: b), ')'].
+		[OilLoadByte]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), '[', (self reg: c), '] (byte)'].
+		[OilLoadChar]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), '[', (self reg: c), '] (Character)'].
+		[OilStoreByte]		-> [aStream nextPutAll: (self reg: b), '[', (self reg: c), '] := ', (self reg: a), ' (byte)'].
+		[OilStoreChar]		-> [aStream nextPutAll: (self reg: b), '[', (self reg: c), '] := ', (self reg: a), ' (Character)'].
+		[OilCompareBytes]	-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' compareWith: ', (self reg: c)].
 		[OilModTagged]		-> [aStream nextPutAll: (self reg: a), ' := ', (self reg: b), ' \\ ', (self reg: c), '   (idiv; floored)'].
 		[OilAddImmTaggedNC]	-> [| k | k := self signed8: c. aStream nextPutAll: (self reg: a), ' := ', (self reg: b), (k >= 0 ifTrue: [' + '] ifFalse: [' - ']), k abs printString, '   (addq $', (k * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: a), ' := size(', (self reg: b), ')'].
@@ -260,6 +266,23 @@ step: i
 	op = OilAddImmTagged ifTrue:
 		[x := self r: b. (self smallInt: x) ifFalse: [^#deopt -> i].
 		 v := self tagged: x + (c signed8: cc). v ifNil: [^#deopt -> i]. self r: a put: v. ^next].
+	op = OilLoadByteSize ifTrue: [self r: a put: (self r: b) basicSize. ^next].
+	op = OilLoadByte ifTrue: [self r: a put: ((self r: b) basicAt: (self r: cc)). ^next].
+	op = OilLoadChar ifTrue: [self r: a put: (Character value: ((self r: b) basicAt: (self r: cc))). ^next].
+	(op = OilStoreByte or: [op = OilStoreChar]) ifTrue:
+		[v := self r: a.
+		 x := op = OilStoreChar
+				ifTrue: [(v isCharacter and: [v asInteger <= 255]) ifTrue: [v asInteger] ifFalse: [nil]]
+				ifFalse: [((self smallInt: v) and: [v between: 0 and: 255]) ifTrue: [v] ifFalse: [nil]].
+		 (x isNil or: [(self r: b) isReadOnlyObject]) ifTrue: [^#deopt -> i].
+		 (self r: b) basicAt: (self r: cc) put: x. ^next].
+	op = OilCompareBytes ifTrue:
+		[| s1 s2 |
+		 s1 := self r: b. s2 := self r: cc.
+		 (s2 class isBytes and: [s2 class isVariable]) ifFalse: [^#deopt -> i].
+		 1 to: (s1 basicSize min: s2 basicSize) do:
+			[:j| (s1 basicAt: j) = (s2 basicAt: j) ifFalse: [self r: a put: (s1 basicAt: j) - (s2 basicAt: j). ^next]].
+		 self r: a put: s1 basicSize - s2 basicSize. ^next].
 	op = OilModTagged ifTrue:
 		[x := self r: b. y := self r: cc.
 		 ((self smallInt: x) and: [(self smallInt: y) and: [y ~= 0]]) ifFalse: [^#deopt -> i].
