@@ -12,8 +12,11 @@
 (CoInterpreter sharedPools includes: OilConstants) ifFalse:
 	[CoInterpreter addSharedPool: OilConstants]!
 
+(CogObjectRepresentationFor64BitSpur sharedPools includes: OilConstants) ifFalse:
+	[CogObjectRepresentationFor64BitSpur addSharedPool: OilConstants]!
+
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog ceOilBailoutTrampoline oilSelectors'
+	instanceVariableNames: 'numCounters counters counterIndex initialCounterValue ceOilTripTrampoline oilTripLog ceOilBailoutTrampoline oilSelectors oilExtraSelectors'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices OilConstants'
 	category: 'Cogit-Oil'!
@@ -27,6 +30,15 @@ isOilMethod: cogMethod
 	<var: #cogMethod type: #'CogMethod *'>
 	^false! !
 
+!CogBlockMethod methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
+cmUnusedFlag
+	"Oil methods: whether Oil set the large context bit of the method header (see ProfilingCogit>>oilGenerateCogMethod)."
+	^cmUnusedFlag! !
+
+!CogBlockMethod methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
+cmUnusedFlag: aValue
+	^cmUnusedFlag := aValue! !
+
 !CogObjectRepresentationForSpur methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 15:00'!
 oilGenStoreCheckTrampolineCall
 	"The slow path of an Oil store check: remember the object in ReceiverResultReg."
@@ -38,6 +50,7 @@ initialize
 	super initialize.
 	oilTripLog := 0.
 	oilSelectors := 0.
+	oilExtraSelectors := 0.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
@@ -96,7 +109,7 @@ oilGenGetActiveContextInto: destReg
 	 baseline JIT's active context trampolines (which clobber the caller saved registers)."
 	objectRepresentation
 		genGetActiveContextNumArgs: methodOrBlockNumArgs
-		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		large: true "see oilGenerateCogMethod"
 		inBlock: 0.
 	destReg ~= ReceiverResultReg ifTrue:
 		[self MoveR: ReceiverResultReg R: destReg].
@@ -124,9 +137,12 @@ oilGenSend: selectorIndex numArgs: numArgs super: isSuper
 		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
 	numArgs >= (NumSendTrampolines - 1) ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
-	self genLoadInlineCacheWithSelector: selectorIndex.
-	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
-	maxLitIndex := maxLitIndex max: selectorIndex! !
+	selectorIndex >= OilExtraSelectorBase
+		ifTrue: [self MoveUniqueC32: selectorIndex R: ClassReg] "an index into the Oil selector table"
+		ifFalse:
+			[self genLoadInlineCacheWithSelector: selectorIndex.
+			 maxLitIndex := maxLitIndex max: selectorIndex].
+	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation! !
 
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
 oilCompileFrameBuild
@@ -244,7 +260,7 @@ oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
 	 deoptimization metadata, a hidden pinned Array, through the method's counters field (tagged with 1)."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result md selector |
+	| codeSize headerSize mapSize totalSize startAddress result md selector added |
 	<var: #writableMethod type: #'CogMethod *'>
 	md := coInterpreter oilAllocateMetadata: self metadataSize.
 	md = 0 ifTrue:
@@ -273,9 +289,15 @@ oilGenerateCogMethod
 	self fillInBlockHeadersAt: startAddress.
 	selector := coInterpreter maybeSelectorOfMethod: methodObj.
 	selector isNil ifTrue: [selector := objectMemory nilObject].
+	"Oil frames hold the home slots of the virtual registers below the temps, and marrying or divorcing a frame copies
+	 all its slots into its context: give the method large contexts (prepareNativeCode keeps the frame within
+	 LargeContextSlots), and note whether the bit must be cleared from the method's header when it is freed."
+	added := (coInterpreter methodNeedsLargeContext: methodObj) not.
+	methodHeader := coInterpreter oilHeaderWithLargeContext: methodHeader.
 	self fillInMethodHeader: (self writableMethodFor: startAddress)
 		size: totalSize
 		selector: selector.
+	(self writableMethodFor: startAddress) cmUnusedFlag: added.
 	"Oil methods are expensive to compile and hot: start with the maximum usage count."
 	(self writableMethodFor: startAddress) cmUsageCount: CMMaxUsageCount.
 	(self writableMethodFor: startAddress) counters: md + 1.
@@ -315,6 +337,90 @@ oilSelectorsAddress
 	<api>
 	<returnTypeC: #'sqInt *'>
 	^self addressOf: oilSelectors put: [:value| oilSelectors := value]! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+setOilExtraSelectors: anArray
+	<api>
+	oilExtraSelectors := anArray! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+getOilExtraSelectors
+	<api>
+	^oilExtraSelectors! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+oilExtraSelectorsAddress
+	"Answer the address of the oilExtraSelectors variable, a GC root, which ceDereferenceSelectorIndex reads."
+	<api>
+	<returnTypeC: #'sqInt *'>
+	^self addressOf: oilExtraSelectors put: [:value| oilExtraSelectors := value]! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+oilExtraSelectorIndexOf: selector add: addIfAbsent
+	"64-bit inline caches hold the index of their selector among the special selectors or the literals of the method.
+	 Oil methods also send selectors of the methods they inline, which are not among their literals, so their inline
+	 caches may hold OilExtraSelectorBase + k instead: the selector at index k of the Oil selector table
+	 (oilExtraSelectors, allocated by primitiveOilSetSelectors, a GC root; see CogObjectRepresentationFor64BitSpur>>oilWrapSelectorIndexDereferenceRoutine
+	 and indexForSelector:in:).  Answer selector's value, adding it if addIfAbsent, or OilNoLink if it is absent and not
+	 added (no table, table full, or a young selector, which the table, perhaps old, must not refer to)."
+	| table sel |
+	table := oilExtraSelectors.
+	(table = 0 or: [table = objectMemory nilObject]) ifTrue:
+		[^OilNoLink].
+	0 to: (objectMemory numSlotsOf: table) - 1 do:
+		[:k|
+		sel := objectMemory fetchPointer: k ofObject: table.
+		sel = selector ifTrue:
+			[^OilExtraSelectorBase + k].
+		sel = objectMemory nilObject ifTrue:
+			[(addIfAbsent
+			  and: [(objectMemory isNonImmediate: selector)
+			  and: [(objectMemory isYoungObject: selector) not]]) ifFalse:
+				[^OilNoLink].
+			 objectMemory storePointerUnchecked: k ofObject: table withValue: selector.
+			 ^OilExtraSelectorBase + k]].
+	^OilNoLink! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+indexForSelector: selector in: cogMethod
+	"Answer the value to put in an inline-cache that is being loaded with the selector (when unlinking a send).
+	 Oil methods' sends may also use the Oil selector table (see oilExtraSelectorIndexOf:add:)."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
+	| index |
+	(self isOilMethod: cogMethod) ifTrue:
+		[index := self oilExtraSelectorIndexOf: selector add: false.
+		 index ~= OilNoLink ifTrue:
+			[^index]].
+	^super indexForSelector: selector in: cogMethod! !
+
+!CogObjectRepresentationFor64BitSpur methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
+oilWrapSelectorIndexDereferenceRoutine
+	"Oil methods' inline caches may also hold OilExtraSelectorBase + k, for the selector at index k of the Oil selector
+	 table (see ProfilingCogit>>oilExtraSelectorIndexOf:add:).  Put a routine that maps those in front of the one
+	 generated by maybeGenerateSelectorIndexDereferenceRoutine, which the send trampolines call."
+	| jumpNotOil |
+	<var: 'jumpNotOil' type: #'AbstractInstruction *'>
+	cogit zeroOpcodeIndex.
+	cogit CmpCq: OilExtraSelectorBase R: ClassReg.
+	jumpNotOil := cogit JumpLess: 0.
+	cogit
+		SubCq: OilExtraSelectorBase - 1 R: ClassReg; "1-relative, skipping the header"
+		MoveAw: (self cCoerceSimple: cogit oilExtraSelectorsAddress to: #usqInt) R: Extra1Reg;
+		MoveXwr: ClassReg R: Extra1Reg R: ClassReg;
+		RetN: 0.
+	"(not JumpFullRT:, which clobbers TempReg, an argument of the directed super send trampolines)"
+	jumpNotOil jmpTarget: (cogit Jump: (self cCoerceSimple: ceDereferenceSelectorIndex to: #'AbstractInstruction *')).
+	ceDereferenceSelectorIndex := cogit methodZoneBase.
+	cogit
+		outputInstructionsForGeneratedRuntimeAt: ceDereferenceSelectorIndex;
+		recordGeneratedRunTime: 'ceOilDereferenceSelectorIndex' address: ceDereferenceSelectorIndex;
+		recordRunTimeObjectReferences! !
+
+!ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!
+generateSendTrampolines
+	objectRepresentation oilWrapSelectorIndexDereferenceRoutine.
+	super generateSendTrampolines! !
 
 
 !ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 15:00'!
@@ -357,6 +463,13 @@ oilSendSiteUnlinkedAt: bcpc in: aMethodObj
 	^entryPoint <= methodZoneBase! !
 
 
+!ProfilingCogit methodsFor: 'oil support' stamp: 'cb 10/24/2026 18:00'!
+oilMethodHasOilCode: aMethodObj
+	"Is aMethodObj's machine code Oil code (OilCompiler>>shouldInline:selector:numArgs:receiver: then calls it)?"
+	<api>
+	^(coInterpreter methodHasCogMethod: aMethodObj)
+	  and: [self isOilMethod: (coInterpreter cogMethodOf: aMethodObj)]! !
+
 !ProfilingCogit methodsFor: 'oil support' stamp: 'cb 10/24/2026 18:30'!
 oilSendSiteNeverSentAt: bcpc in: aMethodObj
 	"Does aMethodObj have baseline machine code in which the send at bcpc was never executed (unlinked inline cache)?
@@ -373,6 +486,14 @@ maybeFreeCountersOf: aCogMethod
 	"Free the pinned object holding the method's trip counters, or its Oil deoptimization metadata, if any."
 	<var: #aCogMethod type: #'CogMethod *'>
 	<inline: true>
+	"An Oil method that set the large context bit of its header (see oilGenerateCogMethod): freeMethod: has just put
+	 its header back into the CompiledMethod, without the bit."
+	((aCogMethod counters bitAnd: 1) ~= 0
+	 and: [aCogMethod cmUnusedFlag
+	 and: [(coInterpreter rawHeaderOf: aCogMethod methodObject) = aCogMethod methodHeader]]) ifTrue:
+		[coInterpreter
+			rawHeaderOf: aCogMethod methodObject
+			put: (coInterpreter oilHeaderWithoutLargeContext: aCogMethod methodHeader)].
 	self freeOilCounters: aCogMethod counters! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 15:00'!
@@ -1081,6 +1202,17 @@ primitiveOilSetSelectors
 	((objectMemory isNonImmediate: sels)
 	 and: [objectMemory isArrayNonImm: sels]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	"The Oil selector table (see ProfilingCogit>>oilExtraSelectorIndexOf:add:), allocated once."
+	cogit getOilExtraSelectors = 0 ifTrue:
+		[| table |
+		 table := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: OilMaxExtraSelectors.
+		 table isNil ifTrue:
+			[^self primitiveFailFor: PrimErrNoMemory].
+		 cogit setOilExtraSelectors: table.
+		 (objectMemory addGCRoot: cogit oilExtraSelectorsAddress) ifFalse:
+			[cogit setOilExtraSelectors: 0.
+			 ^self primitiveFailFor: PrimErrNoMemory].
+		 sels := self stackTop].
 	previous := cogit getOilSelectors.
 	cogit setOilSelectors: sels.
 	previous = 0 ifTrue:
@@ -1166,3 +1298,15 @@ primitiveOilLastCompilation
 		[:i| objectMemory storePointerUnchecked: i ofObject: traceArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
 	objectMemory storePointer: 10 ofObject: result withValue: traceArray.
 	self pop: argumentCount + 1 thenPush: result! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
+oilHeaderWithLargeContext: methodHeader
+	<api>
+	^methodHeader bitOr: LargeContextBit! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil' stamp: 'cb 10/24/2026 18:00'!
+oilHeaderWithoutLargeContext: methodHeader
+	<api>
+	^methodHeader bitAnd: LargeContextBit bitInvert! !
+
+

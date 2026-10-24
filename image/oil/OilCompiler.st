@@ -1513,6 +1513,9 @@ shouldInline: method selector: selector numArgs: n receiver: s
 	(takesBlock or: [self isIteratorSelector: selector]) ifTrue:
 		[^size <= OilMaxIteratorBytes].
 	size <= OilAccessorBytes ifTrue: [^true].
+	"A method with Oil code of its own: calling it runs that code, while an inlined copy would lack the type feedback of
+	 its baseline inline caches (gone with its baseline code), so its own sends would not be inlined."
+	(self hasOilCode: method) ifTrue: [^false].
 	"A send in a loop (of this frame or of a frame it is inlined in) is hot: inline larger methods deeper."
 	(size <= OilMaxIteratorBytes
 	 and: [depth <= OilMediumMethodDepth
@@ -1554,6 +1557,12 @@ genUncommonTrapForSendAt: s numArgs: n
 	idx := self emitOp: OilConstTagged a: dest b: 0 c: 1. "SmallInteger 0, never used"
 	self noteDef: dest at: idx! !
 
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:00'!
+hasOilCode: aMethod
+	^self
+		cCode: [cogit oilMethodHasOilCode: aMethod]
+		inSmalltalk: [false]! !
+
 !OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isNoInline: aMethod
 	0 to: oilNumNoInline - 1 do:
@@ -1563,7 +1572,8 @@ isNoInline: aMethod
 !OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isEncodableCall: selector super: isSuper
 	"Can the back end emit a send of selector?  Inline caches hold the index of their selector in the literals of the
-	 method (the root) or among the special selectors, and a super send binds to the root method's class."
+	 method (the root), among the special selectors or in the Oil selector table (which this adds selector to, see
+	 ProfilingCogit>>oilExtraSelectorIndexOf:add:), and a super send binds to the root method's class."
 	isSuper ifTrue: [^currentFrame = 0].
 	0 to: 31 do:
 		[:k| (self specialSelectorHandle: k) = selector ifTrue: [^true]].
@@ -1571,7 +1581,7 @@ isEncodableCall: selector super: isSuper
 		[:k|
 		(self cCode: [coInterpreter literal: k ofMethod: rootMethod]
 			inSmalltalk: [self handleFor: (rootMethod literalAt: k + 1)]) = selector ifTrue: [^true]].
-	^false! !
+	^self cCode: [(cogit oilExtraSelectorIndexOf: selector add: true) ~= OilNoLink] inSmalltalk: [false]! !
 
 !OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 refuseInliningOfFrameOf: f

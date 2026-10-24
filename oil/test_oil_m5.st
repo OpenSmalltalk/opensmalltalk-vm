@@ -13,6 +13,8 @@ Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames:
 (Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
 Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 (Smalltalk at: #OilWrongItem) compile: 'score ^1000000' classified: 'accessing'.
+(Smalltalk at: #OilTestItem) compile: 'extTag ^score' classified: 'accessing'.
+(Smalltalk at: #OilWrongItem) compile: 'extTag ^7' classified: 'accessing'.
 Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
 #('sumScores: aCollection | sum | sum := 0. aCollection do: [:each | sum := sum + each score]. ^sum'
   'braceOf: a and: b ^{a. b. a + b. nil}'
@@ -26,6 +28,8 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
   'skipSpaces: aStream [aStream atEnd] whileFalse: [| c | c := aStream peek. c isSeparator ifFalse: [^c]. aStream next]. ^nil'
   'words: aString | in out words c | in := ReadStream on: aString. words := 0. [in atEnd] whileFalse: [out := WriteStream on: String new. [in atEnd not and: [(c := in peek) isSeparator not]] whileTrue: [out nextPut: in next]. out contents isEmpty ifFalse: [words := words + 1]. [in atEnd not and: [in peek isSeparator]] whileTrue: [in next]]. ^words'
   'copyChars: aString | in out | in := ReadStream on: aString. out := WriteStream on: (String new: aString size). [in atEnd] whileFalse: [out nextPut: in next]. ^out contents'
+  'extSum: arr | s | s := 0. 1 to: arr size do: [:i | s := s + (self extA: (arr at: i))]. ^s'
+  'extA: x ^x extTag + 1'
   'countA: aString | n | n := 0. 1 to: aString size do: [:i | (aString at: i) == $a ifTrue: [n := n + 1]]. ^n'
   'countEqual: aString in: anArray | n | n := 0. anArray do: [:e | e = aString ifTrue: [n := n + 1]]. ^n'
   'fillBytes: aByteArray 1 to: aByteArray size do: [:i | aByteArray at: i put: i BS 256]. ^aByteArray'
@@ -173,6 +177,22 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  out nextPutAll: 'copyChars: 100 x 20000 chars: Oil '; print: oil; nextPutAll: ' ms'; cr.
  oil := Time millisecondsToRun: [100 timesRepeat: [model words: text]].
  out nextPutAll: 'words: 100 x 20000 chars: Oil '; print: oil; nextPutAll: ' ms'; cr] value.
+
+"--- 5c. Sends of selectors that are not among the root's literals (the Oil selector table) ---"
+[| extArr exp frames |
+ extArr := (1 to: 100) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilTestItem) new score: k; yourself] ifFalse: [(Smalltalk at: #OilWrongItem) new]].
+ exp := (extArr inject: 0 into: [:a :e | a + e extTag + 1]).
+ check value: 'extSum: compiles' value: (res value: #extSum: value: [model extSum: extArr]) = 0.
+ frames := last at: 6.
+ out nextPutAll: 'extSum: frames '; print: frames; cr.
+ check value: 'extSum: inlines extA: (whose polymorphic extTag send is not among the root literals)' value: frames >= 2.
+ check value: 'extSum: result' value: (model extSum: extArr) = exp.
+ check value: 'extSum: result again (linked)' value: ((1 to: 3) collect: [:k | model extSum: extArr]) asSet asArray = {exp}.
+ (Smalltalk at: #OilWrongItem) compile: 'extTag ^8' classified: 'accessing'.
+ check value: 'extSum: after redefining extTag (sends unlinked through the selector table)' value: (model extSum: extArr) = (exp + 50).
+ Smalltalk garbageCollect.
+ check value: 'extSum: after a full GC' value: (model extSum: extArr) = (exp + 50).
+ check value: 'extSum: still Oil code' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo notNil] value.
 
 "--- 6. benchmarkHashProbe compiles ---"
 before := model benchmarkHashProbe.

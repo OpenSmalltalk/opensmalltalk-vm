@@ -125,6 +125,26 @@ the heaviest virtual registers machine registers for the whole method).
   from its Smalltalk body.
 - **Literal limit**: `CoInterpreter>>oilRaiseMaxLiteralCountForCompile` raises `maxLiteralCountForCompile` to 512 at
   start-up, because a VMMaker option can't hold an integer.
+- **Oil selector table**: 64-bit inline caches hold a 32-bit selector index: a literal of the method, or negative for
+  a special selector. Oil methods also send the selectors of the methods they inline, which are not among the root's
+  literals, so their caches may hold `OilExtraSelectorBase` (16r100000) + k. That value names entry k of a VM-owned
+  Array of `OilMaxExtraSelectors` (2048) old selectors. `primitiveOilSetSelectors` allocates the Array and registers it
+  as a GC root. The send trampolines read it through a small routine placed in front of `ceDereferenceSelectorIndex`
+  (`oilWrapSelectorIndexDereferenceRoutine`), and `ProfilingCogit>>indexForSelector:in:` reads it when unlinking.
+  The leak checker's code integrity check, which is not patched, would report these caches (error 8).
+  Pass 1 now inlines such frames instead of refusing them (`refuseInliningOfFrameOf:` remains for super sends and for
+  closures in inlined frames). For example, `countEqual:in:` drops from 59 to 30 ms because the polymorphic `isString`
+  send inside the inlined `String>>=` is now encodable.
+- **Oil callees are called, not inlined**: a method that already has Oil code has lost its baseline inline caches, so
+  an inlined copy would have no type feedback and would keep its own sends as calls (`hasOilCode:`).
+- **Large contexts**: marrying or divorcing an Oil frame copies all its slots, home slots included, into the context.
+  So the Oil CogMethod's header gets the large context bit (cleared from the CompiledMethod again when the CogMethod
+  is freed, using `cmUnusedFlag`), and `prepareNativeCode` refuses frames that would not fit in `LargeContextSlots`.
+  Before this, a stack page overflow in a callee of an Oil method married the Oil frame into a small context and
+  overwrote the next object in eden.
 - Not done: inline `,` (concatenation), SWAR delimiter scanning, `isSeparator` bitmask, dead nil-store elimination.
+  Moose (parseMSE) spends about 2/3 of its time in the 2 `lseek` system calls that each `MultiByteFileStream>>peek`
+  makes (`position` / `position:`), and it reads characters one at a time through the stream. That leaves nothing for
+  an 8-byte scan to work on.
 
 Tests: `oil/test_oil_m5.st` (native, ALL PASS), `oil-m4-test.st` (in image, byte probes added), test_oil_m3 ALL PASS.

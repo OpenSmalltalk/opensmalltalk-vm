@@ -88,6 +88,11 @@ prepareNativeCode
 		(oilVRegWeight at: r) > 0 ifTrue:
 			[oilNumHomes := oilNumHomes + 1.
 			 oilVRegHome at: r put: homeBase - (oilNumHomes * objectMemory wordSize)]].
+	"Marrying or divorcing the frame copies its temps, homes and pushed values into a context, which is large (see
+	 ProfilingCogit>>oilGenerateCogMethod): they must fit.  Calls push the receiver and up to 15 arguments."
+	(self numTempsOf: rootMethod) + oilNumHomes + 16 > (LargeContextSlots - ReceiverIndex - 1) ifTrue:
+		[self abortCompilation: OilFailOutOfRegisters.
+		 ^failureCode].
 	^OilOK! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
@@ -1158,13 +1163,14 @@ genReturn: a
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 selectorIndexOf: selector
-	"The inline cache of a send holds the index of its selector, in the literals of the method (the root) or,
-	 negative, in the special selectors.  Answer that index, or OilNoLink if the selector is in neither."
+	"The inline cache of a send holds the index of its selector, in the literals of the method (the root), negative,
+	 in the special selectors, or OilExtraSelectorBase + its index in the Oil selector table (see
+	 ProfilingCogit>>oilExtraSelectorIndexOf:add:).  Answer that index, or OilNoLink if the selector is in none."
 	0 to: 31 do:
 		[:k| (coInterpreter specialSelector: k) = selector ifTrue: [^-1 - k]].
 	0 to: (objectMemory literalCountOf: rootMethod) - 1 do:
 		[:k| (coInterpreter literal: k ofMethod: rootMethod) = selector ifTrue: [^k]].
-	^OilNoLink! !
+	^cogit oilExtraSelectorIndexOf: selector add: true! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genCallAt: i site: s
