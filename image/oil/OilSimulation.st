@@ -1,4 +1,4 @@
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printIROn: aStream
 	"Dump the flattened linear IR buffer: frames, instructions (index, opcode, operands, deopt site), deopt sites, statistics."
 	<doNotGenerate>
@@ -38,7 +38,7 @@ printIROn: aStream
 	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printInstructionAt: i on: aStream
 	<doNotGenerate>
 	| op a b c name site |
@@ -100,24 +100,24 @@ printInstructionAt: i on: aStream
 		[aStream nextPutAll: '   ; deopt#'; print: site; nextPutAll: ' #'; print: (siteFrame at: site); nextPutAll: ' pc '; print: (sitePC at: site)].
 	aStream cr! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 hexWord: w
 	<doNotGenerate>
 	| s |
 	s := (w printStringBase: 16) asUppercase.
 	^(String new: (8 - s size max: 0) withAll: $0), s! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 reg: r
 	<doNotGenerate>
 	^'r', r printString! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 condName: c
 	<doNotGenerate>
 	^#('<' '>' '<=' '>=' '=' '~=' '==' '~~') at: c! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printHandle: h
 	<doNotGenerate>
 	| o |
@@ -126,7 +126,7 @@ printHandle: h
 		ifTrue: [o printString]
 		ifFalse: [o printString contractTo: 60]! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 packedArgsAt: index count: n
 	<doNotGenerate>
 	^String streamContents:
@@ -137,12 +137,12 @@ packedArgsAt: index count: n
 			j > 0 ifTrue: [s space].
 			s nextPutAll: (self reg: ((w bitShift: (3 - (j \\ 4)) * -8) bitAnd: 255))]]! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 irString
 	<doNotGenerate>
 	^String streamContents: [:s| self printIROn: s]! !
 
-!OilBaseCompiler methodsFor: '*Cogit-Oil-Debugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 opcodeHistogram
 	"Answer a Bag of the opcode names in the buffer (for tests)."
 	<doNotGenerate>
@@ -159,7 +159,7 @@ Object subclass: #OilSimulatedTypeFeedback
 	instanceVariableNames: 'sites'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil-Debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilSimulatedTypeFeedback commentStamp: 'cb 10/24/2026 10:40' prior: 0!
 I play the role of ProfilingCogit's inline caches when OilCompiler runs in the image: I record, for each send site (CompiledCode, pc), the classes of the receivers seen while running a block under the image's bytecode simulator (Context>>runSimulated:contextAtEachStep:).  classAt:in: answers the class of a monomorphic site, nil otherwise, like monomorphicTargetFor:in: does for a linked inline cache.!
@@ -197,7 +197,7 @@ Object subclass: #OilIRInterpreter
 	instanceVariableNames: 'compiler regs flag steps'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants'
-	category: 'Cogit-Oil-Debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilIRInterpreter commentStamp: 'cb 10/24/2026 10:40' prior: 0!
 I execute an OilCompiler's linear IR on host objects: run: receiver with: arguments answers the IR's result, or #deopt if a guard, a bounds check, a tag check or an overflow check fails (the VM would then bail out to the interpreter at the recorded deopt site).  Tagged SmallInteger opcodes are executed on untagged values with the SmallInteger checks they imply.!
@@ -341,7 +341,7 @@ Object subclass: #OilTestItem
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil-Debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 score
@@ -372,7 +372,7 @@ Object subclass: #OilTestOther
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil-Debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 score
@@ -399,7 +399,7 @@ Object subclass: #OilTestModel
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil-Debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumScores: anOrderedCollection

@@ -6,7 +6,7 @@ OilBaseCompiler subclass: #OilLoopCompiler
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil'!
+	category: 'VMMaker-JIT-Oil'!
 
 !OilLoopCompiler commentStamp: 'cb 10/24/2026 19:35' prior: 0!
 I add Pass 2, the streaming loop optimizer, to OilBaseCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via pass2Optimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, removes dead pure instructions, and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
@@ -480,19 +480,19 @@ pass2Statistics: index
 	index = 7 ifTrue: [^oilNumUndos].
 	^0! !
 
-OilLoopCompiler subclass: #OilNumericCompiler
+(Smalltalk hasClassNamed: #OilNumericCompiler) ifTrue: [(Smalltalk at: #OilNumericCompiler) removeFromSystem].!OilLoopCompiler subclass: #OilFullCompiler
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'Cogit-Oil'!
+	category: 'VMMaker-JIT-Oil'!
 
-!OilNumericCompiler commentStamp: 'cb 10/24/2026 19:35' prior: 0!
-I am the leaf class of the Oil optimizing compiler hierarchy (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilNumericCompiler).!
+!OilFullCompiler commentStamp: 'cb 10/24/2026 19:35' prior: 0!
+I am the leaf class of the Oil optimizing compiler hierarchy (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilFullCompiler).!
 
-!OilNumericCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
+!OilFullCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
 pipe
 	<inline: true>
 	^super pipe! !
 
 Smalltalk globals removeKey: #OilCompiler ifAbsent: [].
-Smalltalk at: #OilCompiler put: OilNumericCompiler!
+Smalltalk at: #OilCompiler put: OilFullCompiler!

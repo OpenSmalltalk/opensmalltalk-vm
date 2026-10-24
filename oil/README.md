@@ -1,6 +1,6 @@
 # Oil JIT: `ProfilingCogit` and Native Runtime
 
-`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilBaseCompiler` -> `OilLoopCompiler` -> `OilNumericCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
+`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilBaseCompiler` -> `OilLoopCompiler` -> `OilFullCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
 
 ## Files and Load Order
 
@@ -11,7 +11,7 @@ To generate the 64-bit Spur Oil VM (`src/spur64.oil`), file into `Spur64VMMaker.
 3. `image/oil/OilBytecodeScanner.st` — `OilBytecodeDescriptor` and `OilBytecodeScanner`.
 4. `image/oil/OilCompiler.st` — `OilBaseCompiler` (Pass 1 and `#pipe` hook).
 5. `image/oil/OilCompilerBackend.st` — `OilBaseCompiler` (Pass 3 native code generation).
-6. `image/oil/OilCompilerPass2.st` — `OilLoopCompiler` (Pass 2 loop optimizer) and `OilNumericCompiler`.
+6. `image/oil/OilCompilerPass2.st` — `OilLoopCompiler` (Pass 2 loop optimizer) and `OilFullCompiler`.
 7. `oil/oil-m3-native-backend.st` — `ProfilingCogit` Oil driver (`oilMethod:receiverClass:`, `oilCompile:receiverClass:`, `oilGenerate:`), deoptimization metadata (`fillMetadata:cogMethod:`), `CoInterpreter>>ceOilBailout:`, selector table, invalidation on selector flush (`unlinkSendsOf:isMNUSelector:`), and primitives (`primitiveOilCompile`, `primitiveOilSetSelectors`, `primitiveOilMethodInfo`, `primitiveOilLastCompilation`).
 
 Then run `VMMaker generateSqueakSpurCogOil64VM` and build with `building/linux64x64/squeak.cog.spur/build.oil/mvm` (produces `products/sqcogspur64linuxht.oil/squeak`).

@@ -11,12 +11,12 @@ check := [:name :bool |
 	bool ifFalse: [failures add: name]].
 
 "--- Test classes ---"
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 (Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
 (Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) subclass: #OilTestItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+(Smalltalk at: #OilTestItem) subclass: #OilTestItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 (Smalltalk at: #OilTestItem2) compile: 'score ^score * 2' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 (Smalltalk at: #OilTestModel) compile: 'items: anArray items := anArray' classified: 'accessing'.
 (Smalltalk at: #OilTestModel) compile: 'countTo: n | count | count := 0. 1 to: n do: [:i | count := count + 1]. ^count' classified: 'tests'.
 (Smalltalk at: #OilTestModel) compile: 'sumScores: aCollection | total | total := 0. aCollection do: [:each | total := total + each score]. ^total' classified: 'tests'.

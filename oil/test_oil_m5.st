@@ -8,14 +8,14 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 (Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
 (Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 (Smalltalk at: #OilWrongItem) compile: 'score ^1000000' classified: 'accessing'.
 (Smalltalk at: #OilTestItem) compile: 'extTag ^score' classified: 'accessing'.
 (Smalltalk at: #OilWrongItem) compile: 'extTag ^7' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'Cogit-Oil-Debugging'.
+Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
 #('sumScores: aCollection | sum | sum := 0. aCollection do: [:each | sum := sum + each score]. ^sum'
   'braceOf: a and: b ^{a. b. a + b. nil}'
   'constLeft: x ^(200 + (x * 3)) + ((1000 < (x * 3)) ifTrue: [10] ifFalse: [20])'
