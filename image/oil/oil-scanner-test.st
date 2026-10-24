@@ -18,17 +18,17 @@ check := [:m | | scanner starts pcs ok |
 	pcs := OrderedCollection new.
 	scanner scanMethod: m do: [:d | | sel |
 		pcs add: scanner instrPC.
-		((starts includes: scanner instrPC) and: [(starts includes: scanner bcpc) and: [(scanner nextPC > m endPC) or: [starts includes: scanner nextPC]]]) ifFalse:
+		((starts includes: scanner instrPC) and: [(starts includes: scanner oilBcpc) and: [(scanner oilNextPC > m endPC) or: [starts includes: scanner oilNextPC]]]) ifFalse:
 			[ok := false. out nextPutAll: 'BOUNDARY MISMATCH '; print: m; nextPutAll: ' pc '; print: scanner instrPC; cr].
-		scanner targetPC >= 0 ifTrue:
-			[(starts includes: scanner targetPC) ifFalse: [ok := false. out nextPutAll: 'BAD TARGET '; print: m; nextPutAll: ' pc '; print: scanner instrPC; cr]].
+		scanner oilTargetPC >= 0 ifTrue:
+			[(starts includes: scanner oilTargetPC) ifFalse: [ok := false. out nextPutAll: 'BAD TARGET '; print: m; nextPutAll: ' pc '; print: scanner instrPC; cr]].
 		(#(OilTagSend OilTagSendSuper OilTagSendSpecial) anySatisfy: [:t | scanner scannedTag = (OilConstants classPool at: t)]) ifTrue:
 			[| expected ours |
 			 ours := scanner scannedTag = (OilConstants classPool at: #OilTagSendSpecial)
 				ifTrue: [Smalltalk specialSelectors at: scanner operand1 * 2 + 1]
 				ifFalse: [m literalAt: scanner operand1 + 1].
 			 expected := (InstructionStream new method: m pc: scanner instrPC) selectorToSendOrSelf.
-			 (expected isSymbol not) ifTrue: [expected := (InstructionStream new method: m pc: scanner bcpc) selectorToSendOrSelf].
+			 (expected isSymbol not) ifTrue: [expected := (InstructionStream new method: m pc: scanner oilBcpc) selectorToSendOrSelf].
 			 (ours == expected and: [ours numArgs = scanner operand2]) ifFalse:
 				[ok := false. out nextPutAll: 'SEND MISMATCH '; print: m; nextPutAll: ' pc '; print: scanner instrPC; nextPutAll: ' ours '; print: ours; nextPutAll: '/'; print: scanner operand2; nextPutAll: ' expected '; print: expected; cr]]].
 	(pcs isEmpty or: [ok]) ifFalse: [errors := errors + 1].

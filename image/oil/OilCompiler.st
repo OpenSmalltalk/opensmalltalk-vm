@@ -1,7 +1,7 @@
 OilBytecodeScanner subclass: #OilCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites deadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged'
 	classVariableNames: ''
-	poolDictionaries: 'OilConstants'
+	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets'
 	category: 'VMMaker-Oil'!
 
 !OilCompiler commentStamp: 'cb 10/24/2026 10:30' prior: 0!
@@ -87,6 +87,16 @@ setUpSimulationTables
 	condIdentity := self newTable: OilMaxConds.
 	condFrame := self newTable: OilMaxConds.
 	condPC := self newTable: OilMaxConds.
+	condSite := self newTable: OilMaxConds.
+	snapKind := self newTable: OilNumRegs.
+	snapValue := self newTable: OilNumRegs.
+	sitePoolKind := self newTable: OilSitePoolSize.
+	sitePoolValue := self newTable: OilSitePoolSize.
+	siteSnapBase := self newTable: OilMaxSites.
+	siteSnapTop := self newTable: OilMaxSites.
+	siteSnapHigh := self newTable: OilMaxSites.
+	vobjOuter := self newTable: OilMaxVObjs.
+	emittingCond := -1.
 	irBudget := OilIRBudget.
 	simHandles := OrderedCollection new.
 	simHandleIndex := IdentityDictionary new.
@@ -137,6 +147,14 @@ registerSelector: selector kind: kind
 		[coldSelectors at: numColdSelectors put: selector.
 		 numColdSelectors := numColdSelectors + 1]! !
 
+!OilCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 14:00'!
+resetSelectorRegistry
+	"Forget the registered special selectors (the VM re-registers them before each compilation, since
+	 selector oops move when the garbage collector compacts the heap)."
+	0 to: 4 do: [:i| valueSelectors at: i put: 0].
+	bitXorSelector := 0.
+	numIteratorSelectors := numColdSelectors := 0! !
+
 !OilCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
 resetForCompilation
 	self cCode:
@@ -161,10 +179,13 @@ resetForCompilation
 	simStackTop := -1.
 	highRegTop := OilMaxReg.
 	numFrames := pcMapTop := numVObjs := capturedTop := numSites := numConds := 0.
+	sitePoolTop := 0.
+	snapFrame := snapPC := snapTop := snapHighTop := -1.
+	emittingCond := -1.
 	pendingCondSlot := -1.
 	currentFrame := -1.
 	currentPC := 0.
-	deadCode := failed := needsRestart := false.
+	oilDeadCode := failed := needsRestart := false.
 	failureCode := OilOK.
 	inlineClass := 0.
 	inlineGuard := false.
@@ -254,6 +275,8 @@ compileMethod: aMethod receiverClass: classHandle
 	 into the linear IR buffer.  Closures and temp vectors are first kept virtual (dissolved when their blocks are inlined);
 	 if one escapes, compile again once with eagerClosures, materializing them.  Answer true on success."
 	eagerClosures := false.
+	irBudget = 0 ifTrue: [irBudget := OilIRBudget]. "in the VM nothing else initializes it"
+	oilTraceTop := 0.
 	[self compileOnce: aMethod receiverClass: classHandle.
 	 needsRestart and: [eagerClosures not]] whileTrue:
 		[eagerClosures := true].
@@ -286,6 +309,12 @@ compileOnce: aMethod receiverClass: classHandle
 	frameTempStart at: f put: numArgs + 1.
 	frameStackStart at: f put: numTemps + 1.
 	simStackTop := numTemps.
+	"The receiver's class is a speculation (inlined self sends are bound to it): guard it at entry.
+	 Bailing out there resumes the method from its first bytecode in the interpreter."
+	currentFrame := f.
+	currentPC := frameStartPC at: f.
+	self takeSnapshotFrame: f pc: currentPC.
+	self emitGuardOn: 0 class: classHandle.
 	self translateFrame: f! !
 
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
@@ -296,6 +325,7 @@ abortCompilation: code
 !OilCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
 requireEagerClosures
 	"A virtual closure or temp vector must be materialized.  Restart in eager mode (or give up if already eager)."
+	self oilTrace: currentFrame with: currentPC. "why eager mode was needed (see primitiveOilLastCompilation)"
 	eagerClosures
 		ifTrue: [self abortCompilation: OilFailEagerClosuresFailed]
 		ifFalse: [needsRestart := true. failed := true]! !
@@ -348,10 +378,10 @@ preScanFrame: f
 	[pc <= end] whileTrue:
 		[self decodeAt: pc.
 		 (self isTranslatableTag: opcodeTag) ifFalse: [^false].
-		 targetPC >= 0 ifTrue:
-			[(targetPC < start or: [targetPC > end]) ifTrue: [^false].
-			 pcTarget at: base + targetPC - start put: 1].
-		 pc := nextPC].
+		 oilTargetPC >= 0 ifTrue:
+			[(oilTargetPC < start or: [oilTargetPC > end]) ifTrue: [^false].
+			 pcTarget at: base + oilTargetPC - start put: 1].
+		 pc := oilNextPC].
 	^true! !
 
 !OilCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
@@ -405,11 +435,11 @@ exitFrame: f
 	chain ~= OilNoLink
 		ifTrue:
 			["A final jump to the exit label that immediately precedes it is useless"
-			 (deadCode and: [lastInstIR = chain and: [(self opcodeAt: chain) = OilJump]]) ifTrue:
+			 (oilDeadCode and: [lastInstIR = chain and: [(self opcodeAt: chain) = OilJump]]) ifTrue:
 				[chain := self imm16At: chain.
 				 self retractLastInstruction].
 			 self patchChain: chain to: irIndex.
-			 deadCode := false.
+			 oilDeadCode := false.
 			 self forgetKnowledgeAtLabel.
 			 self resetTVSlotsToOwn.
 			 self setOwn: base]
@@ -419,7 +449,7 @@ exitFrame: f
 				 (frameLazyKind at: f) = OilDescCond ifTrue:
 					[pendingCondSlot := base.
 					 pendingCondIndex := frameLazyValue at: f].
-				 deadCode := false]].
+				 oilDeadCode := false]].
 	simStackTop := base.
 	base to: (frameMaxReg at: f) do: [:r| slotFlags at: r put: 0].
 	pcMapTop := framePCBase at: f! !
@@ -434,15 +464,68 @@ translateFrame: f
 	[pc <= end and: [failed not]] whileTrue:
 		[self setScanMethod: (frameMethod at: f).
 		 self decodeAt: pc.
-		 next := nextPC. tag := opcodeTag. op1 := operand1. op2 := operand2. target := targetPC. ipc := instrPC.
+		 next := oilNextPC. tag := opcodeTag. op1 := operand1. op2 := operand2. target := oilTargetPC. ipc := instrPC.
 		 currentFrame := f.
 		 currentPC := ipc.
 		 (pcTarget at: (self pcMapIndex: ipc frame: f)) ~= 0 ifTrue:
 			[self bindLabelAt: ipc frame: f].
-		 deadCode ifFalse:
-			[next := self translateTag: tag op1: op1 op2: op2 target: target next: next frame: f].
+		 oilDeadCode ifFalse:
+			[self takeSnapshotFrame: f pc: ipc.
+			 next := self translateTag: tag op1: op1 op2: op2 target: target next: next frame: f].
 		 pc := next].
 	^failed not! !
+
+!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 14:00'!
+takeSnapshotFrame: f pc: pc
+	"Record the virtual state at the start of the bytecode at pc of frame f: the descriptors of all live
+	 registers (the register window 0..simStackTop, which holds the receivers, temps and stacks of f and of
+	 all the frames inlining it) and of the scalar replaced temp vector slots and captures (high registers).
+	 A deopt site recorded while translating this bytecode resumes the interpreter right before it, in this
+	 state.  Descriptors are copied: the translation of the bytecode may change them before the site."
+	<inline: false>
+	snapFrame := f.
+	snapPC := pc.
+	snapTop := simStackTop.
+	snapHighTop := highRegTop.
+	0 to: simStackTop do:
+		[:r|
+		snapKind at: r put: (slotKind at: r).
+		snapValue at: r put: (slotValue at: r)].
+	highRegTop + 1 to: OilMaxReg do:
+		[:r|
+		snapKind at: r put: (slotKind at: r).
+		snapValue at: r put: (slotValue at: r)]! !
+
+!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 14:00'!
+copySnapshotToSite: n
+	"Append the current snapshot to the site pool for deopt site n.  A lazy comparison in the snapshot
+	 is materialized (in its own register) before the site's instruction is emitted (see recordSite:),
+	 so it is recorded as that register."
+	| base |
+	<inline: false>
+	base := sitePoolTop.
+	base + snapTop + 1 + (OilMaxReg - snapHighTop) > OilSitePoolSize ifTrue:
+		[siteSnapBase at: n put: -1.
+		 ^self].
+	siteSnapBase at: n put: base.
+	siteSnapTop at: n put: snapTop.
+	siteSnapHigh at: n put: snapHighTop.
+	0 to: snapTop do:
+		[:r|
+		(snapKind at: r) = OilDescCond
+			ifTrue:
+				[sitePoolKind at: base put: OilDescReg.
+				 sitePoolValue at: base put: r]
+			ifFalse:
+				[sitePoolKind at: base put: (snapKind at: r).
+				 sitePoolValue at: base put: (snapValue at: r)].
+		base := base + 1].
+	snapHighTop + 1 to: OilMaxReg do:
+		[:r|
+		sitePoolKind at: base put: (snapKind at: r).
+		sitePoolValue at: base put: (snapValue at: r).
+		base := base + 1].
+	sitePoolTop := base! !
 
 !OilCompiler methodsFor: 'translation' stamp: 'cb 10/24/2026 10:30'!
 translateTag: tag op1: op1 op2: op2 target: target next: next frame: f
@@ -497,10 +580,10 @@ bindLabelAt: pc frame: f
 	 adopt the canonical state of the branches to it), resolve pending forward branches and record the label."
 	| idx |
 	idx := self pcMapIndex: pc frame: f.
-	deadCode
+	oilDeadCode
 		ifTrue:
 			[(pcChain at: idx) = OilNoLink ifTrue: [^self]. "unreachable"
-			 deadCode := false.
+			 oilDeadCode := false.
 			 simStackTop := pcDepth at: idx.
 			 self resetMutableSlotsOfFrame: f]
 		ifFalse:
@@ -692,8 +775,12 @@ emitGuardOn: r class: classHandle
 
 !OilCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 recordSite: kind
-	"Record a deopt site for the instruction about to be emitted: its IR index, the inlined frame and the bytecode pc."
+	"Record a deopt site for the instruction about to be emitted: its IR index, the inlined frame and the bytecode pc,
+	 plus a copy of the virtual state at the start of that bytecode (see takeSnapshotFrame:pc:).  A pending lazy
+	 comparison is materialized first so that the site's IR index is the index of its instruction.  A site recorded
+	 outside of the bytecode whose state was snapshotted has no state (siteSnapBase -1): the back end refuses it."
 	| n |
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
 	n := numSites.
 	n >= OilMaxSites ifTrue:
 		[self abortCompilation: OilFailTooManySites.
@@ -702,16 +789,20 @@ recordSite: kind
 	siteFrame at: n put: currentFrame.
 	sitePC at: n put: currentPC.
 	siteKind at: n put: kind.
+	(currentFrame = snapFrame and: [currentPC = snapPC])
+		ifTrue: [self copySnapshotToSite: n]
+		ifFalse: [siteSnapBase at: n put: -1].
 	numSites := n + 1.
 	^n! !
 
 !OilCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 retractLastInstruction
-	"Delete the last emitted instruction (a one word instruction)."
+	"Delete the last emitted instruction (a one word instruction).  Its deopt site, if any, becomes dead
+	 (IR index -2); sites are not removed since a pending lazy comparison site (IR index -1) may follow."
 	irIndex := lastInstIR.
 	irInstCount := irInstCount - 1.
-	[numSites > 0 and: [(siteIR at: numSites - 1) >= irIndex]] whileTrue:
-		[numSites := numSites - 1].
+	numSites - 1 to: 0 by: -1 do:
+		[:s| (siteIR at: s) >= irIndex ifTrue: [siteIR at: s put: -2]].
 	lastInstIR := -1! !
 
 !OilCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
@@ -957,6 +1048,7 @@ genStoreRcvrVar: index pop: popFlag frame: f
 	index > 255 ifTrue: [^self abortCompilation: OilFailUnsupportedBytecode].
 	val := self regForSlot: simStackTop.
 	rcvr := self selfRegOfFrame: f scratch: simStackTop + 1.
+	self recordSite: OilSiteStore. "the store fails on an immutable object: the interpreter retries it"
 	self emitOp: OilStoreField a: val b: rcvr c: index.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
@@ -967,6 +1059,7 @@ genStoreLitVar: index pop: popFlag frame: f
 	val := self regForSlot: simStackTop.
 	scratch := simStackTop + 1.
 	self emitConst: (self literalHandle: index frame: f) into: scratch.
+	self recordSite: OilSiteStore.
 	self emitOp: OilStoreField a: val b: scratch c: 1.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
@@ -978,6 +1071,7 @@ genStoreRemoteTemp: index inVector: vectorIndex pop: popFlag frame: f
 		[^self storeTopIntoReg: (vobjSlotBase at: (slotValue at: vr)) + index pop: popFlag].
 	val := self regForSlot: simStackTop.
 	vec := self regForSlot: vr.
+	self recordSite: OilSiteStore.
 	self emitOp: OilStoreField a: val b: vec c: index.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
@@ -1090,6 +1184,7 @@ genPushFullClosure: literalIndex flags: flags frame: f
 	failed ifTrue: [^self].
 	vobjLiteral at: v put: block.
 	vobjHome at: v put: ((frameIsBlock at: f) ifTrue: [frameHome at: f] ifFalse: [f]).
+	vobjOuter at: v put: f. "the frame whose context is the closure's outerContext (deoptimization)"
 	rcvrOnStack
 		ifTrue:
 			[self capture: first - 1 frame: f.
@@ -1143,7 +1238,7 @@ genReturnKind: k value: v nonLocal: isNonLocal frame: f next: next
 	 From the compiled method this is OilReturn.  From an inlined frame the result is left in the frame's base
 	 register (or, for a single final return, kept as a lazy descriptor) and control jumps to the frame's exit."
 	| target base r isLast idx |
-	deadCode := true.
+	oilDeadCode := true.
 	target := isNonLocal ifTrue: [frameHome at: f] ifFalse: [f].
 	(k = OilDescBlock or: [k = OilDescTempVector]) ifTrue:
 		[^self requireEagerClosures].
@@ -1185,7 +1280,7 @@ genReturnKind: k value: v nonLocal: isNonLocal frame: f next: next
 genJumpTo: target frame: f
 	self flushFrame: f.
 	self emitBranch: OilJump cond: 0 to: target frame: f.
-	deadCode := true! !
+	oilDeadCode := true! !
 
 !OilCompiler methodsFor: 'jumps' stamp: 'cb 10/24/2026 10:30'!
 genJumpIf: aBoolean to: target frame: f
@@ -1235,7 +1330,7 @@ canInlineSmallIntegerOpOn: a arg: b
 	"Speculate SmallInteger arithmetic if the receiver is a SmallInteger constant, is known to be a SmallInteger,
 	 or its send site only saw SmallIntegers; the argument must not be a non-SmallInteger constant or a virtual object.
 	 The tagged opcodes check their operands' tags and bail out (deopt) on failure or overflow."
-	| ka kb r |
+	| ka kb r c |
 	ka := slotKind at: a.
 	kb := slotKind at: b.
 	(kb = OilDescBlock or: [kb = OilDescTempVector or: [kb = OilDescCond]]) ifTrue: [^false].
@@ -1244,7 +1339,20 @@ canInlineSmallIntegerOpOn: a arg: b
 	ka = OilDescReg ifFalse: [^false].
 	r := slotValue at: a.
 	(knownClass at: r) = smallIntegerClassHandle ifTrue: [^true].
-	^(self profiledClassAt: currentPC) = smallIntegerClassHandle! !
+	"The baseline JIT inlines SmallInteger arithmetic and comparisons and only sends the message for other
+	 receivers.  So a send site whose inline cache is still unlinked has only ever seen SmallIntegers: speculate."
+	c := self profiledClassAt: currentPC.
+	^c = smallIntegerClassHandle
+	  or: [c = 0 and: [self isUnlinkedSendAt: currentPC]]! !
+
+!OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 14:00'!
+isUnlinkedSendAt: pc
+	"Has the send at pc in the current frame's method never been sent (no inline cache information at all)?"
+	^self
+		cCode: [cogit oilSendSiteUnlinkedAt: pc in: (frameMethod at: currentFrame)]
+		inSmalltalk:
+			[typeFeedback isNil
+			 or: [(typeFeedback hasSiteAt: pc in: (frameMethod at: currentFrame)) not]]! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isKnownSmallInteger: i
@@ -1293,7 +1401,7 @@ genSend: selector numArgs: n super: isSuper frame: f
 	method := self lookup: selector inClass: cls.
 	method = 0 ifTrue: [^self genCall: selector numArgs: n receiver: s super: isSuper].
 	prim := self oilPrimitiveIndexOf: method.
-	(self isQuickPrimitiveIndex: prim) ifTrue:
+	(self oilIsQuickPrimitiveIndex: prim) ifTrue:
 		[guard ifTrue: [self emitGuardOn: (self regForSlot: s) class: cls].
 		 ^self genQuickMethod: prim receiver: s numArgs: n].
 	prim ~= 0 ifTrue:
@@ -1442,6 +1550,7 @@ genIntrinsic: prim receiver: s numArgs: n
 		 idx := self emitOp: OilLoadElement a: dest b: arr c: index.
 		 self noteDef: dest at: idx.
 		 ^self].
+	self recordSite: OilSiteStore.
 	self emitOp: OilStoreElement a: val b: arr c: index.
 	(k = OilDescReg and: [v = (s + 2)])
 		ifTrue:
@@ -1486,7 +1595,7 @@ genCompare: cond identity: isIdentity frame: f next: next
 		ifFalse: [rb := self regForKind: kb value: vb scratch: b].
 	simStackTop := a - 1.
 	(next >= 0 and: [self canFuseBranchAt: next frame: f]) ifTrue:
-		[brTag := opcodeTag. brTarget := targetPC. brNext := nextPC.
+		[brTag := opcodeTag. brTarget := oilTargetPC. brNext := oilNextPC.
 		 self flushFrame: f.
 		 self emitCompare: c reg: ra reg: rb imm: imm useImm: useImm identity: isIdentity.
 		 self emitBranch: (brTag = OilTagJumpTrue ifTrue: [OilBranchTrue] ifFalse: [OilBranchFalse])
@@ -1497,6 +1606,16 @@ genCompare: cond identity: isIdentity frame: f next: next
 	 true/false otherwise, or as soon as anything else is emitted."
 	numConds >= OilMaxConds ifTrue:
 		[^self abortCompilation: OilFailTooManyVirtualObjects].
+	"The comparison is emitted later, when consumed, but it must bail out to the state at this bytecode:
+	 record its deopt site now, its IR index is set when the comparison is emitted (see emitCompare:...)."
+	isIdentity
+		ifTrue: [condSite at: numConds put: -1]
+		ifFalse:
+			[| s |
+			 s := self recordSite: OilSiteArith.
+			 failed ifTrue: [^next].
+			 siteIR at: s put: -1.
+			 condSite at: numConds put: s].
 	condCond at: numConds put: c.
 	condRA at: numConds put: ra.
 	condRB at: numConds put: (useImm ifTrue: [0] ifFalse: [rb]).
@@ -1514,13 +1633,16 @@ genCompare: cond identity: isIdentity frame: f next: next
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitCondCompare: cond
 	"Emit the comparison of the lazy comparison result cond (its deopt site is the comparison's bytecode)."
-	| savedPC savedFrame |
+	| savedPC savedFrame savedCond |
 	savedPC := currentPC.
 	savedFrame := currentFrame.
 	currentPC := condPC at: cond.
 	currentFrame := condFrame at: cond.
+	savedCond := emittingCond.
+	emittingCond := cond.
 	self emitCompare: (condCond at: cond) reg: (condRA at: cond) reg: (condRB at: cond)
 		imm: (condImm at: cond) useImm: (condUseImm at: cond) identity: (condIdentity at: cond).
+	emittingCond := savedCond.
 	currentPC := savedPC.
 	currentFrame := savedFrame! !
 
@@ -1570,10 +1692,38 @@ canFuseBranchAt: pc frame: f
 
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitCompare: cond reg: ra reg: rb imm: imm useImm: useImm identity: isIdentity
-	isIdentity ifFalse: [self recordSite: OilSiteArith].
+	isIdentity ifFalse:
+		[emittingCond >= 0
+			ifTrue: [self useCondSite: (condSite at: emittingCond)]
+			ifFalse: [self recordSite: OilSiteArith]].
 	useImm
 		ifTrue: [self emitOp: OilCmpImmTagged a: cond b: ra c: imm]
 		ifFalse: [self emitOp: OilCmpTagged a: cond b: ra c: rb]! !
+
+!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 14:00'!
+useCondSite: s
+	"The comparison of a lazy comparison result is about to be emitted: bind its deopt site, recorded when the
+	 comparison was translated, to the instruction.  If it was already bound (the comparison is emitted again,
+	 e.g. materialized on two paths) clone the site, sharing its recorded state."
+	| n |
+	s < 0 ifTrue: [^self].
+	"Another pending lazy comparison would be materialized by the next emitOp:, shifting the IR index."
+	(pendingCondSlot >= 0 and: [pendingCondIndex ~= emittingCond]) ifTrue:
+		[self materializePendingCond].
+	(siteIR at: s) = -1 ifTrue:
+		[siteIR at: s put: irIndex.
+		 ^self].
+	n := numSites.
+	n >= OilMaxSites ifTrue:
+		[^self abortCompilation: OilFailTooManySites].
+	siteIR at: n put: irIndex.
+	siteFrame at: n put: (siteFrame at: s).
+	sitePC at: n put: (sitePC at: s).
+	siteKind at: n put: (siteKind at: s).
+	siteSnapBase at: n put: (siteSnapBase at: s).
+	siteSnapTop at: n put: (siteSnapTop at: s).
+	siteSnapHigh at: n put: (siteSnapHigh at: s).
+	numSites := n + 1! !
 
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 compareSmallInteger: x with: y cond: c
@@ -2047,11 +2197,11 @@ isSmallIntegerValue: anInteger
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 classHandleOf: aHandle
-	^self cCode: [objectMemory fetchClassOf: aHandle] inSmalltalk: [self handleFor: (self objectFor: aHandle) class]! !
+	^self cCode: [coInterpreter oilApiFetchClassOf: aHandle] inSmalltalk: [self handleFor: (self objectFor: aHandle) class]! !
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 oilInstSpecOfClass: classHandle
-	^self cCode: [objectMemory instSpecOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) instSpec]! !
+	^self cCode: [coInterpreter oilApiInstSpecOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) instSpec]! !
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 oilLiteral: index ofMethod: aMethod
@@ -2099,7 +2249,7 @@ oilPrimitiveIndexOf: aMethod
 	^self cCode: [coInterpreter primitiveIndexOf: aMethod] inSmalltalk: [aMethod primitive]! !
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
-isQuickPrimitiveIndex: prim
+oilIsQuickPrimitiveIndex: prim
 	<inline: true>
 	^prim between: 256 and: 519! !
 
@@ -2107,13 +2257,13 @@ isQuickPrimitiveIndex: prim
 lookup: selector inClass: classHandle
 	"Answer the method found by looking up selector in the class, or 0."
 	^self
-		cCode: [coInterpreter lookupSelector: selector inClass: classHandle]
+		cCode: [coInterpreter oilApiLookupSelector: selector inClass: classHandle]
 		inSmalltalk: [((self objectFor: classHandle) lookupSelector: (self objectFor: selector)) ifNil: [0]]! !
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 superclassHandleOfMethodClassOf: aMethod
 	^self
-		cCode: [coInterpreter superclassOf: (coInterpreter methodClassOf: aMethod)]
+		cCode: [coInterpreter oilApiSuperclassOf: (coInterpreter methodClassOf: aMethod)]
 		inSmalltalk: [self handleFor: aMethod methodClass superclass]! !
 
 !OilCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
@@ -2147,10 +2297,34 @@ declareCVarsIn: aCCodeGenerator
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxVObjs]'].
 	#(capturedKind capturedValue) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxCaptured]'].
-	#(siteIR siteFrame sitePC siteKind) do:
+	#(siteIR siteFrame sitePC siteKind siteSnapBase siteSnapTop siteSnapHigh) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxSites]'].
-	#(condCond condRA condRB condImm condUseImm condIdentity condFrame condPC) do:
+	#(condCond condRA condRB condImm condUseImm condIdentity condFrame condPC condSite) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxConds]'].
+	"Deoptimization metadata: the virtual state at the current bytecode and the states recorded at deopt sites."
+	#(snapKind snapValue) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
+	#(sitePoolKind sitePoolValue) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilSitePoolSize]'].
+	aCCodeGenerator var: #vobjOuter declareC: 'static sqInt vobjOuter[OilMaxVObjs]'.
+	"Pass 3 (native code generation) tables."
+	#(oilVRegWeight oilVRegReg oilVRegHome) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
+	aCCodeGenerator var: #oilIRTarget declareC: 'static unsigned char oilIRTarget[OilBufferWords]'.
+	aCCodeGenerator var: #oilLoopDepth declareC: 'static unsigned char oilLoopDepth[OilBufferWords]'.
+	aCCodeGenerator var: #oilTagged declareC: 'static unsigned char oilTagged[OilNumRegs]'.
+	aCCodeGenerator var: #oilIRSite declareC: 'static short oilIRSite[OilBufferWords]'.
+	aCCodeGenerator var: #oilIRLabel declareC: 'static AbstractInstruction *oilIRLabel[OilBufferWords]'.
+	aCCodeGenerator var: #oilFixupJump declareC: 'static AbstractInstruction *oilFixupJump[OilBufferWords]'.
+	aCCodeGenerator var: #oilFixupTarget declareC: 'static sqInt oilFixupTarget[OilBufferWords]'.
+	aCCodeGenerator var: #oilStubJump declareC: 'static AbstractInstruction *oilStubJump[OilBufferWords]'.
+	aCCodeGenerator var: #oilStubSite declareC: 'static sqInt oilStubSite[OilBufferWords]'.
+	aCCodeGenerator var: #oilSiteResume declareC: 'static AbstractInstruction *oilSiteResume[OilMaxSites]'.
+	aCCodeGenerator var: #oilSiteStub declareC: 'static AbstractInstruction *oilSiteStub[OilMaxSites]'.
+	aCCodeGenerator var: #oilSiteUsed declareC: 'static unsigned char oilSiteUsed[OilMaxSites]'.
+	aCCodeGenerator var: #oilAllocRegs declareC: 'static sqInt oilAllocRegs[16]'.
+	aCCodeGenerator var: #oilBailoutCommon type: #'AbstractInstruction *'.
+	aCCodeGenerator var: #oilTraceBuf declareC: 'static sqInt oilTraceBuf[256]'.
 	aCCodeGenerator var: #valueSelectors declareC: 'static sqInt valueSelectors[5]'.
 	aCCodeGenerator var: #iteratorSelectors declareC: 'static sqInt iteratorSelectors[32]'.
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.

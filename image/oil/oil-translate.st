@@ -3,7 +3,7 @@
 | dir |
 Utilities authorInitials: 'cb'.
 dir := Smalltalk at: #OilSourceDir ifAbsentPut: ['/usr/local/google/home/clementbera/.gemini/jetski/brain/d1466531-7c6e-4182-90d9-4bed24e00db9/scratch/osvm/image/oil/'].
-#('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilSimulation.st') do:
+#('OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | dir vmm cg out proc ctx n done all |

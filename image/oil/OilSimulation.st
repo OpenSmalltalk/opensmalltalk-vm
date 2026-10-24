@@ -34,7 +34,7 @@ printIROn: aStream
 	0 to: numSites - 1 do:
 		[:s|
 		aStream tab; nextPutAll: 'deopt#'; print: s; nextPutAll: ' IR '; nextPutAll: ((siteIR at: s) printPaddedWith: $0 to: 4);
-			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch') at: (siteKind at: s));
+			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch' 'store') at: (siteKind at: s));
 			nextPutAll: ' -> frame #'; print: (siteFrame at: s); nextPutAll: ' '; print: (frameMethod at: (siteFrame at: s));
 			nextPutAll: ' pc '; print: (sitePC at: s); cr].
 	aStream nextPutAll: 'Stats: inlined frames '; print: numInlinedFrames;
@@ -182,6 +182,11 @@ classAt: pc in: aCompiledCode
 	| classes |
 	classes := sites at: {aCompiledCode. pc} ifAbsent: [^nil].
 	^classes size = 1 ifTrue: [classes anyOne] ifFalse: [nil]! !
+
+!OilSimulatedTypeFeedback methodsFor: 'accessing' stamp: 'cb 10/24/2026 14:00'!
+hasSiteAt: pc in: aCompiledCode
+	"Has the send at pc been executed at all (like a linked, monomorphic or polymorphic, inline cache)?"
+	^sites includesKey: {aCompiledCode. pc}! !
 
 !OilSimulatedTypeFeedback methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 numSites
