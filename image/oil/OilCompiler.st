@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth frameVObj numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures inlineClass inlineGuard numInlinedFrames numInlinedQuick numIntrinsics numCalls numGuards numFolds nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilVRegWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilBailoutCommon oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTraceBuf oilTraceTop oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants CogAbstractRegisters VMStackFrameOffsets'
 	category: 'Cogit-Oil'!
@@ -62,6 +62,7 @@ setUpSimulationTables
 	pcLabelIR := self newTable: OilPCMapSize.
 	pcChain := self newTable: OilPCMapSize.
 	pcDepth := self newTable: OilPCMapSize.
+	pcLoop := self newTable: OilPCMapSize.
 	vobjKind := self newTable: OilMaxVObjs.
 	vobjLiteral := self newTable: OilMaxVObjs.
 	vobjSelfKind := self newTable: OilMaxVObjs.
@@ -368,8 +369,8 @@ newFrameFor: aMethod base: base isBlock: isBlock
 
 !OilCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
 preScanFrame: f
-	"Mark the branch targets of frame f's method in its pc map region.
-	 Answer false if the method contains a bytecode Oil does not translate."
+	"Mark the branch targets of frame f's method in its pc map region, and the pcs inside loops (pcLoop, from a
+	 backward branch's target to the branch).  Answer false if the method contains a bytecode Oil does not translate."
 	| pc end start base |
 	start := frameStartPC at: f.
 	end := frameEndPC at: f.
@@ -379,7 +380,8 @@ preScanFrame: f
 		pcTarget at: i put: 0.
 		pcLabelIR at: i put: -1.
 		pcChain at: i put: OilNoLink.
-		pcDepth at: i put: 0].
+		pcDepth at: i put: 0.
+		pcLoop at: i put: 0].
 	self setScanMethod: (frameMethod at: f).
 	pc := start.
 	[pc <= end] whileTrue:
@@ -387,7 +389,9 @@ preScanFrame: f
 		 (self isTranslatableTag: opcodeTag) ifFalse: [^false].
 		 oilTargetPC >= 0 ifTrue:
 			[(oilTargetPC < start or: [oilTargetPC > end]) ifTrue: [^false].
-			 pcTarget at: base + oilTargetPC - start put: 1].
+			 pcTarget at: base + oilTargetPC - start put: 1.
+			 oilTargetPC <= instrPC ifTrue:
+				[oilTargetPC to: instrPC do: [:k| pcLoop at: base + k - start put: 1]]].
 		 pc := oilNextPC].
 	^true! !
 
@@ -846,7 +850,7 @@ retarget: src to: dst
 opcodeHasDest: op
 	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [(op between: OilAddTagged and: OilOddTagged)
 		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
-		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC]]]]]]]]]]]! !
+		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged]]]]]]]]]]]]! !
 
 !OilCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -1461,8 +1465,24 @@ shouldInline: method selector: selector numArgs: n receiver: s
 	(takesBlock or: [self isIteratorSelector: selector]) ifTrue:
 		[^size <= OilMaxIteratorBytes].
 	size <= OilAccessorBytes ifTrue: [^true].
+	"A send in a loop (of this frame or of a frame it is inlined in) is hot: inline larger methods deeper."
+	(size <= OilMaxIteratorBytes
+	 and: [depth <= OilMediumMethodDepth
+	 and: [self isInLoopFrame: currentFrame pc: currentPC]]) ifTrue: [^true].
 	size <= OilMediumMethodBytes ifTrue: [^depth <= OilMediumMethodDepth].
 	^depth <= OilLargeMethodDepth and: [size <= OilMaxIteratorBytes]! !
+
+!OilCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:00'!
+isInLoopFrame: f pc: pc
+	"Is pc of frame f inside a loop of its method, or is f inlined (transitively) from a pc inside a loop?"
+	| g p |
+	g := f.
+	p := pc.
+	[g >= 0] whileTrue:
+		[(pcLoop at: (self pcMapIndex: p frame: g)) ~= 0 ifTrue: [^true].
+		 p := frameCallPC at: g.
+		 g := frameParent at: g].
+	^false! !
 
 !OilCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genCall: selector numArgs: n receiver: s super: isSuper
@@ -1952,13 +1972,15 @@ genDiv
 !OilCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genMod
 	"x \\ 2 => OilOddTagged ((x bitAnd: 8) bitOr: 1 on the tagged value: no division, no branch);
-	 x \\ 2^k => x bitAnd: 2^k - 1 (floored modulo by a positive power of two)."
+	 x \\ 2^k => x bitAnd: 2^k - 1 (floored modulo by a positive power of two);
+	 otherwise OilModTagged (a division; bails out on a zero divisor)."
 	| a b c k x dest idx scratch |
 	a := simStackTop - 1.
 	b := simStackTop.
-	(slotKind at: b) = OilDescConst ifFalse: [^false].
+	(slotKind at: b) = OilDescConst ifFalse: [^self genBinaryTagged: OilModTagged].
 	c := self smallIntegerValueOf: (slotValue at: b).
-	(k := self constantPowerOfTwo: c) > 0 ifFalse: [^false].
+	c = 0 ifTrue: [^false]. "ZeroDivide: send it"
+	(k := self constantPowerOfTwo: c) > 0 ifFalse: [^self genBinaryTagged: OilModTagged].
 	x := self regForSlot: a.
 	c = 2 ifTrue:
 		[simStackTop := a - 1.
@@ -2311,6 +2333,7 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #pcLabelIR declareC: 'static short pcLabelIR[OilPCMapSize]'.
 	aCCodeGenerator var: #pcChain declareC: 'static unsigned short pcChain[OilPCMapSize]'.
 	aCCodeGenerator var: #pcDepth declareC: 'static unsigned char pcDepth[OilPCMapSize]'.
+	aCCodeGenerator var: #pcLoop declareC: 'static unsigned char pcLoop[OilPCMapSize]'.
 	#(vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxVObjs]'].
 	#(capturedKind capturedValue) do:

@@ -66,6 +66,35 @@ check value: 'sumScores:(Array) Pass 2 IR deopts on SmallInteger overflow' value
 check value: 'sumScores:(Array) Pass 2 IR deopts on an OrderedCollection argument' value: ((run value: c value: #sumScores: value: {coll}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]]).
 check value: 'sumScores:(Array) Pass 2 IR fits Buffer 2' value: c irIndex < 4096.
 
+"--- 1b. A hash probe (repeat loop, \\ by the array size) called from a loop: inlined, no calls ---"
+OilTestModel compile: 'probeHash: anArray key: key
+	| index length element |
+	length := anArray size.
+	index := (key hash \\ length) + 1.
+	[element := anArray at: index.
+	 element == nil ifTrue: [^index].
+	 element == key ifTrue: [^index].
+	 index := index \\ length + 1] repeat' classified: 'probes'.
+OilTestModel compile: 'probeLoop: anArray key: key
+	| sum |
+	sum := 0.
+	1 to: 100 do: [:i | sum := sum + (self probeHash: anArray key: key)].
+	^sum' classified: 'probes'.
+[| table |
+ table := Array new: 8191.
+ 1 to: 4000 do: [:i | table at: (i * 17 \\ 8191) + 1 put: i * 17].
+ c := compile value: #probeLoop:key: value: {{table. 68000}. {table. 5}} value: false.
+ out cr; nextPutAll: c irString.
+ c pass2Optimize.
+ out cr; nextPutAll: c irString; nextPutAll: 'Pass 2 statistics: '; print: ((0 to: 6) collect: [:k | c pass2Statistics: k]); cr; flush.
+ hist := c opcodeHistogram.
+ check value: 'probeLoop: probeHash:key: inlined into the caller loop (2 frames, no calls)' value: (c numFrames = 2 and: [((hist occurrencesOf: 'Call0') + (hist occurrencesOf: 'Call1') + (hist occurrencesOf: 'CallN')) = 0]).
+ check value: 'probeLoop: \\ by the array size inlined (OilModTagged)' value: (hist occurrencesOf: 'ModTagged') = 2.
+ check value: 'probeLoop: the probe loop does not guard the array again (Pass 2)' value: (c pass2Statistics: 6) >= 1.
+ #(68000 5 17 34 0 -17) do: [:k |
+	check value: 'probeLoop: Pass 2 IR result = real result for key ', k printString value: (run value: c value: #probeLoop:key: value: {table. k}) = (model probeLoop: table key: k)].
+ check value: 'probeLoop: Pass 2 IR deopts on an empty table (ZeroDivide)' value: ((run value: c value: #probeLoop:key: value: {#(). 5}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]])] value.
+
 "--- 2. Every M2 probe: Pass 2 IR = Pass 1 IR = real execution ---"
 probes := {
 	{#sumScores:. {{coll}}. {{coll}. {OrderedCollection new}. {mixed}. {coll asArray}}}.

@@ -1072,9 +1072,9 @@ primitiveOilLastCompilation
 	0 to: n - 1 do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: i))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	traceArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 7.
+	traceArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 8.
 	traceArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 6 do:
+	0 to: 7 do:
 		[:i| objectMemory storePointerUnchecked: i ofObject: traceArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: i))].
 	objectMemory storePointer: 10 ofObject: result withValue: traceArray.
 	self pop: argumentCount + 1 thenPush: result! !

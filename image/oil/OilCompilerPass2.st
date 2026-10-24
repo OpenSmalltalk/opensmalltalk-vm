@@ -21,7 +21,7 @@ pass2Optimize
 	self cCode: [] inSmalltalk: [self p2SetUpSimulationTables].
 	oilIRBuffer := oilIRBuffer1.
 	oilPass1Words := irIndex.
-	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := 0.
+	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := 0.
 	oilUseProbe := -1.
 	0 to: irIndex do:
 		[:j|
@@ -115,6 +115,7 @@ p2OptimizeLoop: loopHead backJump: backJump
 		 (self p2IsCall: op) ifTrue: [^self].
 		 ((self p2IsBranch: op) and: [(self imm16At: i) <= i]) ifTrue: [^self].
 		 i := i + (self instructionLengthAt: i)].
+	self p2RemoveInvariantChecksInLoop: loopHead backJump: backJump.
 	"The header: pure instructions without deopt sites, nothing branching into them."
 	i := loopHead.
 	[(i = loopHead or: [(oilIRTarget at: i) = 0])
@@ -194,11 +195,68 @@ p2OptimizeLoop: loopHead backJump: backJump
 			[((self fieldAAt: i) = iv or: [(self fieldAAt: i) = lim]) ifTrue: [^self].
 			 (self fieldAAt: i) = sizeAlias ifTrue: [sizeAlias := -1].
 			 (op = OilLoadSize and: [(self fieldBAt: i) = x]) ifTrue:
-				[self p2Mark: i with: OilP2ToMove.
+				[(self p2Flag: i has: OilP2ToMove) ifFalse:
+					[oilNumSizesShared := oilNumSizesShared + 1].
+				 self p2Mark: i with: OilP2ToMove.
 				 oilIRAux at: i put: lim.
-				 sizeAlias := self fieldAAt: i.
-				 oilNumSizesShared := oilNumSizesShared + 1]].
+				 sizeAlias := self fieldAAt: i]].
 		 i := i + (self instructionLengthAt: i)]! !
+
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+p2RemoveInvariantChecksInLoop: loopHead backJump: backJump
+	"In an innermost, call-free loop entered only by falling into loopHead: a class guard of a register that is never
+	 assigned (the receiver or an argument) is redundant if the straight-line code falling into the loop, free of
+	 calls (which could become: it), guards it already; and the size of such a register is the one that code loaded
+	 into a register assigned only there."
+	<inline: false>
+	| regionStart i op r k |
+	regionStart := self p2RegionStartBefore: loopHead.
+	i := regionStart.
+	[i < loopHead] whileTrue:
+		[(self p2IsCall: (self opcodeAt: i)) ifTrue: [^self].
+		 i := i + (self instructionLengthAt: i)].
+	i := loopHead.
+	[i < backJump] whileTrue:
+		[op := self opcodeAt: i.
+		 r := op = OilGuardClass ifTrue: [self fieldAAt: i] ifFalse: [self fieldBAt: i].
+		 (op = OilGuardClass
+		  and: [(oilVRegDefs at: r) = 0
+		  and: [self p2IsGuarded: r class: (self word64At: i + 1) from: regionStart to: loopHead]]) ifTrue:
+			[self p2Mark: i with: OilP2Delete.
+			 oilNumGuardsRemoved := oilNumGuardsRemoved + 1].
+		 (op = OilLoadSize
+		  and: [(oilVRegDefs at: r) = 0
+		  and: [(k := self p2SizeRegisterOf: r from: regionStart to: loopHead) >= 0]]) ifTrue:
+			[self p2Mark: i with: OilP2ToMove.
+			 oilIRAux at: i put: k.
+			 oilNumSizesShared := oilNumSizesShared + 1].
+		 i := i + (self instructionLengthAt: i)]! !
+
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+p2IsGuarded: r class: classHandle from: start to: end
+	"Is there an OilGuardClass of register r for classHandle in the instructions from start to end?"
+	| i |
+	i := start.
+	[i < end] whileTrue:
+		[((self opcodeAt: i) = OilGuardClass
+		  and: [(self fieldAAt: i) = r
+		  and: [(self word64At: i + 1) = classHandle
+		  and: [(self p2Flag: i has: OilP2Delete) not]]]) ifTrue: [^true].
+		 i := i + (self instructionLengthAt: i)].
+	^false! !
+
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 17:00'!
+p2SizeRegisterOf: x from: start to: end
+	"Answer a register assigned only once, by an OilLoadSize of x in the instructions from start to end, or -1."
+	| i |
+	i := start.
+	[i < end] whileTrue:
+		[((self opcodeAt: i) = OilLoadSize
+		  and: [(self fieldBAt: i) = x
+		  and: [(oilVRegDefs at: (self fieldAAt: i)) = 1
+		  and: [(self p2Flag: i has: OilP2Delete + OilP2ToMove) not]]]) ifTrue: [^self fieldAAt: i].
+		 i := i + (self instructionLengthAt: i)].
+	^-1! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2Use: r
@@ -225,7 +283,7 @@ p2CountUsesAt: i
 	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilCmpImmTagged or: [op = OilCall0]]]]]]]]) ifTrue:
 		[^self p2Use: b].
 	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1]]]) ifTrue:
+	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1]]]]) ifTrue:
 		[self p2Use: b.
 		 ^self p2Use: c].
 	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
@@ -457,11 +515,12 @@ p2SetUpSimulationTables
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Statistics: index
 	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
-	 5 Pass 1 IR words."
+	 5 Pass 1 IR words, 6 class guards removed."
 	index = 0 ifTrue: [^oilNumRotated].
 	index = 1 ifTrue: [^oilNumBoundsRemoved].
 	index = 2 ifTrue: [^oilNumDeadRemoved].
 	index = 3 ifTrue: [^oilNumSizesShared].
 	index = 4 ifTrue: [^oilNumNoCheck].
 	index = 5 ifTrue: [^oilPass1Words].
+	index = 6 ifTrue: [^oilNumGuardsRemoved].
 	^0! !

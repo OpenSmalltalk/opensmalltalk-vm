@@ -24,7 +24,7 @@ CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.
 irDump := [:ir | | s i names |
-	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC).
+	names := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged).
 	s := WriteStream on: String new.
 	i := 1.
 	[i <= ir size] whileTrue:
@@ -75,7 +75,7 @@ out nextPutAll: 'last compilation: failure '; print: (last at: 1); nextPutAll: '
 	nextPutAll: 'IR ('; print: (last at: 2) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 2)); nextPutAll: 'trace: '; print: (last at: 9); cr; flush.
 last size >= 11 ifTrue: "Oil M4: the IR above is Pass 2's; Pass 1's and Pass 2's statistics"
 	[out nextPutAll: 'Pass 1 IR ('; print: (last at: 10) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 10));
-		nextPutAll: 'Pass 2 (loops rotated, bounds checks removed, dead instructions, sizes shared, unchecked increments, Pass 1 words, undo stubs): '; print: (last at: 11); cr; flush].
+		nextPutAll: 'Pass 2 (loops rotated, bounds checks removed, dead instructions, sizes shared, unchecked increments, Pass 1 words, guards removed, undo stubs): '; print: (last at: 11); cr; flush].
 check value: 'Oil compilation succeeds (result 0)' value: compileResult = 0.
 info := m oilInfo.
 check value: 'sumScores: now has Oil machine code' value: info notNil.

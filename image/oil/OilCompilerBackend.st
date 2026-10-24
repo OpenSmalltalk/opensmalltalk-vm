@@ -122,7 +122,7 @@ weighInstructionAt: i
 		[self weigh: a at: i.
 		 ^self weigh: b at: i].
 	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilLoadElement or: [op = OilStoreElement or: [op = OilCall1]]]) ifTrue:
+	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilStoreElement or: [op = OilCall1]]]]) ifTrue:
 		[self weigh: a at: i.
 		 self weigh: b at: i.
 		 ^self weigh: c at: i].
@@ -346,6 +346,7 @@ genInstructionAt: i
 		[OilOddTagged]		-> [self genOddTagged: a b: b site: s].
 		[OilAddImmTagged]	-> [self genAddImmTagged: a b: b imm: (self signed8: c) site: s].
 		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: a b: b imm: (self signed8: c)].
+		[OilModTagged]		-> [self genModTagged: a b: b c: c site: s].
 		[OilLoadField]		-> [self genLoadField: a object: b slot: c].
 		[OilStoreField]		-> [self genStoreField: a object: b slot: c site: s].
 		[OilLoadElement]	-> [self genLoadElement: a array: b index: c].
@@ -443,6 +444,35 @@ genSubTagged: a b: b c: c site: s
 	self bail: (cogit JumpOverflow: 0) site: s.
 	cogit AddCq: 1 R: SendNumArgsReg.
 	self setDst: a from: SendNumArgsReg! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:00'!
+genModTagged: a b: b c: c site: s
+	"x \\ y, the floored modulo (the result has the sign of y): untag both, divide (the back end's genDivR:R:Quo:Rem:,
+	 which saves and restores the registers the division needs), and add y to a non-zero remainder whose sign differs
+	 from y's.  Bail out unless both are SmallIntegers and y is not 0.  The result cannot overflow."
+	| rb rc jumpZero jumpSameSign |
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpSameSign type: #'AbstractInstruction *'>
+	rb := self src: b scratch: TempReg.
+	rc := self src: c scratch: ClassReg.
+	self genTagCheckOf: b in: rb and: c in: rc site: s.
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: rc.
+	self bail: (cogit JumpZero: 0) site: s.
+	cogit MoveR: rc R: SendNumArgsReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
+	cogit MoveR: rb R: ClassReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: ClassReg.
+	cogit backEnd genDivR: SendNumArgsReg R: ClassReg Quo: TempReg Rem: ClassReg.
+	cogit CmpCq: 0 R: ClassReg.
+	jumpZero := cogit JumpZero: 0.
+	cogit MoveR: ClassReg R: TempReg.
+	cogit XorR: SendNumArgsReg R: TempReg.
+	jumpSameSign := cogit JumpGreaterOrEqual: 0.
+	cogit AddR: SendNumArgsReg R: ClassReg.
+	jumpZero jmpTarget: (jumpSameSign jmpTarget: cogit Label).
+	cogit LogicalShiftLeftCq: objectMemory numTagBits R: ClassReg.
+	cogit OrCq: objectMemory smallIntegerTag R: ClassReg.
+	self setDst: a from: ClassReg! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 genLogicTagged: op a: a b: b c: c site: s
@@ -838,7 +868,7 @@ oilDebugInfo: what at: index
 	what = 10 ifTrue: [^(index between: 0 and: oilTraceTop - 1) ifTrue: [oilTraceBuf at: index] ifFalse: [0]].
 	what = 11 ifTrue: [^oilPass1Words].
 	what = 12 ifTrue: [^(index between: 0 and: oilPass1Words - 1) ifTrue: [oilIRBuffer1 at: index] ifFalse: [0]].
-	what = 13 ifTrue: [^index = 6 ifTrue: [oilNumUndos] ifFalse: [self pass2Statistics: index]].
+	what = 13 ifTrue: [^index = 7 ifTrue: [oilNumUndos] ifFalse: [self pass2Statistics: index]].
 	^0! !
 
 !OilCompiler methodsFor: 'debugging' stamp: 'cb 10/24/2026 15:00'!
@@ -884,7 +914,7 @@ definitionIsTaggedAt: i
 	op = OilConst64 ifTrue: [^self isSmallIntegerHandle: (self word64At: i + 1)].
 	op = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: i)) ~= 0].
 	((op between: OilAddTagged and: OilOddTagged)
-	 or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC or: [op = OilLoadSize]]]) ifTrue: [^true].
+	 or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC or: [op = OilLoadSize or: [op = OilModTagged]]]]) ifTrue: [^true].
 	^false! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
