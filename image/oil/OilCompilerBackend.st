@@ -22,9 +22,10 @@ prepareNativeCode
 	oilAllocRegs at: 7 put: Arg1Reg.
 	oilAllocRegs at: 8 put: ReceiverResultReg.
 	oilNumAllocRegs := 9.
+	oilUseProbe := -1.
 	0 to: OilNumRegs - 1 do:
 		[:r|
-		oilVRegWeight at: r put: 0.
+		oilVRegUses at: r put: 0.
 		oilVRegReg at: r put: NoReg.
 		oilVRegHome at: r put: 0].
 	0 to: irIndex - 1 do:
@@ -55,10 +56,8 @@ prepareNativeCode
 		 i := i + (self instructionLengthAt: i)].
 	"The receiver and arguments are copied in from the frame; registers referenced by deopt states need homes."
 	0 to: (self numArgsOf: rootMethod) do:
-		[:r| oilVRegWeight at: r put: (oilVRegWeight at: r) + 1].
-	0 to: numSites - 1 do:
-		[:s| ((siteIR at: s) >= 0 and: [(siteSnapBase at: s) >= 0]) ifTrue:
-			[self markRegistersOfSiteState: s]].
+		[:r| oilVRegUses at: r put: (oilVRegUses at: r) + 1].
+	self markMetadataRegisters.
 	self analyzeTaggedRegisters.
 	"Allocate machine registers, heaviest first."
 	n := 0.
@@ -66,8 +65,8 @@ prepareNativeCode
 		[best := -1. bestWeight := 0.
 		 0 to: OilMaxReg do:
 			[:r|
-			((oilVRegReg at: r) = NoReg and: [(oilVRegWeight at: r) > bestWeight]) ifTrue:
-				[best := r. bestWeight := oilVRegWeight at: r]].
+			((oilVRegReg at: r) = NoReg and: [(oilVRegUses at: r) > bestWeight]) ifTrue:
+				[best := r. bestWeight := oilVRegUses at: r]].
 		 best < 0
 			ifTrue: [oilNumAllocRegs := n]
 			ifFalse:
@@ -78,7 +77,7 @@ prepareNativeCode
 	homeBase := FoxMFReceiver - ((self numTempsOf: rootMethod) - (self numArgsOf: rootMethod) * objectMemory wordSize).
 	0 to: OilMaxReg do:
 		[:r|
-		(oilVRegWeight at: r) > 0 ifTrue:
+		(oilVRegUses at: r) > 0 ifTrue:
 			[oilNumHomes := oilNumHomes + 1.
 			 oilVRegHome at: r put: homeBase - (oilNumHomes * objectMemory wordSize)]].
 	"Marrying or divorcing the frame copies its temps, homes and pushed values into a context, which is large (see
@@ -88,68 +87,82 @@ prepareNativeCode
 		 ^failureCode].
 	^OilOK! !
 
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+isBranch: op
+	<inline: true>
+	^op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]! !
+
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 computeIRSites
 	0 to: irIndex - 1 do: [:j| oilIRSite at: j put: -1].
 	0 to: numSites - 1 do:
 		[:s| (siteIR at: s) >= 0 ifTrue: [oilIRSite at: (siteIR at: s) put: s]]! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-weigh: r at: i
-	"Count a use or definition of virtual register r by the instruction at i."
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+siteStateSize: s
 	<inline: true>
-	| d w |
-	d := oilLoopDepth at: i.
-	w := d = 0 ifTrue: [1] ifFalse: [d = 1 ifTrue: [10] ifFalse: [d = 2 ifTrue: [100] ifFalse: [1000]]].
-	r < OilFlagsReg ifTrue:
-		[oilVRegWeight at: r put: (oilVRegWeight at: r) + w]! !
+	^(siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s))! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-weighInstructionAt: i
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+p2Use: r
+	"Count a use of register r (weighted by oilUseWeight), or, when probing for reads of oilUseProbe, note it."
+	<inline: true>
+	oilUseProbe >= 0
+		ifTrue: [r = oilUseProbe ifTrue: [oilUseProbeHit := true]]
+		ifFalse:
+			[r < OilFlagsReg ifTrue:
+				[oilVRegUses at: r put: (oilVRegUses at: r) + oilUseWeight]]! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+p2CountUsesAt: i
+	"Count the registers the instruction at i reads."
 	<inline: false>
 	| op a b c |
 	op := self opcodeAt: i.
 	a := self fieldAAt: i.
 	b := self fieldBAt: i.
 	c := self fieldCAt: i.
-	(op = OilConstTagged or: [op = OilConst64 or: [op = OilReturn or: [op = OilGuardClass]]]) ifTrue:
-		[^self weigh: a at: i].
 	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilStoreField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCheckBounds or: [op = OilCharValue]]]]]]]]]]) ifTrue:
-		[self weigh: a at: i.
-		 ^self weigh: b at: i].
+	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0 or: [op = OilCharValue]]]]]]]]]]) ifTrue:
+		[^self p2Use: b].
 	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilStoreElement or: [op = OilCall1
-	 or: [(op between: OilLoadByte and: OilStoreChar) or: [op = OilCompareBytes]]]]]]) ifTrue:
-		[self weigh: a at: i.
-		 self weigh: b at: i.
-		 ^self weigh: c at: i].
-	op = OilCmpTagged ifTrue:
-		[self weigh: b at: i.
-		 ^self weigh: c at: i].
-	op = OilCmpImmTagged ifTrue:
-		[^self weigh: b at: i].
-	(op = OilBranchTrue or: [op = OilBranchFalse]) ifTrue:
-		[^self weigh: a at: i].
-	op = OilCall0 ifTrue:
-		[self weigh: a at: i.
-		 ^self weigh: b at: i].
+	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1
+	 or: [op = OilLoadByte or: [op = OilLoadChar or: [op = OilCompareBytes]]]]]]]) ifTrue:
+		[self p2Use: b.
+		 ^self p2Use: c].
+	(op = OilStoreByte or: [op = OilStoreChar or: [op = OilStoreElement]]) ifTrue:
+		[self p2Use: a.
+		 self p2Use: b.
+		 ^self p2Use: c].
+	op = OilStreamNext ifTrue:
+		[^self p2Use: b].
+	op = OilStreamNextPut ifTrue:
+		[self p2Use: b.
+		 ^self p2Use: c].
+	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
+		[self p2Use: a.
+		 ^self p2Use: b].
+	(op = OilReturn or: [op = OilGuardClass or: [op = OilBranchTrue or: [op = OilBranchFalse]]]) ifTrue:
+		[^self p2Use: a].
 	(op = OilCallN or: [op = OilCallSuper]) ifTrue:
-		[self weigh: a at: i.
-		 self weigh: b at: i.
-		 1 to: c do: [:k| self weigh: (self packedArg: k - 1 at: i) at: i]].
-	(op = OilStreamNext or: [op = OilStreamNextPut]) ifTrue:
-		[self weigh: a at: i.
-		 self weigh: b at: i.
-		 op = OilStreamNextPut ifTrue: [self weigh: c at: i]].
+		[self p2Use: b.
+		 1 to: c do: [:k| self p2Use: (self packedArg: k - 1 at: i)]].
 	op = OilNewArray ifTrue:
-		[self weigh: a at: i.
-		 b ~= OilFlagsReg ifTrue:
-			[0 to: c - 1 do: [:k| self weigh: b + k at: i]]].
+		[b ~= OilFlagsReg ifTrue:
+			[0 to: c - 1 do: [:k| self p2Use: b + k]]].
 	op = OilMakeClosure ifTrue:
-		[self weigh: a at: i.
-		 self weigh: ((oilIRBuffer at: i + 3) bitAnd: 255) at: i.
-		 0 to: c - 1 do: [:k| self weigh: b + k at: i]]! !
+		[self p2Use: ((oilIRBuffer at: i + 3) bitAnd: 255).
+		 0 to: c - 1 do: [:k| self p2Use: b + k]]! !
+
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+weighInstructionAt: i
+	"Count the registers the instruction at i defines or reads, weighted by loop depth."
+	| d |
+	d := oilLoopDepth at: i.
+	oilUseWeight := d = 0 ifTrue: [1] ifFalse: [d = 1 ifTrue: [10] ifFalse: [d = 2 ifTrue: [100] ifFalse: [1000]]].
+	(self opcodeHasDest: (self opcodeAt: i)) ifTrue:
+		[self p2Use: (self fieldAAt: i)].
+	self p2CountUsesAt: i! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 packedArg: k at: i
@@ -158,30 +171,35 @@ packedArg: k at: i
 	word := oilIRBuffer at: i + 3 + (k // 4).
 	^(word bitShift: (3 - (k \\ 4)) * -8) bitAnd: 255! !
 
-!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
-markRegistersOfSiteState: s
+!OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 19:20'!
+markMetadataRegisters
 	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a home."
-	| base n k |
-	base := siteSnapBase at: s.
-	n := (siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s)).
-	0 to: n - 1 do:
-		[:j|
-		k := sitePoolKind at: base + j.
-		(k = OilDescReg and: [(oilVRegWeight at: (sitePoolValue at: base + j)) = 0]) ifTrue:
-			[oilVRegWeight at: (sitePoolValue at: base + j) put: 1]].
+	| base n r |
+	0 to: numSites - 1 do:
+		[:s|
+		((siteIR at: s) >= 0 and: [(siteSnapBase at: s) >= 0]) ifTrue:
+			[base := siteSnapBase at: s.
+			 n := self siteStateSize: s.
+			 0 to: n - 1 do:
+				[:j|
+				(sitePoolKind at: base + j) = OilDescReg ifTrue:
+					[r := sitePoolValue at: base + j.
+					 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]]]].
 	0 to: numFrames - 1 do:
 		[:f|
-		((frameSelfKind at: f) = OilDescReg and: [(oilVRegWeight at: (frameSelfValue at: f)) = 0]) ifTrue:
-			[oilVRegWeight at: (frameSelfValue at: f) put: 1]].
+		(frameSelfKind at: f) = OilDescReg ifTrue:
+			[r := frameSelfValue at: f.
+			 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]].
 	0 to: numVObjs - 1 do:
 		[:v|
-		((vobjSelfKind at: v) = OilDescReg and: [(oilVRegWeight at: (vobjSelfValue at: v)) = 0]) ifTrue:
-			[oilVRegWeight at: (vobjSelfValue at: v) put: 1].
+		(vobjSelfKind at: v) = OilDescReg ifTrue:
+			[r := vobjSelfValue at: v.
+			 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)].
 		0 to: (vobjNumCopied at: v) - 1 do:
 			[:j|
-			((capturedKind at: (vobjCopiedBase at: v) + j) = OilDescReg
-			 and: [(oilVRegWeight at: (capturedValue at: (vobjCopiedBase at: v) + j)) = 0]) ifTrue:
-				[oilVRegWeight at: (capturedValue at: (vobjCopiedBase at: v) + j) put: 1]]]! !
+			(capturedKind at: (vobjCopiedBase at: v) + j) = OilDescReg ifTrue:
+				[r := capturedValue at: (vobjCopiedBase at: v) + j.
+				 oilVRegUses at: r put: ((oilVRegUses at: r) max: 1)]]]! !
 
 !OilCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 15:00'!
 src: r scratch: scratch

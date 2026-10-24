@@ -42,6 +42,12 @@ oilGenStoreCheckTrampolineCall
 	<option: #ProfilingCogit>
 	^cogit CallRT: ceStoreCheckTrampoline! !
 
+!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 19:15'!
+defaultCogCodeSize
+	"With Oil, allocate at least 4 MB: 2 MB for baseline Cogit machine code and 2 MB for Oil methods."
+	<api>
+	^4 * 1024 * 1024! !
+
 !ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 15:00'!
 initialize
 	super initialize.
@@ -481,6 +487,37 @@ oilSendSiteNeverSentAt: bcpc in: aMethodObj
 	^(coInterpreter methodHasCogMethod: aMethodObj)
 	  and: [self oilSendSiteUnlinkedAt: bcpc in: aMethodObj]! !
 
+!ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/24/2026 19:20'!
+oilMethod: cogMethod inlinesSelector: aSelector
+	"Answer whether cogMethod or any method inlined into it sends/defines aSelector."
+	| md nFrames frames m |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod selector = aSelector ifTrue: [^true].
+	md := self oilMetadataOf: cogMethod.
+	nFrames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDNumFrames ofObject: md).
+	frames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDFrames ofObject: md).
+	0 to: nFrames - 1 do:
+		[:fr|
+		m := objectMemory fetchPointer: frames + (fr * OilMDFrameSize) ofObject: md.
+		(coInterpreter maybeSelectorOfMethod: m) = aSelector ifTrue: [^true]].
+	^false! !
+
+!ProfilingCogit methodsFor: 'jit - api' stamp: 'cb 10/24/2026 19:20'!
+unlinkSendsOf: selector isMNUSelector: isMNUSelector
+	<api>
+	"Also discard Oil methods that inlined selector (unless an activation is currently running on the stack)."
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	super unlinkSendsOf: selector isMNUSelector: isMNUSelector.
+	methodZoneBase ifNil: [^self].
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[((self isOilMethod: cogMethod)
+		  and: [(self oilMethod: cogMethod inlinesSelector: selector)
+		  and: [(coInterpreter oilHasFramesOf: cogMethod) not]]) ifTrue:
+			[self unlinkSendsTo: cogMethod methodObject andFreeIf: true].
+		 cogMethod := methodZone methodAfter: cogMethod]! !
+
 !ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 15:00'!
 maybeFreeCountersOf: aCogMethod
 	"Free the pinned object holding the method's trip counters, or its Oil deoptimization metadata, if any."
@@ -559,14 +596,14 @@ estimateOpcodes
 		 i := i + (self instructionLengthAt: i)].
 	^n + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
-!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 19:20'!
 metadataSize
 	"The number of slots of the deoptimization metadata (see fillMetadata:cogMethod:)."
 	| n |
 	n := OilMDHeaderSize + (numFrames * OilMDFrameSize) + (numVObjs * OilMDVObjSize) + (capturedTop * 2) + OilNumRegs + numSites.
 	0 to: numSites - 1 do:
 		[:s| (oilSiteUsed at: s) ~= 0 ifTrue:
-			[n := n + OilMDSiteHeaderSize + (2 * ((siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s))))]].
+			[n := n + OilMDSiteHeaderSize + (2 * (self siteStateSize: s))]].
 	^n! !
 
 !OilCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
@@ -805,6 +842,7 @@ oilDisqualifyCogMethod: cogMethod
 !CoInterpreter methodsFor: '*Cogit-Oil-deoptimization' stamp: 'cb 10/24/2026 17:30'!
 oilHasFramesOf: cogMethod
 	"Is there a machine code frame running cogMethod on a stack page?"
+	<api>
 	<essential: #ProfilingCogit>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #aPage type: #'StackPage *'>
@@ -1103,6 +1141,12 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	stackPointer := sp.
 	instructionPointer := innermost + objectMemory baseHeaderSize + sitePC - 1.
 	self setMethod: innermost! !
+
+!CoInterpreter methodsFor: '*Cogit-Oil-initialization' stamp: 'cb 10/24/2026 19:15'!
+checkImageHeaderLoad
+	<inline: #always>
+	cogCodeSize < (4 * 1024 * 1024) ifTrue:
+		[cogCodeSize := 4 * 1024 * 1024]! !
 
 !CoInterpreter methodsFor: '*Cogit-Oil-initialization' stamp: 'cb 10/24/2026 15:00'!
 attemptToSwitchToMachineCode: bcpc

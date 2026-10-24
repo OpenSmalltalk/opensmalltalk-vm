@@ -54,11 +54,6 @@ pass2Optimize
 	^self p2Emit! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
-isBranch: op
-	<inline: true>
-	^op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]! !
-
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2IsCall: op
 	<inline: true>
 	^op = OilCall0 or: [op = OilCall1 or: [op = OilCallN or: [op = OilCallSuper]]]! !
@@ -253,64 +248,13 @@ p2SizeRegisterOf: x op: sizeOp from: start to: end
 	^-1! !
 
 !OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
-p2Use: r
-	"Count a read of register r, or, when probing for reads of oilUseProbe, note it."
-	<inline: true>
-	oilUseProbe >= 0
-		ifTrue: [r = oilUseProbe ifTrue: [oilUseProbeHit := true]]
-		ifFalse:
-			[r < OilFlagsReg ifTrue:
-				[oilVRegUses at: r put: (oilVRegUses at: r) + 1]]! !
-
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
-p2CountUsesAt: i
-	"Count the registers the (live) instruction at i reads."
-	<inline: false>
-	| op a b c |
-	op := self opcodeAt: i.
-	a := self fieldAAt: i.
-	b := self fieldBAt: i.
-	c := self fieldCAt: i.
-	(self p2Flag: i has: OilP2ToMove) ifTrue:
-		[^self p2Use: (oilIRAux at: i)].
-	(op = OilMove or: [op = OilShiftTagged or: [op = OilOddTagged or: [op = OilAddImmTagged or: [op = OilAddImmTaggedNC
-	 or: [op = OilLoadField or: [op = OilLoadSize or: [op = OilLoadByteSize or: [op = OilCmpImmTagged or: [op = OilCall0 or: [op = OilCharValue]]]]]]]]]]) ifTrue:
-		[^self p2Use: b].
-	((op between: OilAddTagged and: OilXorTagged)
-	 or: [op = OilModTagged or: [op = OilLoadElement or: [op = OilCmpTagged or: [op = OilCall1
-	 or: [op = OilLoadByte or: [op = OilLoadChar or: [op = OilCompareBytes]]]]]]]) ifTrue:
-		[self p2Use: b.
-		 ^self p2Use: c].
-	(op = OilStoreByte or: [op = OilStoreChar]) ifTrue:
-		[self p2Use: a.
-		 self p2Use: b.
-		 ^self p2Use: c].
-	op = OilStreamNext ifTrue:
-		[^self p2Use: b].
-	op = OilStreamNextPut ifTrue:
-		[self p2Use: b.
-		 ^self p2Use: c].
-	(op = OilStoreField or: [op = OilCheckBounds]) ifTrue:
-		[self p2Use: a.
-		 ^self p2Use: b].
-	op = OilStoreElement ifTrue:
-		[self p2Use: a.
-		 self p2Use: b.
-		 ^self p2Use: c].
-	(op = OilReturn or: [op = OilGuardClass or: [op = OilBranchTrue or: [op = OilBranchFalse]]]) ifTrue:
-		[^self p2Use: a].
-	(op = OilCallN or: [op = OilCallSuper]) ifTrue:
-		[self p2Use: b.
-		 1 to: c do: [:k| self p2Use: (self packedArg: k - 1 at: i)]]! !
-
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 p2IsLiveSite: s
 	"Is deopt site s still attached to an instruction that can bail out?"
 	| i |
 	i := siteIR at: s.
 	^i >= 0 and: [(siteSnapBase at: s) >= 0 and: [(self p2Flag: i has: OilP2Delete + OilP2NoCheck) not]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2CountMetadataUses
 	"Count the registers the deoptimization metadata refers to: the states of the live deopt sites, the receivers
 	 of the inlined frames and of the virtual objects, and the values the virtual objects captured."
@@ -319,7 +263,7 @@ p2CountMetadataUses
 		[:s|
 		(self p2IsLiveSite: s) ifTrue:
 			[base := siteSnapBase at: s.
-			 n := (siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s)).
+			 n := self siteStateSize: s.
 			 0 to: n - 1 do:
 				[:j| (sitePoolKind at: base + j) = OilDescReg ifTrue:
 					[self p2Use: (sitePoolValue at: base + j)]]]].
@@ -334,11 +278,12 @@ p2CountMetadataUses
 			[:j| (capturedKind at: (vobjCopiedBase at: v) + j) = OilDescReg ifTrue:
 				[self p2Use: (capturedValue at: (vobjCopiedBase at: v) + j)]]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2EliminateDeadCode
 	"Delete the pure instructions whose destination nothing reads (anywhere, or before it is assigned again in the
 	 straight-line code that follows), until there are none."
 	| changed i |
+	oilUseWeight := 1.
 	changed := true.
 	[changed] whileTrue:
 		[changed := false.
@@ -347,7 +292,9 @@ p2EliminateDeadCode
 		 i := 0.
 		 [i < irIndex] whileTrue:
 			[(self p2Flag: i has: OilP2Delete) ifFalse:
-				[self p2CountUsesAt: i].
+				[(self p2Flag: i has: OilP2ToMove)
+					ifTrue: [self p2Use: (oilIRAux at: i)]
+					ifFalse: [self p2CountUsesAt: i]].
 			 i := i + (self instructionLengthAt: i)].
 		 self p2CountMetadataUses.
 		 i := 0.
@@ -362,7 +309,7 @@ p2EliminateDeadCode
 				 changed := true].
 			 i := i + (self instructionLengthAt: i)]]! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2IsOverwrittenBeforeUse: r after: def
 	"Is register r, assigned by the instruction at def, assigned again before anything reads it?  Only the straight-line
 	 code after def is examined (up to a branch target, a branch, a return or a call, where r is assumed live).
@@ -377,7 +324,9 @@ p2IsOverwrittenBeforeUse: r after: def
 		 (self p2Flag: i has: OilP2Delete) ifFalse:
 			[oilUseProbe := r.
 			 oilUseProbeHit := false.
-			 self p2CountUsesAt: i.
+			 (self p2Flag: i has: OilP2ToMove)
+				ifTrue: [self p2Use: (oilIRAux at: i)]
+				ifFalse: [self p2CountUsesAt: i].
 			 oilUseProbe := -1.
 			 oilUseProbeHit ifTrue: [^false].
 			 s := oilIRSite at: i.
@@ -386,12 +335,12 @@ p2IsOverwrittenBeforeUse: r after: def
 		 i := i + (self instructionLengthAt: i)].
 	^false! !
 
-!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
+!OilCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:20'!
 p2State: s refersTo: r
 	"Does the deopt state of site s refer to register r?"
 	| base n |
 	base := siteSnapBase at: s.
-	n := (siteSnapTop at: s) + 1 + (OilMaxReg - (siteSnapHigh at: s)).
+	n := self siteStateSize: s.
 	0 to: n - 1 do:
 		[:j| ((sitePoolKind at: base + j) = OilDescReg and: [(sitePoolValue at: base + j) = r]) ifTrue: [^true]].
 	^false! !

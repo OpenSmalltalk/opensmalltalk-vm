@@ -1,70 +1,17 @@
 VMStructType subclass: #OilBytecodeDescriptor
-	instanceVariableNames: 'numBytes stackDelta opcodeTag operandMode operandBase operandBias isBranchTrue isBranchFalse isBranchUnconditional isReturn isBlockCreation isExtension'
+	instanceVariableNames: 'numBytes opcodeTag operandMode operandBase operandBias'
 	classVariableNames: ''
 	poolDictionaries: 'OilConstants'
 	category: 'Cogit-Oil'!
 
 !OilBytecodeDescriptor commentStamp: 'cb 10/24/2026 10:10' prior: 0!
-I am an entry in Oil's bytecode dispatch table, oilGeneratorTable (256 entries, one per SistaV1 bytecode; Oil only compiles methods using the SistaV1 bytecode set).  Like Cogit's CogBytecodeDescriptor I let OilBytecodeScanner decode a bytecode in O(1) with zero allocation: one table lookup on oilByte0 gives the instruction length, its stack delta, its high level classification (opcodeTag) and how to extract its operands (operandMode, operandBase, operandBias).
+I am an entry in Oil's bytecode dispatch table, oilGeneratorTable (256 entries, one per SistaV1 bytecode; Oil only compiles methods using the SistaV1 bytecode set).  Like Cogit's CogBytecodeDescriptor I let OilBytecodeScanner decode a bytecode in O(1) with zero allocation: one table lookup on oilByte0 gives the instruction length, its high level classification (opcodeTag) and how to extract its operands (operandMode, operandBase, operandBias).
 
-numBytes			<Integer> instruction length (1..4)
-stackDelta			<Integer> net evaluation stack change (sends with a dynamic arity answer 0; the scanner computes the real arity)
+numBytes			<Integer> instruction length (1..3)
 opcodeTag			<Integer> one of the OilTag* constants
 operandMode		<Integer> one of the OilMode* constants
 operandBase		<Integer> table index of the first bytecode of my range (for range encoded operands)
-operandBias		<Integer> constant added to range encoded operands (e.g. 1 for short jumps), the fixed arity of literal sends, or the kind of extension (0 = A, 1 = B)
-isBranch*			<Boolean> branch flags
-isReturn			<Boolean> return flag
-isBlockCreation	<Boolean> closure creation flag
-isExtension			<Boolean> extension prefix (SistaV1 oilExtA/oilExtB)!
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBlockCreation
-	^isBlockCreation! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBlockCreation: aBoolean
-	^isBlockCreation := aBoolean! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchFalse
-	^isBranchFalse! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchFalse: aBoolean
-	^isBranchFalse := aBoolean! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchTrue
-	^isBranchTrue! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchTrue: aBoolean
-	^isBranchTrue := aBoolean! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchUnconditional
-	^isBranchUnconditional! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isBranchUnconditional: aBoolean
-	^isBranchUnconditional := aBoolean! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isExtension
-	^isExtension! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isExtension: aBoolean
-	^isExtension := aBoolean! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isReturn
-	^isReturn! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-isReturn: aBoolean
-	^isReturn := aBoolean! !
+operandBias		<Integer> constant added to range encoded operands (e.g. 1 for short jumps), the fixed arity of literal sends, or the kind of extension (0 = A, 1 = B)!
 
 !OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
 numBytes
@@ -106,14 +53,6 @@ operandMode
 operandMode: anInteger
 	^operandMode := anInteger! !
 
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-stackDelta
-	^stackDelta! !
-
-!OilBytecodeDescriptor methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
-stackDelta: anInteger
-	^stackDelta := anInteger! !
-
 !OilBytecodeDescriptor methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 printCInitializerOn: aStream in: aCCodeGenerator
 	"Print my C struct initializer, for the static oilGeneratorTable."
@@ -122,29 +61,24 @@ printCInitializerOn: aStream in: aCCodeGenerator
 	first := true.
 	aStream nextPut: ${; space.
 	self class instVarNamesAndTypesForTranslationDo:
-		[:ivn :type| | value |
+		[:ivn :type|
 		first ifTrue: [first := false] ifFalse: [aStream nextPut: $,; space].
-		value := self instVarNamed: ivn.
-		value isInteger
-			ifTrue: [aStream print: value]
-			ifFalse: [aStream nextPut: ((value notNil and: [value]) ifTrue: [$1] ifFalse: [$0])]].
+		aStream print: (self instVarNamed: ivn)].
 	aStream space; nextPut: $}! !
 
 !OilBytecodeDescriptor class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 instVarNamesAndTypesForTranslationDo: aBinaryBlock
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an OilBytecodeDescriptor struct.  Six bytes of fields plus six flag bits: 8 bytes per entry, 2 KB for the whole 256 entry table."
+	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an OilBytecodeDescriptor struct (6 bytes per entry)."
 	self instVarNames do:
 		[:ivn|
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
 						['numBytes']		->	['unsigned char'].
-						['stackDelta']		->	['signed char'].
 						['opcodeTag']		->	['unsigned char'].
 						['operandMode']	->	['unsigned char'].
 						['operandBase']	->	['unsigned short'].
-						['operandBias']	->	['signed char'] }
-					otherwise: [#('unsigned' ' : 1')])]! !
+						['operandBias']	->	['signed char'] })]! !
 
 !OilBytecodeDescriptor class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 structTypeName
@@ -160,7 +94,7 @@ VMClass subclass: #OilBytecodeScanner
 !OilBytecodeScanner commentStamp: 'cb 10/24/2026 10:10' prior: 0!
 I am Oil's zero-allocation bytecode scanner.  I mirror the Cogit's scanner architecture: a static 256-entry dispatch table, oilGeneratorTable, of OilBytecodeDescriptor structs indexed by oilByte0.  I only decode the SistaV1 bytecode set (the alternate bytecode set in the method header); Oil refuses to compile methods using any other set (see oilIsSistaV1Method:), leaving them to the baseline Cogit.  Decoding a bytecode is a table lookup plus a switch on the descriptor's operandMode; extension prefixes (oilExtA, oilExtB) are folded into the bytecode they extend, so clients see one logical instruction per decodeAt:.
 
-All method access goes through fetchByte:, startPCOf:, endPCOf:, literal:of: and friends, which use the VM (objectMemory/coInterpreter) when translated to C and the host image's CompiledCode objects when run in Smalltalk (in-image compilation, cf. CurrentImageCoInterpreterFacade), so the same code runs in the image and in the VM.
+All method access goes through fetchByte:, startPCOf: and oilEndPCOf:, which use the VM (objectMemory/coInterpreter/cogit) when translated to C and the host image's CompiledCode objects when run in Smalltalk, so the same code runs in the image and in the VM.
 
 After decodeAt: pc:
 	instrPC		pc of the instruction, including its extension prefixes
@@ -174,8 +108,7 @@ After decodeAt: pc:
 !OilBytecodeScanner methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:10'!
 initialize
 	<doNotGenerate>
-	oilGeneratorTable := OilGeneratorTable ifNil: [self class initializeOilGeneratorTable].
-	oilExtA := oilExtB := oilNumExtB := 0! !
+	oilGeneratorTable := OilGeneratorTable! !
 
 !OilBytecodeScanner methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:10'!
 instrPC
@@ -269,7 +202,7 @@ decodeAt: aPC
 		[oilByte1 := self fetchByte: oilBcpc + 1.
 		 d numBytes > 2 ifTrue:
 			[oilByte2 := self fetchByte: oilBcpc + 2]].
-	 d isExtension] whileTrue:
+	 d opcodeTag = OilTagExtension] whileTrue:
 		[d operandBias = 0
 			ifTrue: [oilExtA := (oilExtA bitShift: 8) + oilByte1]
 			ifFalse:
@@ -296,7 +229,7 @@ decodeOperands: d
 		[OilModeByte1ExtB]		-> [operand1 := oilByte1 + (oilExtB bitShift: 8)].
 		[OilModeSend]			->
 			[operand1 := (oilByte1 bitShift: -3) + (oilExtA bitShift: 5).
-			 operand2 := (oilByte1 bitAnd: 7) + ((oilExtB bitAnd: 63) bitShift: 3).
+			 operand2 := (oilByte1 bitAnd: 7) + (oilExtB bitShift: 3).
 			 (opcodeTag = OilTagSendSuper and: [oilExtB >= 64]) ifTrue: "directed super send: unsupported by Oil"
 				[opcodeTag := OilTagUnknown]].
 		[OilModeLowSend]		-> [operand1 := oilByte0 - d operandBase. operand2 := d operandBias].
@@ -308,7 +241,7 @@ decodeOperands: d
 				[opcodeTag := OilTagUnknown]].
 		[OilModeFullClosure]	-> [operand1 := oilByte1 + (oilExtA bitShift: 8). operand2 := oilByte2] }
 		otherwise: [].
-	(d isBranchTrue or: [d isBranchFalse or: [d isBranchUnconditional]]) ifTrue:
+	(opcodeTag between: OilTagJump and: OilTagJumpFalse) ifTrue:
 		[oilTargetPC := oilNextPC + operand1].
 	opcodeTag = OilTagSendSpecial ifTrue:
 		[operand2 := self oilSpecialSelectorNumArgs: operand1]! !
@@ -340,9 +273,8 @@ initializeOilGeneratorTable
 
 !OilBytecodeScanner class methodsFor: 'class initialization' stamp: 'cb 10/24/2026 10:10'!
 fill: table from: spec
-	"Each tuple is (numBytes first last tag mode bias stackDelta flag*).
-	 tag names an OilTag* constant, mode an OilMode* constant; flags are
-	 return branch branchTrue branchFalse block extension."
+	"Each tuple is (numBytes first last tag mode bias).
+	 tag names an OilTag* constant, mode an OilMode* constant."
 	| pool |
 	pool := OilConstants classPool.
 	spec do:
@@ -352,14 +284,7 @@ fill: table from: spec
 		  opcodeTag: (pool at: ('OilTag', (tuple at: 4)) asSymbol);
 		  operandMode: (pool at: ('OilMode', (tuple at: 5)) asSymbol);
 		  operandBase: (tuple at: 2);
-		  operandBias: (tuple at: 6);
-		  stackDelta: (tuple at: 7);
-		  isReturn: (tuple includes: #return);
-		  isBranchUnconditional: (tuple includes: #branch);
-		  isBranchTrue: (tuple includes: #branchTrue);
-		  isBranchFalse: (tuple includes: #branchFalse);
-		  isBlockCreation: (tuple includes: #block);
-		  isExtension: (tuple includes: #extension).
+		  operandBias: (tuple at: 6).
 		(tuple at: 2) to: (tuple at: 3) do:
 			[:byte|
 			(table at: byte) ifNotNil: [self error: 'overlap at ', byte printString].
@@ -367,72 +292,72 @@ fill: table from: spec
 
 !OilBytecodeScanner class methodsFor: 'class initialization' stamp: 'cb 10/24/2026 10:10'!
 sistaV1Spec
-	"(numBytes first last tag mode bias stackDelta flags...)"
-	^#(	(1   0  15 PushRcvrVar		Low		0  1)
-		(1  16  31 PushLitVar		Low		0  1)
-		(1  32  63 PushLitConst		Low		0  1)
-		(1  64  75 PushTemp			Low		0  1)
-		(1  76  76 PushSelf			None	0  1)
-		(1  77  77 PushTrue			None	0  1)
-		(1  78  78 PushFalse			None	0  1)
-		(1  79  79 PushNil			None	0  1)
-		(1  80  81 PushInteger		Low		0  1)
-		(1  82  82 Unknown			None	0  0)
-		(1  83  83 Dup				None	0  1)
-		(1  84  87 Unknown			None	0  0)
-		(1  88  88 ReturnSelf		None	0  0 return)
-		(1  89  89 ReturnTrue		None	0  0 return)
-		(1  90  90 ReturnFalse		None	0  0 return)
-		(1  91  91 ReturnNil			None	0  0 return)
-		(1  92  92 ReturnTop			None	0 -1 return)
-		(1  93  93 BlockReturnNil	None	0  0 return)
-		(1  94  94 BlockReturnTop	None	0 -1 return)
-		(1  95  95 Nop				None	0  0)
-		(1  96 127 SendSpecial		Low		0  0)
-		(1 128 143 Send				LowSend	0  0)
-		(1 144 159 Send				LowSend	1 -1)
-		(1 160 175 Send				LowSend	2 -2)
-		(1 176 183 Jump				Low		1  0 branch)
-		(1 184 191 JumpTrue			Low		1 -1 branchTrue)
-		(1 192 199 JumpFalse			Low		1 -1 branchFalse)
-		(1 200 207 PopIntoRcvrVar	Low		0 -1)
-		(1 208 215 PopIntoTemp		Low		0 -1)
-		(1 216 216 Pop				None	0 -1)
-		(1 217 223 Unknown			None	0  0)
-		(2 224 224 Extension			None	0  0 extension)
-		(2 225 225 Extension			None	1  0 extension)
-		(2 226 226 PushRcvrVar		Byte1	0  1)
-		(2 227 227 PushLitVar		Byte1	0  1)
-		(2 228 228 PushLitConst		Byte1	0  1)
-		(2 229 229 PushTemp			Byte1Temp 0 1)
-		(2 230 230 Unknown			None	0  0)
-		(2 231 231 PushNewArray		NewArray 0 1)
-		(2 232 232 PushInteger		Byte1ExtB 0 1)
-		(2 233 233 PushCharacter		Byte1	0  1)
-		(2 234 234 Send				Send	0  0)
-		(2 235 235 SendSuper			Send	0  0)
-		(2 236 236 Unknown			None	0  0)
-		(2 237 237 Jump				Byte1ExtB 0 0 branch)
-		(2 238 238 JumpTrue			Byte1ExtB 0 -1 branchTrue)
-		(2 239 239 JumpFalse			Byte1ExtB 0 -1 branchFalse)
-		(2 240 240 PopIntoRcvrVar	Byte1	0 -1)
-		(2 241 241 PopIntoLitVar		Byte1	0 -1)
-		(2 242 242 PopIntoTemp		Byte1Temp 0 -1)
-		(2 243 243 StoreRcvrVar		Byte1	0  0)
-		(2 244 244 StoreLitVar		Byte1	0  0)
-		(2 245 245 StoreTemp			Byte1Temp 0 0)
-		(2 246 247 Unknown			None	0  0)
-		(3 248 248 Unknown			None	0  0)
-		(3 249 249 PushFullClosure	FullClosure 0 1 block)
-		(3 250 250 Unknown			None	0  0)
-		(3 251 251 PushRemoteTemp	RemoteTemp 0  1)
-		(3 252 252 StoreRemoteTemp	RemoteTemp 0  0)
-		(3 253 253 PopIntoRemoteTemp RemoteTemp 0 -1)
-		(3 254 255 Unknown			None	0  0))! !
+	"(numBytes first last tag mode bias)"
+	^#(	(1   0  15 PushRcvrVar		Low		0)
+		(1  16  31 PushLitVar		Low		0)
+		(1  32  63 PushLitConst		Low		0)
+		(1  64  75 PushTemp			Low		0)
+		(1  76  76 PushSelf			None	0)
+		(1  77  77 PushTrue			None	0)
+		(1  78  78 PushFalse			None	0)
+		(1  79  79 PushNil			None	0)
+		(1  80  81 PushInteger		Low		0)
+		(1  82  82 Unknown			None	0)
+		(1  83  83 Dup				None	0)
+		(1  84  87 Unknown			None	0)
+		(1  88  88 ReturnSelf		None	0)
+		(1  89  89 ReturnTrue		None	0)
+		(1  90  90 ReturnFalse		None	0)
+		(1  91  91 ReturnNil			None	0)
+		(1  92  92 ReturnTop			None	0)
+		(1  93  93 BlockReturnNil	None	0)
+		(1  94  94 BlockReturnTop	None	0)
+		(1  95  95 Nop				None	0)
+		(1  96 127 SendSpecial		Low		0)
+		(1 128 143 Send				LowSend	0)
+		(1 144 159 Send				LowSend	1)
+		(1 160 175 Send				LowSend	2)
+		(1 176 183 Jump				Low		1)
+		(1 184 191 JumpTrue			Low		1)
+		(1 192 199 JumpFalse			Low		1)
+		(1 200 207 PopIntoRcvrVar	Low		0)
+		(1 208 215 PopIntoTemp		Low		0)
+		(1 216 216 Pop				None	0)
+		(1 217 223 Unknown			None	0)
+		(2 224 224 Extension			None	0)
+		(2 225 225 Extension			None	1)
+		(2 226 226 PushRcvrVar		Byte1	0)
+		(2 227 227 PushLitVar		Byte1	0)
+		(2 228 228 PushLitConst		Byte1	0)
+		(2 229 229 PushTemp			Byte1Temp 0)
+		(2 230 230 Unknown			None	0)
+		(2 231 231 PushNewArray		NewArray 0)
+		(2 232 232 PushInteger		Byte1ExtB 0)
+		(2 233 233 PushCharacter		Byte1	0)
+		(2 234 234 Send				Send	0)
+		(2 235 235 SendSuper			Send	0)
+		(2 236 236 Unknown			None	0)
+		(2 237 237 Jump				Byte1ExtB 0)
+		(2 238 238 JumpTrue			Byte1ExtB 0)
+		(2 239 239 JumpFalse			Byte1ExtB 0)
+		(2 240 240 PopIntoRcvrVar	Byte1	0)
+		(2 241 241 PopIntoLitVar		Byte1	0)
+		(2 242 242 PopIntoTemp		Byte1Temp 0)
+		(2 243 243 StoreRcvrVar		Byte1	0)
+		(2 244 244 StoreLitVar		Byte1	0)
+		(2 245 245 StoreTemp			Byte1Temp 0)
+		(2 246 247 Unknown			None	0)
+		(3 248 248 Unknown			None	0)
+		(3 249 249 PushFullClosure	FullClosure 0)
+		(3 250 250 Unknown			None	0)
+		(3 251 251 PushRemoteTemp	RemoteTemp 0)
+		(3 252 252 StoreRemoteTemp	RemoteTemp 0)
+		(3 253 253 PopIntoRemoteTemp RemoteTemp 0)
+		(3 254 255 Unknown			None	0))! !
 
 !OilBytecodeScanner class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:10'!
 declareCVarsIn: aCCodeGenerator
-	"The dispatch table is a static array of 256 OilBytecodeDescriptor structs (one per SistaV1 bytecode) (8 bytes each), like the Cogit's generatorTable."
+	"The dispatch table is a static array of 256 OilBytecodeDescriptor structs (one per SistaV1 bytecode), like the Cogit's generatorTable."
 	| table |
 	table := OilGeneratorTable ifNil: [self initializeOilGeneratorTable].
 	aCCodeGenerator
