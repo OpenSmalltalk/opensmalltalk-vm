@@ -1600,7 +1600,7 @@ definitionIsTaggedAt: irOffset
 	opcode = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: irOffset)) ~= 0].
 	((opcode between: OilAddTagged and: OilOddTagged)
 	 or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC or: [opcode = OilLoadSize or: [opcode = OilModTagged
-	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue or: [opcode = OilIdentityHash or: [opcode = OilStringHash]]]]]]]]]]) ifTrue: [^true].
+	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue or: [opcode = OilIdentityHash]]]]]]]]]) ifTrue: [^true].
 	^false! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
@@ -1795,6 +1795,15 @@ genNewObjectAt: irOffset site: siteIndex
 	classIndex := coInterpreter oilApiClassIndexOfClass: classOop.
 	(classIndex <= 0 or: [numSlots >= objectMemory numSlotsMask]) ifTrue:
 		[^self abortCompilation: OilFailBackend].
+	"The class may have been reshaped (or become another) since: check that it still has the format and the class index
+	 compiled in (its oop, a literal, is updated by the GC), else deoptimize and let the interpreter allocate."
+	cogit genMoveConstant: classOop R: TempReg.
+	cogit MoveMw: InstanceSpecificationIndex * objectMemory wordSize + objectMemory baseHeaderSize r: TempReg R: SendNumArgsReg.
+	cogit CmpCq: (coInterpreter oilApiFormatOfClass: classOop) R: SendNumArgsReg.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
+	cogit oilGenGetHashOf: TempReg into: SendNumArgsReg.
+	cogit CmpCq: (objectMemory integerObjectOf: classIndex) R: SendNumArgsReg.
+	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
 	self genAllocate: (objectMemory smallObjectBytesForSlots: numSlots)
 		header: (objectMemory
 					headerForSlots: numSlots

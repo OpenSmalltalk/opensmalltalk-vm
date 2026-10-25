@@ -851,6 +851,19 @@ oilApiStorePointer: index ofObject: obj withValue: value
 	^objectMemory storePointer: index ofObject: obj withValue: value! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiIsImmutable: oop
+	<api>
+	<essential: #ProfilingCogit>
+	^(objectMemory isNonImmediate: oop) and: [objectMemory isImmutable: oop]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiFormatOfClass: class
+	"The format slot of class (a SmallInteger oop: instance specification and number of fixed fields)."
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory fetchPointer: InstanceSpecificationIndex ofObject: class! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
 oilApiClassAtIndex: classIndex
 	"The class of index classIndex in the class table (e.g. FullBlockClosure)."
 	<api>
@@ -1277,11 +1290,11 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 							classIndex: ClassFullBlockClosureCompactIndex]
 					ifFalse:
 						[kind = OilDescObject
-							ifTrue: "a scalar replaced object: an instance of the class in its record"
+							ifTrue: "a scalar replaced object: an instance of the class in its record (with its current shape)"
 								[objectMemory
-									allocateSlots: (self oilMD: md at: vr + 1)
+									allocateSlots: (objectMemory fixedFieldsOfClass: (objectMemory fetchPointer: vr + 4 ofObject: md))
 									format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vr + 4 ofObject: md))
-									classIndex: (objectMemory rawHashBitsOf: (objectMemory fetchPointer: vr + 4 ofObject: md))]
+									classIndex: (objectMemory ensureBehaviorHash: (objectMemory fetchPointer: vr + 4 ofObject: md))]
 							ifFalse:
 								[objectMemory
 									allocateSlots: (self oilMD: md at: vr + 1)
@@ -1316,7 +1329,7 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 							ofObject: obj
 							withValue: (self oilValueAt: (self oilMD: md at: vr + 6) + (2 * j) metadata: md values: vals vobjs: vobjOops)]]
 				ifFalse:
-					[0 to: (self oilMD: md at: vr + 1) - 1 do:
+					[0 to: ((self oilMD: md at: vr + 1) min: (objectMemory numSlotsOf: obj)) - 1 do:
 						[:j|
 						objectMemory
 							storePointer: j

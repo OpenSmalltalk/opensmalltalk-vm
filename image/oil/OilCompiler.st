@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilBaseCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -227,7 +227,7 @@ resetForCompilation
 	pendingCondSlot := -1.
 	currentFrame := -1.
 	currentPC := 0.
-	oilDeadCode := failed := needsRestart := oilRestartNoInline := oilRestartEager := false.
+	oilDeadCode := failed := needsRestart := oilRestartNoInline := oilRestartEager := oilSnapStale := false.
 	oilFlowEpoch := 0.
 	oilClassBindingClass := 0.
 	failureCode := OilOK! !
@@ -504,7 +504,8 @@ exitFrame: frameIndex
 			 self setOwn: baseReg]
 		ifFalse:
 			[(frameHasLazy at: frameIndex) ifTrue:
-				[self setSlot: baseReg kind: (frameLazyKind at: frameIndex) value: (frameLazyValue at: frameIndex).
+				[frameHasLazy at: frameIndex put: false. "(consumed: no longer a reference to a scalar replaced object)"
+				 self setSlot: baseReg kind: (frameLazyKind at: frameIndex) value: (frameLazyValue at: frameIndex).
 				 ((frameLazyKind at: frameIndex) = OilDescCond or: [(frameLazyKind at: frameIndex) = OilDescSelect]) ifTrue:
 					[pendingCondSlot := baseReg.
 					 pendingCondIndex := frameLazyValue at: frameIndex].
@@ -544,6 +545,7 @@ takeSnapshotFrame: frameIndex pc: pc
 	<inline: false>
 	snapFrame := frameIndex.
 	snapPC := pc.
+	oilSnapStale := false.
 	snapTop := simStackTop.
 	snapHighTop := highRegTop.
 	0 to: simStackTop do:
@@ -554,6 +556,18 @@ takeSnapshotFrame: frameIndex pc: pc
 		[:vreg|
 		snapKind at: vreg put: (slotKind at: vreg).
 		snapValue at: vreg put: (slotValue at: vreg)]! !
+
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 10:45'!
+snapshotRefersTo: reg
+	"Answer whether a register descriptor of the current snapshot refers to reg."
+	<inline: false>
+	0 to: snapTop do:
+		[:vreg|
+		((snapKind at: vreg) = OilDescReg and: [(snapValue at: vreg) = reg]) ifTrue: [^true]].
+	snapHighTop + 1 to: OilMaxReg do:
+		[:vreg|
+		((snapKind at: vreg) = OilDescReg and: [(snapValue at: vreg) = reg]) ifTrue: [^true]].
+	^false! !
 
 !OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:45'!
 copySnapshotToSite: siteIndex
@@ -688,14 +702,20 @@ forgetKnowledgeAtLabel
 flushFrame: frameIndex
 	"Before a branch or a label: make every mutable register of frame frameIndex (temps and stack) and every
 	 scalar replaced temp vector slot hold its value in its own register, so that all paths agree."
+	"Lazy comparisons first: the deopt state of an allocation (a scalar replaced object materialized below) records them
+	 as their registers."
+	(frameTempStart at: frameIndex) to: simStackTop do:
+		[:slotIndex|
+		((slotKind at: slotIndex) = OilDescCond or: [(slotKind at: slotIndex) = OilDescSelect]) ifTrue:
+			[self materializeSlot: slotIndex]].
 	(frameTempStart at: frameIndex) to: simStackTop do:
 		[:slotIndex| ((self isImmutable: slotIndex) or: [(slotKind at: slotIndex) = OilDescTempVector]) ifFalse:
 			[((slotKind at: slotIndex) = OilDescObject
 			  and: [slotIndex < (frameStackStart at: frameIndex)
-			  and: [self isTemp: slotIndex - (frameBase at: frameIndex) - 1 deadFrom: currentPC frame: frameIndex]])
-				ifTrue: "a scalar replaced object in a dead temp: forget it rather than materializing it"
-					[self setSlot: slotIndex kind: OilDescConst value: nilHandle]
-				ifFalse: [self materializeSlot: slotIndex]]].
+			  and: [self isTemp: slotIndex - (frameBase at: frameIndex) - 1 deadFrom: currentPC frame: frameIndex]]) ifTrue:
+				"a scalar replaced object in a dead temp: nil rather than materializing it"
+				[self setSlot: slotIndex kind: OilDescConst value: nilHandle].
+			 self materializeSlot: slotIndex]].
 	self flushTVSlots! !
 
 !OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
@@ -874,6 +894,8 @@ retarget: src to: dst
 	idx := lastDefIR at: src.
 	(idx >= 0 and: [idx = lastInstIR and: [idx >= lastLabelIR]]) ifFalse: [^false].
 	(slotFlags at: src) ~= 0 ifTrue: [^false]. "(e.g. a materialized object's register, to which descriptors refer)"
+	"the deopt state of this bytecode may refer to src, which no longer receives the value"
+	(self snapshotRefersTo: src) ifTrue: [oilSnapStale := true].
 	word := oilIRBuffer at: idx.
 	(self opcodeHasDest: (word bitShift: -24)) ifFalse: [^false].
 	((word bitShift: -16) bitAnd: 255) = src ifFalse: [^false].
@@ -1950,6 +1972,7 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 			 failed ifTrue: [^nextPC].
 			 siteIR at: siteIndex put: -1.
 			 condSite at: numConds put: siteIndex].
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
 	condCond at: numConds put: condCode.
 	condClass at: numConds put: 0.
 	condRA at: numConds put: regA.
@@ -2506,6 +2529,7 @@ isClassBinding: binding
 	"In the VM: is binding an instance of the class of class bindings (ClassBinding in Squeak 6), which is the class of
 	 the last literal (the method class association) of the instance side methods (whose key is the class's name; on the
 	 class side, the key is nil)?  It is found in the root method or the method of the current frame."
+	| meta |
 	oilClassBindingClass <= 0 ifTrue:
 		[oilClassBindingClass := coInterpreter oilApiClassBindingClassOf:
 									((oilClassBindingClass = 0 or: [currentFrame < 0])
@@ -2513,9 +2537,13 @@ isClassBinding: binding
 										ifFalse: [frameMethod at: currentFrame]).
 		 oilClassBindingClass = 0 ifTrue: [oilClassBindingClass := -1]].
 	oilClassBindingClass <= 0 ifTrue: [^false].
-	^(objectMemory isNonImmediate: binding)
+	((objectMemory isNonImmediate: binding)
 	  and: [(coInterpreter oilApiFetchClassOf: binding) = oilClassBindingClass
-	  and: [(objectMemory fetchPointer: 1 ofObject: binding) ~= nilHandle]]! !
+	  and: [(objectMemory fetchPointer: 1 ofObject: binding) ~= nilHandle]]) ifFalse: [^false].
+	"and its value is a Behavior: m, the class of its class, is Metaclass (Metaclass class for a metaclass); only
+	 those satisfy m class class == m"
+	meta := coInterpreter oilApiFetchClassOf: (coInterpreter oilApiFetchClassOf: (objectMemory fetchPointer: 1 ofObject: binding)).
+	^(coInterpreter oilApiFetchClassOf: (coInterpreter oilApiFetchClassOf: meta)) = meta! !
 
 !OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 identityHashOf: aHandle
@@ -2698,10 +2726,10 @@ genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard
 		slotFlags at: slotReg put: OilFlagTVSlot.
 		self setSlot: slotReg kind: OilDescConst value: nilHandle].
 	prim = 18
-		ifTrue: "x := the receiver, y := the argument"
-			[self storeTopIntoReg: baseReg + 1 pop: true.
-			 self storeTopIntoReg: baseReg pop: true]
-		ifFalse: [simStackTop := rcvrSlot - 1].
+		ifTrue: "x := the receiver, y := the argument (moved, not retargeted: the deopt state refers to their registers)"
+			[self initVObjSlot: baseReg + 1 from: rcvrSlot + 1.
+			 self initVObjSlot: baseReg from: rcvrSlot].
+	simStackTop := rcvrSlot - 1.
 	self push: OilDescObject value: vobjIndex.
 	oilNumVirtualized := oilNumVirtualized + 1.
 	(self isEagerSite: (vobjLiteral at: vobjIndex) pc: currentPC) ifTrue: "its objects escape: allocate them now"
@@ -2746,7 +2774,8 @@ materializeVObj: vobjIndex scratch: scratchReg
 	(vobjMaterialized at: vobjIndex) >= 0 ifTrue: [^vobjMaterialized at: vobjIndex].
 	failed ifTrue: [^scratchReg].
 	(self canMaterializeInPlace: vobjIndex depth: 0) ifFalse:
-		[self requestEagerSite: vobjIndex.
+		["(the object that cannot be materialized here: this one or one in its slots)"
+		 self requestEagerSite: oilBlockingVObj.
 		 ^scratchReg].
 	baseReg := vobjSlotBase at: vobjIndex.
 	numSlots := vobjSize at: vobjIndex.
@@ -2780,10 +2809,16 @@ canMaterializeInPlace: vobjIndex depth: depth
 	 at hand (for the allocation's deopt site), and the static deoptimization records do not refer to it: it is not the
 	 receiver of an active inlined frame and no virtual closure captured it.  The same for the objects in its slots."
 	| activeFrame baseReg |
+	oilBlockingVObj := vobjIndex.
 	depth > 4 ifTrue: [^false].
 	(vobjMaterialized at: vobjIndex) >= 0 ifTrue: [^true].
 	((vobjEpoch at: vobjIndex) = oilFlowEpoch
-	 and: [snapFrame = currentFrame and: [snapPC = currentPC and: [emittingCond < 0]]]) ifFalse: [^false].
+	 and: [snapFrame = currentFrame and: [snapPC = currentPC and: [emittingCond < 0 and: [oilSnapStale not]]]]) ifFalse: [^false].
+	"The allocation's deopt site records a lazy comparison of the snapshot as its register: it must hold it already."
+	0 to: snapTop do:
+		[:slotIndex|
+		(((snapKind at: slotIndex) = OilDescCond or: [(snapKind at: slotIndex) = OilDescSelect])
+		 and: [slotIndex > simStackTop or: [(slotKind at: slotIndex) ~= OilDescReg or: [(slotValue at: slotIndex) ~= slotIndex]]]) ifTrue: [^false]].
 	activeFrame := currentFrame.
 	[activeFrame >= 0] whileTrue:
 		[((frameSelfKind at: activeFrame) = OilDescObject and: [(frameSelfValue at: activeFrame) = vobjIndex]) ifTrue: [^false].
@@ -2800,6 +2835,7 @@ canMaterializeInPlace: vobjIndex depth: depth
 		[:slotReg|
 		((slotKind at: slotReg) = OilDescObject
 		 and: [(self canMaterializeInPlace: (slotValue at: slotReg) depth: depth + 1) not]) ifTrue: [^false]].
+	oilBlockingVObj := vobjIndex.
 	^true! !
 
 !OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
@@ -3051,6 +3087,7 @@ genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
 	self emit64: trueClass.
 	self emit64: falseClass.
 	simStackTop := rcvrSlot - 1.
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
 	condCond at: numConds put: OilCondIdentical.
 	condClass at: numConds put: trueClass.
 	condRA at: numConds put: rcvrReg.
@@ -3086,7 +3123,8 @@ genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
 	| rcvrReg argReg |
 	((slotKind at: rcvrSlot) = OilDescConst
 	 and: [(slotKind at: rcvrSlot + 1) = OilDescConst
-	 and: [self isSmallIntegerHandle: (slotValue at: rcvrSlot + 1)]]) ifTrue:
+	 and: [(self isSmallIntegerHandle: (slotValue at: rcvrSlot + 1))
+	 and: [self isImmutableObject: (slotValue at: rcvrSlot)]]]) ifTrue: "(a Symbol literal: its hash cannot change)"
 		[simStackTop := rcvrSlot - 1.
 		 ^self push: OilDescConst value: (self handleForSmallInteger:
 											(self stringHashOf: (slotValue at: rcvrSlot)
@@ -3098,8 +3136,7 @@ genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
 	argReg := self regForSlot: rcvrSlot + 1.
 	simStackTop := rcvrSlot - 1.
 	self pushResultOf: OilStringHash b: rcvrReg c: argReg site: 0.
-	self emit64: selector.
-	knownClass at: simStackTop put: smallIntegerClassHandle! !
+	self emit64: selector! !
 
 !OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 stringHashOf: aHandle initialHash: initialHash
@@ -3163,6 +3200,7 @@ genBimorphicSelect: nilClass other: otherClass prim: prim receiver: rcvrSlot
 	self emit64: nilClass.
 	self emit64: otherClass.
 	simStackTop := rcvrSlot - 1.
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
 	condCond at: numConds put: OilCondIdentical.
 	condClass at: numConds put: nilClass.
 	condRA at: numConds put: rcvrReg.
@@ -3208,6 +3246,7 @@ genSelectIsNil: condIndex cond: condCode slot: slotA frame: frameIndex next: nex
 	numConds >= OilMaxConds ifTrue:
 		[self abortCompilation: OilFailTooManyVirtualObjects.
 		 ^nextPC].
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
 	condCond at: numConds put: testCond.
 	condClass at: numConds put: (condClass at: condIndex).
 	condRA at: numConds put: (condRA at: condIndex).
@@ -3280,3 +3319,21 @@ policyDepthOf: frameIndex
 			[^(frameDepth at: frameIndex) - (frameDepth at: walkFrame) + 1].
 		 walkFrame := frameParent at: walkFrame].
 	^(frameDepth at: frameIndex) + 1! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+initVObjSlot: slotReg from: srcSlot
+	"Initialize the slot register slotReg of a new scalar replaced object with the value of the stack slot srcSlot."
+	| descKind |
+	((slotKind at: srcSlot) = OilDescCond or: [(slotKind at: srcSlot) = OilDescSelect]) ifTrue:
+		[self materializeSlot: srcSlot].
+	descKind := slotKind at: srcSlot.
+	(descKind = OilDescConst or: [descKind = OilDescObject]) ifTrue:
+		[^self setSlot: slotReg kind: descKind value: (slotValue at: srcSlot)].
+	descKind = OilDescReg ifFalse: [^self requireEagerClosures].
+	self emitMove: slotReg from: (slotValue at: srcSlot).
+	self setOwn: slotReg! !
+
+!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+isImmutableObject: aHandle
+	"Is the non-immediate constant aHandle read-only (e.g. a Symbol)?"
+	^self cCode: [coInterpreter oilApiIsImmutable: aHandle] inSmalltalk: [(self objectFor: aHandle) isReadOnlyObject]! !
