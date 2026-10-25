@@ -205,6 +205,7 @@ oilRegisterSelectors
 	| pairs numSlots kind selector |
 	self resetSelectorRegistry.
 	self oilDisqualifyLimit: 0.
+	self oilResetUnrollParameters.
 	pairs := oilSelectors.
 	(pairs = 0 or: [pairs = objectMemory nilObject]) ifTrue: [^self].
 	(objectMemory isForwarded: pairs) ifTrue:
@@ -220,7 +221,12 @@ oilRegisterSelectors
 			 self registerSelector: selector kind: (objectMemory integerValueOf: kind)].
 		"kind 8: the number of deoptimizations after which an Oil method is disqualified (default OilDisqualifyDeopts)"
 		(kind = (objectMemory integerObjectOf: 8) and: [objectMemory isIntegerObject: selector]) ifTrue:
-			[self oilDisqualifyLimit: (objectMemory integerValueOf: selector)]]! !
+			[self oilDisqualifyLimit: (objectMemory integerValueOf: selector)].
+		"kinds 12 to 18: the loop unrolling parameters (see OilLoopOptimizer>>oilUnrollParameter:value:)"
+		((objectMemory isIntegerObject: kind)
+		 and: [((objectMemory integerValueOf: kind) between: 12 and: 18)
+		 and: [objectMemory isIntegerObject: selector]]) ifTrue:
+			[self oilUnrollParameter: (objectMemory integerValueOf: kind) value: (objectMemory integerValueOf: selector)]]! !
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
 oilMethod: aMethodObj receiverClass: classObj
@@ -1466,7 +1472,8 @@ primitiveOilCompile
 primitiveOilSetSelectors
 	"Argument: an Array of pairs kind, selector telling the Oil compiler which selectors it treats specially
 	 (0-4: value, value:, ... by arity; 5: bitXor:; 6: iterators to inline; 7: cold selectors never inlined;
-	 8 with a SmallInteger: the number of deoptimizations after which an Oil method is disqualified).
+	 8 with a SmallInteger: the number of deoptimizations after which an Oil method is disqualified;
+	 12-18 with a SmallInteger: the loop unrolling parameters, see OilLoopOptimizer>>oilUnrollParameter:value:).
 	 Answer the previous Array, or nil."
 	<export: true>
 	<essential: #ProfilingCogit>
@@ -1536,7 +1543,8 @@ primitiveOilLastCompilation
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
 	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers.
 	   microseconds Passes 1 to 3 took (including assembling the CogMethod and its metadata, not freeing the baseline code).
-	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
+	   Pass 1 IR words (after loop unrolling, the IR Pass 2 optimized again, see OilLoopOptimizer>>loopOptimize).
+	   Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
 	<export: true>
 	<essential: #ProfilingCogit>
 	| irWordCount irArray result statsArray |
@@ -1560,9 +1568,9 @@ primitiveOilLastCompilation
 	0 to: irWordCount - 1 do:
 		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 23.
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 26.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 22 do:
+	0 to: 25 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !

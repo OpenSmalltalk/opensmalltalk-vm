@@ -57,6 +57,7 @@ sels add: 5; add: #bitXor:.
 sels add: 9; add: ByteString class >> #indexOfAscii:inString:startingAt:.
 sels add: 10; add: PositionableStream >> #skipSeparators.
 sels add: 11; add: ReadStream.
+sels add: 12; add: 3. "no loop unrolling (M9, see test_oil_m9.st): these checks count the instructions of loops"
 check value: 'primitiveOilSetSelectors' value: (cls oilSetSelectors: sels asArray) ~~ #failed.
 model := cls new total: 7; yourself.
 "opcodes: the opcode numbers of the last compilation's (Pass 2) IR; countOps: how many of the given opcodes"

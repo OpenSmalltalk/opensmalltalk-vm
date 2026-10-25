@@ -55,9 +55,10 @@ prepareNativeCode
 			 branchTarget >= irIndex ifTrue:
 				[self abortCompilation: OilFailInternal.
 				 ^failureCode].
-			 oilIRTarget at: branchTarget put: 1.
-			 branchTarget <= irOffset ifTrue:
-				[branchTarget to: irOffset do: [:targetOffset| oilLoopDepth at: targetOffset put: ((oilLoopDepth at: targetOffset) + 1 min: 3)]]].
+			 oilIRTarget at: branchTarget put: ((oilIRTarget at: branchTarget) max: 1).
+			 branchTarget <= irOffset ifTrue: "a loop header: 2 (see generateNativeCode)"
+				[oilIRTarget at: branchTarget put: 2.
+				 branchTarget to: irOffset do: [:targetOffset| oilLoopDepth at: targetOffset put: ((oilLoopDepth at: targetOffset) + 1 min: 3)]]].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
@@ -322,6 +323,8 @@ generateNativeCode
 	"The home slots follow the method's temps.  They are pushed here, after the stack check, and not in the
 	 frame build: the CoInterpreter also builds machine code frames itself (with the method's temps only, see
 	 activateNewCogMethod:inInterpreter:) and enters them at the stack check."
+	1 to: self codeShift do: "(a measurement aid, see OilLoopOptimizer>>codeShift)"
+		[:nopIndex| cogit Nop].
 	1 to: oilNumSpillTemps do:
 		[:homeIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
 	0 to: numArgs do:
@@ -339,7 +342,9 @@ generateNativeCode
 	oilPendingAllocBytes := oilNumAllocsCombined := 0.
 	irOffset := 0.
 	[irOffset < irIndex and: [failed not]] whileTrue:
-		[(oilIRTarget at: irOffset) ~= 0 ifTrue:
+		[((oilIRTarget at: irOffset) = 2 and: [self loopAlignment > 1]) ifTrue: "a loop header"
+			[self genLoopAlignment].
+		 (oilIRTarget at: irOffset) ~= 0 ifTrue:
 			[oilIRLabel at: irOffset put: cogit Label].
 		 irOffset := self genInstructionAt: irOffset].
 	failed ifTrue: [^failureCode].
@@ -1316,7 +1321,8 @@ genStoreField: valReg object: objReg slot: slotIndex site: siteIndex
 	objMach := self src: objReg scratch: ClassReg.
 	self genImmutabilityCheckOf: objMach scratch: SendNumArgsReg site: siteIndex.
 	cogit MoveR: valMach Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: objMach.
-	self genStoreCheckObject: objMach value: valMach scratch: SendNumArgsReg! !
+	(self storeNeedsCheck: objReg) ifTrue:
+		[self genStoreCheckObject: objMach value: valMach scratch: SendNumArgsReg]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genLoadElement: destReg array: arrayReg index: indexReg
@@ -1341,7 +1347,34 @@ genStoreElement: valReg array: arrayReg index: indexReg site: siteIndex
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	valMach := self src: valReg scratch: TempReg.
 	cogit MoveR: valMach Xwr: SendNumArgsReg R: arrayMach.
-	self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg! !
+	(self storeNeedsCheck: arrayReg) ifTrue:
+		[self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+codeShift
+	"The number of nops before the method body (see OilLoopOptimizer>>codeShift)."
+	^0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+genLoopAlignment
+	"Pad with nops to the next multiple of loopAlignment (at most 16), by steps of at most 8 bytes: an AlignmentNops pads with
+	 up to alignment - 1 bytes, and an abstract instruction has room for 14 (CogX64Compiler>>machineCodeBytes)."
+	| alignment |
+	alignment := 8.
+	[alignment <= self loopAlignment] whileTrue:
+		[cogit AlignmentNops: alignment.
+		 alignment := alignment * 2]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+loopAlignment
+	"The alignment (in bytes, a power of two) of the loop headers, or 0.  (See OilLoopOptimizer>>loopAlignment.)"
+	^0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+storeNeedsCheck: objReg
+	"Does the store into the object in register objReg by the instruction being translated need the store check?  (See
+	 OilLoopOptimizer>>storeNeedsCheck:.)"
+	^true! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genLoadSize: destReg object: objReg

@@ -1,6 +1,6 @@
 SharedPool subclass: #OilConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilCondLt OilCondGt OilCondLe OilCondGe OilCondEq OilCondNe OilCondIdentical OilCondNotIdentical OilTagUnknown OilTagPushRcvrVar OilTagPushLitVar OilTagPushLitConst OilTagPushTemp OilTagPushSelf OilTagPushTrue OilTagPushFalse OilTagPushNil OilTagPushInteger OilTagPushCharacter OilTagDup OilTagPop OilTagReturnSelf OilTagReturnTrue OilTagReturnFalse OilTagReturnNil OilTagReturnTop OilTagBlockReturnNil OilTagBlockReturnTop OilTagNop OilTagSendSpecial OilTagSend OilTagSendSuper OilTagJump OilTagJumpTrue OilTagJumpFalse OilTagStoreRcvrVar OilTagPopIntoRcvrVar OilTagStoreTemp OilTagPopIntoTemp OilTagStoreLitVar OilTagPopIntoLitVar OilTagPushNewArray OilTagPushRemoteTemp OilTagStoreRemoteTemp OilTagPopIntoRemoteTemp OilTagPushFullClosure OilTagExtension OilModeNone OilModeLow OilModeByte1 OilModeByte1ExtB OilModeSend OilModeLowSend OilModeNewArray OilModeRemoteTemp OilModeFullClosure OilModeByte1Temp OilDescReg OilDescConst OilDescBlock OilDescTempVector OilDescCond OilDescObject OilDescSelect OilFlagImmutable OilFlagTVSlot OilBufferWords OilIRBudget OilMaxInlineDepth OilLargeMethodDepth OilMediumMethodDepth OilAccessorBytes OilMediumMethodBytes OilMaxCalleeBytes OilNumRegs OilFlagsReg OilMaxReg OilMaxFrames OilPCMapSize OilMaxVObjs OilMaxCaptured OilMaxSites OilMaxConds OilMaxColdSelectors OilNoLink OilSiteGuard OilSiteArith OilSiteBounds OilSiteCall OilSiteBranch OilSiteStore OilSiteAlloc OilSitePoolSize OilOK OilFailUnsupportedBytecode OilFailThisContext OilFailPrimitiveMethod OilFailBufferFull OilFailOutOfRegisters OilFailTooManyFrames OilFailPCMapFull OilFailTooManyVirtualObjects OilFailTooManySites OilFailEagerClosuresFailed OilFailInternal OilFailBackend OilFailCodeSpace OilFailUnsafeSite OilFailNotSistaV1 OilMDVersion OilMDRootMethod OilMDNumSites OilMDSiteTable OilMDNumFrames OilMDFrames OilMDNumVObjs OilMDVObjs OilMDHomes OilMDDeopts OilMDFastPaths OilMDNumArgs OilMDCaptured OilMDHeaderSize OilMDFrameSize OilMDVObjSize OilMDSiteHeaderSize OilMDFrameMethod OilMDFrameIsBlock OilMDFrameBase OilMDFrameParent OilMDFrameReturnPC OilMDFrameSelf OilMDFrameNumArgs OilMDVObjKind OilMDVObjLiteralOrSize OilMDVObjOuterFrame OilMDVObjSelf OilMDVObjClass OilMDVObjNumCopied OilMDVObjCopiedIndex OilMDVObjSlotBase OilMDSiteKind OilMDSiteGuardReg OilMDSiteClassTag OilMDSiteResumeOffset OilMDSiteFrame OilMDSitePC OilMDSiteTop OilMDSiteHigh OilMDMagic OilP2Delete OilP2NoCheck OilP2RotBack OilP2ToMove OilFloatChained OilFloatUnboxed OilNumXmms OilMaxFacts OilMaxUndos OilFailDisqualified OilDisqualifyDeopts OilMaxDisqualified OilExtraSelectorBase OilMaxExtraSelectors OilFailSpecialization OilMaxSpecializations OilMaxPICCases OilSpecializationSize OilSpecMethod OilSpecClassTag OilSpecCopy OilSpecClass OilMaxEagerSites OilMaxVObjSlots'
+	classVariableNames: 'OilCondLt OilCondGt OilCondLe OilCondGe OilCondEq OilCondNe OilCondIdentical OilCondNotIdentical OilTagUnknown OilTagPushRcvrVar OilTagPushLitVar OilTagPushLitConst OilTagPushTemp OilTagPushSelf OilTagPushTrue OilTagPushFalse OilTagPushNil OilTagPushInteger OilTagPushCharacter OilTagDup OilTagPop OilTagReturnSelf OilTagReturnTrue OilTagReturnFalse OilTagReturnNil OilTagReturnTop OilTagBlockReturnNil OilTagBlockReturnTop OilTagNop OilTagSendSpecial OilTagSend OilTagSendSuper OilTagJump OilTagJumpTrue OilTagJumpFalse OilTagStoreRcvrVar OilTagPopIntoRcvrVar OilTagStoreTemp OilTagPopIntoTemp OilTagStoreLitVar OilTagPopIntoLitVar OilTagPushNewArray OilTagPushRemoteTemp OilTagStoreRemoteTemp OilTagPopIntoRemoteTemp OilTagPushFullClosure OilTagExtension OilModeNone OilModeLow OilModeByte1 OilModeByte1ExtB OilModeSend OilModeLowSend OilModeNewArray OilModeRemoteTemp OilModeFullClosure OilModeByte1Temp OilDescReg OilDescConst OilDescBlock OilDescTempVector OilDescCond OilDescObject OilDescSelect OilFlagImmutable OilFlagTVSlot OilBufferWords OilIRBudget OilMaxInlineDepth OilLargeMethodDepth OilMediumMethodDepth OilAccessorBytes OilMediumMethodBytes OilMaxCalleeBytes OilNumRegs OilFlagsReg OilMaxReg OilMaxFrames OilPCMapSize OilMaxVObjs OilMaxCaptured OilMaxSites OilMaxConds OilMaxColdSelectors OilNoLink OilSiteGuard OilSiteArith OilSiteBounds OilSiteCall OilSiteBranch OilSiteStore OilSiteAlloc OilSitePoolSize OilOK OilFailUnsupportedBytecode OilFailThisContext OilFailPrimitiveMethod OilFailBufferFull OilFailOutOfRegisters OilFailTooManyFrames OilFailPCMapFull OilFailTooManyVirtualObjects OilFailTooManySites OilFailEagerClosuresFailed OilFailInternal OilFailBackend OilFailCodeSpace OilFailUnsafeSite OilFailNotSistaV1 OilMDVersion OilMDRootMethod OilMDNumSites OilMDSiteTable OilMDNumFrames OilMDFrames OilMDNumVObjs OilMDVObjs OilMDHomes OilMDDeopts OilMDFastPaths OilMDNumArgs OilMDCaptured OilMDHeaderSize OilMDFrameSize OilMDVObjSize OilMDSiteHeaderSize OilMDFrameMethod OilMDFrameIsBlock OilMDFrameBase OilMDFrameParent OilMDFrameReturnPC OilMDFrameSelf OilMDFrameNumArgs OilMDVObjKind OilMDVObjLiteralOrSize OilMDVObjOuterFrame OilMDVObjSelf OilMDVObjClass OilMDVObjNumCopied OilMDVObjCopiedIndex OilMDVObjSlotBase OilMDSiteKind OilMDSiteGuardReg OilMDSiteClassTag OilMDSiteResumeOffset OilMDSiteFrame OilMDSitePC OilMDSiteTop OilMDSiteHigh OilMDMagic OilP2Delete OilP2NoCheck OilP2RotBack OilP2ToMove OilFloatChained OilFloatUnboxed OilNumXmms OilMaxFacts OilMaxUndos OilFailDisqualified OilDisqualifyDeopts OilMaxDisqualified OilExtraSelectorBase OilMaxExtraSelectors OilFailSpecialization OilMaxSpecializations OilMaxPICCases OilSpecializationSize OilSpecMethod OilSpecClassTag OilSpecCopy OilSpecClass OilMaxEagerSites OilMaxVObjSlots OilP2Unroll OilP2UnrollPartial OilMaxUnrolls OilUnrollMaxTrips OilUnrollFullBudget OilUnrollTinyBody OilUnrollMaxBody OilLoopAlignment'
 	poolDictionaries: 'OilInstructionConstants'
 	category: 'VMMaker-JIT-Oil'!
 
@@ -184,6 +184,10 @@ initialize
 	OilP2NoCheck := 2.
 	OilP2RotBack := 8.
 	OilP2ToMove := 16.
+	"Pass 2 loop unrolling (OilLoopOptimizer>>unrollLoops): the header of a fully unrolled loop, the exit branch of the header
+	 of a partially unrolled one (the unrolled loop follows it)"
+	OilP2Unroll := 4.
+	OilP2UnrollPartial := 128.
 	"OilFullCompiler>>fuseFloats, on the final IR (oilIRFlag, cleared first): an instruction of a float chain (whose deopts
 	 all go to the site in oilIRAux, the one of its first instruction), and a float result left unboxed in an XMM register"
 	OilFloatChained := 32.
@@ -213,7 +217,20 @@ initialize
 	"scalar replacement: the allocation sites (method, pc) whose objects are materialized when created (they escaped after a
 	 branch or a label, see OilInliningCompiler>>materializeVObj:), and the largest scalar replaced object"
 	OilMaxEagerSites := 16.
-	OilMaxVObjSlots := 16.! !
+	OilMaxVObjSlots := 16.
+	"loop unrolling (OilLoopOptimizer>>unrollLoops), per method: unrolled loops; a loop of at most OilUnrollMaxTrips iterations
+	 known at compile time is fully unrolled if iterations * body size (IR instructions) <= OilUnrollFullBudget; other counted
+	 leaf loops are unrolled 4 times if their body has at most OilUnrollTinyBody instructions, else twice if at most
+	 OilUnrollMaxBody (the image can override these, see OilLoopOptimizer>>oilUnrollParameter:value:).  Tuned (M9): 8
+	 iterations and a budget of 48 instructions (about 80 bytecodes) are faster than 5 and 25 (8 x 2 instructions: 1.35
+	 times faster when unrolled; 5 x 6: 1.15 times); the body sizes (4 and 16) make no measurable difference."
+	OilMaxUnrolls := 16.
+	OilUnrollMaxTrips := 8.
+	OilUnrollFullBudget := 48.
+	OilUnrollTinyBody := 4.
+	OilUnrollMaxBody := 16.
+	"Pass 3: the alignment of loop headers (bytes, at most 16; 1: none), see OilLoopOptimizer>>loopAlignment"
+	OilLoopAlignment := 16.! !
 
 !OilConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:15'!
 opcodeNames

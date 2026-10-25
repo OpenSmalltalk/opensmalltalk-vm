@@ -3,13 +3,35 @@
  translates to machine code.  All its tables are static; it allocates nothing.  Author: cb."!
 
 OilInliningCompiler subclass: #OilLoopOptimizer
-	instanceVariableNames: ''
+	instanceVariableNames: 'oilUnrollHead oilUnrollBack oilUnrollTest oilUnrollCount oilUnrollIV oilUnrollValue oilUnrollWord1 oilUnrollWord2 oilNumUnrolls oilUnrollGrowth oilUnrollClones oilUnrollFreeReg oilNumFullyUnrolled oilNumPartiallyUnrolled oilNumYoungStores oilUnrollMode oilUnrollTinyBody oilUnrollMaxBody oilUnrollBudget oilUnrollMaxTrips oilLoopAlignment oilCodeShift'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
 !OilLoopOptimizer commentStamp: 'cb 10/24/2026 19:35' prior: 0!
-I add Pass 2, the streaming loop optimizer, to OilInliningCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via loopOptimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, removes dead pure instructions, and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
+I add Pass 2, the streaming loop optimizer, to OilInliningCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via loopOptimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, removes dead pure instructions, unrolls innermost leaf loops (fully when their trip count is a small constant, else 2 or 4 times with a remainder loop), and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
+
+!OilLoopOptimizer class methodsFor: 'translation' stamp: 'cb 10/25/2026 21:00'!
+declareCVarsIn: aCCodeGenerator
+	self == OilLoopOptimizer ifFalse: [^self].
+	#(oilUnrollHead oilUnrollBack oilUnrollTest oilUnrollCount oilUnrollIV oilUnrollValue oilUnrollWord1 oilUnrollWord2) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxUnrolls]']! !
+
+!OilLoopOptimizer methodsFor: 'initialization' stamp: 'cb 10/25/2026 21:00'!
+setUpSimulationTables
+	<doNotGenerate>
+	super setUpSimulationTables.
+	oilUnrollHead := self newTable: OilMaxUnrolls.
+	oilUnrollBack := self newTable: OilMaxUnrolls.
+	oilUnrollTest := self newTable: OilMaxUnrolls.
+	oilUnrollCount := self newTable: OilMaxUnrolls.
+	oilUnrollIV := self newTable: OilMaxUnrolls.
+	oilUnrollValue := self newTable: OilMaxUnrolls.
+	oilUnrollWord1 := self newTable: OilMaxUnrolls.
+	oilUnrollWord2 := self newTable: OilMaxUnrolls.
+	oilNumUnrolls := oilUnrollGrowth := oilUnrollClones := oilNumFullyUnrolled := oilNumPartiallyUnrolled := oilNumYoungStores := 0.
+	oilUnrollFreeReg := -2.
+	self oilResetUnrollParameters! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
 pipe
@@ -34,13 +56,31 @@ loopOptimize
 	      the loop, and the bounds checks of the index right after the loop test are redundant.
 	 3. Redundant loads and checks (valueNumber: none here, see OilFullCompiler).
 	 4. Dead code: pure instructions defining a register nothing reads (no instruction, no deopt state).
-	 5. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
+	 5. Unrolling of innermost leaf loops (unrollLoops).
+	 6. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
+	 If loops were fully unrolled, their copies are straight-line code: Buffer 2 is copied back into Buffer 1 and optimized
+	 again (once), e.g. the checks a copy repeats are redundant (value numbering), and loops around them may now be innermost.
 	 Answer OilOK or a failure code."
-	| irOffset opcode branchTarget optimize |
+	| result |
 	oilIRBuffer := oilIRBuffer1.
 	oilPass1Words := irIndex.
 	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := oilNumUndos := 0.
 	oilUseProbe := -1.
+	oilNumFullyUnrolled := oilNumPartiallyUnrolled := oilNumYoungStores := 0.
+	result := self optimizeIR.
+	(result = OilOK and: [oilNumFullyUnrolled > 0]) ifTrue:
+		[0 to: irIndex - 1 do:
+			[:irOffset| oilIRBuffer1 at: irOffset put: (oilIRBuffer2 at: irOffset)].
+		 oilIRBuffer := oilIRBuffer1.
+		 result := self optimizeIR].
+	^result! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 21:00'!
+optimizeIR
+	"Optimize the IR of Buffer 1 into Buffer 2 and make Buffer 2 the current IR (see loopOptimize)."
+	| irOffset opcode branchTarget optimize |
+	oilNumUnrolls := oilUnrollGrowth := oilUnrollClones := 0.
+	oilUnrollFreeReg := -2.
 	0 to: irIndex - 1 do:
 		[:targetOffset|
 		oilIRFlag at: targetOffset put: 0.
@@ -71,7 +111,8 @@ loopOptimize
 				[self optimizeLoop: (self imm16At: irOffset) backJump: irOffset].
 			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 		 self valueNumber.
-		 self eliminateDeadCode].
+		 self eliminateDeadCode.
+		 self unrollLoops].
 	^self emitOptimizedIR! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 02:00'!
@@ -123,9 +164,10 @@ regionStartBefore: loopHead
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 optimizeLoop: loopHead backJump: backJump
 	"Optimize the loop from loopHead to the Jump at backJump, if it is innermost, free of calls and only entered by
-	 falling into loopHead, and its header is pure code then OilCmpTagged and an OilBranchFalse that leaves the loop."
+	 falling into loopHead, and its header is pure code then OilCmpTagged (or OilCmpImmTagged) and an OilBranchFalse that
+	 leaves the loop."
 	<inline: false>
-	| irOffset opcode cmpOffset bfOffset exitOffset cond ivReg limitReg limitDef arrayReg regionStart ivDefsInLoop ivInit ivInitValue sizeAlias |
+	| irOffset opcode cmpOffset bfOffset exitOffset cond ivReg limitReg limitDef arrayReg regionStart ivDefsInLoop ivInit ivInitValue sizeAlias isImm |
 	(oilIRTarget at: loopHead) = 1 ifFalse: [^self]. "only the back jump branches to the loop head"
 	irOffset := loopHead.
 	[irOffset < backJump] whileTrue:
@@ -141,7 +183,8 @@ optimizeLoop: loopHead backJump: backJump
 		[irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	cmpOffset := irOffset.
 	bfOffset := cmpOffset + 1.
-	((self opcodeAt: cmpOffset) = OilCmpTagged
+	isImm := (self opcodeAt: cmpOffset) = OilCmpImmTagged.
+	((isImm or: [(self opcodeAt: cmpOffset) = OilCmpTagged])
 	 and: [bfOffset < backJump
 	 and: [(cmpOffset = loopHead or: [(oilIRTarget at: cmpOffset) = 0])
 	 and: [(self opcodeAt: bfOffset) = OilBranchFalse
@@ -152,10 +195,18 @@ optimizeLoop: loopHead backJump: backJump
 	cond := self fieldAAt: cmpOffset.
 	ivReg := self fieldBAt: cmpOffset.
 	limitReg := self fieldCAt: cmpOffset.
-	"Rotation: the test is duplicated at the bottom, without its deopt site, so it must not be able to fail."
-	(cond < OilCondIdentical and: [(self isTagged: ivReg) and: [self isTagged: limitReg]]) ifTrue:
+	"Rotation: the test is duplicated at the bottom, without its deopt site, so it must not be able to fail; or, if the
+	 limit may not be a SmallInteger but the loop does not assign it, with a clone of its deopt site (the bottom is the
+	 header of the next iteration; see emitRotatedBackJump:at:)."
+	(cond < OilCondIdentical
+	 and: [(self isTagged: ivReg)
+	 and: [isImm or: [(self isTagged: limitReg) or: [self canCheckLimit: limitReg test: cmpOffset loop: loopHead backJump: backJump]]]]) ifTrue:
 		[self mark: backJump with: OilP2RotBack.
-		 oilNumRotated := oilNumRotated + 1].
+		 oilNumRotated := oilNumRotated + 1.
+		 "a constant limit (at most 4095) bounds the induction variable at the test: its increments cannot overflow"
+		 (isImm or: [(self constantLimit: limitReg test: cmpOffset loop: loopHead backJump: backJump) ~= 0]) ifTrue:
+			[self markUncheckedSteps: ivReg cond: cond after: bfOffset backJump: backJump]].
+	isImm ifTrue: [^self].
 	"A counted loop?  ivReg <= limitReg (or ivReg < limitReg), limitReg the size of an object arrayReg that is never assigned (the receiver or
 	 an argument), limitReg assigned only once, before the loop; ivReg assigned a constant >= 1 before the loop and only
 	 incremented in the loop.  Then 1 <= ivReg <= limitReg holds after the test, and the increments cannot overflow."
@@ -379,9 +430,55 @@ rotatedHeaderCompareOf: backJump
 	"The OilCmpTagged of the header of the rotated loop closed by the Jump at backJump (see optimizeLoop:backJump:)."
 	| irOffset |
 	irOffset := self imm16At: backJump.
-	[(self opcodeAt: irOffset) = OilCmpTagged] whileFalse:
+	[(self opcodeAt: irOffset) = OilCmpTagged or: [(self opcodeAt: irOffset) = OilCmpImmTagged]] whileFalse:
 		[irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^irOffset! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 21:00'!
+canCheckLimit: limitReg test: cmpOffset loop: loopHead backJump: backJump
+	"Can the test at cmpOffset of the loop from loopHead to backJump, of a limit limitReg that may not be a SmallInteger, be
+	 duplicated at the bottom of the loop with a clone of its deopt site?  The loop must not assign limitReg, the site must
+	 have a state, and there must be room for the clone (and one more, see partiallyUnrollLoop:backJump:)."
+	| siteIndex |
+	siteIndex := oilIRSite at: cmpOffset.
+	(limitReg < OilFlagsReg
+	 and: [siteIndex >= 0
+	 and: [(siteSnapBase at: siteIndex) >= 0
+	 and: [numSites + oilUnrollClones + 2 <= OilMaxSites
+	 and: [(self isAssigned: limitReg from: loopHead to: backJump - 1) not]]]]) ifFalse: [^false].
+	oilUnrollClones := oilUnrollClones + 1.
+	^true! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 21:00'!
+emitTestCopy: cmpOffset at: dstOffset
+	"Emit a copy of the loop test at cmpOffset: with a clone of its deopt site if its limit may not be a SmallInteger (see
+	 canCheckLimit:test:loop:backJump:).  Answer the index following it in Buffer 2."
+	((self opcodeAt: cmpOffset) = OilCmpTagged and: [(self isTagged: (self fieldCAt: cmpOffset)) not]) ifTrue:
+		[self cloneSite: (oilIRSite at: cmpOffset) at: dstOffset].
+	^self emitInstructionAt: cmpOffset at: dstOffset! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 21:00'!
+markUncheckedSteps: ivReg cond: cond after: bfOffset backJump: backJump
+	"The rotated loop ending with the Jump at backJump tests ivReg < or <= a constant (at most 4095) before the branch at bfOffset
+	 that leaves it.  If the loop only increments ivReg (by at most 127 each time), and only after that test, the increments
+	 cannot overflow: mark them unchecked (OilP2NoCheck)."
+	| irOffset opcode |
+	(cond = OilCondLe or: [cond = OilCondLt]) ifFalse: [^self].
+	irOffset := self imm16At: backJump.
+	[irOffset < backJump] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 ((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = ivReg]) ifTrue:
+			[(irOffset > bfOffset
+			  and: [opcode = OilAddImmTagged
+			  and: [(self fieldBAt: irOffset) = ivReg
+			  and: [(self signed8: (self fieldCAt: irOffset)) > 0]]]) ifFalse: [^self]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	irOffset := bfOffset.
+	[irOffset < backJump] whileTrue:
+		[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = ivReg]) ifTrue:
+			[self mark: irOffset with: OilP2NoCheck.
+			 oilNumNoCheck := oilNumNoCheck + 1].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 sizeOfRotatedBackJump: backJump
@@ -430,7 +527,7 @@ emitRotatedBackJump: backJump at: startOffset
 		[(self flag: irOffset has: OilP2Delete) ifFalse:
 			[dstOffset := self emitInstructionAt: irOffset at: dstOffset].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-	dstOffset := self emitInstructionAt: cmpOffset at: dstOffset.
+	dstOffset := self emitTestCopy: cmpOffset at: dstOffset.
 	oilIRBuffer2 at: dstOffset put: (OilBranchTrue bitShift: 24) + (OilFlagsReg bitShift: 16) + (oilIRMap at: cmpOffset + 2).
 	dstOffset := dstOffset + 1.
 	exitTarget := self imm16At: cmpOffset + 1.
@@ -444,32 +541,48 @@ emitOptimizedIR
 	"Stream Buffer 1 into Buffer 2: lay out (the index in Buffer 2 of every instruction of Buffer 1, in oilIRMap),
 	 then emit, then remap the deopt sites, whose instructions were deleted or no longer deoptimize (dead, -2) or moved.
 	 Buffer 2 becomes the current IR."
-	| srcOffset dstOffset instrLen siteIROffset |
+	| srcOffset dstOffset instrLen siteIROffset numOriginalSites |
 	dstOffset := 0.
 	srcOffset := 0.
 	[srcOffset < irIndex] whileTrue:
 		[instrLen := self instructionLengthAt: srcOffset.
 		 oilIRMap at: srcOffset put: dstOffset.
-		 (self flag: srcOffset has: OilP2Delete) ifFalse:
-			[dstOffset := dstOffset + ((self flag: srcOffset has: OilP2RotBack)
-						ifTrue: [self sizeOfRotatedBackJump: srcOffset]
-						ifFalse: [instrLen])].
+		 (self flag: srcOffset has: OilP2Unroll)
+			ifTrue: "a fully unrolled loop, to its back jump"
+				[dstOffset := self layOutFullyUnrolledLoop: (self unrollIndexOf: srcOffset) at: dstOffset.
+				 instrLen := (oilUnrollBack at: (self unrollIndexOf: srcOffset)) + 1 - srcOffset]
+			ifFalse:
+				[(self flag: srcOffset has: OilP2Delete) ifFalse:
+					[dstOffset := dstOffset + ((self flag: srcOffset has: OilP2RotBack)
+								ifTrue: [self sizeOfRotatedBackJump: srcOffset]
+								ifFalse: [instrLen]).
+					 (self flag: srcOffset has: OilP2UnrollPartial) ifTrue:
+						[dstOffset := dstOffset + (self sizeOfPartiallyUnrolledLoop: (self unrollIndexOf: srcOffset))]]].
 		 srcOffset := srcOffset + instrLen].
 	oilIRMap at: irIndex put: dstOffset.
 	dstOffset > OilBufferWords ifTrue:
 		[self abortCompilation: OilFailBufferFull.
 		 ^failureCode].
+	"Copies of instructions get clones of their deopt sites, at their index in Buffer 2 (see emitCopyOf:at:shift:from:to:)."
+	numOriginalSites := numSites.
 	dstOffset := 0.
 	srcOffset := 0.
 	[srcOffset < irIndex] whileTrue:
 		[instrLen := self instructionLengthAt: srcOffset.
-		 (self flag: srcOffset has: OilP2Delete) ifFalse:
-			[dstOffset := (self flag: srcOffset has: OilP2RotBack)
-					ifTrue: [self emitRotatedBackJump: srcOffset at: dstOffset]
-					ifFalse: [self emitInstructionAt: srcOffset at: dstOffset]].
+		 (self flag: srcOffset has: OilP2Unroll)
+			ifTrue:
+				[dstOffset := self emitFullyUnrolledLoop: (self unrollIndexOf: srcOffset) at: dstOffset.
+				 instrLen := (oilUnrollBack at: (self unrollIndexOf: srcOffset)) + 1 - srcOffset]
+			ifFalse:
+				[(self flag: srcOffset has: OilP2Delete) ifFalse:
+					[dstOffset := (self flag: srcOffset has: OilP2RotBack)
+							ifTrue: [self emitRotatedBackJump: srcOffset at: dstOffset]
+							ifFalse: [self emitInstructionAt: srcOffset at: dstOffset].
+					 (self flag: srcOffset has: OilP2UnrollPartial) ifTrue:
+						[dstOffset := self emitPartiallyUnrolledLoop: (self unrollIndexOf: srcOffset) at: dstOffset]]].
 		 srcOffset := srcOffset + instrLen].
 	self assert: dstOffset = (oilIRMap at: irIndex).
-	0 to: numSites - 1 do:
+	0 to: numOriginalSites - 1 do:
 		[:siteIndex|
 		siteIROffset := siteIR at: siteIndex.
 		siteIROffset >= 0 ifTrue:
@@ -480,10 +593,610 @@ emitOptimizedIR
 	irIndex := dstOffset.
 	^OilOK! !
 
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+unrollLoops
+	"Unroll the innermost leaf loops (no sends) whose iterations are counted: fully if their number is a small
+	 constant (fullyUnrollLoop:backJump:), else 2 or 4 times, with the rotated loop as the remainder
+	 (partiallyUnrollLoop:backJump:).  Run after dead code elimination: the loops' instructions are final, the copies
+	 are made by the emission (emitOptimizedIR), with clones of their deopt sites."
+	| irOffset |
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[((self opcodeAt: irOffset) = OilJump and: [(self imm16At: irOffset) <= irOffset]) ifTrue:
+			[(self fullyUnrollLoop: (self imm16At: irOffset) backJump: irOffset) ifFalse:
+				[self partiallyUnrollLoop: (self imm16At: irOffset) backJump: irOffset]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+oilResetUnrollParameters
+	"Use the default unrolling thresholds (OilUnrollMaxTrips, OilUnrollFullBudget, OilUnrollTinyBody, OilUnrollMaxBody)."
+	oilUnrollMode := oilUnrollTinyBody := oilUnrollMaxBody := oilUnrollBudget := oilUnrollMaxTrips := oilLoopAlignment := oilCodeShift := 0! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+codeShift
+	"A measurement aid (kind 18 of primitiveOilSetSelectors, default 0): the number of one byte nops before the method body,
+	 which moves its code by that many bytes, so that benchmarks can average over the placements of its loops."
+	^oilCodeShift max: 0! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+loopAlignment
+	"The alignment (in bytes, at most 16) of the loop headers (OilLoopAlignment, or kind 17 of primitiveOilSetSelectors; 1 for
+	 none): the fall-through into the loop runs the padding (nops).  How the instructions of a loop fall on 16 and 32 byte
+	 boundaries changes its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes
+	 makes it faster on average and less erratic."
+	^(self unrollParameter: oilLoopAlignment default: OilLoopAlignment) min: 16 "(see genLoopAlignment)"! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+oilUnrollParameter: kind value: value
+	"Set a loop unrolling parameter (kinds 12 to 18 of primitiveOilSetSelectors, with a SmallInteger): 12 the mode, whose
+	 bits disable full unrolling (1), partial unrolling (2) and the store check elimination of young objects (4), and allow
+	 partial unrolling of bodies with branches (8); 13 the
+	 largest body unrolled 4 times; 14 the largest body unrolled twice; 15 the budget of full unrolling (iterations * body
+	 size); 16 the most iterations fully unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift
+	 (see codeShift).  0 (or less) means the default."
+	kind = 12 ifTrue: [oilUnrollMode := value].
+	kind = 13 ifTrue: [oilUnrollTinyBody := value].
+	kind = 14 ifTrue: [oilUnrollMaxBody := value].
+	kind = 15 ifTrue: [oilUnrollBudget := value].
+	kind = 16 ifTrue: [oilUnrollMaxTrips := value].
+	kind = 17 ifTrue: [oilLoopAlignment := value].
+	kind = 18 ifTrue: [oilCodeShift := value min: 64]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+unrollParameter: value default: defaultValue
+	<inline: true>
+	^value > 0 ifTrue: [value] ifFalse: [defaultValue]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+unrollIndexOf: irOffset
+	"The index of the unrolled loop whose header (fully unrolled) or exit branch (partially unrolled) is at irOffset."
+	0 to: oilNumUnrolls - 1 do:
+		[:unrollIndex|
+		(((oilUnrollHead at: unrollIndex) = irOffset and: [self flag: irOffset has: OilP2Unroll])
+		 or: [(oilUnrollTest at: unrollIndex) + 1 = irOffset and: [self flag: irOffset has: OilP2UnrollPartial]]) ifTrue:
+			[^unrollIndex]].
+	self abortCompilation: OilFailInternal.
+	^0! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+isStepAt: irOffset
+	"Is the instruction at irOffset r := r + c, an AddImmTagged (checked or not) of a register to itself?"
+	| opcode |
+	opcode := self opcodeAt: irOffset.
+	^(opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC])
+	  and: [(self fieldAAt: irOffset) = (self fieldBAt: irOffset)]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+condition: cond holdsFor: leftValue and: rightValue
+	"Does leftValue cond rightValue hold (cond one of OilCondLt .. OilCondNe)?"
+	cond = OilCondLt ifTrue: [^leftValue < rightValue].
+	cond = OilCondGt ifTrue: [^leftValue > rightValue].
+	cond = OilCondLe ifTrue: [^leftValue <= rightValue].
+	cond = OilCondGe ifTrue: [^leftValue >= rightValue].
+	cond = OilCondEq ifTrue: [^leftValue = rightValue].
+	^leftValue ~= rightValue! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+stepOf: ivReg from: startOffset before: backJump
+	"The index of the step ivReg := ivReg + c in the loop body from startOffset to before the back jump at backJump, if it is
+	 the only assignment of ivReg there and runs every iteration (no branch nor branch target follows it: it is in the
+	 straight-line code ending with the back jump).  Else -1."
+	| irOffset opcode stepOffset |
+	stepOffset := -1.
+	irOffset := startOffset.
+	[irOffset < backJump] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (stepOffset >= 0
+		  and: [(oilIRTarget at: irOffset) ~= 0 or: [(self isBranch: opcode) or: [opcode = OilReturn]]]) ifTrue: [^-1].
+		 ((self flag: irOffset has: OilP2Delete) not
+		  and: [(self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = ivReg]]) ifTrue:
+			[(stepOffset < 0 and: [self isStepAt: irOffset]) ifFalse: [^-1].
+			 stepOffset := irOffset].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^stepOffset! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+entryConstantOf: vreg before: loopHead
+	"The tagged constant register vreg holds when the loop at loopHead is entered by falling into it: the last
+	 assignment of vreg in the straight-line code before loopHead is an OilConstTagged.  Answer 0 (no SmallInteger) if
+	 it is not known."
+	| irOffset defOffset |
+	defOffset := -1.
+	irOffset := self regionStartBefore: loopHead.
+	[irOffset < loopHead] whileTrue:
+		[((self flag: irOffset has: OilP2Delete) not
+		  and: [(self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]]) ifTrue:
+			[defOffset := irOffset].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	(defOffset >= 0 and: [(self opcodeAt: defOffset) = OilConstTagged]) ifFalse: [^0].
+	^self signed16: (self imm16At: defOffset)! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+isUnrollableLoop: loopHead backJump: backJump
+	"Can the loop from loopHead to the Jump at backJump be copied?  It must be innermost and a leaf (no send, nor
+	 intrinsic falling back to one), entered only by falling into loopHead (no branch from outside into it), its branches
+	 forward, either inside it (but not to the back jump, so that what precedes the back jump runs every iteration) or out of
+	 it, and room must be left for another unrolled loop."
+	| irOffset opcode target |
+	(oilNumUnrolls < OilMaxUnrolls
+	 and: [(oilIRTarget at: loopHead) = 1
+	 and: [(oilIRTarget at: backJump) = 0]]) ifFalse: [^false].
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (irOffset >= loopHead and: [irOffset < backJump])
+			ifTrue:
+				[(self isCall: opcode) ifTrue: [^false].
+				 (self isBranch: opcode) ifTrue:
+					[target := self imm16At: irOffset.
+					 (target <= irOffset or: [target = backJump]) ifTrue: [^false]]]
+			ifFalse:
+				[(irOffset ~= backJump and: [self isBranch: opcode]) ifTrue:
+					[target := self imm16At: irOffset.
+					 (target > loopHead and: [target <= backJump]) ifTrue: [^false]]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^true! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+copySitesFrom: startOffset to: endOffset
+	"The number of deopt sites a copy of the instructions from startOffset to before endOffset clones."
+	| irOffset numSitesInCopy |
+	numSitesInCopy := 0.
+	irOffset := startOffset.
+	[irOffset < endOffset] whileTrue:
+		[((oilIRSite at: irOffset) >= 0 and: [(self flag: irOffset has: OilP2Delete + OilP2NoCheck) not]) ifTrue:
+			[numSitesInCopy := numSitesInCopy + 1].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^numSitesInCopy! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+canGrowBy: numWords sites: numClones
+	"Can the IR grow by numWords more words and numClones more deopt sites (margin left for the rotated loops)?"
+	^irIndex + oilUnrollGrowth + numWords + 256 < OilBufferWords
+	  and: [numSites + oilUnrollClones + numClones <= OilMaxSites]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+fullyUnrollLoop: loopHead backJump: backJump
+	"If the loop from loopHead to the Jump at backJump runs a number of iterations known now, at most OilUnrollMaxTrips,
+	 and iterations * body size (its instructions but the test and the induction steps) is at most OilUnrollFullBudget,
+	 record it to be replaced by that many copies of its body, without test, branch or back jump (see
+	 emitFullyUnrolledLoop:at:), and answer true.
+	 The loop: a header of pure instructions without deopt sites and steps (r := r + c) of the induction variable, an
+	 OilCmpTagged (or OilCmpImmTagged) of the induction variable with a limit and an OilBranchFalse leaving the loop, the
+	 body, possibly with a step of the induction variable in its last straight-line code.  Nothing else assigns the induction variable in the loop,
+	 its value is a constant when the loop is entered, and the limit is a constant (an immediate, or a register assigned
+	 a constant before the loop or by the header).  The copies assign the induction variable its values (OilConstTagged)
+	 instead of stepping it, and the tests, known to hold, go."
+	| irOffset opcode cmpOffset bfOffset tailOffset cond ivReg limitValue ivValue headerStep tailStep stepMagnitude trips bodySize copyWords headerWords |
+	((oilUnrollMode bitAnd: 1) = 0
+	 and: [self isUnrollableLoop: loopHead backJump: backJump]) ifFalse: [^false].
+	"The header, then the test."
+	irOffset := loopHead.
+	[opcode := self opcodeAt: irOffset.
+	 opcode ~= OilCmpTagged and: [opcode ~= OilCmpImmTagged]] whileTrue:
+		[((irOffset = loopHead or: [(oilIRTarget at: irOffset) = 0])
+		  and: [(self flag: irOffset has: OilP2Delete)
+				or: [(self isStepAt: irOffset)
+				or: [(self isPureAt: irOffset) and: [(oilIRSite at: irOffset) < 0]]]]) ifFalse: [^false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset).
+		 irOffset >= backJump ifTrue: [^false]].
+	cmpOffset := irOffset.
+	bfOffset := cmpOffset + 1.
+	((cmpOffset = loopHead or: [(oilIRTarget at: cmpOffset) = 0])
+	 and: [bfOffset < backJump
+	 and: [(self opcodeAt: bfOffset) = OilBranchFalse
+	 and: [(self fieldAAt: bfOffset) = OilFlagsReg
+	 and: [(oilIRTarget at: bfOffset) = 0
+	 and: [(self imm16At: bfOffset) > backJump]]]]]) ifFalse: [^false].
+	cond := self fieldAAt: cmpOffset.
+	ivReg := self fieldBAt: cmpOffset.
+	(cond < OilCondIdentical and: [ivReg < OilFlagsReg]) ifFalse: [^false].
+	"The limit."
+	(self opcodeAt: cmpOffset) = OilCmpImmTagged
+		ifTrue: [limitValue := self signed8: (self fieldCAt: cmpOffset)]
+		ifFalse:
+			[(self fieldCAt: cmpOffset) = ivReg ifTrue: [^false].
+			 limitValue := self constantLimit: (self fieldCAt: cmpOffset) test: cmpOffset loop: loopHead backJump: backJump.
+			 limitValue = 0 ifTrue: [^false].
+			 limitValue := (limitValue - 1) bitShift: -3].
+	"The induction variable: the steps of the header, and a step of the body that runs every iteration."
+	ivValue := self entryConstantOf: ivReg before: loopHead.
+	ivValue = 0 ifTrue: [^false].
+	ivValue := (ivValue - 1) bitShift: -3.
+	tailOffset := self stepOf: ivReg from: bfOffset + 1 before: backJump.
+	headerStep := tailStep := stepMagnitude := 0.
+	irOffset := loopHead.
+	[irOffset < backJump] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 ((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = ivReg]) ifTrue:
+			[((self isStepAt: irOffset)
+			  and: [(self flag: irOffset has: OilP2Delete) not
+			  and: [irOffset < cmpOffset or: [irOffset = tailOffset]]]) ifFalse: [^false].
+			 stepMagnitude := stepMagnitude + (self signed8: (self fieldCAt: irOffset)) abs.
+			 irOffset < cmpOffset
+				ifTrue: [headerStep := headerStep + (self signed8: (self fieldCAt: irOffset))]
+				ifFalse: [tailStep := self signed8: (self fieldCAt: irOffset)]].
+		 "a step of another register in the header would need its deopt site"
+		 (irOffset < cmpOffset
+		  and: [(self isStepAt: irOffset)
+		  and: [(self fieldAAt: irOffset) ~= ivReg
+		  and: [(self flag: irOffset has: OilP2Delete + OilP2NoCheck) not]]]) ifTrue: [^false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	"Count the iterations."
+	(ivValue abs <= 2048 and: [stepMagnitude <= 255]) ifFalse: [^false]. "(the values fit OilConstTagged)"
+	trips := 0.
+	[ivValue := ivValue + headerStep.
+	 self condition: cond holdsFor: ivValue and: limitValue] whileTrue:
+		[trips := trips + 1.
+		 trips > (self unrollParameter: oilUnrollMaxTrips default: OilUnrollMaxTrips) ifTrue: [^false].
+		 ivValue := ivValue + tailStep].
+	trips = 0 ifTrue: [^false].
+	"The budget, the room."
+	bodySize := headerWords := copyWords := 0.
+	irOffset := loopHead.
+	[irOffset < backJump] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (irOffset ~= cmpOffset and: [irOffset ~= bfOffset]) ifTrue:
+			[((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = ivReg])
+				ifTrue: [copyWords := copyWords + 1]
+				ifFalse:
+					[(self flag: irOffset has: OilP2Delete) ifFalse:
+						[bodySize := bodySize + 1.
+						 copyWords := copyWords + (self instructionLengthAt: irOffset)]]].
+		 irOffset = cmpOffset ifTrue: [headerWords := copyWords].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	(trips * bodySize <= (self unrollParameter: oilUnrollBudget default: OilUnrollFullBudget)
+	 and: [self canGrowBy: (trips * copyWords) + headerWords + 1
+			sites: (trips - 1) * (self copySitesFrom: bfOffset + 1 to: backJump)]) ifFalse: [^false].
+	"Record it.  The test and the steps go, with their deopt sites."
+	oilUnrollHead at: oilNumUnrolls put: loopHead.
+	oilUnrollBack at: oilNumUnrolls put: backJump.
+	oilUnrollTest at: oilNumUnrolls put: cmpOffset.
+	oilUnrollCount at: oilNumUnrolls put: trips.
+	oilUnrollIV at: oilNumUnrolls put: ivReg.
+	oilUnrollValue at: oilNumUnrolls put: (self entryConstantOf: ivReg before: loopHead) - 1 >> 3.
+	oilUnrollWord1 at: oilNumUnrolls put: headerWords.
+	oilUnrollWord2 at: oilNumUnrolls put: copyWords.
+	oilNumUnrolls := oilNumUnrolls + 1.
+	oilUnrollGrowth := oilUnrollGrowth + (trips * copyWords) + headerWords + 1.
+	oilUnrollClones := oilUnrollClones + ((trips - 1) * (self copySitesFrom: bfOffset + 1 to: backJump)).
+	oilNumFullyUnrolled := oilNumFullyUnrolled + 1.
+	self mark: loopHead with: OilP2Unroll.
+	self mark: cmpOffset with: OilP2Delete.
+	irOffset := loopHead.
+	[irOffset < backJump] whileTrue:
+		[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = ivReg]) ifTrue:
+			[self mark: irOffset with: OilP2Delete].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^true! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+constantLimit: limitReg test: cmpOffset loop: loopHead backJump: backJump
+	"The tagged constant register limitReg holds at the test at cmpOffset of the loop from loopHead to backJump: the header
+	 assigns it a constant, or nothing in the loop assigns it and it holds a constant when the loop is entered.  Answer 0 if
+	 it is not known."
+	| irOffset value |
+	limitReg >= OilFlagsReg ifTrue: [^0].
+	value := 0.
+	irOffset := loopHead.
+	[irOffset < backJump] whileTrue:
+		[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = limitReg]) ifTrue:
+			[((self opcodeAt: irOffset) = OilConstTagged
+			  and: [irOffset < cmpOffset
+			  and: [(self flag: irOffset has: OilP2Delete) not
+			  and: [value = 0 or: [value = (self signed16: (self imm16At: irOffset))]]]]) ifFalse: [^0].
+			 value := self signed16: (self imm16At: irOffset)].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	value ~= 0 ifTrue: [^value].
+	^self entryConstantOf: limitReg before: loopHead! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+unrollFreeRegister
+	"A virtual register that no instruction assigns or reads and that no deopt state, inlined frame or virtual object refers
+	 to, to hold the limit of partially unrolled loops (dead outside them).  Answer -1 if there is none."
+	| numArgs |
+	oilUnrollFreeReg >= -1 ifTrue: [^oilUnrollFreeReg].
+	oilUnrollFreeReg := -1.
+	numArgs := self numArgsOf: oilHomeMethod.
+	numArgs + 1 to: highRegTop - 1 do:
+		[:vreg|
+		(oilUnrollFreeReg < 0
+		 and: [(oilVRegDefs at: vreg) = 0
+		 and: [(oilVRegUses at: vreg) = 0
+		 and: [(self isVirtualObjectSlot: vreg) not]]]) ifTrue:
+			[oilUnrollFreeReg := vreg]].
+	^oilUnrollFreeReg! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+isVirtualObjectSlot: vreg
+	"Does register vreg hold a slot of a virtual temp vector or object (which the deopt metadata refers to)?"
+	0 to: numVObjs - 1 do:
+		[:vobjIndex|
+		((vobjKind at: vobjIndex) ~= OilDescBlock
+		 and: [vreg >= (vobjSlotBase at: vobjIndex)
+		 and: [vreg < ((vobjSlotBase at: vobjIndex) + (vobjSize at: vobjIndex))]]) ifTrue: [^true]].
+	^false! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+partiallyUnrollLoop: loopHead backJump: backJump
+	"If the loop from loopHead to the Jump at backJump is a rotated (see optimizeLoop:backJump:) leaf loop counting up,
+	 ivReg < or <= limit (an immediate, or a register the loop does not assign), whose body has one step of the induction
+	 variable ivReg := ivReg + c (c > 0), running every iteration, and assigns it nowhere else, record it to be unrolled k times (k = 4 if its body has at most
+	 OilUnrollTinyBody instructions but the step, else k = 2 if at most OilUnrollMaxBody), see
+	 emitPartiallyUnrolledLoop:at:.  After the header's test:
+		[limit2 := limit - ((k - 1) * c)]	(unless the limit is an immediate, or k * c = 2 and the test is <=: ivReg < limit)
+		ivReg cond limit2, else go to R		(k iterations left?)
+	 U:	body ... body (k copies, each ending with its step)
+		ivReg cond limit2, if so go to U
+		ivReg cond limit, else exit
+	 R:	the rotated loop (the remainder, at most k - 1 iterations).
+	 The copies of the body run with ivReg <= limit, as the original does, so its bounds check eliminations and unchecked
+	 increments (see optimizeLoop:backJump:) hold for them.  limit2 cannot overflow: limit >= ivReg >= its constant
+	 initial value after the header's test."
+	| cmpOffset bfOffset irOffset opcode cond ivReg limitReg isImm tailOffset step bodySize bodyWords factor reach immValue cmpWord limitWord limit2Reg numClones |
+	((oilUnrollMode bitAnd: 2) = 0
+	 and: [(self flag: backJump has: OilP2RotBack)
+	 and: [self isUnrollableLoop: loopHead backJump: backJump]]) ifFalse: [^false].
+	cmpOffset := self rotatedHeaderCompareOf: backJump.
+	bfOffset := cmpOffset + 1.
+	cond := self fieldAAt: cmpOffset.
+	ivReg := self fieldBAt: cmpOffset.
+	isImm := (self opcodeAt: cmpOffset) = OilCmpImmTagged.
+	limitReg := self fieldCAt: cmpOffset.
+	(cond = OilCondLe or: [cond = OilCondLt]) ifFalse: [^false].
+	"The header (it runs only before the tests of the remainder): constants assigning registers the body does not assign."
+	irOffset := loopHead.
+	[irOffset < cmpOffset] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 ((self flag: irOffset has: OilP2Delete)
+		  or: [(opcode = OilConstTagged or: [opcode = OilConst64])
+			   and: [(self isAssigned: (self fieldAAt: irOffset) from: bfOffset + 1 to: backJump - 1) not]]) ifFalse: [^false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	(isImm or: [(self isAssigned: limitReg from: bfOffset + 1 to: backJump - 1) not]) ifFalse: [^false].
+	"The step."
+	tailOffset := self stepOf: ivReg from: bfOffset + 1 before: backJump.
+	(tailOffset >= 0
+	 and: [(step := self signed8: (self fieldCAt: tailOffset)) > 0
+	 and: [(self isAssigned: ivReg from: loopHead to: cmpOffset) not]]) ifFalse: [^false].
+	"The factor.  A body with branches (but deopts) is not unrolled (unless mode bit 8): measured, its copies are not
+	 faster, the branches cost as much as the loop's."
+	bodySize := bodyWords := 0.
+	irOffset := bfOffset + 1.
+	[irOffset < backJump] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (self flag: irOffset has: OilP2Delete) ifFalse:
+			[((oilUnrollMode bitAnd: 8) = 0
+			  and: [(self isBranch: opcode) or: [opcode = OilReturn]]) ifTrue: [^false].
+			 irOffset ~= tailOffset ifTrue: [bodySize := bodySize + 1].
+			 bodyWords := bodyWords + (self instructionLengthAt: irOffset)].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	bodySize <= (self unrollParameter: oilUnrollTinyBody default: OilUnrollTinyBody)
+		ifTrue: [factor := 4]
+		ifFalse:
+			[bodySize <= (self unrollParameter: oilUnrollMaxBody default: OilUnrollMaxBody)
+				ifTrue: [factor := 2]
+				ifFalse: [^false]].
+	"The test of the unrolled loop."
+	reach := factor - 1 * step.
+	limitWord := 0.
+	isImm
+		ifTrue:
+			[immValue := (self signed8: limitReg) - reach.
+			 immValue < -128 ifTrue: [^false].
+			 cmpWord := (OilCmpImmTagged << 24) + (cond << 16) + (ivReg << 8) + (immValue bitAnd: 255)]
+		ifFalse:
+			[(reach = 1 and: [cond = OilCondLe and: [self isTagged: limitReg]])
+				ifTrue: [cmpWord := (OilCmpTagged << 24) + (OilCondLt << 16) + (ivReg << 8) + limitReg]
+				ifFalse:
+					[(reach <= 128
+					  and: [(self entryConstantOf: ivReg before: loopHead) ~= 0
+					  and: [(limit2Reg := self unrollFreeRegister) >= 0]]) ifFalse: [^false].
+					 limitWord := (OilAddImmTaggedNC << 24) + (limit2Reg << 16) + (limitReg << 8) + (reach negated bitAnd: 255).
+					 cmpWord := (OilCmpTagged << 24) + (cond << 16) + (ivReg << 8) + limit2Reg]].
+	numClones := factor * (self copySitesFrom: bfOffset + 1 to: backJump) + 1.
+	(self canGrowBy: (factor * bodyWords) + 7 sites: numClones) ifFalse: [^false].
+	"Record it."
+	oilUnrollHead at: oilNumUnrolls put: loopHead.
+	oilUnrollBack at: oilNumUnrolls put: backJump.
+	oilUnrollTest at: oilNumUnrolls put: cmpOffset.
+	oilUnrollCount at: oilNumUnrolls put: factor.
+	oilUnrollIV at: oilNumUnrolls put: ivReg.
+	oilUnrollValue at: oilNumUnrolls put: bodyWords.
+	oilUnrollWord1 at: oilNumUnrolls put: limitWord.
+	oilUnrollWord2 at: oilNumUnrolls put: cmpWord.
+	oilNumUnrolls := oilNumUnrolls + 1.
+	oilUnrollGrowth := oilUnrollGrowth + (factor * bodyWords) + 7.
+	oilUnrollClones := oilUnrollClones + numClones.
+	oilNumPartiallyUnrolled := oilNumPartiallyUnrolled + 1.
+	self mark: bfOffset with: OilP2UnrollPartial.
+	^true! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+cloneSite: siteIndex at: irOffset
+	"A new deopt site for the instruction at irOffset of Buffer 2, a copy of the one of deopt site siteIndex: the same inlined
+	 frame, bytecode pc and recorded state (the copy computes into the same registers, see useCondSite: in Pass 1)."
+	| newSiteIndex |
+	newSiteIndex := numSites.
+	newSiteIndex >= OilMaxSites ifTrue:
+		[self abortCompilation: OilFailTooManySites.
+		 ^siteIndex].
+	siteIR at: newSiteIndex put: irOffset.
+	siteFrame at: newSiteIndex put: (siteFrame at: siteIndex).
+	sitePC at: newSiteIndex put: (sitePC at: siteIndex).
+	siteKind at: newSiteIndex put: (siteKind at: siteIndex).
+	siteSnapBase at: newSiteIndex put: (siteSnapBase at: siteIndex).
+	siteSnapTop at: newSiteIndex put: (siteSnapTop at: siteIndex).
+	siteSnapHigh at: newSiteIndex put: (siteSnapHigh at: siteIndex).
+	numSites := newSiteIndex + 1.
+	^newSiteIndex! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+emitCopyOf: srcOffset at: dstOffset shift: shift from: firstOffset to: lastOffset
+	"Emit a copy of the instruction at srcOffset of a loop from firstOffset to lastOffset whose instructions are laid out
+	 (oilIRMap) shift words before this copy of them: its branches into the loop go to this copy, and if it can deoptimize
+	 (and is not laid out there itself, shift = 0) it gets a clone of its deopt site (the one OilGuardClass, OilGuardClass2 and
+	 OilCheckBounds also hold).  Answer the index following it in Buffer 2."
+	| nextOffset opcode target siteIndex |
+	nextOffset := self emitInstructionAt: srcOffset at: dstOffset.
+	opcode := self opcodeAt: srcOffset.
+	(self isBranch: opcode) ifTrue:
+		[target := self imm16At: srcOffset.
+		 (target >= firstOffset and: [target <= lastOffset]) ifTrue:
+			[oilIRBuffer2 at: dstOffset put: ((oilIRBuffer2 at: dstOffset) bitAnd: 16rFFFF0000) + ((oilIRMap at: target) + shift)]].
+	siteIndex := oilIRSite at: srcOffset.
+	(shift ~= 0 and: [siteIndex >= 0 and: [(self flag: srcOffset has: OilP2Delete + OilP2NoCheck) not]]) ifTrue:
+		[siteIndex := self cloneSite: siteIndex at: dstOffset.
+		 (opcode = OilGuardClass or: [opcode = OilGuardClass2]) ifTrue:
+			[oilIRBuffer2 at: dstOffset put: ((oilIRBuffer2 at: dstOffset) bitAnd: 16rFFFF0000) + siteIndex].
+		 opcode = OilCheckBounds ifTrue:
+			[oilIRBuffer2 at: dstOffset put: ((oilIRBuffer2 at: dstOffset) bitAnd: 16rFFFFFF00) + siteIndex]].
+	^nextOffset! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+isCopiedInFullUnroll: irOffset index: unrollIndex
+	"Is the instruction at irOffset of the fully unrolled loop unrollIndex in its copies (as itself, or as an OilConstTagged
+	 for a step of the induction variable)?  The test and its branch are not."
+	(irOffset = (oilUnrollTest at: unrollIndex) or: [irOffset = ((oilUnrollTest at: unrollIndex) + 1)]) ifTrue: [^false].
+	^(self flag: irOffset has: OilP2Delete) not
+	  or: [(self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = (oilUnrollIV at: unrollIndex)]]! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+layOutFullyUnrolledLoop: unrollIndex at: startOffset
+	"Map the instructions of the fully unrolled loop unrollIndex to their first copy (its original deopt sites are those of
+	 the first copy), and answer the index following the unrolled code: count copies of the header and the body, a last copy
+	 of the header (the exit), and a jump to the exit if it does not follow."
+	| irOffset dstOffset backJump |
+	backJump := oilUnrollBack at: unrollIndex.
+	dstOffset := startOffset.
+	irOffset := oilUnrollHead at: unrollIndex.
+	[irOffset < backJump] whileTrue:
+		[oilIRMap at: irOffset put: dstOffset.
+		 (self isCopiedInFullUnroll: irOffset index: unrollIndex) ifTrue:
+			[dstOffset := dstOffset + (self instructionLengthAt: irOffset)].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	dstOffset := startOffset + ((oilUnrollCount at: unrollIndex) * (oilUnrollWord2 at: unrollIndex)).
+	oilIRMap at: backJump put: dstOffset.
+	dstOffset := dstOffset + (oilUnrollWord1 at: unrollIndex).
+	(self imm16At: (oilUnrollTest at: unrollIndex) + 1) ~= (backJump + 1) ifTrue:
+		[dstOffset := dstOffset + 1].
+	^dstOffset! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+emitFullyUnrolledLoop: unrollIndex at: startOffset
+	"Emit the fully unrolled loop unrollIndex (see layOutFullyUnrolledLoop:at:): count copies of its header and body, with
+	 the steps of the induction variable replaced by assignments of its values, then the header again, and a jump to the
+	 exit if it does not follow.  Answer the index following it in Buffer 2."
+	| loopHead backJump cmpOffset ivReg ivValue dstOffset endOffset irOffset exitOffset |
+	loopHead := oilUnrollHead at: unrollIndex.
+	backJump := oilUnrollBack at: unrollIndex.
+	cmpOffset := oilUnrollTest at: unrollIndex.
+	ivReg := oilUnrollIV at: unrollIndex.
+	ivValue := oilUnrollValue at: unrollIndex.
+	dstOffset := startOffset.
+	0 to: (oilUnrollCount at: unrollIndex) do:
+		[:copyIndex|
+		endOffset := copyIndex < (oilUnrollCount at: unrollIndex) ifTrue: [backJump] ifFalse: [cmpOffset].
+		irOffset := loopHead.
+		[irOffset < endOffset] whileTrue:
+			[(self isCopiedInFullUnroll: irOffset index: unrollIndex) ifTrue:
+				[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = ivReg])
+					ifTrue:
+						[ivValue := ivValue + (self signed8: (self fieldCAt: irOffset)).
+						 oilIRBuffer2 at: dstOffset put: (OilConstTagged << 24) + (ivReg << 16) + ((ivValue << 3) + 1 bitAnd: 16rFFFF).
+						 dstOffset := dstOffset + 1]
+					ifFalse:
+						[dstOffset := self emitCopyOf: irOffset at: dstOffset shift: copyIndex * (oilUnrollWord2 at: unrollIndex) from: loopHead to: backJump]].
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)]].
+	exitOffset := self imm16At: cmpOffset + 1.
+	exitOffset ~= (backJump + 1) ifTrue:
+		[oilIRBuffer2 at: dstOffset put: (OilJump << 24) + (oilIRMap at: exitOffset).
+		 dstOffset := dstOffset + 1].
+	^dstOffset! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+sizeOfPartiallyUnrolledLoop: unrollIndex
+	"The size of the unrolled loop that follows the exit branch of the header of the partially unrolled loop unrollIndex
+	 (see emitPartiallyUnrolledLoop:at:)."
+	^((oilUnrollWord1 at: unrollIndex) = 0 ifTrue: [0] ifFalse: [1])
+	  + ((oilUnrollCount at: unrollIndex) * (oilUnrollValue at: unrollIndex)) + 6! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+emitPartiallyUnrolledLoop: unrollIndex at: startOffset
+	"Emit the unrolled loop of the partially unrolled loop unrollIndex after the exit branch of its header (see
+	 partiallyUnrollLoop:backJump:): the limit of the unrolled loop if needed, its test (else go to the remainder, the rotated
+	 loop laid out as usual), the copies of the body, its test again, branching back, then the test of the remainder.
+	 Answer the index following it in Buffer 2."
+	| backJump cmpOffset remainderOffset dstOffset unrolledOffset irOffset |
+	backJump := oilUnrollBack at: unrollIndex.
+	cmpOffset := oilUnrollTest at: unrollIndex.
+	remainderOffset := oilIRMap at: cmpOffset + 2.
+	dstOffset := startOffset.
+	(oilUnrollWord1 at: unrollIndex) ~= 0 ifTrue:
+		[oilIRBuffer2 at: dstOffset put: (oilUnrollWord1 at: unrollIndex).
+		 dstOffset := dstOffset + 1].
+	oilIRBuffer2 at: dstOffset put: (oilUnrollWord2 at: unrollIndex).
+	oilIRBuffer2 at: dstOffset + 1 put: (OilBranchFalse << 24) + (OilFlagsReg << 16) + remainderOffset.
+	dstOffset := dstOffset + 2.
+	unrolledOffset := dstOffset.
+	1 to: (oilUnrollCount at: unrollIndex) do:
+		[:copyIndex| | shift |
+		shift := dstOffset - remainderOffset.
+		irOffset := cmpOffset + 2.
+		[irOffset < backJump] whileTrue:
+			[(self flag: irOffset has: OilP2Delete) ifFalse:
+				[dstOffset := self emitCopyOf: irOffset at: dstOffset shift: shift from: (oilUnrollHead at: unrollIndex) to: backJump].
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)]].
+	oilIRBuffer2 at: dstOffset put: (oilUnrollWord2 at: unrollIndex).
+	oilIRBuffer2 at: dstOffset + 1 put: (OilBranchTrue << 24) + (OilFlagsReg << 16) + unrolledOffset.
+	dstOffset := self emitTestCopy: cmpOffset at: dstOffset + 2.
+	oilIRBuffer2 at: dstOffset put: (OilBranchFalse << 24) + (OilFlagsReg << 16) + (oilIRMap at: (self imm16At: cmpOffset + 1)).
+	^dstOffset + 1! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
+storeNeedsCheck: objReg
+	"Does the store into the object in register objReg by the instruction being translated (at oilFailIndex) need the store
+	 check?  Not if the object is young: it was allocated in eden (OilNewArray, OilNewObject) in the straight-line code that
+	 leads to the store (no branch target between them), into objReg or into a register objReg is a move (or a move of a
+	 move...) of, and nothing between them may run the garbage collector.  Oil allocations deoptimize rather than scavenge and
+	 Oil code has no interrupt checks, so only calls may: sends, and intrinsics falling back to sends."
+	| storeOffset allocOffset irOffset opcode vreg defOffset useOffset hops |
+	(oilUnrollMode bitAnd: 4) = 0 ifFalse: [^true].
+	storeOffset := oilFailIndex.
+	vreg := objReg.
+	useOffset := storeOffset.
+	allocOffset := -1.
+	hops := 0.
+	[allocOffset < 0] whileTrue:
+		[defOffset := -1.
+		 irOffset := 0.
+		 [irOffset < useOffset] whileTrue:
+			[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue:
+				[defOffset := irOffset].
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+		 defOffset < 0 ifTrue: [^true].
+		 opcode := self opcodeAt: defOffset.
+		 (opcode = OilNewArray or: [opcode = OilNewObject])
+			ifTrue: [allocOffset := defOffset]
+			ifFalse:
+				[(opcode = OilMove and: [(hops := hops + 1) <= 4]) ifFalse: [^true].
+				 vreg := self fieldBAt: defOffset.
+				 useOffset := defOffset]].
+	irOffset := allocOffset + (self instructionLengthAt: allocOffset).
+	[irOffset <= storeOffset] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 ((oilIRTarget at: irOffset) ~= 0
+		  or: [irOffset < storeOffset
+			  and: [(self isCall: opcode) or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut
+					or: [opcode = OilCompareBytes or: [opcode = OilIdentityHash]]]]]]) ifTrue: [^true].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	oilNumYoungStores := oilNumYoungStores + 1.
+	^false! !
+
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Statistics: index
 	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
-	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos."
+	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos; 23 loops fully unrolled, 24 loops partially
+	 unrolled, 25 stores into young objects without store check (Pass 3)."
 	index = 0 ifTrue: [^oilNumRotated].
 	index = 1 ifTrue: [^oilNumBoundsRemoved].
 	index = 2 ifTrue: [^oilNumDeadRemoved].
@@ -492,6 +1205,9 @@ pass2Statistics: index
 	index = 5 ifTrue: [^oilPass1Words].
 	index = 6 ifTrue: [^oilNumGuardsRemoved].
 	index = 7 ifTrue: [^oilNumUndos].
+	index = 23 ifTrue: [^oilNumFullyUnrolled].
+	index = 24 ifTrue: [^oilNumPartiallyUnrolled].
+	index = 25 ifTrue: [^oilNumYoungStores].
 	^0! !
 
 (Smalltalk hasClassNamed: #OilNumericCompiler) ifTrue: [(Smalltalk at: #OilNumericCompiler) removeFromSystem].!
@@ -798,13 +1514,15 @@ isEscaping: irOffset runEnd: runEnd
 	^(self isAssigned: destReg from: irOffset + 1 to: runEnd - 1) not
 	  and: [self isLive: destReg from: runEnd]! !
 
-!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 02:00'!
 isAssigned: vreg from: startOffset to: endOffset
-	"Is register vreg assigned by an instruction from startOffset to endOffset (inclusive, straight-line code)?"
+	"Is register vreg assigned by an instruction from startOffset to endOffset (inclusive), not deleted (by Pass 2)?"
 	| irOffset |
 	irOffset := startOffset.
 	[irOffset <= endOffset] whileTrue:
-		[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [^true].
+		[((self opcodeHasDest: (self opcodeAt: irOffset))
+		  and: [(self fieldAAt: irOffset) = vreg
+		  and: [(self flag: irOffset has: OilP2Delete) not]]) ifTrue: [^true].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^false! !
 

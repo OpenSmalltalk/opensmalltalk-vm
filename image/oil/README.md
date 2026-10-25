@@ -25,6 +25,7 @@ OilBytecodeScanner
 | `oil-m4-test.st` | Pass 2 acceptance test: checks loop rotation, bounds-check elimination, shared sizes, unchecked increments, dead code elimination, and equivalence with Pass 1 and real execution. |
 | `oil-m6-test.st` | `OilFullCompiler` acceptance test: value numbering and float fusion statistics, and equivalence of the IR (the interpreter keeps unboxed float results aside, like XMM registers) with real execution. |
 | `oil-m8-test.st` | M8 acceptance test: scalar replacement (dissolved and materialized Points and Associations), bimorphic inlining (diamonds, predicates, nil-or-object sends), folded hashes and `OilStringHash`, and equivalence of the IR with real execution. |
+| `oil-m9-test.st` | M9 acceptance test: loop unrolling (full and partial), the cloned deopt sites, the rotation of loops tested against an immediate or an argument, young stores without store check, and equivalence of the IR with real execution and with the IR compiled without unrolling. |
 
 ## Running the In-Image Tests
 
@@ -35,6 +36,7 @@ run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m2-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m4-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m6-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m8-test.st
+run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m9-test.st
 ```
 
 The scripts look for sources in `Smalltalk at: #OilSourceDir` (defaulting to the current working directory).
@@ -59,12 +61,17 @@ The scripts look for sources in `Smalltalk at: #OilSourceDir` (defaulting to the
 Invoked via `#pipe` between Pass 1 and Pass 3, streaming `oilIRBuffer1` into `oilIRBuffer2`:
 
 1. **Analysis**: definition counts, branch targets, and `analyzeTaggedRegisters` (registers guaranteed to hold SmallIntegers).
-2. **Loop optimization** (`p2OptimizeLoop:backJump:` on innermost call-free loops entered by fall-through):
+2. **Loop optimization** (`optimizeLoop:backJump:` on innermost call-free loops entered by fall-through):
    - **Invariant checks**: class guards inside the loop redundant with a pre-header guard on the same immutable register are removed.
-   - **Loop rotation**: a header compare on SmallIntegers is duplicated before the back jump as `CmpTagged; BranchTrue body`.
+   - **Loop rotation**: a header compare on SmallIntegers (`OilCmpTagged`, or `OilCmpImmTagged` against an immediate) is duplicated before the back jump as `Cmp; BranchTrue body`. If the limit is not known to be a SmallInteger but the loop does not assign it (`1 to: n do:` with `n` an argument), the copy gets a clone of the header's deopt site (the bottom of the loop is the header of the next iteration). Increments of an induction variable tested against a constant limit are unchecked.
    - **Counted loops**: for an induction variable initialized from a constant `>= 1`, incremented by 1, and compared `<=` or `<` against `size(x)` loaded before the loop, increments become `OilAddImmTaggedNC` (unchecked), `size(x)` inside the loop is shared with the pre-header load, and dominated `OilCheckBounds` instructions are eliminated.
 3. **Dead code elimination**: pure instructions whose destination register has no reads (neither by instructions nor by live deopt snapshots, or overwritten before use in straight-line code) are deleted.
-4. **Streaming emission**: computes `oilIRMap`, emits into `oilIRBuffer2`, and remaps `siteIR`.
+4. **Loop unrolling** (`unrollLoops`, M9), of innermost leaf loops (no sends, nor intrinsics falling back to sends), entered only by falling into their header, with forward branches only:
+   - **Full unrolling** (`fullyUnrollLoop:backJump:`): if the induction variable is a constant entering the loop, stepped by constants (`r := r + c`) in the header and/or in the straight-line end of the body, and tested against a constant, the iterations are counted now; at most `OilUnrollMaxTrips` (8) of them with iterations × body IR instructions ≤ `OilUnrollFullBudget` (48) become straight-line copies of the header and body: no test, no branch, no back jump, the steps replaced by `OilConstTagged` of the induction variable's values (the test and step deopt sites die). `to:do:` with constant bounds and `timesRepeat:` of a constant qualify. Pass 2 then runs once more on its own output: value numbering removes the guards and size loads the copies repeat.
+   - **Partial unrolling** (`partiallyUnrollLoop:backJump:`): a rotated loop counting up (`<`, `<=`) with one step `i := i + c` per iteration and a limit the loop does not assign is unrolled 4 times if its body has at most `OilUnrollTinyBody` (4) instructions, else twice if at most `OilUnrollMaxBody` (16): after the header's test, `limit2 := limit - (k-1)c` (unchecked: `limit >= i >= the constant initial value`; none for an immediate limit, or `i < limit` for k·c = 2 and `<=`), `i <= limit2 else remainder`, then the k copies of the body and `i <= limit2, branch back`, then `i <= limit, else exit`, then the rotated loop runs the at most k - 1 remaining iterations. The copies run with `i <= limit`, so the bounds check eliminations and unchecked increments of the original hold for them.
+   - **Deopt sites**: the copies are made by the emission (`emitCopyOf:at:shift:from:to:`); a copy of an instruction that can deoptimize gets a clone of its site (`cloneSite:at:`, same frame, pc and recorded state: the copies compute into the same registers), also stored in `OilGuardClass`/`OilGuardClass2` (imm16) and `OilCheckBounds` (C). Unrolling is skipped if the IR or `OilMaxSites` would overflow.
+   - The image can tune it, per compilation, with SmallInteger pairs of `primitiveOilSetSelectors`: kind 12 the mode (bits: 1 no full unrolling, 2 no partial unrolling, 4 no young store elimination), 13 `OilUnrollTinyBody`, 14 `OilUnrollMaxBody`, 15 `OilUnrollFullBudget`, 16 `OilUnrollMaxTrips`, 17 the loop header alignment (`OilLoopAlignment`). Statistics 23 (fully unrolled loops), 24 (partially unrolled), 25 (young stores).
+5. **Streaming emission**: computes `oilIRMap`, emits into `oilIRBuffer2`, and remaps `siteIR`.
 
 ## OilFullCompiler
 
@@ -77,6 +84,7 @@ Invoked via `#pipe` between Pass 1 and Pass 3, streaming `oilIRBuffer1` into `oi
 - **Register allocation**: weighs virtual registers by use count (10x per loop nesting level), assigns the heaviest up to 9 machine registers, and gives every live virtual register a frame spill temp below the method's temporaries.
 - **Native codegen**: translates IR instructions to Cogit abstract instructions, including in-place tagged accumulation with undo stubs (`oilUndoJump`), eden bump allocation (`OilMakeClosure`, `OilNewArray`), byte/character/stream intrinsics (`OilLoadByte*`, `OilStoreByte*`, `OilCompareBytes`, `OilStreamNext`, `OilStreamNextPut`), uncommon traps (`OilTrap`), and bailout stubs (`ceOilBailoutTrampoline`).
 - **Allocations** (`genAllocate:header:site:combineAfter:`): eden bump sharing: an `OilNewObject`/`OilNewArray` followed in straight-line code, with only constants and moves in between, by other allocations reserves their bytes too (one scavenge threshold check, one `freeStart` bump; `oilPendingAllocBytes`); the followers take their memory just below `freeStart`. Beyond the threshold the first one deoptimizes (`OilSiteAlloc`, not counted), and the interpreter redoes them all. `OilNewObject` writes its slots from registers, without nil filling and without store checks (the object is young).
+- **Young stores** (`storeNeedsCheck:`, M9): a store into an object allocated in eden (`OilNewArray`, `OilNewObject`, possibly through moves) in the straight-line code leading to it, with no call in between, has no store check: Oil allocations deoptimize instead of scavenging and Oil code has no interrupt checks, so the object is still young.
 - **Class tests** (`genClassTagOf:into:`): `OilCmpClass` (fused with its branch) and `OilGuardClass2` compare the class tag (tag bits of an immediate, else the class index in the header).
 - **`OilStringHash`** (`genStringHashAt:`): `h := (h + byte) * 16r19660D` per byte, `h bitAnd: 16r0FFFFFFF` (the low 28 bits of 64-bit arithmetic are those of the primitive's 32-bit arithmetic); a non-SmallInteger initial hash sends the message.
 - **`OilModTagged`** (`genModTagged:b:c:site:`): operands in [0, 2^31) are divided as doubles (about 14 cycles instead of 40 to 90 for a 64-bit `idiv`): the rounded quotient is exact or one too many, so the remainder is `x - (q * y)`, plus `y` if negative.

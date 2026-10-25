@@ -33,6 +33,7 @@ compile := [:sel :argLists :pass2 |
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
+	comp oilUnrollParameter: 12 value: 3. "no loop unrolling (M9, see oil-m9-test.st): these checks count the instructions of loops"
 	comp compileMethod: OilTestModel >> sel receiverClass: (comp handleFor: OilTestModel).
 	pass2 ifTrue: [comp loopOptimize].
 	comp].
