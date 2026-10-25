@@ -516,7 +516,8 @@ setUpSimulationTables
 	oilFactA := self newTable: OilMaxFacts.
 	oilFactB := self newTable: OilMaxFacts.
 	oilFactDest := self newTable: OilMaxFacts.
-	oilFactAt := self newTable: OilMaxFacts! !
+	oilFactAt := self newTable: OilMaxFacts.
+	oilNumLoadsRemoved := oilNumChecksRemoved := oilNumUnboxed := 0! !
 
 !OilFullCompiler methodsFor: 'optimization' stamp: 'cb 10/25/2026 02:00'!
 pipe
@@ -556,7 +557,7 @@ valueNumber
 			[branchTarget := self imm16At: irOffset.
 			 oilIRMap at: branchTarget put: (branchTarget <= irOffset ifTrue: [0] ifFalse: [(oilIRMap at: branchTarget) min: irOffset])].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-	oilNumFacts := oilNumLoadsRemoved := oilNumChecksRemoved := 0.
+	oilNumFacts := 0.
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
 		[(oilIRTarget at: irOffset) ~= 0 ifTrue:
@@ -685,7 +686,6 @@ fuseFloats
 	 first instruction does not refer to.  So all its deopts go to that site (OilFloatChained, oilIRAux), and the
 	 interpreter then redoes the whole chain."
 	| irOffset opcode branchTarget |
-	oilNumUnboxed := 0.
 	0 to: irIndex - 1 do:
 		[:offset|
 		oilIRFlag at: offset put: 0.
