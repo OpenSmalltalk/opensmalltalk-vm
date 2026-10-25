@@ -33,9 +33,9 @@ oilSpecializationsAddress
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
 oilSpecializationAt: entryIndex field: fieldIndex
-	"Field fieldIndex of entry entryIndex of the specialization table: 0 the method, 1 the class tag of the receivers (a
-	 SmallInteger), 2 the copy of the method whose machine code is the specialized Oil code, 3 the class (which keeps the
-	 tag from being reused).  Answer nil if there is no table."
+	"Field fieldIndex of entry entryIndex of the specialization table: OilSpecMethod the method, OilSpecClassTag the class tag
+	 of the receivers (a SmallInteger), OilSpecCopy the copy of the method whose machine code is the specialized Oil code,
+	 OilSpecClass the class (which keeps the tag from being reused).  Answer nil if there is no table."
 	<api>
 	| oop |
 	(oilSpecializations = 0 or: [oilSpecializations = objectMemory nilObject]) ifTrue:
@@ -51,8 +51,8 @@ oilSpecializationOf: aMethodObj tag: classTag
 	<api>
 	0 to: OilMaxSpecializations - 1 do:
 		[:entryIndex|
-		((self oilSpecializationAt: entryIndex field: 0) = aMethodObj
-		 and: [(self oilSpecializationAt: entryIndex field: 1) = (objectMemory integerObjectOf: classTag)]) ifTrue:
+		((self oilSpecializationAt: entryIndex field: OilSpecMethod) = aMethodObj
+		 and: [(self oilSpecializationAt: entryIndex field: OilSpecClassTag) = (objectMemory integerObjectOf: classTag)]) ifTrue:
 			[^entryIndex]].
 	^-1! !
 
@@ -77,13 +77,13 @@ oilIsLiveSpecialization: entryIndex of: aMethodObj
 	 table follows the forwarder of a method replaced by become:)."
 	<api>
 	| copy class |
-	(self oilSpecializationAt: entryIndex field: 0) = aMethodObj ifFalse:
+	(self oilSpecializationAt: entryIndex field: OilSpecMethod) = aMethodObj ifFalse:
 		[^false].
-	copy := self oilSpecializationAt: entryIndex field: 2.
-	class := self oilSpecializationAt: entryIndex field: 3.
+	copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
+	class := self oilSpecializationAt: entryIndex field: OilSpecClass.
 	^(self oilHasOilCode: copy)
 	  and: [(objectMemory isNonImmediate: class)
-	  and: [(objectMemory classTagForClass: class) = (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: 1))
+	  and: [(objectMemory classTagForClass: class) = (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: OilSpecClassTag))
 	  and: [self oilCopy: copy isCopyOf: aMethodObj]]]! !
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 05:00'!
@@ -115,8 +115,8 @@ oilDropSpecializationsOf: aMethodObj freeing: freeCode
 		[^self].
 	0 to: OilMaxSpecializations - 1 do:
 		[:entryIndex|
-		(self oilSpecializationAt: entryIndex field: 0) = aMethodObj ifTrue:
-			[copy := self oilSpecializationAt: entryIndex field: 2.
+		(self oilSpecializationAt: entryIndex field: OilSpecMethod) = aMethodObj ifTrue:
+			[copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
 			 0 to: OilSpecializationSize - 1 do: [:fieldIndex| objectMemory storePointerUnchecked: entryIndex * OilSpecializationSize + fieldIndex ofObject: oilSpecializations withValue: objectMemory nilObject].
 			 (freeCode
 			  and: [(self oilHasOilCode: copy)
@@ -160,8 +160,8 @@ compactCogCompiledCode
 	(oilSpecializations ~= 0 and: [oilSpecializations ~= objectMemory nilObject]) ifTrue:
 		[0 to: OilMaxSpecializations - 1 do:
 			[:entryIndex|
-			method := self oilSpecializationAt: entryIndex field: 0.
-			copy := self oilSpecializationAt: entryIndex field: 2.
+			method := self oilSpecializationAt: entryIndex field: OilSpecMethod.
+			copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
 			(self oilHasOilCode: copy) ifTrue:
 				[(self oilIsLiveSpecialization: entryIndex of: method)
 					ifTrue:
@@ -186,12 +186,12 @@ oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 	0 to: OilMaxSpecializations - 1 do:
 		[:k|
 		(entryIndex < 0
-		 and: [(self oilSpecializationAt: k field: 0) = objectMemory nilObject]) ifTrue:
+		 and: [(self oilSpecializationAt: k field: OilSpecMethod) = objectMemory nilObject]) ifTrue:
 			[entryIndex := k]].
 	entryIndex < 0 ifTrue:
 		[0 to: OilMaxSpecializations - 1 do:
 			[:k|
-			copy := self oilSpecializationAt: k field: 2.
+			copy := self oilSpecializationAt: k field: OilSpecCopy.
 			(entryIndex < 0
 			 and: [(self oilHasOilCode: copy) not]) ifTrue:
 				[entryIndex := k]]].
@@ -199,10 +199,10 @@ oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 		[entryIndex := oilNumSpecializations \\ OilMaxSpecializations].
 	oilNumSpecializations := oilNumSpecializations + 1.
 	objectMemory
-		storePointer: entryIndex * OilSpecializationSize ofObject: oilSpecializations withValue: aMethodObj;
-		storePointer: entryIndex * OilSpecializationSize + 1 ofObject: oilSpecializations withValue: (objectMemory integerObjectOf: classTag);
-		storePointer: entryIndex * OilSpecializationSize + 2 ofObject: oilSpecializations withValue: copyObj;
-		storePointer: entryIndex * OilSpecializationSize + 3 ofObject: oilSpecializations withValue: classObj! !
+		storePointer: entryIndex * OilSpecializationSize + OilSpecMethod ofObject: oilSpecializations withValue: aMethodObj;
+		storePointer: entryIndex * OilSpecializationSize + OilSpecClassTag ofObject: oilSpecializations withValue: (objectMemory integerObjectOf: classTag);
+		storePointer: entryIndex * OilSpecializationSize + OilSpecCopy ofObject: oilSpecializations withValue: copyObj;
+		storePointer: entryIndex * OilSpecializationSize + OilSpecClass ofObject: oilSpecializations withValue: classObj! !
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
 oilHasOilCode: aMethodObj
@@ -220,8 +220,8 @@ oilSpecializedCogMethodOf: aMethodObj tag: classTag
 	0 to: OilMaxSpecializations - 1 do:
 		[:entryIndex|
 		((self oilIsLiveSpecialization: entryIndex of: aMethodObj)
-		 and: [(self oilSpecializationAt: entryIndex field: 1) = (objectMemory integerObjectOf: classTag)]) ifTrue:
-			[^coInterpreter cogMethodOf: (self oilSpecializationAt: entryIndex field: 2)]].
+		 and: [(self oilSpecializationAt: entryIndex field: OilSpecClassTag) = (objectMemory integerObjectOf: classTag)]) ifTrue:
+			[^coInterpreter cogMethodOf: (self oilSpecializationAt: entryIndex field: OilSpecCopy)]].
 	^nil! !
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
@@ -247,9 +247,9 @@ compileEntry
 			[first ifTrue:
 				[objectRepresentation genGetInlineCacheClassTagFrom: ReceiverResultReg into: TempReg forEntry: false.
 				 first := false].
-			 self CmpCq: (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: 1)) R: TempReg.
+			 self CmpCq: (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: OilSpecClassTag)) R: TempReg.
 			 jumpNext := self JumpNonZero: 0.
-			 self genMoveConstant: (self oilSpecializationAt: entryIndex field: 2) R: ClassReg.
+			 self genMoveConstant: (self oilSpecializationAt: entryIndex field: OilSpecCopy) R: ClassReg.
 			 self MoveMw: objectMemory baseHeaderSize r: ClassReg R: ClassReg.
 			 self TstCq: objectMemory smallIntegerTag R: ClassReg.
 			 jumpNotCogged := self JumpNonZero: 0.
@@ -390,7 +390,7 @@ primitiveOilSpecialize
 	entryIndex := cogit oilSpecializationOf: methodObj tag: classTag.
 	entryIndex >= 0
 		ifTrue:
-			[copy := cogit oilSpecializationAt: entryIndex field: 2.
+			[copy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
 			 (cogit oilHasOilCode: copy) ifTrue:
 				[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilOK)]]
 		ifFalse:
@@ -448,7 +448,7 @@ primitiveOilSpecializations
 		[:entryIndex|
 		(cogit oilIsLiveSpecialization: entryIndex of: methodObj) ifTrue:
 			[objectMemory
-				storePointer: count ofObject: result withValue: (objectMemory classOrNilAtIndex: (objectMemory integerValueOf: (cogit oilSpecializationAt: entryIndex field: 1)));
-				storePointer: count + 1 ofObject: result withValue: (cogit oilSpecializationAt: entryIndex field: 2).
+				storePointer: count ofObject: result withValue: (objectMemory classOrNilAtIndex: (objectMemory integerValueOf: (cogit oilSpecializationAt: entryIndex field: OilSpecClassTag)));
+				storePointer: count + 1 ofObject: result withValue: (cogit oilSpecializationAt: entryIndex field: OilSpecCopy).
 			 count := count + 2]].
 	self pop: argumentCount + 1 thenPush: result! !
