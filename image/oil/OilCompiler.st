@@ -2154,7 +2154,7 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	"x + c with on-the-fly reduction: x + 0 => x; if x = y + c1 (an affine fact still valid) then
 	 x + c => y + (c1 + c), so (i - 1) + 1 => i and (i + 1) - 1 => i (no instruction) and (x + c1) - c2 => x + (c1 - c2).
 	 Tagged: Tagged(x) + 8c, emitted as OilAddImmTagged when c fits 8 signed bits."
-	| descKind slotVal operandReg baseReg totalOffset destReg instIndex scratchReg |
+	| descKind slotVal operandReg baseReg totalOffset destReg instIndex scratchReg producerSite |
 	descKind := slotKind at: operandSlot.
 	slotVal := slotValue at: operandSlot.
 	constantVal = 0 ifTrue:
@@ -2164,13 +2164,17 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	operandReg := self regForSlot: operandSlot.
 	baseReg := operandReg.
 	totalOffset := constantVal.
+	producerSite := -1.
 	((affineBase at: operandReg) >= 0 and: [(affineVersion at: operandReg) = (regVersion at: (affineBase at: operandReg))]) ifTrue:
 		[baseReg := affineBase at: operandReg.
 		 totalOffset := (affineConst at: operandReg) + constantVal.
-		 "its producer is now dead, unless the deopt state of this bytecode (that of the add emitted below) refers to it"
-		 ((operandReg >= resultSlot and: [operandReg <= simStackTop])
-		  and: [totalOffset = 0 or: [(self snapshotRefersTo: operandReg) not]]) ifTrue:
-			[self retractIfDeadDefinitionOf: operandReg]].
+		 "Its producer is now dead.  The add emitted below then takes over its deopt site: the deopt state of this bytecode
+		  refers to the producer's result, but the interpreter redoes both adds from the producer's bytecode."
+		 (operandReg >= resultSlot and: [operandReg <= simStackTop]) ifTrue:
+			[producerSite := self siteAtIR: lastInstIR.
+			 ((totalOffset = 0 or: [producerSite >= 0])
+			  and: [self retractIfDeadDefinitionOf: operandReg]) ifFalse:
+				[producerSite := -1]]].
 	simStackTop := resultSlot - 1.
 	totalOffset = 0 ifTrue:
 		[self push: OilDescReg value: baseReg.
@@ -2178,12 +2182,12 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	destReg := self pushOwnSlot.
 	(totalOffset between: -128 and: 127)
 		ifTrue:
-			[self recordSite: OilSiteArith.
+			[self recordAddSite: producerSite.
 			 instIndex := self emitOp: OilAddImmTagged a: destReg b: baseReg c: (totalOffset bitAnd: 255)]
 		ifFalse:
 			[scratchReg := operandSlot + 1.
 			 self emitConst: (self handleForSmallInteger: totalOffset) into: scratchReg.
-			 self recordSite: OilSiteArith.
+			 self recordAddSite: producerSite.
 			 instIndex := self emitOp: OilAddTagged a: destReg b: baseReg c: scratchReg].
 	self noteDef: destReg at: instIndex.
 	affineBase at: destReg put: baseReg.
@@ -3121,13 +3125,20 @@ classIndexOfClass: classHandle
 	^self cCode: [coInterpreter oilApiClassIndexOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) identityHash]! !
 
 !OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
-snapshotRefersTo: vreg
-	"Does the deopt state of the current bytecode refer to register vreg?"
-	0 to: snapTop do:
-		[:slotIndex| ((snapKind at: slotIndex) = OilDescReg and: [(snapValue at: slotIndex) = vreg]) ifTrue: [^true]].
-	snapHighTop + 1 to: OilMaxReg do:
-		[:slotIndex| ((snapKind at: slotIndex) = OilDescReg and: [(snapValue at: slotIndex) = vreg]) ifTrue: [^true]].
-	^false! !
+siteAtIR: irOffset
+	"The (last) deopt site of the instruction at irOffset, or -1."
+	numSites - 1 to: 0 by: -1 do:
+		[:siteIndex| (siteIR at: siteIndex) = irOffset ifTrue: [^siteIndex]].
+	^-1! !
+
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
+recordAddSite: producerSite
+	"The deopt site of the add about to be emitted by genAddConstant:to:result:: a new one, or the site of the add it
+	 replaces (retracted, so marked dead: revive it at the new instruction)."
+	producerSite < 0 ifTrue: [^self recordSite: OilSiteArith].
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
+	siteIR at: producerSite put: irIndex.
+	^producerSite! !
 
 !OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 isNonNilQuickPrimitive: prim class: cls

@@ -86,7 +86,9 @@ check value: 'peepholes: (i+5)-2 and (i-3)+1 combined into one OilAddImmTagged e
 check value: 'peepholes: SmallInteger overflow deopts (no wrong result)' value: ((run value: c value: #peepholes:with: value: {SmallInteger maxVal. 1}) isKindOf: Association).
 
 "--- 6. Calls: polymorphic receiver, 0/1/2/3 arguments ---"
-c := compile value: #callProbe:with:with: value: {{coll first. 1. 2}. {OilTestOther new. 3. 4}} value: nil.
+"(three receiver classes, so that the sends are megamorphic: Oil inlines bimorphic sends of small methods)"
+OilTestOther subclass: #OilTestThird instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+c := compile value: #callProbe:with:with: value: {{coll first. 1. 2}. {OilTestOther new. 3. 4}. {(Smalltalk at: #OilTestThird) new. 1. 2}} value: nil.
 hist := c opcodeHistogram.
 check value: 'callProbe: OilCall0, OilCall1 and two OilCallN (packed args)' value: ((hist occurrencesOf: 'Call0') = 1 and: [(hist occurrencesOf: 'Call1') = 1 and: [(hist occurrencesOf: 'CallN') = 2]]).
 check value: 'callProbe: IR result = real result (OilTestItem)' value: (run value: c value: #callProbe:with:with: value: {coll first. 5. 6}) = (model callProbe: coll first with: 5 with: 6).
