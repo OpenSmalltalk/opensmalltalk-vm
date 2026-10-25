@@ -320,7 +320,8 @@ generateNativeCode
 	numArgs + 1 to: OilMaxReg do:
 		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
 			[cogit MoveCq: (objectMemory integerObjectOf: 0) R: (oilVRegReg at: vreg)]].
-	self resetXmms: -1.
+	self resetXmms.
+	oilXmmChain := -1.
 	irOffset := 0.
 	[irOffset < irIndex and: [failed not]] whileTrue:
 		[(oilIRTarget at: irOffset) ~= 0 ifTrue:
@@ -353,10 +354,13 @@ genInstructionAt: irOffset
 			ifFalse: [oilIRSite at: irOffset].
 	siteIndex >= 0 ifTrue: "the deopt fast path (an unforwarded guard) resumes here"
 		[oilSiteResume at: siteIndex put: cogit Label].
-	"In a float chain (OilFullCompiler>>fuseFloats) XMM registers hold values across instructions and every deopt
-	 goes to the chain's site."
+	"XMM registers cache the double values of registers in straight-line code (see xmmFor:ints:except:site:) and hold
+	 the unboxed results of a float chain (OilFullCompiler>>fuseFloats), every deopt of which goes to the chain's site."
+	((oilIRTarget at: irOffset) ~= 0 or: [self mayClobberXmms: opcode]) ifTrue: [self resetXmms].
 	chainSite := ((oilIRFlag at: irOffset) bitAnd: OilFloatChained) ~= 0 ifTrue: [oilIRAux at: irOffset] ifFalse: [-1].
-	chainSite ~= oilXmmChain ifTrue: [self resetXmms: chainSite].
+	chainSite ~= oilXmmChain ifTrue: "a chain ends: its unboxed results are dead"
+		[0 to: OilNumXmms - 1 do: [:xmmIndex| (oilXmmKind at: xmmIndex) < 0 ifTrue: [oilXmmVReg at: xmmIndex put: -1]].
+		 oilXmmChain := chainSite].
 	chainSite >= 0 ifTrue: [siteIndex := chainSite].
 	opcode caseOf: {
 		[OilConstTagged]	-> [self genConstTagged: regA value: (self signed16: (self imm16At: irOffset))].
@@ -1296,10 +1300,16 @@ isTagged: virtualReg
 
 
 !OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
-resetXmms: chainSite
-	"Forget the values of the XMM registers: a float chain (identified by its deopt site) starts, or none (-1)."
-	0 to: OilNumXmms - 1 do: [:xmmIndex| oilXmmVReg at: xmmIndex put: -1].
-	oilXmmChain := chainSite! !
+resetXmms
+	"Forget the values of the XMM registers (at a label, or before a call that clobbers them)."
+	0 to: OilNumXmms - 1 do: [:xmmIndex| oilXmmVReg at: xmmIndex put: -1]! !
+
+!OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 03:00'!
+mayClobberXmms: opcode
+	"May the instruction call out (C calls clobber the XMM registers), or resume after a deopt (a guard)?"
+	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper
+	 or: [opcode = OilStoreField or: [opcode = OilStoreElement or: [opcode = OilMakeClosure
+	 or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilGuardClass]]]]]]]]]! !
 
 !OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
 forgetXmmsOf: virtualReg
@@ -1327,7 +1337,7 @@ allocXmmExcept: busyXmm and: otherBusyXmm
 xmmFor: virtualReg ints: intMode except: busyXmm site: siteIndex
 	"Answer the index of an XMM register holding the double value of virtualReg: the one of an unboxed result of
 	 the chain or the one caching it, if that was loaded checking the same (oilXmmKind), or else load it (see
-	 genLoadDouble:into:ints:site:) and cache it for the rest of the chain."
+	 genLoadDouble:into:ints:site:) and cache it until virtualReg is assigned or the cache is reset."
 	| xmmIndex kind |
 	0 to: OilNumXmms - 1 do:
 		[:index|
@@ -1404,9 +1414,9 @@ genBoxDouble: dpReg into: destReg site: siteIndex
 !OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
 genFloatArith: opcode at: irOffset site: siteIndex
 	"[OilAddFloat..OilDivFloat | Dest | Rcvr | Arg]: compute in an XMM register (a zero divisor deoptimizes, like the
-	 primitive fails), then box the result into Dest, or, in a float chain, leave it there if it is OilFloatUnboxed."
+	 primitive fails), then box the result into Dest (the XMM register caches it), or, in a float chain, leave it there
+	 if it is OilFloatUnboxed."
 	| destReg rcvrXmm argXmm resultXmm resultReg argReg |
-	oilXmmChain < 0 ifTrue: [self resetXmms: -1].
 	destReg := self fieldAAt: irOffset.
 	rcvrXmm := self xmmFor: (self fieldBAt: irOffset) ints: 0 except: -1 site: siteIndex.
 	argXmm := self xmmFor: (self fieldCAt: irOffset) ints: 1 except: rcvrXmm site: siteIndex.
@@ -1423,11 +1433,11 @@ genFloatArith: opcode at: irOffset site: siteIndex
 	opcode = OilSubFloat ifTrue: [cogit SubRd: argReg Rd: resultReg].
 	opcode = OilMulFloat ifTrue: [cogit MulRd: argReg Rd: resultReg].
 	opcode = OilDivFloat ifTrue: [cogit DivRd: argReg Rd: resultReg].
-	((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0 ifFalse:
-		[^self genBoxDouble: resultReg into: destReg site: siteIndex].
-	self forgetXmmsOf: destReg.
+	((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0
+		ifTrue: [self forgetXmmsOf: destReg]
+		ifFalse: [self genBoxDouble: resultReg into: destReg site: siteIndex].
 	oilXmmVReg at: resultXmm put: destReg.
-	oilXmmKind at: resultXmm put: -1! !
+	oilXmmKind at: resultXmm put: (((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0 ifTrue: [-1] ifFalse: [0])! !
 
 !OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
 genFloatCompareAt: irOffset site: siteIndex
@@ -1436,7 +1446,6 @@ genFloatCompareAt: irOffset site: siteIndex
 	<inline: false>
 	| cond branchOffset target rcvrXmm argXmm jump |
 	<var: #jump type: #'AbstractInstruction *'>
-	oilXmmChain < 0 ifTrue: [self resetXmms: -1].
 	cond := self fieldAAt: irOffset.
 	branchOffset := irOffset + 1.
 	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
