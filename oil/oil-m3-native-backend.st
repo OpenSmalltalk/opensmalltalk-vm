@@ -1068,6 +1068,13 @@ oilDescriptorIndex: reg site: site metadata: metadata
 		[^site + OilMDSiteHeaderSize + (2 * (top + 1)) + (2 * (reg - high - 1))].
 	^0! !
 
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/25/2026 15:00'!
+oilIsVirtualObjectKind: kind
+	"Is kind the descriptor kind of a virtual object (a dissolved closure or temp vector, or a scalar replaced object)?"
+	<inline: true>
+	<essential: #ProfilingCogit>
+	^kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]! !
+
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops
 	"Answer the value described by the descriptor at metadata index p: a register's value (read from its home before
@@ -1080,7 +1087,7 @@ oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops
 	kind := self oilMD: metadata at: descIndex.
 	kind = OilDescConst ifTrue:
 		[^objectMemory fetchPointer: descIndex + 1 ofObject: metadata].
-	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifTrue:
+	(self oilIsVirtualObjectKind: kind) ifTrue:
 		[^(vobjOops at: (self oilMD: metadata at: descIndex + 1)) = 0
 			ifTrue: [objectMemory nilObject]
 			ifFalse: [vobjOops at: (self oilMD: metadata at: descIndex + 1)]].
@@ -1094,7 +1101,7 @@ oilNeedVObjAt: descIndex metadata: metadata needed: needed
 	| kind vobjIndex |
 	descIndex = 0 ifTrue: [^self].
 	kind := self oilMD: metadata at: descIndex.
-	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifFalse: [^self].
+	(self oilIsVirtualObjectKind: kind) ifFalse: [^self].
 	vobjIndex := self oilMD: metadata at: descIndex + 1.
 	(needed at: vobjIndex) = 0 ifTrue: [needed at: vobjIndex put: 1]! !
 
@@ -1113,7 +1120,7 @@ oilStore: descIndex at: address metadata: metadata values: regValues vobjs: vobj
 	stackPages longAt: address put: (self oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops).
 	descIndex = 0 ifTrue: [^numFixups].
 	kind := self oilMD: metadata at: descIndex.
-	((kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) and: [numFixups < OilNumRegs]) ifFalse:
+	((self oilIsVirtualObjectKind: kind) and: [numFixups < OilNumRegs]) ifFalse:
 		[^numFixups].
 	self oilNeedVObjAt: descIndex metadata: metadata needed: needed.
 	fixupAddrs at: numFixups put: address.
