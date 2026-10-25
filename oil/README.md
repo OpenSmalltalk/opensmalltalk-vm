@@ -22,6 +22,8 @@ Then run `VMMaker generateSqueakSpurCogOil64VM` and build with `building/linux64
 - `oil/test_profiling_cogit.st` — trip counter and inline cache query tests.
 - `oil/test_oil_m3.st` — end-to-end compilation, `sumScores:` benchmark, class guard and overflow deoptimization, forwarding fast path, and GC robustness.
 - `oil/test_oil_m5.st` — deopt disqualification, escaping closures and brace arrays (`OilMakeClosure`, `OilNewArray`), byte/stream intrinsics, selector table (`OilExtraSelectorBase`), and constant-left arithmetic/comparison probes.
+- `oil/test_oil_m6.st` — `OilFullCompiler`: Float arithmetic and fusion (Mandelbrot), boxed and mixed operands, float deoptimization (non-Float receiver, zero divisor, exact comparisons), and value numbering of loads and checks.
+- `oil/test_oil_stress.st` — SUnit with the trip log on, Oil compilation of every hot method, SUnit on the Oil code, then `Compiler recompileAll` (which discards the Oil code that inlined the flushed selectors) and SUnit again.
 
 ## Key Runtime Mechanisms
 

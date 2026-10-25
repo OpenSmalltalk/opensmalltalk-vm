@@ -418,29 +418,11 @@ genConstTagged: destReg value: tagged
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genConst64: destReg value: oop
-	"An object literal: annotated so that the GC can update it (and the method is a young referrer if need be).
-	 A SmallFloat64 in a float chain is also loaded, decoded at compile time, into an XMM register for the chain."
-	| dst xmmIndex |
+	"An object literal: annotated so that the GC can update it (and the method is a young referrer if need be)."
+	| dst |
 	dst := self dst: destReg scratch: TempReg.
 	cogit genMoveConstant: oop R: dst.
-	self setDst: destReg from: dst.
-	(oilXmmChain >= 0 and: [(oop bitAnd: objectMemory tagMask) = objectMemory smallFloatTag]) ifTrue:
-		[xmmIndex := self allocXmmExcept: -1 and: -1.
-		 cogit MoveCq: (self smallFloatBitsOf: oop) R: TempReg.
-		 cogit MoveR: TempReg Rd: (oilXmmRegs at: xmmIndex).
-		 oilXmmVReg at: xmmIndex put: destReg.
-		 oilXmmKind at: xmmIndex put: 0]! !
-
-!OilBaseCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:30'!
-smallFloatBitsOf: oop
-	"The IEEE 754 bits of the SmallFloat64 oop (see Spur64BitMemoryManager>>smallFloatBitsOf:)."
-	| bits |
-	<returnTypeC: #usqLong>
-	<var: #bits type: #usqLong>
-	bits := (self cCoerce: oop to: #usqLong) >> objectMemory numTagBits.
-	bits > 1 ifTrue: "not +/-0.0"
-		[bits := bits + (objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1))].
-	^(bits >> 1) bitOr: (bits << 63)! !
+	self setDst: destReg from: dst! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genMove: destReg from: srcReg
