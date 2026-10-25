@@ -1798,7 +1798,7 @@ compareSmallInteger: val1 with: val2 cond: condCode
 !OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genArith: selectorIndex
 	<inline: false>
-	"Special selector arithmetic on (speculated) SmallIntegers: + - * \ bitShift: // bitAnd: bitOr:.
+	"Special selector arithmetic on (speculated) SmallIntegers: + - * \\ bitShift: // bitAnd: bitOr:.
 	 Answer false if not inlinable (the caller then emits an ordinary send)."
 	| rcvrSlot argSlot |
 	rcvrSlot := simStackTop - 1.
@@ -1873,20 +1873,21 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	"x + c with on-the-fly reduction: x + 0 => x; if x = y + c1 (an affine fact still valid) then
 	 x + c => y + (c1 + c), so (i - 1) + 1 => i and (i + 1) - 1 => i (no instruction) and (x + c1) - c2 => x + (c1 - c2).
 	 Tagged: Tagged(x) + 8c, emitted as OilAddImmTagged when c fits 8 signed bits."
-	| descKind slotVal baseReg totalOffset destReg instIndex scratchReg |
+	| descKind slotVal operandReg baseReg totalOffset destReg instIndex scratchReg |
 	descKind := slotKind at: operandSlot.
 	slotVal := slotValue at: operandSlot.
 	constantVal = 0 ifTrue:
 		[simStackTop := resultSlot - 1.
 		 self push: descKind value: slotVal.
 		 ^true].
-	baseReg := self regForSlot: operandSlot.
+	operandReg := self regForSlot: operandSlot.
+	baseReg := operandReg.
 	totalOffset := constantVal.
-	((affineBase at: baseReg) >= 0 and: [(affineVersion at: baseReg) = (regVersion at: (affineBase at: baseReg))]) ifTrue:
-		[totalOffset := (affineConst at: baseReg) + constantVal.
-		 baseReg := affineBase at: baseReg.
-		 (baseReg >= resultSlot and: [baseReg <= simStackTop]) ifTrue: "its producer is now dead"
-			[self retractIfDeadDefinitionOf: baseReg]].
+	((affineBase at: operandReg) >= 0 and: [(affineVersion at: operandReg) = (regVersion at: (affineBase at: operandReg))]) ifTrue:
+		[baseReg := affineBase at: operandReg.
+		 totalOffset := (affineConst at: operandReg) + constantVal.
+		 (operandReg >= resultSlot and: [operandReg <= simStackTop]) ifTrue: "its producer is now dead"
+			[self retractIfDeadDefinitionOf: operandReg]].
 	simStackTop := resultSlot - 1.
 	totalOffset = 0 ifTrue:
 		[self push: OilDescReg value: baseReg.
@@ -1983,8 +1984,8 @@ genDiv
 
 !OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genMod
-	"x \ 2 => OilOddTagged ((x bitAnd: 8) bitOr: 1 on the tagged value: no division, no branch);
-	 x \ 2^k => x bitAnd: 2^k - 1 (floored modulo by a positive power of two);
+	"x \\ 2 => OilOddTagged ((x bitAnd: 8) bitOr: 1 on the tagged value: no division, no branch);
+	 x \\ 2^k => x bitAnd: 2^k - 1 (floored modulo by a positive power of two);
 	 otherwise OilModTagged (a division; deoptimizes on a zero divisor)."
 	| rcvrSlot argSlot constantVal power srcReg |
 	rcvrSlot := simStackTop - 1.

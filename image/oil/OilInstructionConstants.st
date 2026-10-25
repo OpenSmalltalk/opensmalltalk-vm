@@ -43,7 +43,7 @@ initialize
 	OilCallSuper := 30.
 	"Pass 2 only: x + imm on a SmallInteger that cannot overflow (a bounded loop index): no tag or overflow check"
 	OilAddImmTaggedNC := 31.
-	"x \ y (floored modulo) on SmallIntegers, y not a power of two: a division; deoptimizes on a zero divisor"
+	"x \\ y (floored modulo) on SmallIntegers, y not a power of two: a division; deoptimizes on a zero divisor"
 	OilModTagged := 32.
 	"byte objects (ByteString, ByteArray): size in bytes; element as SmallInteger or Character; stores; primitive 158 (compareWith:)"
 	OilLoadByteSize := 33.

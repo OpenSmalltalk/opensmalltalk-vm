@@ -89,7 +89,7 @@ printInstructionAt: instIndex on: aStream
 		[OilStoreByte]		-> [aStream nextPutAll: (self reg: regB), '[', (self reg: regC), '] := ', (self reg: regA), ' (byte)'].
 		[OilStoreChar]		-> [aStream nextPutAll: (self reg: regB), '[', (self reg: regC), '] := ', (self reg: regA), ' (Character)'].
 		[OilCompareBytes]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' compareWith: ', (self reg: regC)].
-		[OilModTagged]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' \ ', (self reg: regC), '   (idiv; floored)'].
+		[OilModTagged]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' \\ ', (self reg: regC), '   (idiv; floored)'].
 		[OilAddImmTaggedNC]	-> [| immVal | immVal := self signed8: regC. aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), (immVal >= 0 ifTrue: [' + '] ifFalse: [' - ']), immVal abs printString, '   (addq $', (immVal * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: regA), ' := size(', (self reg: regB), ')'].
 		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: regA), ' := closure ', (self printHandle: (self word64At: instIndex + 1)), ' self ', (self reg: (self fieldCAt: instIndex + 3)), ' copied ', regC printString, ' from ', (self reg: regB)].
@@ -135,7 +135,7 @@ packedArgsAt: index count: count
 			[:argIndex| | word |
 			word := oilIRBuffer at: index + (argIndex // 4).
 			argIndex > 0 ifTrue: [stream space].
-			stream nextPutAll: (self reg: ((word bitShift: (3 - (argIndex \ 4)) * -8) bitAnd: 255))]]! !
+			stream nextPutAll: (self reg: ((word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255))]]! !
 
 !OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 irString
@@ -282,7 +282,7 @@ step: instIndex
 	opcode = OilModTagged ifTrue:
 		[val1 := self r: srcReg1. val2 := self r: srcReg2.
 		 ((self smallInt: val1) and: [(self smallInt: val2) and: [val2 ~= 0]]) ifFalse: [^#deopt -> instIndex].
-		 self r: destReg put: val1 \ val2. ^nextIndex].
+		 self r: destReg put: val1 \\ val2. ^nextIndex].
 	opcode = OilAddImmTaggedNC ifTrue: "Pass 2 proved it cannot fail: if it would, Pass 2 is wrong"
 		[val1 := self r: srcReg1.
 		 resVal := val1 + (comp signed8: srcReg2).

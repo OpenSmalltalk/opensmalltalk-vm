@@ -10,15 +10,15 @@ I hold the non-instruction constants of Oil, the optimizing JIT for the 64-bit S
 !OilConstants class methodsFor: 'class initialization' stamp: 'cb 10/25/2026 00:15'!
 initialize
 	"OilConstants initialize"
-	"operand condition codes (OilBytecodeScanner scannedCond)"
-	OilCondLt := 0.
-	OilCondGt := 1.
-	OilCondLe := 2.
-	OilCondGe := 3.
-	OilCondEq := 4.
-	OilCondNe := 5.
-	OilCondIdentical := 6.
-	OilCondNotIdentical := 7.
+	"operand condition codes: Pass 1 maps the special selectors < > <= >= = ~= (indices 2 to 7) to index - 1"
+	OilCondLt := 1.
+	OilCondGt := 2.
+	OilCondLe := 3.
+	OilCondGe := 4.
+	OilCondEq := 5.
+	OilCondNe := 6.
+	OilCondIdentical := 7.
+	OilCondNotIdentical := 8.
 	"bytecode classification tags (OilBytecodeDescriptor kind)"
 	OilTagUnknown := 0.
 	OilTagPushRcvrVar := 1.
