@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilInliningCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -122,7 +122,19 @@ setUpSimulationTables
 	oilLoopDepth := self newTable: OilBufferWords.
 	oilIRTarget := self newTable: OilBufferWords.
 	oilIRSite := self newTable: OilBufferWords.
-	oilXmmRegs := self newTable: OilNumXmms.
+	oilXmmRegs := self newTable: OilNumXmms + OilMaxPinnedXmms.
+	oilXmmPinned := self newTable: OilNumRegs.
+	oilFloatLoopHead := self newTable: OilMaxFloatLoops.
+	oilFloatLoopEnd := self newTable: OilMaxFloatLoops.
+	oilFloatLoopSite := self newTable: OilMaxFloatLoops.
+	oilFloatLoopNum := self newTable: OilMaxFloatLoops.
+	oilFloatLoopVReg := self newTable: OilMaxFloatLoops * OilMaxPinnedXmms.
+	oilFloatLoopKind := self newTable: OilMaxFloatLoops * OilMaxPinnedXmms.
+	oilSiteFloatLoop := self newTable: OilMaxSites.
+	oilFloatExitJump := self newTable: OilMaxFloatExits.
+	oilFloatExitTarget := self newTable: OilMaxFloatExits.
+	oilNumFloatLoops := oilNumFloatExits := 0.
+	oilFloatLoopCurrent := -1.
 	oilXmmVReg := self newTable: OilNumXmms.
 	oilXmmKind := self newTable: OilNumXmms.
 	simHandles := OrderedCollection new.
@@ -2687,8 +2699,18 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilSiteUsed declareC: 'static unsigned char oilSiteUsed[OilMaxSites]'.
 	aCCodeGenerator var: #oilAllocRegs declareC: 'static sqInt oilAllocRegs[16]'.
 	"Float chains: the XMM registers, the register whose value each holds (or -1) and how it was loaded (-1: computed)."
-	#(oilXmmRegs oilXmmVReg oilXmmKind) do:
+	#(oilXmmVReg oilXmmKind) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumXmms]'].
+	"(then the XMM registers pinned to the float variables of loops, see prepareFloatLoops)"
+	aCCodeGenerator var: #oilXmmRegs declareC: 'static sqInt oilXmmRegs[OilNumXmms + OilMaxPinnedXmms]'.
+	aCCodeGenerator var: #oilXmmPinned declareC: 'static sqInt oilXmmPinned[OilNumRegs]'.
+	#(oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxFloatLoops]'].
+	#(oilFloatLoopVReg oilFloatLoopKind) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxFloatLoops * OilMaxPinnedXmms]'].
+	aCCodeGenerator var: #oilSiteFloatLoop declareC: 'static unsigned char oilSiteFloatLoop[OilMaxSites]'.
+	aCCodeGenerator var: #oilFloatExitJump declareC: 'static AbstractInstruction *oilFloatExitJump[OilMaxFloatExits]'.
+	aCCodeGenerator var: #oilFloatExitTarget declareC: 'static sqInt oilFloatExitTarget[OilMaxFloatExits]'.
 	aCCodeGenerator var: #valueSelectors declareC: 'static sqInt valueSelectors[5]'.
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.
 	#(typeFeedback simHandles simHandleIndex) do:

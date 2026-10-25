@@ -820,6 +820,16 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 					index := index + 2]]]! !
 
 
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 22:30'!
+oilApiFloatBitsOf: floatOop
+	"The bits of the double of a SmallFloat64 or a BoxedFloat64 (see OilInliningCompiler>>cacheFloatLiteral:in:)."
+	<api>
+	<essential: #ProfilingCogit>
+	<returnTypeC: #sqLong>
+	^(objectMemory isImmediate: floatOop)
+		ifTrue: [objectMemory smallFloatBitsOf: floatOop]
+		ifFalse: [objectMemory fetchLong64: 0 ofObject: floatOop]! !
+
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiLookupSelector: selector inClass: class
 	<api>
@@ -1568,9 +1578,9 @@ primitiveOilLastCompilation
 	0 to: irWordCount - 1 do:
 		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 26.
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 27.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 25 do:
+	0 to: 26 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !

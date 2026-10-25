@@ -81,6 +81,7 @@ optimizeIR
 	| irOffset opcode branchTarget optimize |
 	oilNumUnrolls := oilUnrollGrowth := oilUnrollClones := 0.
 	oilUnrollFreeReg := -2.
+	self threadBooleanJumps.
 	0 to: irIndex - 1 do:
 		[:targetOffset|
 		oilIRFlag at: targetOffset put: 0.
@@ -114,6 +115,44 @@ optimizeIR
 		 self eliminateDeadCode.
 		 self unrollLoops].
 	^self emitOptimizedIR! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 22:30'!
+threadBooleanJumps
+	"A Jump right after rX := true (or false), not itself a branch target, to a test of rX (OilBranchTrue or OilBranchFalse rX,
+	 possibly through other jumps) goes straight where the test goes: its target, or the instruction after it.  rX is still
+	 assigned.  That is the boolean of an and: or or: condition (e.g. [i < n and: [x < y]] whileTrue: [...]), so its test (two
+	 comparisons and a mustBeBoolean check) is skipped on the hot path."
+	| irOffset prevOffset opcode target hops taken newTarget |
+	0 to: irIndex - 1 do: [:offset| oilIRTarget at: offset put: 0].
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (self isBranch: opcode) ifTrue:
+			[(self imm16At: irOffset) < irIndex ifTrue: [oilIRTarget at: (self imm16At: irOffset) put: 1]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	prevOffset := -1.
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (opcode = OilJump
+		  and: [prevOffset >= 0
+		  and: [(oilIRTarget at: irOffset) = 0
+		  and: [(self opcodeAt: prevOffset) = OilConst64
+		  and: [((self word64At: prevOffset + 1) = trueHandle or: [(self word64At: prevOffset + 1) = falseHandle])
+		  and: [(target := self imm16At: irOffset) > irOffset and: [target < irIndex]]]]]]) ifTrue:
+			[hops := 0.
+			 [(self opcodeAt: target) = OilJump and: [hops < 4 and: [(self imm16At: target) > target]]] whileTrue:
+				[target := self imm16At: target.
+				 hops := hops + 1].
+			 (((self opcodeAt: target) = OilBranchTrue or: [(self opcodeAt: target) = OilBranchFalse])
+			  and: [(self fieldAAt: target) = (self fieldAAt: prevOffset)]) ifTrue:
+				[taken := (self word64At: prevOffset + 1) = trueHandle.
+				 (self opcodeAt: target) = OilBranchFalse ifTrue: [taken := taken not].
+				 newTarget := taken ifTrue: [self imm16At: target] ifFalse: [target + 1].
+				 (newTarget > irOffset and: [newTarget < irIndex]) ifTrue:
+					[oilIRBuffer at: irOffset put: ((oilIRBuffer at: irOffset) bitAnd: 16rFFFF0000) + newTarget]]].
+		 prevOffset := irOffset.
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 02:00'!
 valueNumber
@@ -629,8 +668,8 @@ loopAlignment
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
 oilUnrollParameter: kind value: value
 	"Set a loop unrolling parameter (kinds 12 to 18 of primitiveOilSetSelectors, with a SmallInteger): 12 the mode, whose
-	 bits disable full unrolling (1), partial unrolling (2) and the store check elimination of young objects (4), and allow
-	 partial unrolling of bodies with branches (8); 13 the
+	 bits disable full unrolling (1), partial unrolling (2), the store check elimination of young objects (4) and the float
+	 loop registers (16), and allow partial unrolling of bodies with branches (8); 13 the
 	 largest body unrolled 4 times; 14 the largest body unrolled twice; 15 the budget of full unrolling (iterations * body
 	 size); 16 the most iterations fully unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift
 	 (see codeShift).  0 (or less) means the default."
@@ -959,7 +998,8 @@ partiallyUnrollLoop: loopHead backJump: backJump
 	 and: [(step := self signed8: (self fieldCAt: tailOffset)) > 0
 	 and: [(self isAssigned: ivReg from: loopHead to: cmpOffset) not]]) ifFalse: [^false].
 	"The factor.  A body with branches (but deopts) is not unrolled (unless mode bit 8): measured, its copies are not
-	 faster, the branches cost as much as the loop's."
+	 faster, the branches cost as much as the loop's.  Nor one with float arithmetic: its variables get XMM registers instead
+	 (Pass 3, prepareFloatLoops), and its additions are a chain of dependent instructions anyway."
 	bodySize := bodyWords := 0.
 	irOffset := bfOffset + 1.
 	[irOffset < backJump] whileTrue:
@@ -967,6 +1007,7 @@ partiallyUnrollLoop: loopHead backJump: backJump
 		 (self flag: irOffset has: OilP2Delete) ifFalse:
 			[((oilUnrollMode bitAnd: 8) = 0
 			  and: [(self isBranch: opcode) or: [opcode = OilReturn]]) ifTrue: [^false].
+			 ((opcode between: OilAddFloat and: OilCmpFloat) and: [self floatLoopsEnabled]) ifTrue: [^false]. "(see prepareFloatLoops)"
 			 irOffset ~= tailOffset ifTrue: [bodySize := bodySize + 1].
 			 bodyWords := bodyWords + (self instructionLengthAt: irOffset)].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
@@ -1010,25 +1051,6 @@ partiallyUnrollLoop: loopHead backJump: backJump
 	oilNumPartiallyUnrolled := oilNumPartiallyUnrolled + 1.
 	self mark: bfOffset with: OilP2UnrollPartial.
 	^true! !
-
-!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
-cloneSite: siteIndex at: irOffset
-	"A new deopt site for the instruction at irOffset of Buffer 2, a copy of the one of deopt site siteIndex: the same inlined
-	 frame, bytecode pc and recorded state (the copy computes into the same registers, see useCondSite: in Pass 1)."
-	| newSiteIndex |
-	newSiteIndex := numSites.
-	newSiteIndex >= OilMaxSites ifTrue:
-		[self abortCompilation: OilFailTooManySites.
-		 ^siteIndex].
-	siteIR at: newSiteIndex put: irOffset.
-	siteFrame at: newSiteIndex put: (siteFrame at: siteIndex).
-	sitePC at: newSiteIndex put: (sitePC at: siteIndex).
-	siteKind at: newSiteIndex put: (siteKind at: siteIndex).
-	siteSnapBase at: newSiteIndex put: (siteSnapBase at: siteIndex).
-	siteSnapTop at: newSiteIndex put: (siteSnapTop at: siteIndex).
-	siteSnapHigh at: newSiteIndex put: (siteSnapHigh at: siteIndex).
-	numSites := newSiteIndex + 1.
-	^newSiteIndex! !
 
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
 emitCopyOf: srcOffset at: dstOffset shift: shift from: firstOffset to: lastOffset
@@ -1196,7 +1218,7 @@ storeNeedsCheck: objReg
 pass2Statistics: index
 	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
 	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos; 23 loops fully unrolled, 24 loops partially
-	 unrolled, 25 stores into young objects without store check (Pass 3)."
+	 unrolled, 25 stores into young objects without store check (Pass 3), 26 loops with float registers (Pass 3)."
 	index = 0 ifTrue: [^oilNumRotated].
 	index = 1 ifTrue: [^oilNumBoundsRemoved].
 	index = 2 ifTrue: [^oilNumDeadRemoved].
@@ -1208,7 +1230,13 @@ pass2Statistics: index
 	index = 23 ifTrue: [^oilNumFullyUnrolled].
 	index = 24 ifTrue: [^oilNumPartiallyUnrolled].
 	index = 25 ifTrue: [^oilNumYoungStores].
+	index = 26 ifTrue: [^oilNumFloatLoops].
 	^0! !
+
+!OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 22:30'!
+floatLoopsEnabled
+	"Mode bit 16 (kind 12 of primitiveOilSetSelectors) disables the float loop registers (M10, see prepareFloatLoops)."
+	^(oilUnrollMode bitAnd: 16) = 0! !
 
 (Smalltalk hasClassNamed: #OilNumericCompiler) ifTrue: [(Smalltalk at: #OilNumericCompiler) removeFromSystem].!
 
