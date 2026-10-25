@@ -608,7 +608,9 @@ oilMethod: cogMethod inlinesSelector: aSelector
 !ProfilingCogit methodsFor: 'jit - api' stamp: 'cb 10/24/2026 19:20'!
 unlinkSendsOf: selector isMNUSelector: isMNUSelector
 	<api>
-	"Also discard Oil methods that inlined selector (unless an activation is currently running on the stack)."
+	"Also discard Oil methods that inlined selector.  One that an activation is currently running on the stack cannot be
+	 freed: unhook it instead (see CoInterpreter>>oilUnhookCogMethod:), so that new activations run the method's new
+	 baseline code; the running ones finish in the Oil code, which is freed once unused."
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	super unlinkSendsOf: selector isMNUSelector: isMNUSelector.
@@ -616,10 +618,53 @@ unlinkSendsOf: selector isMNUSelector: isMNUSelector
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[((self isOilMethod: cogMethod)
-		  and: [(self oilMethod: cogMethod inlinesSelector: selector)
-		  and: [(coInterpreter oilHasFramesOf: cogMethod) not]]) ifTrue:
-			[self unlinkSendsTo: cogMethod methodObject andFreeIf: true].
+		  and: [self oilMethod: cogMethod inlinesSelector: selector]) ifTrue:
+			[(coInterpreter oilHasFramesOf: cogMethod)
+				ifTrue: [coInterpreter oilUnhookCogMethod: cogMethod]
+				ifFalse: [self unlinkSendsTo: cogMethod methodObject andFreeIf: true]].
 		 cogMethod := methodZone methodAfter: cogMethod]! !
+
+!ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/26/2026 00:40'!
+oilSetMethodObjectOf: cogMethod to: aMethodObj
+	<api>
+	<var: #cogMethod type: #'CogMethod *'>
+	(self writableMethodFor: cogMethod) methodObject: aMethodObj! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 00:40'!
+oilUnhookCogMethod: cogMethod
+	"The Oil method cogMethod must be discarded (it inlined a method that changed) but activations are running it.  Give
+	 its machine code to a copy of its CompiledMethod (as for a specialization, see primitiveOilSpecialize): the inline
+	 caches linked to it are unlinked and the CompiledMethod gets its bytecoded header back, so that new activations
+	 run the interpreter or new baseline code; the copy, which nothing sends to, owns the Oil code (and the contexts of
+	 its running activations), freed at a code compaction once they have returned.  Answer whether it was unhooked
+	 (not if the copy cannot be allocated: the Oil code then stays)."
+	<api>
+	<essential: #ProfilingCogit>
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #aPage type: #'StackPage *'>
+	<var: #theFP type: #'char *'>
+	| methodObj copy aPage theFP |
+	methodObj := cogMethod methodObject.
+	copy := objectMemory cloneInOldSpace: methodObj forPinning: false. "(with its bytecoded header)"
+	copy = 0 ifTrue: [^false].
+	cogit unlinkSendsTo: methodObj andFreeIf: false.
+	self rawHeaderOf: methodObj put: (objectMemory methodHeaderOf: copy).
+	cogMethod cmUnusedFlag ifTrue:
+		[self rawHeaderOf: methodObj put: (self oilHeaderWithoutLargeContext: (objectMemory methodHeaderOf: copy))].
+	self rawHeaderOf: copy put: cogMethod asUnsignedInteger.
+	cogit oilSetMethodObjectOf: cogMethod to: copy.
+	0 to: numStackPages - 1 do:
+		[:i|
+		aPage := stackPages stackPageAt: i.
+		(stackPages isFree: aPage) ifFalse:
+			[theFP := aPage = stackPage ifTrue: [framePointer] ifFalse: [aPage headFP].
+			 [theFP ~= 0] whileTrue:
+				[((self isMachineCodeFrame: theFP)
+				  and: [(self mframeHomeMethod: theFP) = cogMethod
+				  and: [self frameHasContext: theFP]]) ifTrue:
+					[objectMemory storePointer: MethodIndex ofObject: (self frameContext: theFP) withValue: copy].
+				 theFP := self frameCallerFP: theFP]]].
+	^true! !
 
 !ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 15:00'!
 maybeFreeCountersOf: aCogMethod

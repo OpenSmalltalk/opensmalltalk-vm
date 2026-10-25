@@ -98,6 +98,21 @@ check value: 'sumX: = 55 at the end' value: (model sumX: items) = 55.
 	value: ((1 to: 4) allSatisfy: [:k | (item callLoop: 1000) = 3004]).
  check value: 'callLoop: of an OilInvBase' value: (base callLoop: 1000) = 2003]
 	on: Error do: [:e | check value: 'deopt from an interpreter frame: ', e description value: false].
+"8. a method inlined by an Oil method that is running (on the stack) changes: the Oil method cannot be freed, but new
+ activations must run the new definition (the running one finishes in the Oil code)."
+(Smalltalk at: #OilInvBase) compile: 'w ^x' classified: 'accessing'.
+(Smalltalk at: #OilInvBase) compile: 'reent: aBlock ^self w + aBlock value + self w' classified: 'tests'.
+[| base r |
+ base := (Smalltalk at: #OilInvBase) new x: 1 y: 0.
+ 5 timesRepeat: [base reent: [0]].
+ check value: 'reent: Oil-compiles' value: (((Smalltalk at: #OilInvBase) >> #reent:) oilCompileFor: (Smalltalk at: #OilInvBase)) = 0.
+ r := base reent: [(Smalltalk at: #OilInvBase) compile: 'w ^x * 10' classified: 'accessing'. 0].
+ check value: 'redefined while running: the running activation answers 2 or 11' value: (r = 2 or: [r = 11]).
+ check value: 'redefined while running: no Oil code any more' value: ((Smalltalk at: #OilInvBase) >> #reent:) oilInfo isNil.
+ check value: 'redefined while running: the next activation runs the new definition' value: (base reent: [0]) = 20.
+ Smalltalk garbageCollect.
+ check value: 'redefined while running: after a full GC' value: (base reent: [0]) = 20]
+	on: Error do: [:e | check value: 'redefined while running: ', e description value: false].
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
 failures isEmpty ifFalse: [self error: 'Oil invalidation test failures: ', failures printString]

@@ -73,7 +73,14 @@ round := 0.
 		r := (sel first = $( or: [(cls includesSelector: sel) not and: [(cls canUnderstand: sel) not]])
 			ifTrue: [nil]
 			ifFalse: [[(cls selector: sel) run] on: Error do: [:e | nil]].
-		(r isNil or: [r hasPassed not]) ifTrue: [persistent add: f]].
+		(r isNil or: [r hasPassed not]) ifTrue:
+			[persistent add: f.
+			 "what failed, and the Oil code installed then"
+			 out tab; nextPutAll: f; nextPutAll: ': '; nextPutAll: ([(cls selector: sel) runCase. 'passed when run alone']
+				on: Exception do: [:e | e class name, ': ', (e messageText ifNil: ['']) asString]); cr.
+			 out tab; nextPutAll: 'Oil methods installed: '.
+			 (allMethods select: [:m | m oilInfo notNil]) do: [:m | out print: m; space].
+			 out cr; flush]].
 	"4. a perturbation"
 	action := rng nextInt: 10.
 	detail := ''.
