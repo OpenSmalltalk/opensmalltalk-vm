@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilBaseCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -286,6 +286,7 @@ compileMethod: aMethod receiverClass: classHandle
 	eagerClosures := false.
 	irBudget = 0 ifTrue: [irBudget := OilIRBudget]. "in the VM nothing else initializes it"
 	oilNumNoInline := oilNumEagerSites := 0.
+	oilEagerPC := oilEagerDepth := oilRefusePC := oilRefuseDepth := -1.
 	restarts := 0.
 	[oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := oilNumSelects := 0.
 	 self compileOnce: aMethod receiverClass: classHandle.
@@ -367,7 +368,11 @@ requireEagerClosures
 	"A virtual closure or temp vector must be materialized.  Restart in eager mode (or give up if already eager)."
 	eagerClosures
 		ifTrue: [self abortCompilation: OilFailEagerClosuresFailed]
-		ifFalse: [needsRestart := true. failed := true]! !
+		ifFalse:
+			["(for debugging: where the first attempt found an escaping closure)"
+			 oilEagerPC := currentPC.
+			 oilEagerDepth := currentFrame < 0 ifTrue: [-1] ifFalse: [frameDepth at: currentFrame].
+			 needsRestart := true. failed := true]! !
 
 !OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 newFrameFor: aMethod base: baseReg isBlock: isBlock
@@ -1528,6 +1533,8 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	(descKind = OilDescBlock and: [isSuper not]) ifTrue:
 		[((self isValueSelector: selector numArgs: numArgs)
 		  and: [self inlineBlock: (slotValue at: rcvrSlot) receiver: rcvrSlot numArgs: numArgs]) ifTrue: [^self].
+		 ((self isValueSelector: selector numArgs: numArgs) not
+		  and: [self inlineSendToVirtualBlock: selector numArgs: numArgs receiver: rcvrSlot]) ifTrue: [^self].
 		 ^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: false].
 	(isSuper not and: [selector = bitXorSelector and: [numArgs = 1
 	 and: [self canInlineSmallIntegerOpOn: rcvrSlot arg: rcvrSlot + 1]]]) ifTrue:
@@ -1570,6 +1577,9 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			 self genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes: (self oilInstSpecOfClass: rcvrClass) >= 16.
 			 ^self].
 		 ^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
+	((self hasVirtualObjectFrom: rcvrSlot to: rcvrSlot + numArgs) and: [self isNeverSentAt: currentPC]) ifTrue:
+		["never executed so far (a cold path), and inlining it or calling it would make a virtual closure or object escape"
+		 ^self genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs].
 	(self shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot) ifTrue:
 		[(self inlineMethod: method receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard) ifTrue:
 			[^self]].
@@ -1605,7 +1615,10 @@ isColdSelector: selector
 shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
 	"Inlining policy (see the class comment)."
 	| depth size takesBlock inLoop maxDepth |
-	depth := (frameDepth at: currentFrame) + 1.
+	(frameDepth at: currentFrame) + 1 > (2 * OilMaxInlineDepth) ifTrue: [^false].
+	"The depth counts from the closest block of the root method's code inlined (e.g. the loop of a benchmark under
+	 timeToRun, millisecondsToRun: and microsecondsToRun:): that block is the root's code."
+	depth := self policyDepthOf: currentFrame.
 	inLoop := self isInLoopFrame: currentFrame pc: currentPC.
 	maxDepth := inLoop ifTrue: [OilMaxInlineDepth] ifFalse: [OilMaxInlineDepth // 2].
 	depth > maxDepth ifTrue: [^false].
@@ -1653,7 +1666,7 @@ genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs
 	"A send in an inlined frame that the back end cannot encode, but that never executed: instead of a call, deoptimize
 	 there (an uncommon trap: the interpreter then performs the send; this counts as a deoptimization).  The send's
 	 result is an unknown own register (the code after the trap is unreachable)."
-	rcvrSlot to: rcvrSlot + numArgs do: [:slotIndex| self materializeSlot: slotIndex].
+	"(The deopt state of the send's bytecode describes its receiver and arguments, virtual or not.)"
 	failed ifTrue: [^self].
 	self emitOp: OilTrap a: 0 b: 0 c: (self recordSite: OilSiteCall).
 	simStackTop := rcvrSlot - 1.
@@ -1694,6 +1707,8 @@ refuseInliningOfFrameOf: frameIndex
 		[walkFrame := frameParent at: walkFrame].
 	(walkFrame <= 0 or: [(frameIsBlock at: walkFrame) or: [oilNumNoInline >= 16]]) ifTrue:
 		[^self abortCompilation: OilFailBackend].
+	oilRefusePC := currentPC. "(for debugging)"
+	oilRefuseDepth := frameDepth at: frameIndex.
 	oilNoInline at: oilNumNoInline put: (frameMethod at: walkFrame).
 	oilNumNoInline := oilNumNoInline + 1.
 	oilRestartNoInline := true.
@@ -1706,6 +1721,10 @@ genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper
 	 OilCall0 [Op|Dest|Rcvr|0], OilCall1 [Op|Dest|Rcvr|Arg0], OilCallN/OilCallSuper [Op|Dest|Rcvr|NumArgs];
 	 then the 64-bit selector; then, for OilCallN/OilCallSuper, the packed argument registers."
 	| instIndex |
+	((self hasVirtualObjectFrom: rcvrSlot to: rcvrSlot + numArgs) and: [self isNeverSentAt: currentPC]) ifTrue:
+		["A send never executed so far would make a virtual closure or object escape (e.g. the high resolution clock path
+		  of Time class>>microsecondsToRun:, whose block is the loop of a benchmark): an uncommon trap keeps it virtual."
+		 ^self genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs].
 	(self isEncodableCall: selector super: isSuper) ifFalse:
 		[(currentFrame > 0 and: [self isNeverSentAt: currentPC]) ifTrue:
 			[^self genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs].
@@ -3212,3 +3231,41 @@ emitSelect: condIndex into: destReg
 	self patchBranch: exitJump to: irIndex.
 	lastLabelIR := irIndex.
 	knownClass at: destReg put: 0! !
+
+!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+hasVirtualObjectFrom: firstSlot to: lastSlot
+	"Does a slot from firstSlot to lastSlot hold a virtual closure, temp vector or object (which a call would materialize)?"
+	| descKind |
+	firstSlot to: lastSlot do:
+		[:slotIndex|
+		descKind := slotKind at: slotIndex.
+		(descKind = OilDescBlock or: [descKind = OilDescTempVector or: [descKind = OilDescObject]]) ifTrue: [^true]].
+	^false! !
+
+!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+inlineSendToVirtualBlock: selector numArgs: numArgs receiver: rcvrSlot
+	"A send other than value... to a virtual closure (e.g. aBlock timeToRun): inline the method of FullBlockClosure if it is
+	 not a primitive, the closure staying virtual as its self (and as an argument of what it sends, e.g. Time
+	 millisecondsToRun: self, down to the inlined evaluation of the block).  Answer whether the send was inlined."
+	| cls method |
+	cls := self fullBlockClosureClassHandle.
+	method := self lookup: selector inClass: cls.
+	(method = 0 or: [(self oilPrimitiveIndexOf: method) ~= 0]) ifTrue: [^false].
+	(self shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot) ifFalse: [^false].
+	^self inlineMethod: method receiver: rcvrSlot numArgs: numArgs class: cls guard: false! !
+
+!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+fullBlockClosureClassHandle
+	^self cCode: [coInterpreter oilApiClassAtIndex: ClassFullBlockClosureCompactIndex] inSmalltalk: [self handleFor: FullBlockClosure]! !
+
+!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+policyDepthOf: frameIndex
+	"The inlining depth of a send in frameIndex for the inlining policy: the depth below the closest inlined block whose home
+	 is the root frame (a block of the root method's own code), or below the root."
+	| walkFrame |
+	walkFrame := frameIndex.
+	[walkFrame > 0] whileTrue:
+		[((frameIsBlock at: walkFrame) and: [(frameHome at: walkFrame) = 0]) ifTrue:
+			[^(frameDepth at: frameIndex) - (frameDepth at: walkFrame) + 1].
+		 walkFrame := frameParent at: walkFrame].
+	^(frameDepth at: frameIndex) + 1! !

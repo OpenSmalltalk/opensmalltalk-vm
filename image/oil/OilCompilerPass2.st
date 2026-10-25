@@ -544,6 +544,11 @@ pass2Statistics: index
 	index = 15 ifTrue: [^oilNumEagerSites].
 	index = 16 ifTrue: [^oilNumAllocsCombined].
 	index = 17 ifTrue: [^oilNumSelects].
+	index = 18 ifTrue: [^oilEagerPC].
+	index = 19 ifTrue: [^oilEagerDepth].
+	index = 20 ifTrue: [^oilRefusePC].
+	index = 21 ifTrue: [^oilRefuseDepth].
+	index = 22 ifTrue: [^oilNumNoInline].
 	index = 9 ifTrue: [^oilNumChecksRemoved].
 	index = 10 ifTrue: [^oilNumUnboxed].
 	^super pass2Statistics: index! !

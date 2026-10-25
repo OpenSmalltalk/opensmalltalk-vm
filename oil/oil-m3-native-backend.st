@@ -427,7 +427,7 @@ oilExtraSelectorIndexOf: selector add: addIfAbsent
 	 caches may hold OilExtraSelectorBase + k instead: the selector at index k of the Oil selector table
 	 (oilExtraSelectors, allocated by primitiveOilSetSelectors, a GC root; see CogObjectRepresentationFor64BitSpur>>oilWrapSelectorIndexDereferenceRoutine
 	 and indexForSelector:in:).  Answer selector's value, adding it if addIfAbsent, or OilNoLink if it is absent and not
-	 added (no table, table full, or a young selector, which the table, perhaps old, must not refer to)."
+	 added (no table, or the table is full)."
 	| table sel |
 	table := oilExtraSelectors.
 	(table = 0 or: [table = objectMemory nilObject]) ifTrue:
@@ -438,11 +438,10 @@ oilExtraSelectorIndexOf: selector add: addIfAbsent
 		sel = selector ifTrue:
 			[^OilExtraSelectorBase + k].
 		sel = objectMemory nilObject ifTrue:
-			[(addIfAbsent
-			  and: [(objectMemory isNonImmediate: selector)
-			  and: [(objectMemory isYoungObject: selector) not]]) ifFalse:
+			[(addIfAbsent and: [objectMemory isNonImmediate: selector]) ifFalse:
 				[^OilNoLink].
-			 objectMemory storePointerUnchecked: k ofObject: table withValue: selector.
+			 "(with the write barrier: a young selector, e.g. of a method just compiled, remembers the table)"
+			 coInterpreter oilApiStorePointer: k ofObject: table withValue: selector.
 			 ^OilExtraSelectorBase + k]].
 	^OilNoLink! !
 
@@ -843,6 +842,20 @@ oilApiClassIndexOfClass: class
 	<api>
 	<essential: #ProfilingCogit>
 	^objectMemory rawHashBitsOf: class! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiStorePointer: index ofObject: obj withValue: value
+	"A store with the write barrier (the generational store check)."
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory storePointer: index ofObject: obj withValue: value! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiClassAtIndex: classIndex
+	"The class of index classIndex in the class table (e.g. FullBlockClosure)."
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory classAtIndex: classIndex! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
 oilApiFixedFieldsOfClass: class
@@ -1513,9 +1526,9 @@ primitiveOilLastCompilation
 	0 to: irWordCount - 1 do:
 		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 18.
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 23.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 17 do:
+	0 to: 22 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !
