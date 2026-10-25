@@ -1547,17 +1547,17 @@ shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
 	takesBlock := false.
 	rcvrSlot + 1 to: rcvrSlot + numArgs do: [:slotIndex| (slotKind at: slotIndex) = OilDescBlock ifTrue: [takesBlock := true]].
 	(takesBlock or: [self isIteratorSelector: selector]) ifTrue:
-		[^size <= OilMaxIteratorBytes].
+		[^size <= OilMaxCalleeBytes].
 	size <= OilAccessorBytes ifTrue: [^true].
 	"A method with Oil code of its own: calling it runs that code, while an inlined copy would lack the type feedback of
 	 its baseline inline caches (gone with its baseline code), so its own sends would not be inlined."
 	(self hasOilCode: method) ifTrue: [^false].
 	"A send in a loop (of this frame or of a frame it is inlined in) is hot: inline larger methods deeper."
-	(size <= OilMaxIteratorBytes
+	(size <= OilMaxCalleeBytes
 	 and: [depth <= OilMediumMethodDepth
 	 and: [self isInLoopFrame: currentFrame pc: currentPC]]) ifTrue: [^true].
 	size <= OilMediumMethodBytes ifTrue: [^depth <= OilMediumMethodDepth].
-	^depth <= OilLargeMethodDepth and: [size <= OilMaxIteratorBytes]! !
+	^depth <= OilLargeMethodDepth and: [size <= OilMaxCalleeBytes]! !
 
 !OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:00'!
 isInLoopFrame: frameIndex pc: targetPC
