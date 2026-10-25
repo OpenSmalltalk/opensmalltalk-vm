@@ -280,6 +280,8 @@ compileOnce: aMethod receiverClass: classHandle
 		[^self abortCompilation: OilFailNotSistaV1].
 	(self oilIsDisqualified: aMethod) ifTrue: "it deoptimized too often"
 		[^self abortCompilation: OilFailDisqualified].
+	(self isContextClass: classHandle) ifTrue: "see isContextClass:"
+		[^self abortCompilation: OilFailUnsupportedBytecode].
 	(self oilPrimitiveIndexOf: aMethod) ~= 0 ifTrue:
 		[^self abortCompilation: OilFailPrimitiveMethod].
 	rootFrame := self newFrameFor: aMethod base: 0 isBlock: false.
@@ -1463,7 +1465,8 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			 rcvrClass = 0 ifTrue:
 				[rcvrClass := self profiledClassAt: currentPC.
 				 guard := rcvrClass ~= 0]].
-	rcvrClass = 0 ifTrue: [^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
+	(rcvrClass = 0 or: [self isContextClass: rcvrClass]) ifTrue:
+		[^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
 	method := self lookup: selector inClass: rcvrClass.
 	method = 0 ifTrue: [^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
 	prim := self oilPrimitiveIndexOf: method.
@@ -1480,6 +1483,15 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 		[(self inlineMethod: method receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard) ifTrue:
 			[^self]].
 	self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper! !
+
+!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
+isContextClass: classHandle
+	"Is classHandle Context?  The sender, pc and stackp of a context married to a stack frame are not in its slots (the
+	 interpreter and the baseline JIT map them from the frame), so Oil neither compiles nor inlines methods of contexts."
+	classHandle = 0 ifTrue: [^false].
+	^self
+		cCode: [(objectMemory classTagForClass: classHandle) = ClassMethodContextCompactIndex]
+		inSmalltalk: [(self objectFor: classHandle) == Context]! !
 
 !OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 staticClassOfSlot: slotIndex
