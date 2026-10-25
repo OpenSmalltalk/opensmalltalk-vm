@@ -1622,7 +1622,7 @@ resetXmms
 !OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 03:00'!
 mayClobberXmms: opcode
 	"May the instruction call out (C calls clobber the XMM registers), or resume after a deopt (a guard)?"
-	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]]) ifTrue: [^true].
+	(self isSendOpcode: opcode) ifTrue: [^true].
 	(opcode = OilStoreField or: [opcode = OilStoreElement or: [opcode = OilMakeClosure]]) ifTrue: [^true].
 	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilGuardClass or: [opcode = OilGuardClass2]]]) ifTrue: [^true].
 	opcode = OilModTagged ifTrue: [^true]. "(its division may use DPFPReg0 and DPFPReg1)"

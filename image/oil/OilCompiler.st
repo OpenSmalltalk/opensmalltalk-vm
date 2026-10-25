@@ -909,6 +909,12 @@ retarget: src to: dst
 	knownClass at: dst put: (knownClass at: src).
 	^true! !
 
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/25/2026 15:00'!
+isSendOpcode: opcode
+	"Is opcode a send (OilCall0, OilCall1, OilCallN or OilCallSuper)?"
+	<inline: true>
+	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]]! !
+
 !OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 opcodeHasDest: opcode
 	(opcode = OilConstTagged or: [opcode = OilConst64 or: [opcode = OilMove or: [opcode = OilLoadField or: [opcode = OilLoadElement]]]]) ifTrue: [^true].

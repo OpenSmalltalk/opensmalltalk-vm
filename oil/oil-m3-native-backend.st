@@ -666,31 +666,28 @@ ancilliaryClasses
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 estimateOpcodes
 	"An upper bound of the number of abstract instructions oilGenerate: emits (they are allocated on the C stack)."
-	| irOffset opcode estimatedCount |
+	| irOffset estimatedCount |
 	estimatedCount := 200 + (2 * oilNumSpillTemps) + (4 * numSites) + (4 * OilMaxReg // 16).
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
-		[opcode := self opcodeAt: irOffset.
-		 estimatedCount := estimatedCount + ((opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]])
-					ifTrue: [48 + (2 * (self fieldCAt: irOffset))]
-					ifFalse:
-						[(opcode = OilStoreField or: [opcode = OilStoreElement])
-							ifTrue: [48]
-							ifFalse:
-								[(opcode = OilNewArray or: [opcode = OilMakeClosure or: [opcode = OilNewObject]])
-									ifTrue: [40 + (2 * (self fieldCAt: irOffset)) + (2 * OilMaxReg // 16)]
-									ifFalse:
-										[(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]])
-											ifTrue: [140]
-											ifFalse:
-												[(opcode = OilIdentityHash or: [opcode = OilStringHash])
-													ifTrue: [opcode = OilStringHash ifTrue: [100] ifFalse: [60]]
-													ifFalse:
-														[(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators])
-															ifTrue: [160 + (4 * oilNumAllocRegs)]
-															ifFalse: [20]]]]]]).
+		[estimatedCount := estimatedCount + (self estimateOpcodesOfInstructionAt: irOffset).
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 15:00'!
+estimateOpcodesOfInstructionAt: irOffset
+	"An upper bound of the number of abstract instructions generated for the IR instruction at irOffset."
+	| opcode |
+	opcode := self opcodeAt: irOffset.
+	(self isSendOpcode: opcode) ifTrue: [^48 + (2 * (self fieldCAt: irOffset))].
+	(opcode = OilStoreField or: [opcode = OilStoreElement]) ifTrue: [^48].
+	(opcode = OilNewArray or: [opcode = OilMakeClosure or: [opcode = OilNewObject]]) ifTrue:
+		[^40 + (2 * (self fieldCAt: irOffset)) + (2 * OilMaxReg // 16)].
+	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]]) ifTrue: [^140].
+	opcode = OilStringHash ifTrue: [^100].
+	opcode = OilIdentityHash ifTrue: [^60].
+	(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators]) ifTrue: [^160 + (4 * oilNumAllocRegs)].
+	^20! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:30'!
 metadataSize
