@@ -247,6 +247,7 @@ oil := times value: [model probeLoop: probeArray n: 1000000].
 out nextPutAll: 'probeLoop (hashProbe: x 1000000): Oil '; print: oil; nextPutAll: ' ms, baseline '; print: base; nextPutAll: ' ms'; cr; flush.
 
 "--- 6. OrderedCollection>>add: inlined fast path (makeRoomAtLast is a call, a cold slow path) ---"
+Smalltalk garbageCollect.
 r := OrderedCollection new.
 base := times value: [r := OrderedCollection new. model ocAddTo: r n: 1000000].
 check value: 'ocAddTo:n: compiles' value: (res value: #ocAddTo:n: value: [model ocAddTo: OrderedCollection new n: 1000]) = 0.
@@ -254,6 +255,7 @@ dump value.
 check value: 'ocAddTo:n: add: inlined, makeRoomAtLast the only call' value: (countOps value: ir value: #(22 23 24 30)) = 1.
 r := model ocAddTo: OrderedCollection new n: 1000000.
 check value: 'ocAddTo:n: result' value: (r size = 1000000 and: [r first = 1 and: [r last = 1000000 and: [(r at: 500000) = 500000]]]).
+Smalltalk garbageCollect.
 oil := times value: [r := OrderedCollection new. model ocAddTo: r n: 1000000].
 out nextPutAll: 'ocAddTo:n: 1000000 add: Oil '; print: oil; nextPutAll: ' ms, baseline '; print: base; nextPutAll: ' ms'; cr; flush.
 check value: 'ocAddTo:n: faster than baseline' value: oil < base.
