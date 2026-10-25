@@ -319,10 +319,10 @@ oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
 	 deoptimization metadata, a hidden pinned Array, through the method's counters field (tagged with 1)."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result md selector added writableMethod |
+	| codeSize headerSize mapSize totalSize startAddress result metadata selector added writableMethod |
 	<var: #writableMethod type: #'CogMethod *'>
-	md := coInterpreter oilAllocateMetadata: self metadataSize.
-	md = 0 ifTrue:
+	metadata := coInterpreter oilAllocateMetadata: self metadataSize.
+	metadata = 0 ifTrue:
 		[^OilFailCodeSpace].
 	headerSize := self sizeof: CogMethod.
 	methodLabel address: methodZone freeStart.
@@ -332,11 +332,11 @@ oilGenerateCogMethod
 	mapSize := self generateMapAt: nil start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
 	totalSize > MaxMethodSize ifTrue:
-		[objectMemory freeObject: md.
+		[objectMemory freeObject: metadata.
 		 ^OilFailCodeSpace].
 	startAddress := methodZone allocate: totalSize.
 	startAddress = 0 ifTrue:
-		[objectMemory freeObject: md.
+		[objectMemory freeObject: metadata.
 		 coInterpreter callForCogCompiledCodeCompaction.
 		 ^OilFailCodeSpace].
 	self assert: startAddress + cmEntryOffset = entry address.
@@ -360,8 +360,8 @@ oilGenerateCogMethod
 	writableMethod cmUnusedFlag: added.
 	"Oil methods are expensive to compile and hot: start with the maximum usage count."
 	writableMethod cmUsageCount: CMMaxUsageCount.
-	writableMethod counters: md + 1.
-	self fillMetadata: md cogMethod: startAddress.
+	writableMethod counters: metadata + 1.
+	self fillMetadata: metadata cogMethod: startAddress.
 	backEnd flushICacheFrom: startAddress to: startAddress + totalSize.
 	^OilOK! !
 
@@ -580,16 +580,16 @@ oilSendSiteNeverSentAt: bcpc in: aMethodObj
 !ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/24/2026 19:20'!
 oilMethod: cogMethod inlinesSelector: aSelector
 	"Answer whether cogMethod or any method inlined into it sends/defines aSelector."
-	| md nFrames frames m |
+	| metadata nFrames frames inlinedMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod selector = aSelector ifTrue: [^true].
-	md := self oilMetadataOf: cogMethod.
-	nFrames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDNumFrames ofObject: md).
-	frames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDFrames ofObject: md).
+	metadata := self oilMetadataOf: cogMethod.
+	nFrames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDNumFrames ofObject: metadata).
+	frames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDFrames ofObject: metadata).
 	0 to: nFrames - 1 do:
-		[:fr|
-		m := objectMemory fetchPointer: frames + (fr * OilMDFrameSize) + OilMDFrameMethod ofObject: md.
-		(coInterpreter maybeSelectorOfMethod: m) = aSelector ifTrue: [^true]].
+		[:frameIndex|
+		inlinedMethod := objectMemory fetchPointer: frames + (frameIndex * OilMDFrameSize) + OilMDFrameMethod ofObject: metadata.
+		(coInterpreter maybeSelectorOfMethod: inlinedMethod) = aSelector ifTrue: [^true]].
 	^false! !
 
 !ProfilingCogit methodsFor: 'jit - api' stamp: 'cb 10/24/2026 19:20'!
@@ -703,25 +703,25 @@ metadataSize
 	^totalSlots! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
-md: md at: index put: value
+metadata: metadata at: index put: value
 	<inline: true>
-	objectMemory storePointer: index ofObject: md withValue: value! !
+	objectMemory storePointer: index ofObject: metadata withValue: value! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
-md: md at: index putInt: value
+metadata: metadata at: index putInt: value
 	<inline: true>
-	objectMemory storePointer: index ofObject: md withValue: (objectMemory integerObjectOf: value)! !
+	objectMemory storePointer: index ofObject: metadata withValue: (objectMemory integerObjectOf: value)! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
-md: md at: index putKind: kind value: value
+metadata: metadata at: index putKind: kind value: value
 	"A descriptor: its kind and its value, an object for a constant, a SmallInteger (register or virtual object) otherwise."
-	self md: md at: index putInt: kind.
+	self metadata: metadata at: index putInt: kind.
 	kind = OilDescConst
-		ifTrue: [self md: md at: index + 1 put: value]
-		ifFalse: [self md: md at: index + 1 putInt: value]! !
+		ifTrue: [self metadata: metadata at: index + 1 put: value]
+		ifFalse: [self metadata: metadata at: index + 1 putInt: value]! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
-fillMetadata: md cogMethod: cogMethodAddress
+fillMetadata: metadata cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their
 	 captured values, the home slot (frame offset) of every virtual register, a table from deopt site index to
@@ -729,91 +729,91 @@ fillMetadata: md cogMethod: cogMethodAddress
 	 tag (for the unforwarding fast path), the offset of the instruction to resume at, the inlined frame and
 	 bytecode pc, and the virtual state (descriptors of the register window and of the high registers)."
 	<var: #cogMethodAddress type: #usqInt>
-	| frames vobjs captured homes siteTable index f p op g |
+	| frames vobjs captured homes siteTable index frameRecord vobjRecord poolBase opcode parentFrame |
 	frames := OilMDHeaderSize.
 	vobjs := frames + (numFrames * OilMDFrameSize).
 	captured := vobjs + (numVObjs * OilMDVObjSize).
 	homes := captured + (capturedTop * 2).
 	siteTable := homes + OilNumRegs.
-	self md: md at: OilMDVersion putInt: OilMDMagic.
-	self md: md at: OilMDRootMethod put: oilHomeMethod.
-	self md: md at: OilMDNumSites putInt: numSites.
-	self md: md at: OilMDSiteTable putInt: siteTable.
-	self md: md at: OilMDNumFrames putInt: numFrames.
-	self md: md at: OilMDFrames putInt: frames.
-	self md: md at: OilMDNumVObjs putInt: numVObjs.
-	self md: md at: OilMDVObjs putInt: vobjs.
-	self md: md at: OilMDHomes putInt: homes.
-	self md: md at: OilMDDeopts putInt: 0.
-	self md: md at: OilMDFastPaths putInt: 0.
-	self md: md at: OilMDNumArgs putInt: (self numArgsOf: oilHomeMethod).
-	self md: md at: OilMDCaptured putInt: captured.
+	self metadata: metadata at: OilMDVersion putInt: OilMDMagic.
+	self metadata: metadata at: OilMDRootMethod put: oilHomeMethod.
+	self metadata: metadata at: OilMDNumSites putInt: numSites.
+	self metadata: metadata at: OilMDSiteTable putInt: siteTable.
+	self metadata: metadata at: OilMDNumFrames putInt: numFrames.
+	self metadata: metadata at: OilMDFrames putInt: frames.
+	self metadata: metadata at: OilMDNumVObjs putInt: numVObjs.
+	self metadata: metadata at: OilMDVObjs putInt: vobjs.
+	self metadata: metadata at: OilMDHomes putInt: homes.
+	self metadata: metadata at: OilMDDeopts putInt: 0.
+	self metadata: metadata at: OilMDFastPaths putInt: 0.
+	self metadata: metadata at: OilMDNumArgs putInt: (self numArgsOf: oilHomeMethod).
+	self metadata: metadata at: OilMDCaptured putInt: captured.
 	0 to: numFrames - 1 do:
-		[:fr|
-		f := frames + (fr * OilMDFrameSize).
-		g := frameParent at: fr.
-		self md: md at: f + OilMDFrameMethod put: (frameMethod at: fr).
-		self md: md at: f + OilMDFrameIsBlock putInt: ((frameIsBlock at: fr) ifTrue: [1] ifFalse: [0]).
-		self md: md at: f + OilMDFrameBase putInt: (frameBase at: fr).
-		self md: md at: f + OilMDFrameParent putInt: g.
-		g < 0
-			ifTrue: [self md: md at: f + OilMDFrameReturnPC putInt: -1]
+		[:frameIndex|
+		frameRecord := frames + (frameIndex * OilMDFrameSize).
+		parentFrame := frameParent at: frameIndex.
+		self metadata: metadata at: frameRecord + OilMDFrameMethod put: (frameMethod at: frameIndex).
+		self metadata: metadata at: frameRecord + OilMDFrameIsBlock putInt: ((frameIsBlock at: frameIndex) ifTrue: [1] ifFalse: [0]).
+		self metadata: metadata at: frameRecord + OilMDFrameBase putInt: (frameBase at: frameIndex).
+		self metadata: metadata at: frameRecord + OilMDFrameParent putInt: parentFrame.
+		parentFrame < 0
+			ifTrue: [self metadata: metadata at: frameRecord + OilMDFrameReturnPC putInt: -1]
 			ifFalse: "the pc after the send that the frame was inlined at"
-				[self setScanMethod: (frameMethod at: g).
-				 self decodeAt: (frameCallPC at: fr).
-				 self md: md at: f + OilMDFrameReturnPC putInt: oilNextPC].
-		self md: md at: f + OilMDFrameSelf putKind: (frameSelfKind at: fr) value: (frameSelfValue at: fr).
-		self md: md at: f + OilMDFrameNumArgs putInt: (self numArgsOf: (frameMethod at: fr))].
+				[self setScanMethod: (frameMethod at: parentFrame).
+				 self decodeAt: (frameCallPC at: frameIndex).
+				 self metadata: metadata at: frameRecord + OilMDFrameReturnPC putInt: oilNextPC].
+		self metadata: metadata at: frameRecord + OilMDFrameSelf putKind: (frameSelfKind at: frameIndex) value: (frameSelfValue at: frameIndex).
+		self metadata: metadata at: frameRecord + OilMDFrameNumArgs putInt: (self numArgsOf: (frameMethod at: frameIndex))].
 	0 to: numVObjs - 1 do:
-		[:v|
-		p := vobjs + (v * OilMDVObjSize).
-		self md: md at: p + OilMDVObjKind putInt: (vobjKind at: v).
-		(vobjKind at: v) = OilDescBlock
+		[:vobjIndex|
+		vobjRecord := vobjs + (vobjIndex * OilMDVObjSize).
+		self metadata: metadata at: vobjRecord + OilMDVObjKind putInt: (vobjKind at: vobjIndex).
+		(vobjKind at: vobjIndex) = OilDescBlock
 			ifTrue:
-				[self md: md at: p + OilMDVObjLiteralOrSize put: (vobjLiteral at: v).
-				 self md: md at: p + OilMDVObjOuterFrame putInt: (vobjOuter at: v).
-				 self md: md at: p + OilMDVObjSelf putKind: (vobjSelfKind at: v) value: (vobjSelfValue at: v).
-				 self md: md at: p + OilMDVObjNumCopied putInt: (vobjNumCopied at: v).
-				 self md: md at: p + OilMDVObjCopiedIndex putInt: captured + (2 * (vobjCopiedBase at: v)).
-				 self md: md at: p + OilMDVObjSlotBase putInt: 0]
+				[self metadata: metadata at: vobjRecord + OilMDVObjLiteralOrSize put: (vobjLiteral at: vobjIndex).
+				 self metadata: metadata at: vobjRecord + OilMDVObjOuterFrame putInt: (vobjOuter at: vobjIndex).
+				 self metadata: metadata at: vobjRecord + OilMDVObjSelf putKind: (vobjSelfKind at: vobjIndex) value: (vobjSelfValue at: vobjIndex).
+				 self metadata: metadata at: vobjRecord + OilMDVObjNumCopied putInt: (vobjNumCopied at: vobjIndex).
+				 self metadata: metadata at: vobjRecord + OilMDVObjCopiedIndex putInt: captured + (2 * (vobjCopiedBase at: vobjIndex)).
+				 self metadata: metadata at: vobjRecord + OilMDVObjSlotBase putInt: 0]
 			ifFalse:
 				["a temp vector, or a scalar replaced object (OilDescObject; selfValue is its class): slots in high registers"
-				 self md: md at: p + OilMDVObjLiteralOrSize putInt: (vobjSize at: v).
-				 self md: md at: p + OilMDVObjOuterFrame putInt: -1.
-				 self md: md at: p + OilMDVObjSelf putKind: OilDescConst value: ((vobjKind at: v) = OilDescObject ifTrue: [vobjSelfClass at: v] ifFalse: [objectMemory nilObject]).
-				 self md: md at: p + OilMDVObjNumCopied putInt: 0.
-				 self md: md at: p + OilMDVObjCopiedIndex putInt: 0.
-				 self md: md at: p + OilMDVObjSlotBase putInt: (vobjSlotBase at: v)]].
+				 self metadata: metadata at: vobjRecord + OilMDVObjLiteralOrSize putInt: (vobjSize at: vobjIndex).
+				 self metadata: metadata at: vobjRecord + OilMDVObjOuterFrame putInt: -1.
+				 self metadata: metadata at: vobjRecord + OilMDVObjSelf putKind: OilDescConst value: ((vobjKind at: vobjIndex) = OilDescObject ifTrue: [vobjSelfClass at: vobjIndex] ifFalse: [objectMemory nilObject]).
+				 self metadata: metadata at: vobjRecord + OilMDVObjNumCopied putInt: 0.
+				 self metadata: metadata at: vobjRecord + OilMDVObjCopiedIndex putInt: 0.
+				 self metadata: metadata at: vobjRecord + OilMDVObjSlotBase putInt: (vobjSlotBase at: vobjIndex)]].
 	0 to: capturedTop - 1 do:
-		[:j| self md: md at: captured + (2 * j) putKind: (capturedKind at: j) value: (capturedValue at: j)].
+		[:j| self metadata: metadata at: captured + (2 * j) putKind: (capturedKind at: j) value: (capturedValue at: j)].
 	0 to: OilNumRegs - 1 do:
-		[:r| self md: md at: homes + r putInt: (oilVRegSpillTemp at: r)].
+		[:reg| self metadata: metadata at: homes + reg putInt: (oilVRegSpillTemp at: reg)].
 	index := siteTable + numSites.
 	0 to: numSites - 1 do:
-		[:s|
-		(oilSiteUsed at: s) = 0
-			ifTrue: [self md: md at: siteTable + s putInt: -1]
+		[:siteIndex|
+		(oilSiteUsed at: siteIndex) = 0
+			ifTrue: [self metadata: metadata at: siteTable + siteIndex putInt: -1]
 			ifFalse:
-				[self md: md at: siteTable + s putInt: index.
-				 op := self opcodeAt: (siteIR at: s).
-				 self md: md at: index + OilMDSiteKind putInt: (siteKind at: s).
-				 op = OilGuardClass
+				[self metadata: metadata at: siteTable + siteIndex putInt: index.
+				 opcode := self opcodeAt: (siteIR at: siteIndex).
+				 self metadata: metadata at: index + OilMDSiteKind putInt: (siteKind at: siteIndex).
+				 opcode = OilGuardClass
 					ifTrue:
-						[self md: md at: index + OilMDSiteGuardReg putInt: (self fieldAAt: (siteIR at: s)).
-						 self md: md at: index + OilMDSiteClassTag putInt: (objectMemory classTagForClass: (self word64At: (siteIR at: s) + 1))]
+						[self metadata: metadata at: index + OilMDSiteGuardReg putInt: (self fieldAAt: (siteIR at: siteIndex)).
+						 self metadata: metadata at: index + OilMDSiteClassTag putInt: (objectMemory classTagForClass: (self word64At: (siteIR at: siteIndex) + 1))]
 					ifFalse:
-						[self md: md at: index + OilMDSiteGuardReg putInt: -1.
-						 self md: md at: index + OilMDSiteClassTag putInt: 0].
-				 self md: md at: index + OilMDSiteResumeOffset putInt: (oilSiteResume at: s) address - cogMethodAddress.
-				 self md: md at: index + OilMDSiteFrame putInt: (siteFrame at: s).
-				 self md: md at: index + OilMDSitePC putInt: (sitePC at: s).
-				 self md: md at: index + OilMDSiteTop putInt: (siteSnapTop at: s).
-				 self md: md at: index + OilMDSiteHigh putInt: (siteSnapHigh at: s).
+						[self metadata: metadata at: index + OilMDSiteGuardReg putInt: -1.
+						 self metadata: metadata at: index + OilMDSiteClassTag putInt: 0].
+				 self metadata: metadata at: index + OilMDSiteResumeOffset putInt: (oilSiteResume at: siteIndex) address - cogMethodAddress.
+				 self metadata: metadata at: index + OilMDSiteFrame putInt: (siteFrame at: siteIndex).
+				 self metadata: metadata at: index + OilMDSitePC putInt: (sitePC at: siteIndex).
+				 self metadata: metadata at: index + OilMDSiteTop putInt: (siteSnapTop at: siteIndex).
+				 self metadata: metadata at: index + OilMDSiteHigh putInt: (siteSnapHigh at: siteIndex).
 				 index := index + OilMDSiteHeaderSize.
-				 p := siteSnapBase at: s.
-				 0 to: (siteSnapTop at: s) + (OilMaxReg - (siteSnapHigh at: s)) do:
+				 poolBase := siteSnapBase at: siteIndex.
+				 0 to: (siteSnapTop at: siteIndex) + (OilMaxReg - (siteSnapHigh at: siteIndex)) do:
 					[:j|
-					self md: md at: index putKind: (sitePoolKind at: p + j) value: (sitePoolValue at: p + j).
+					self metadata: metadata at: index putKind: (sitePoolKind at: poolBase + j) value: (sitePoolValue at: poolBase + j).
 					index := index + 2]]]! !
 
 
@@ -956,19 +956,19 @@ oilAllocateMetadata: numSlots
 	^obj! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilMD: md at: index
-	"Answer the SmallInteger value of slot index of Oil metadata md."
+oilMD: metadata at: index
+	"Answer the SmallInteger value of slot index of the Oil metadata."
 	<inline: true>
 	<essential: #ProfilingCogit>
-	^objectMemory integerValueOf: (objectMemory fetchPointer: index ofObject: md)! !
+	^objectMemory integerValueOf: (objectMemory fetchPointer: index ofObject: metadata)! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilMDIncrement: index of: md
+oilMDIncrement: index of: metadata
 	<essential: #ProfilingCogit>
 	objectMemory
 		storePointerUnchecked: index
-		ofObject: md
-		withValue: (objectMemory integerObjectOf: (self oilMD: md at: index) + 1)! !
+		ofObject: metadata
+		withValue: (objectMemory integerObjectOf: (self oilMD: metadata at: index) + 1)! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/25/2026 00:30'!
 ceOilDeoptimize: siteIndex
@@ -1055,73 +1055,73 @@ oilHasFramesOf: cogMethod
 	^false! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilDescriptorIndex: r site: site metadata: md
+oilDescriptorIndex: reg site: site metadata: metadata
 	"Answer the metadata index of the descriptor of register r in the virtual state of the site record at site,
 	 or 0 if the state does not describe r."
 	<essential: #ProfilingCogit>
 	| top high |
-	top := self oilMD: md at: site + OilMDSiteTop.
-	high := self oilMD: md at: site + OilMDSiteHigh.
-	r <= top ifTrue:
-		[^site + OilMDSiteHeaderSize + (2 * r)].
-	(r > high and: [r <= OilMaxReg]) ifTrue:
-		[^site + OilMDSiteHeaderSize + (2 * (top + 1)) + (2 * (r - high - 1))].
+	top := self oilMD: metadata at: site + OilMDSiteTop.
+	high := self oilMD: metadata at: site + OilMDSiteHigh.
+	reg <= top ifTrue:
+		[^site + OilMDSiteHeaderSize + (2 * reg)].
+	(reg > high and: [reg <= OilMaxReg]) ifTrue:
+		[^site + OilMDSiteHeaderSize + (2 * (top + 1)) + (2 * (reg - high - 1))].
 	^0! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilValueAt: p metadata: md values: vals vobjs: vobjOops
+oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops
 	"Answer the value described by the descriptor at metadata index p: a register's value (read from its home before
 	 the frame was rewritten), a constant, or a rematerialized virtual object (or nil if not yet allocated)."
 	<essential: #ProfilingCogit>
-	<var: #vals type: #'sqInt *'>
+	<var: #regValues type: #'sqInt *'>
 	<var: #vobjOops type: #'sqInt *'>
 	| kind |
-	p = 0 ifTrue: [^objectMemory nilObject].
-	kind := self oilMD: md at: p.
+	descIndex = 0 ifTrue: [^objectMemory nilObject].
+	kind := self oilMD: metadata at: descIndex.
 	kind = OilDescConst ifTrue:
-		[^objectMemory fetchPointer: p + 1 ofObject: md].
+		[^objectMemory fetchPointer: descIndex + 1 ofObject: metadata].
 	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifTrue:
-		[^(vobjOops at: (self oilMD: md at: p + 1)) = 0
+		[^(vobjOops at: (self oilMD: metadata at: descIndex + 1)) = 0
 			ifTrue: [objectMemory nilObject]
-			ifFalse: [vobjOops at: (self oilMD: md at: p + 1)]].
-	^vals at: (self oilMD: md at: p + 1)! !
+			ifFalse: [vobjOops at: (self oilMD: metadata at: descIndex + 1)]].
+	^regValues at: (self oilMD: metadata at: descIndex + 1)! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilNeedVObjAt: p metadata: md needed: needed
+oilNeedVObjAt: descIndex metadata: metadata needed: needed
 	"If the descriptor at metadata index p is a virtual object, mark it as needed."
 	<essential: #ProfilingCogit>
 	<var: #needed type: #'char *'>
-	| kind v |
-	p = 0 ifTrue: [^self].
-	kind := self oilMD: md at: p.
+	| kind vobjIndex |
+	descIndex = 0 ifTrue: [^self].
+	kind := self oilMD: metadata at: descIndex.
 	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifFalse: [^self].
-	v := self oilMD: md at: p + 1.
-	(needed at: v) = 0 ifTrue: [needed at: v put: 1]! !
+	vobjIndex := self oilMD: metadata at: descIndex + 1.
+	(needed at: vobjIndex) = 0 ifTrue: [needed at: vobjIndex put: 1]! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilStore: p at: address metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix
+oilStore: descIndex at: address metadata: metadata values: regValues vobjs: vobjOops needed: needed fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups
 	"Store the value described by the descriptor at metadata index p into the frame slot at address.  A virtual
-	 object is marked as needed and the slot recorded, to be stored once the object exists.  Answer numFix."
+	 object is marked as needed and the slot recorded, to be stored once the object exists.  Answer numFixups."
 	<essential: #ProfilingCogit>
 	<var: #address type: #'char *'>
-	<var: #vals type: #'sqInt *'>
+	<var: #regValues type: #'sqInt *'>
 	<var: #vobjOops type: #'sqInt *'>
 	<var: #needed type: #'char *'>
-	<var: #fixAddr type: #'char **'>
-	<var: #fixVObj type: #'sqInt *'>
+	<var: #fixupAddrs type: #'char **'>
+	<var: #fixupVObjs type: #'sqInt *'>
 	| kind |
-	stackPages longAt: address put: (self oilValueAt: p metadata: md values: vals vobjs: vobjOops).
-	p = 0 ifTrue: [^numFix].
-	kind := self oilMD: md at: p.
-	((kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) and: [numFix < OilNumRegs]) ifFalse:
-		[^numFix].
-	self oilNeedVObjAt: p metadata: md needed: needed.
-	fixAddr at: numFix put: address.
-	fixVObj at: numFix put: (self oilMD: md at: p + 1).
-	^numFix + 1! !
+	stackPages longAt: address put: (self oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops).
+	descIndex = 0 ifTrue: [^numFixups].
+	kind := self oilMD: metadata at: descIndex.
+	((kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) and: [numFixups < OilNumRegs]) ifFalse:
+		[^numFixups].
+	self oilNeedVObjAt: descIndex metadata: metadata needed: needed.
+	fixupAddrs at: numFixups put: address.
+	fixupVObjs at: numFixups put: (self oilMD: metadata at: descIndex + 1).
+	^numFixups + 1! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
-oilDeoptimizeFrame: oilFP metadata: md site: site
+oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	"Replace the Oil method's machine code frame at oilFP (the top frame) by the interpreter frames it stands for at
 	 the deopt site record site: the root method's frame (converted in place: its receiver and arguments are already
 	 above it) and one frame per method or block inlined at the site, from the root to the innermost.  Each frame's
@@ -1132,61 +1132,61 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	 innermost frame; the caller then enters the interpreter."
 	<essential: #ProfilingCogit>
 	<var: #oilFP type: #'char *'>
-	| theFP framesBase vobjsBase homes numVObjs chain n g k base numArgs homeMethod fr sp newFP needed vobjOops vals
-	  fixAddr fixVObj numFix newPage words finalSP more vr kind obj numCopied outer ctx sitePC innermost tops fps sps |
+	| theFP framesBase vobjsBase homes numVObjs chain numFrames frameIndex chainIndex baseReg numArgs homeMethod frameRecord sp newFP needed vobjOops regValues
+	  fixupAddrs fixupVObjs numFixups newPage numWords finalSP more vobjRecord kind obj numCopied outerFrame context sitePC innermost topRegs framePointers stackPointers |
 	<var: #theFP type: #'char *'>
 	<var: #sp type: #'char *'>
 	<var: #newFP type: #'char *'>
 	<var: #finalSP type: #'char *'>
 	<var: #newPage type: #'StackPage *'>
 	<var: #chain declareC: 'sqInt chain[OilMaxFrames]'>
-	<var: #tops declareC: 'sqInt tops[OilMaxFrames]'>
-	<var: #fps declareC: 'char *fps[OilMaxFrames]'>
-	<var: #sps declareC: 'char *sps[OilMaxFrames]'>
-	<var: #vals declareC: 'sqInt vals[OilNumRegs]'>
+	<var: #topRegs declareC: 'sqInt topRegs[OilMaxFrames]'>
+	<var: #framePointers declareC: 'char *framePointers[OilMaxFrames]'>
+	<var: #stackPointers declareC: 'char *stackPointers[OilMaxFrames]'>
+	<var: #regValues declareC: 'sqInt regValues[OilNumRegs]'>
 	<var: #vobjOops declareC: 'sqInt vobjOops[OilMaxVObjs]'>
 	<var: #needed declareC: 'char needed[OilMaxVObjs]'>
-	<var: #fixAddr declareC: 'char *fixAddr[OilNumRegs]'>
-	<var: #fixVObj declareC: 'sqInt fixVObj[OilNumRegs]'>
+	<var: #fixupAddrs declareC: 'char *fixupAddrs[OilNumRegs]'>
+	<var: #fixupVObjs declareC: 'sqInt fixupVObjs[OilNumRegs]'>
 	self cCode: [] inSmalltalk:
 		[chain := CArrayAccessor on: (Array new: OilMaxFrames).
-		 tops := CArrayAccessor on: (Array new: OilMaxFrames).
-		 fps := CArrayAccessor on: (Array new: OilMaxFrames).
-		 sps := CArrayAccessor on: (Array new: OilMaxFrames).
-		 vals := CArrayAccessor on: (Array new: OilNumRegs).
+		 topRegs := CArrayAccessor on: (Array new: OilMaxFrames).
+		 framePointers := CArrayAccessor on: (Array new: OilMaxFrames).
+		 stackPointers := CArrayAccessor on: (Array new: OilMaxFrames).
+		 regValues := CArrayAccessor on: (Array new: OilNumRegs).
 		 vobjOops := CArrayAccessor on: (Array new: OilMaxVObjs).
 		 needed := CArrayAccessor on: (ByteArray new: OilMaxVObjs).
-		 fixAddr := CArrayAccessor on: (Array new: OilNumRegs).
-		 fixVObj := CArrayAccessor on: (Array new: OilNumRegs)].
+		 fixupAddrs := CArrayAccessor on: (Array new: OilNumRegs).
+		 fixupVObjs := CArrayAccessor on: (Array new: OilNumRegs)].
 	theFP := oilFP.
-	framesBase := self oilMD: md at: OilMDFrames.
-	vobjsBase := self oilMD: md at: OilMDVObjs.
-	homes := self oilMD: md at: OilMDHomes.
-	numVObjs := self oilMD: md at: OilMDNumVObjs.
-	sitePC := self oilMD: md at: site + OilMDSitePC.
+	framesBase := self oilMD: metadata at: OilMDFrames.
+	vobjsBase := self oilMD: metadata at: OilMDVObjs.
+	homes := self oilMD: metadata at: OilMDHomes.
+	numVObjs := self oilMD: metadata at: OilMDNumVObjs.
+	sitePC := self oilMD: metadata at: site + OilMDSitePC.
 	"1. The chain of inlined frames, root first, and the top register of each frame's part of the window."
-	n := 0.
-	g := self oilMD: md at: site + OilMDSiteFrame.
-	[g >= 0] whileTrue:
-		[n := n + 1.
-		 g := self oilMD: md at: framesBase + (g * OilMDFrameSize) + OilMDFrameParent].
-	g := self oilMD: md at: site + OilMDSiteFrame.
-	k := n - 1.
-	[g >= 0] whileTrue:
-		[chain at: k put: g.
-		 k := k - 1.
-		 g := self oilMD: md at: framesBase + (g * OilMDFrameSize) + OilMDFrameParent].
-	tops at: n - 1 put: (self oilMD: md at: site + OilMDSiteTop).
-	0 to: n - 2 do:
-		[:i| tops at: i put: (self oilMD: md at: framesBase + ((chain at: i + 1) * OilMDFrameSize) + OilMDFrameBase) - 1].
+	numFrames := 0.
+	frameIndex := self oilMD: metadata at: site + OilMDSiteFrame.
+	[frameIndex >= 0] whileTrue:
+		[numFrames := numFrames + 1.
+		 frameIndex := self oilMD: metadata at: framesBase + (frameIndex * OilMDFrameSize) + OilMDFrameParent].
+	frameIndex := self oilMD: metadata at: site + OilMDSiteFrame.
+	chainIndex := numFrames - 1.
+	[frameIndex >= 0] whileTrue:
+		[chain at: chainIndex put: frameIndex.
+		 chainIndex := chainIndex - 1.
+		 frameIndex := self oilMD: metadata at: framesBase + (frameIndex * OilMDFrameSize) + OilMDFrameParent].
+	topRegs at: numFrames - 1 put: (self oilMD: metadata at: site + OilMDSiteTop).
+	0 to: numFrames - 2 do:
+		[:i| topRegs at: i put: (self oilMD: metadata at: framesBase + ((chain at: i + 1) * OilMDFrameSize) + OilMDFrameBase) - 1].
 	"2. Make room: the interpreter frames are larger than the machine code frame."
-	fr := framesBase + ((chain at: 0) * OilMDFrameSize).
-	words := 5 + (tops at: 0) - (self oilMD: md at: fr + OilMDFrameNumArgs).
-	1 to: n - 1 do:
+	frameRecord := framesBase + ((chain at: 0) * OilMDFrameSize).
+	numWords := 5 + (topRegs at: 0) - (self oilMD: metadata at: frameRecord + OilMDFrameNumArgs).
+	1 to: numFrames - 1 do:
 		[:i|
-		fr := framesBase + ((chain at: i) * OilMDFrameSize).
-		words := words + 8 + (tops at: i) - (self oilMD: md at: fr + OilMDFrameBase)].
-	finalSP := theFP - (words * objectMemory wordSize).
+		frameRecord := framesBase + ((chain at: i) * OilMDFrameSize).
+		numWords := numWords + 8 + (topRegs at: i) - (self oilMD: metadata at: frameRecord + OilMDFrameBase)].
+	finalSP := theFP - (numWords * objectMemory wordSize).
 	(finalSP < (stackPage realStackLimit + (LargeContextSlots * objectMemory bytesPerOop))
 	 and: [(self isBaseFrame: theFP) not]) ifTrue:
 		[self setHeadFP: framePointer andSP: stackPointer inPage: stackPage.
@@ -1198,66 +1198,66 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 		 self assert: theFP = framePointer].
 	"3. Read the virtual registers from their homes before the frame is overwritten."
 	0 to: OilNumRegs - 1 do:
-		[:r|
-		vals at: r put: ((self oilMD: md at: homes + r) = 0
+		[:reg|
+		regValues at: reg put: ((self oilMD: metadata at: homes + reg) = 0
 							ifTrue: [objectMemory nilObject]
-							ifFalse: [stackPages longAt: theFP + (self oilMD: md at: homes + r)])].
+							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: homes + reg)])].
 	0 to: OilMaxVObjs - 1 do:
 		[:i| vobjOops at: i put: 0. needed at: i put: 0].
-	numFix := 0.
+	numFixups := 0.
 	"4. Convert the root frame in place, then push the inlined frames.  Slots holding virtual objects are
-	    written later (fixAddr/fixVObj), once the objects and the contexts they refer to exist."
-	fr := framesBase + ((chain at: 0) * OilMDFrameSize).
-	homeMethod := objectMemory fetchPointer: fr + OilMDFrameMethod ofObject: md.
-	numArgs := self oilMD: md at: fr + OilMDFrameNumArgs.
+	    written later (fixupAddrs/fixupVObjs), once the objects and the contexts they refer to exist."
+	frameRecord := framesBase + ((chain at: 0) * OilMDFrameSize).
+	homeMethod := objectMemory fetchPointer: frameRecord + OilMDFrameMethod ofObject: metadata.
+	numArgs := self oilMD: metadata at: frameRecord + OilMDFrameNumArgs.
 	stackPages
 		longAt: theFP + FoxIFrameFlags
 			put: (self encodeFrameFieldHasContext: (self mframeHasContext: theFP) isBlock: false numArgs: numArgs);
 		longAt: theFP + FoxMethod put: homeMethod;
 		longAt: theFP + FoxIFSavedIP put: 0;
-		longAt: theFP + FoxIFReceiver put: (self oilValueAt: fr + OilMDFrameSelf metadata: md values: vals vobjs: vobjOops).
-	fps at: 0 put: theFP.
+		longAt: theFP + FoxIFReceiver put: (self oilValueAt: frameRecord + OilMDFrameSelf metadata: metadata values: regValues vobjs: vobjOops).
+	framePointers at: 0 put: theFP.
 	sp := theFP + FoxIFReceiver.
-	0 to: n - 1 do:
+	0 to: numFrames - 1 do:
 		[:i|
-		fr := framesBase + ((chain at: i) * OilMDFrameSize).
-		base := self oilMD: md at: fr + OilMDFrameBase.
-		numArgs := self oilMD: md at: fr + OilMDFrameNumArgs.
+		frameRecord := framesBase + ((chain at: i) * OilMDFrameSize).
+		baseReg := self oilMD: metadata at: frameRecord + OilMDFrameBase.
+		numArgs := self oilMD: metadata at: frameRecord + OilMDFrameNumArgs.
 		i > 0 ifTrue:
 			["The stacked receiver (the closure, for a block) and the arguments, on the caller's stack."
-			 base to: base + numArgs do:
-				[:r|
+			 baseReg to: baseReg + numArgs do:
+				[:reg|
 				sp := sp - objectMemory wordSize.
-				numFix := self oilStore: (self oilDescriptorIndex: r site: site metadata: md) at: sp metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix].
+				numFixups := self oilStore: (self oilDescriptorIndex: reg site: site metadata: metadata) at: sp metadata: metadata values: regValues vobjs: vobjOops needed: needed fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups].
 			 "The caller's instruction pointer: the bytecode after the send (pre-incremented)."
 			 sp := sp - objectMemory wordSize.
 			 stackPages
 				longAt: sp
-				put: (objectMemory fetchPointer: framesBase + ((chain at: i - 1) * OilMDFrameSize) + OilMDFrameMethod ofObject: md)
+				put: (objectMemory fetchPointer: framesBase + ((chain at: i - 1) * OilMDFrameSize) + OilMDFrameMethod ofObject: metadata)
 					+ objectMemory baseHeaderSize
-					+ (self oilMD: md at: fr + OilMDFrameReturnPC)
+					+ (self oilMD: metadata at: frameRecord + OilMDFrameReturnPC)
 					- 1.
 			 sp := sp - objectMemory wordSize.
-			 stackPages longAt: sp put: (fps at: i - 1) asUnsignedInteger.
+			 stackPages longAt: sp put: (framePointers at: i - 1) asUnsignedInteger.
 			 newFP := sp.
-			 fps at: i put: newFP.
+			 framePointers at: i put: newFP.
 			 sp := sp - objectMemory wordSize.
-			 stackPages longAt: sp put: (objectMemory fetchPointer: fr + OilMDFrameMethod ofObject: md).
+			 stackPages longAt: sp put: (objectMemory fetchPointer: frameRecord + OilMDFrameMethod ofObject: metadata).
 			 sp := sp - objectMemory wordSize.
 			 stackPages longAt: sp put: objectMemory nilObject.
 			 sp := sp - objectMemory wordSize.
-			 stackPages longAt: sp put: (self encodeFrameFieldHasContext: false isBlock: (self oilMD: md at: fr + OilMDFrameIsBlock) ~= 0 numArgs: numArgs).
+			 stackPages longAt: sp put: (self encodeFrameFieldHasContext: false isBlock: (self oilMD: metadata at: frameRecord + OilMDFrameIsBlock) ~= 0 numArgs: numArgs).
 			 sp := sp - objectMemory wordSize.
 			 stackPages longAt: sp put: 0.
 			 sp := sp - objectMemory wordSize.
 			 self assert: sp = (newFP + FoxIFReceiver).
-			 numFix := self oilStore: fr + OilMDFrameSelf at: sp metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix].
+			 numFixups := self oilStore: frameRecord + OilMDFrameSelf at: sp metadata: metadata values: regValues vobjs: vobjOops needed: needed fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups].
 		"The temps (after the arguments) and the stack of the frame."
-		base + numArgs + 1 to: (tops at: i) do:
-			[:r|
+		baseReg + numArgs + 1 to: (topRegs at: i) do:
+			[:reg|
 			sp := sp - objectMemory wordSize.
-			numFix := self oilStore: (self oilDescriptorIndex: r site: site metadata: md) at: sp metadata: md values: vals vobjs: vobjOops needed: needed fixAddr: fixAddr fixVObj: fixVObj numFix: numFix].
-		sps at: i put: sp].
+			numFixups := self oilStore: (self oilDescriptorIndex: reg site: site metadata: metadata) at: sp metadata: metadata values: regValues vobjs: vobjOops needed: needed fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups].
+		stackPointers at: i put: sp].
 	"5. The virtual objects needed, transitively (a closure's receiver and copied values, a temp vector's slots)."
 	more := true.
 	[more] whileTrue:
@@ -1267,37 +1267,37 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 			(needed at: i) = 1 ifTrue:
 				[needed at: i put: 2.
 				 more := true.
-				 vr := vobjsBase + (i * OilMDVObjSize).
-				 (self oilMD: md at: vr + OilMDVObjKind) = OilDescBlock
+				 vobjRecord := vobjsBase + (i * OilMDVObjSize).
+				 (self oilMD: metadata at: vobjRecord + OilMDVObjKind) = OilDescBlock
 					ifTrue:
-						[self oilNeedVObjAt: vr + OilMDVObjSelf metadata: md needed: needed.
-						 0 to: (self oilMD: md at: vr + OilMDVObjNumCopied) - 1 do:
-							[:j| self oilNeedVObjAt: (self oilMD: md at: vr + OilMDVObjCopiedIndex) + (2 * j) metadata: md needed: needed]]
+						[self oilNeedVObjAt: vobjRecord + OilMDVObjSelf metadata: metadata needed: needed.
+						 0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied) - 1 do:
+							[:j| self oilNeedVObjAt: (self oilMD: metadata at: vobjRecord + OilMDVObjCopiedIndex) + (2 * j) metadata: metadata needed: needed]]
 					ifFalse:
-						[0 to: (self oilMD: md at: vr + OilMDVObjLiteralOrSize) - 1 do:
-							[:j| self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: md at: vr + OilMDVObjSlotBase) + j site: site metadata: md) metadata: md needed: needed]]]]].
+						[0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize) - 1 do:
+							[:j| self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: metadata at: vobjRecord + OilMDVObjSlotBase) + j site: site metadata: metadata) metadata: metadata needed: needed]]]]].
 	"6. Allocate them (no GC can happen here: allocation at worst schedules a scavenge)..."
 	0 to: numVObjs - 1 do:
 		[:i|
 		(needed at: i) ~= 0 ifTrue:
-			[vr := vobjsBase + (i * OilMDVObjSize).
-			 kind := self oilMD: md at: vr + OilMDVObjKind.
+			[vobjRecord := vobjsBase + (i * OilMDVObjSize).
+			 kind := self oilMD: metadata at: vobjRecord + OilMDVObjKind.
 			 obj := kind = OilDescBlock
 					ifTrue:
 						[objectMemory
-							allocateSlots: FullClosureFirstCopiedValueIndex + (self oilMD: md at: vr + OilMDVObjNumCopied)
+							allocateSlots: FullClosureFirstCopiedValueIndex + (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied)
 							format: objectMemory indexablePointersFormat
 							classIndex: ClassFullBlockClosureCompactIndex]
 					ifFalse:
 						[kind = OilDescObject
 							ifTrue: "a scalar replaced object: an instance of the class in its record (with its current shape)"
 								[objectMemory
-									allocateSlots: (objectMemory fixedFieldsOfClass: (objectMemory fetchPointer: vr + OilMDVObjClass ofObject: md))
-									format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vr + OilMDVObjClass ofObject: md))
-									classIndex: (objectMemory ensureBehaviorHash: (objectMemory fetchPointer: vr + OilMDVObjClass ofObject: md))]
+									allocateSlots: (objectMemory fixedFieldsOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
+									format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
+									classIndex: (objectMemory ensureBehaviorHash: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))]
 							ifFalse:
 								[objectMemory
-									allocateSlots: (self oilMD: md at: vr + OilMDVObjLiteralOrSize)
+									allocateSlots: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize)
 									format: objectMemory arrayFormat
 									classIndex: ClassArrayCompactIndex]].
 			 self assert: obj notNil.
@@ -1307,39 +1307,39 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	0 to: numVObjs - 1 do:
 		[:i|
 		(needed at: i) ~= 0 ifTrue:
-			[vr := vobjsBase + (i * OilMDVObjSize).
+			[vobjRecord := vobjsBase + (i * OilMDVObjSize).
 			 obj := vobjOops at: i.
-			 (self oilMD: md at: vr + OilMDVObjKind) = OilDescBlock
+			 (self oilMD: metadata at: vobjRecord + OilMDVObjKind) = OilDescBlock
 				ifTrue:
-					[outer := self oilMD: md at: vr + OilMDVObjOuterFrame.
-					 ctx := objectMemory nilObject.
-					 0 to: n - 1 do:
-						[:j| (chain at: j) = outer ifTrue:
-							[ctx := self ensureFrameIsMarried: (fps at: j) SP: (sps at: j)]].
-					 numCopied := self oilMD: md at: vr + OilMDVObjNumCopied.
+					[outerFrame := self oilMD: metadata at: vobjRecord + OilMDVObjOuterFrame.
+					 context := objectMemory nilObject.
+					 0 to: numFrames - 1 do:
+						[:j| (chain at: j) = outerFrame ifTrue:
+							[context := self ensureFrameIsMarried: (framePointers at: j) SP: (stackPointers at: j)]].
+					 numCopied := self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied.
 					 objectMemory
-						storePointer: ClosureOuterContextIndex ofObject: obj withValue: ctx;
-						storePointer: FullClosureCompiledBlockIndex ofObject: obj withValue: (objectMemory fetchPointer: vr + OilMDVObjLiteralOrSize ofObject: md);
-						storePointer: ClosureNumArgsIndex ofObject: obj withValue: (objectMemory integerObjectOf: (self argumentCountOf: (objectMemory fetchPointer: vr + OilMDVObjLiteralOrSize ofObject: md)));
-						storePointer: FullClosureReceiverIndex ofObject: obj withValue: (self oilValueAt: vr + OilMDVObjSelf metadata: md values: vals vobjs: vobjOops).
+						storePointer: ClosureOuterContextIndex ofObject: obj withValue: context;
+						storePointer: FullClosureCompiledBlockIndex ofObject: obj withValue: (objectMemory fetchPointer: vobjRecord + OilMDVObjLiteralOrSize ofObject: metadata);
+						storePointer: ClosureNumArgsIndex ofObject: obj withValue: (objectMemory integerObjectOf: (self argumentCountOf: (objectMemory fetchPointer: vobjRecord + OilMDVObjLiteralOrSize ofObject: metadata)));
+						storePointer: FullClosureReceiverIndex ofObject: obj withValue: (self oilValueAt: vobjRecord + OilMDVObjSelf metadata: metadata values: regValues vobjs: vobjOops).
 					 0 to: numCopied - 1 do:
 						[:j|
 						objectMemory
 							storePointer: FullClosureFirstCopiedValueIndex + j
 							ofObject: obj
-							withValue: (self oilValueAt: (self oilMD: md at: vr + OilMDVObjCopiedIndex) + (2 * j) metadata: md values: vals vobjs: vobjOops)]]
+							withValue: (self oilValueAt: (self oilMD: metadata at: vobjRecord + OilMDVObjCopiedIndex) + (2 * j) metadata: metadata values: regValues vobjs: vobjOops)]]
 				ifFalse:
-					[0 to: ((self oilMD: md at: vr + OilMDVObjLiteralOrSize) min: (objectMemory numSlotsOf: obj)) - 1 do:
+					[0 to: ((self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize) min: (objectMemory numSlotsOf: obj)) - 1 do:
 						[:j|
 						objectMemory
 							storePointer: j
 							ofObject: obj
-							withValue: (self oilValueAt: (self oilDescriptorIndex: (self oilMD: md at: vr + OilMDVObjSlotBase) + j site: site metadata: md) metadata: md values: vals vobjs: vobjOops)]]]].
-	0 to: numFix - 1 do:
-		[:i| stackPages longAt: (fixAddr at: i) put: (vobjOops at: (fixVObj at: i))].
+							withValue: (self oilValueAt: (self oilDescriptorIndex: (self oilMD: metadata at: vobjRecord + OilMDVObjSlotBase) + j site: site metadata: metadata) metadata: metadata values: regValues vobjs: vobjOops)]]]].
+	0 to: numFixups - 1 do:
+		[:i| stackPages longAt: (fixupAddrs at: i) put: (vobjOops at: (fixupVObjs at: i))].
 	"7. Continue in the innermost frame, at the site's bytecode."
-	innermost := objectMemory fetchPointer: framesBase + ((chain at: n - 1) * OilMDFrameSize) + OilMDFrameMethod ofObject: md.
-	framePointer := fps at: n - 1.
+	innermost := objectMemory fetchPointer: framesBase + ((chain at: numFrames - 1) * OilMDFrameSize) + OilMDFrameMethod ofObject: metadata.
+	framePointer := framePointers at: numFrames - 1.
 	stackPointer := sp.
 	instructionPointer := innermost + objectMemory baseHeaderSize + sitePC - 1.
 	self setMethod: innermost! !
@@ -1481,7 +1481,7 @@ primitiveOilMethodInfo
 	 otherwise answer nil."
 	<export: true>
 	<essential: #ProfilingCogit>
-	| methodObj cogMethod md code result size |
+	| methodObj cogMethod metadata code result size |
 	<var: #cogMethod type: #'CogMethod *'>
 	methodObj := self stackTop.
 	((objectMemory isNonImmediate: methodObj)
@@ -1499,10 +1499,10 @@ primitiveOilMethodInfo
 	"Allocation neither moves objects nor frees machine code."
 	0 to: size - 1 do:
 		[:byteOffset| objectMemory storeByte: byteOffset ofObject: code withValue: (objectMemory byteAt: cogMethod asUnsignedInteger + byteOffset)].
-	md := cogit oilMetadataOf: cogMethod.
+	metadata := cogit oilMetadataOf: cogMethod.
 	objectMemory
-		storePointerUnchecked: 0 ofObject: result withValue: (objectMemory fetchPointer: OilMDDeopts ofObject: md);
-		storePointerUnchecked: 1 ofObject: result withValue: (objectMemory fetchPointer: OilMDFastPaths ofObject: md);
+		storePointerUnchecked: 0 ofObject: result withValue: (objectMemory fetchPointer: OilMDDeopts ofObject: metadata);
+		storePointerUnchecked: 1 ofObject: result withValue: (objectMemory fetchPointer: OilMDFastPaths ofObject: metadata);
 		storePointer: 2 ofObject: result withValue: code;
 		storePointerUnchecked: 3 ofObject: result withValue: (objectMemory integerObjectOf: cogMethod asUnsignedInteger).
 	self pop: argumentCount + 1 thenPush: result! !
