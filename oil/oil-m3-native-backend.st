@@ -1124,6 +1124,63 @@ oilStore: descIndex at: address metadata: metadata values: regValues vobjs: vobj
 	fixupVObjs at: numFixups put: (self oilMD: metadata at: descIndex + 1).
 	^numFixups + 1! !
 
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/25/2026 15:00'!
+oilMarkVObjsNeededBy: needed site: site metadata: metadata
+	"Mark as needed the virtual objects that the needed ones refer to, transitively: a closure's receiver and copied
+	 values, a temp vector's or scalar replaced object's slots.  needed at: i is 0 (not needed), 1 (needed, its
+	 references not marked yet) or 2 (needed, its references marked)."
+	<essential: #ProfilingCogit>
+	<var: #needed type: #'char *'>
+	| vobjsBase numVObjs vobjRecord more |
+	vobjsBase := self oilMD: metadata at: OilMDVObjs.
+	numVObjs := self oilMD: metadata at: OilMDNumVObjs.
+	more := true.
+	[more] whileTrue:
+		[more := false.
+		 0 to: numVObjs - 1 do:
+			[:i|
+			(needed at: i) = 1 ifTrue:
+				[needed at: i put: 2.
+				 more := true.
+				 vobjRecord := vobjsBase + (i * OilMDVObjSize).
+				 (self oilMD: metadata at: vobjRecord + OilMDVObjKind) = OilDescBlock
+					ifTrue:
+						[self oilNeedVObjAt: vobjRecord + OilMDVObjSelf metadata: metadata needed: needed.
+						 0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied) - 1 do:
+							[:j| self oilNeedVObjAt: (self oilMD: metadata at: vobjRecord + OilMDVObjCopiedIndex) + (2 * j) metadata: metadata needed: needed]]
+					ifFalse:
+						[0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize) - 1 do:
+							[:j| self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: metadata at: vobjRecord + OilMDVObjSlotBase) + j site: site metadata: metadata) metadata: metadata needed: needed]]]]]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/25/2026 15:00'!
+oilAllocateVObjAt: vobjRecord metadata: metadata
+	"Allocate the object of the virtual object record at vobjRecord, filled with nil: a FullBlockClosure, an instance
+	 of the class of a scalar replaced object (with its current shape) or a temp vector (an Array)."
+	<essential: #ProfilingCogit>
+	| kind obj |
+	kind := self oilMD: metadata at: vobjRecord + OilMDVObjKind.
+	obj := kind = OilDescBlock
+			ifTrue:
+				[objectMemory
+					allocateSlots: FullClosureFirstCopiedValueIndex + (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied)
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassFullBlockClosureCompactIndex]
+			ifFalse:
+				[kind = OilDescObject
+					ifTrue:
+						[objectMemory
+							allocateSlots: (objectMemory fixedFieldsOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
+							format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
+							classIndex: (objectMemory ensureBehaviorHash: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))]
+					ifFalse:
+						[objectMemory
+							allocateSlots: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize)
+							format: objectMemory arrayFormat
+							classIndex: ClassArrayCompactIndex]].
+	self assert: obj notNil.
+	objectMemory fillObj: obj numSlots: (objectMemory numSlotsOf: obj) with: objectMemory nilObject.
+	^obj! !
+
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	"Replace the Oil method's machine code frame at oilFP (the top frame) by the interpreter frames it stands for at
@@ -1137,7 +1194,7 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	<essential: #ProfilingCogit>
 	<var: #oilFP type: #'char *'>
 	| theFP framesBase vobjsBase homes numVObjs chain numFrames frameIndex chainIndex baseReg numArgs homeMethod frameRecord sp newFP needed vobjOops regValues
-	  fixupAddrs fixupVObjs numFixups newPage numWords finalSP more vobjRecord kind obj numCopied outerFrame context sitePC innermost topRegs framePointers stackPointers |
+	  fixupAddrs fixupVObjs numFixups newPage numWords finalSP vobjRecord obj numCopied outerFrame context sitePC innermost topRegs framePointers stackPointers |
 	<var: #theFP type: #'char *'>
 	<var: #sp type: #'char *'>
 	<var: #newFP type: #'char *'>
@@ -1263,50 +1320,12 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 			numFixups := self oilStore: (self oilDescriptorIndex: reg site: site metadata: metadata) at: sp metadata: metadata values: regValues vobjs: vobjOops needed: needed fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups].
 		stackPointers at: i put: sp].
 	"5. The virtual objects needed, transitively (a closure's receiver and copied values, a temp vector's slots)."
-	more := true.
-	[more] whileTrue:
-		[more := false.
-		 0 to: numVObjs - 1 do:
-			[:i|
-			(needed at: i) = 1 ifTrue:
-				[needed at: i put: 2.
-				 more := true.
-				 vobjRecord := vobjsBase + (i * OilMDVObjSize).
-				 (self oilMD: metadata at: vobjRecord + OilMDVObjKind) = OilDescBlock
-					ifTrue:
-						[self oilNeedVObjAt: vobjRecord + OilMDVObjSelf metadata: metadata needed: needed.
-						 0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied) - 1 do:
-							[:j| self oilNeedVObjAt: (self oilMD: metadata at: vobjRecord + OilMDVObjCopiedIndex) + (2 * j) metadata: metadata needed: needed]]
-					ifFalse:
-						[0 to: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize) - 1 do:
-							[:j| self oilNeedVObjAt: (self oilDescriptorIndex: (self oilMD: metadata at: vobjRecord + OilMDVObjSlotBase) + j site: site metadata: metadata) metadata: metadata needed: needed]]]]].
+	self oilMarkVObjsNeededBy: needed site: site metadata: metadata.
 	"6. Allocate them (no GC can happen here: allocation at worst schedules a scavenge)..."
 	0 to: numVObjs - 1 do:
 		[:i|
 		(needed at: i) ~= 0 ifTrue:
-			[vobjRecord := vobjsBase + (i * OilMDVObjSize).
-			 kind := self oilMD: metadata at: vobjRecord + OilMDVObjKind.
-			 obj := kind = OilDescBlock
-					ifTrue:
-						[objectMemory
-							allocateSlots: FullClosureFirstCopiedValueIndex + (self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied)
-							format: objectMemory indexablePointersFormat
-							classIndex: ClassFullBlockClosureCompactIndex]
-					ifFalse:
-						[kind = OilDescObject
-							ifTrue: "a scalar replaced object: an instance of the class in its record (with its current shape)"
-								[objectMemory
-									allocateSlots: (objectMemory fixedFieldsOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
-									format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))
-									classIndex: (objectMemory ensureBehaviorHash: (objectMemory fetchPointer: vobjRecord + OilMDVObjClass ofObject: metadata))]
-							ifFalse:
-								[objectMemory
-									allocateSlots: (self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize)
-									format: objectMemory arrayFormat
-									classIndex: ClassArrayCompactIndex]].
-			 self assert: obj notNil.
-			 objectMemory fillObj: obj numSlots: (objectMemory numSlotsOf: obj) with: objectMemory nilObject.
-			 vobjOops at: i put: obj]].
+			[vobjOops at: i put: (self oilAllocateVObjAt: vobjsBase + (i * OilMDVObjSize) metadata: metadata)]].
 	"...then fill them in.  A closure's outerContext is the context of the frame that created it, if on the chain."
 	0 to: numVObjs - 1 do:
 		[:i|
