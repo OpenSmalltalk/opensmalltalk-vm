@@ -51,14 +51,14 @@ out nextPutAll: 'trips recorded before tests: '; print: count value; cr.
 
 m := (Smalltalk at: #OilTestModel) new.
 
-"--- T1: back jump counter threshold (65535) and trip-once semantics ---"
+"--- T1: back jump counter threshold (8191) and trip-once semantics ---"
 warm := (1 to: 5) collect: [:i | m countTo: 0]. "jit countTo: without executing its back jump"
 beforeCount := (recordsFor value: mCountTo) size.
-check value: 'countTo: 65534 computes correctly' value: (m countTo: 65534) = 65534.
-check value: 'no trip after 65534 back jumps' value: (recordsFor value: mCountTo) size = beforeCount.
+check value: 'countTo: 8190 computes correctly' value: (m countTo: 8190) = 8190.
+check value: 'no trip after 8190 back jumps' value: (recordsFor value: mCountTo) size = beforeCount.
 check value: 'countTo: 1 computes correctly' value: (m countTo: 1) = 1.
 newRecs := recordsFor value: mCountTo.
-check value: 'trip on the 65535th back jump' value: newRecs size = (beforeCount + 1).
+check value: 'trip on the 8191st back jump' value: newRecs size = (beforeCount + 1).
 newRecs notEmpty ifTrue:
 	[rec := newRecs last.
 	 check value: 'T1 trip kind is back jump (0)' value: (rec at: 1) = 0.
