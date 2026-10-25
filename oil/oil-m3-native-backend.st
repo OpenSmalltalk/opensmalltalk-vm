@@ -660,14 +660,14 @@ numTrampolines
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
 	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
-	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilBaseCompiler. OilLoopCompiler. OilFullCompiler}! !
+	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
 
 
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 estimateOpcodes
 	"An upper bound of the number of abstract instructions oilGenerate: emits (they are allocated on the C stack)."
 	| irOffset opcode estimatedCount |
-	estimatedCount := 200 + (2 * oilNumHomes) + (4 * numSites) + (4 * OilMaxReg // 16).
+	estimatedCount := 200 + (2 * oilNumSpillTemps) + (4 * numSites) + (4 * OilMaxReg // 16).
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
 		[opcode := self opcodeAt: irOffset.
@@ -692,7 +692,7 @@ estimateOpcodes
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:30'!
 metadataSize
 	"The number of slots of the deoptimization metadata (see fillMetadata:cogMethod:)."
 	| totalSlots |
@@ -702,17 +702,17 @@ metadataSize
 			[totalSlots := totalSlots + OilMDSiteHeaderSize + (2 * (self siteStateSize: siteIndex))]].
 	^totalSlots! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index put: value
 	<inline: true>
 	objectMemory storePointer: index ofObject: md withValue: value! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index putInt: value
 	<inline: true>
 	objectMemory storePointer: index ofObject: md withValue: (objectMemory integerObjectOf: value)! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 md: md at: index putKind: kind value: value
 	"A descriptor: its kind and its value, an object for a constant, a SmallInteger (register or virtual object) otherwise."
 	self md: md at: index putInt: kind.
@@ -720,7 +720,7 @@ md: md at: index putKind: kind value: value
 		ifTrue: [self md: md at: index + 1 put: value]
 		ifFalse: [self md: md at: index + 1 putInt: value]! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 15:00'!
 fillMetadata: md cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their
@@ -736,7 +736,7 @@ fillMetadata: md cogMethod: cogMethodAddress
 	homes := captured + (capturedTop * 2).
 	siteTable := homes + OilNumRegs.
 	self md: md at: OilMDVersion putInt: OilMDMagic.
-	self md: md at: OilMDRootMethod put: rootMethod.
+	self md: md at: OilMDRootMethod put: oilHomeMethod.
 	self md: md at: OilMDNumSites putInt: numSites.
 	self md: md at: OilMDSiteTable putInt: siteTable.
 	self md: md at: OilMDNumFrames putInt: numFrames.
@@ -746,7 +746,7 @@ fillMetadata: md cogMethod: cogMethodAddress
 	self md: md at: OilMDHomes putInt: homes.
 	self md: md at: OilMDDeopts putInt: 0.
 	self md: md at: OilMDFastPaths putInt: 0.
-	self md: md at: OilMDNumArgs putInt: (self numArgsOf: rootMethod).
+	self md: md at: OilMDNumArgs putInt: (self numArgsOf: oilHomeMethod).
 	self md: md at: OilMDCaptured putInt: captured.
 	0 to: numFrames - 1 do:
 		[:fr|
@@ -787,7 +787,7 @@ fillMetadata: md cogMethod: cogMethodAddress
 	0 to: capturedTop - 1 do:
 		[:j| self md: md at: captured + (2 * j) putKind: (capturedKind at: j) value: (capturedValue at: j)].
 	0 to: OilNumRegs - 1 do:
-		[:r| self md: md at: homes + r putInt: (oilVRegHome at: r)].
+		[:r| self md: md at: homes + r putInt: (oilVRegSpillTemp at: r)].
 	index := siteTable + numSites.
 	0 to: numSites - 1 do:
 		[:s|
@@ -1132,7 +1132,7 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	 innermost frame; the caller then enters the interpreter."
 	<essential: #ProfilingCogit>
 	<var: #oilFP type: #'char *'>
-	| theFP framesBase vobjsBase homes numVObjs chain n g k base numArgs rootMethod fr sp newFP needed vobjOops vals
+	| theFP framesBase vobjsBase homes numVObjs chain n g k base numArgs homeMethod fr sp newFP needed vobjOops vals
 	  fixAddr fixVObj numFix newPage words finalSP more vr kind obj numCopied outer ctx sitePC innermost tops fps sps |
 	<var: #theFP type: #'char *'>
 	<var: #sp type: #'char *'>
@@ -1208,12 +1208,12 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 	"4. Convert the root frame in place, then push the inlined frames.  Slots holding virtual objects are
 	    written later (fixAddr/fixVObj), once the objects and the contexts they refer to exist."
 	fr := framesBase + ((chain at: 0) * OilMDFrameSize).
-	rootMethod := objectMemory fetchPointer: fr ofObject: md.
+	homeMethod := objectMemory fetchPointer: fr ofObject: md.
 	numArgs := self oilMD: md at: fr + 7.
 	stackPages
 		longAt: theFP + FoxIFrameFlags
 			put: (self encodeFrameFieldHasContext: (self mframeHasContext: theFP) isBlock: false numArgs: numArgs);
-		longAt: theFP + FoxMethod put: rootMethod;
+		longAt: theFP + FoxMethod put: homeMethod;
 		longAt: theFP + FoxIFSavedIP put: 0;
 		longAt: theFP + FoxIFReceiver put: (self oilValueAt: fr + 5 metadata: md values: vals vobjs: vobjOops).
 	fps at: 0 put: theFP.

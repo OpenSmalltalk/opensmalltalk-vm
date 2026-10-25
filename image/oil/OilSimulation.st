@@ -1,9 +1,9 @@
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printIROn: aStream
 	"Dump the flattened linear IR buffer: frames, instructions (index, opcode, operands, deopt site), deopt sites, statistics."
 	<doNotGenerate>
 	| labels i |
-	aStream nextPutAll: (oilIRBuffer == oilIRBuffer2 ifTrue: ['=== Oil Pass 2 IR: '] ifFalse: ['=== Oil Pass 1 IR: ']); print: rootMethod; nextPutAll: ' for receiver class '; print: (self objectFor: rootClass).
+	aStream nextPutAll: (oilIRBuffer == oilIRBuffer2 ifTrue: ['=== Oil Pass 2 IR: '] ifFalse: ['=== Oil Pass 1 IR: ']); print: oilHomeMethod; nextPutAll: ' for receiver class '; print: (self objectFor: receiverClass).
 	aStream nextPutAll: (eagerClosures ifTrue: ['  [eager closures]'] ifFalse: ['  [virtual closures]']); cr.
 	failed ifTrue:
 		[aStream nextPutAll: 'FAILED: '; nextPutAll: (OilConstants failureNames at: failureCode + 1); cr].
@@ -38,7 +38,7 @@ printIROn: aStream
 	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printInstructionAt: instIndex on: aStream
 	<doNotGenerate>
 	| opcode regA regB regC name siteIndex |
@@ -115,24 +115,24 @@ printInstructionAt: instIndex on: aStream
 		 ((oilIRFlag at: instIndex) bitAnd: OilFloatUnboxed) ~= 0 ifTrue: [aStream nextPutAll: ' unboxed']].
 	aStream cr! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 hexWord: word
 	<doNotGenerate>
 	| hexString |
 	hexString := (word printStringBase: 16) asUppercase.
 	^(String new: (8 - hexString size max: 0) withAll: $0), hexString! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 reg: registerIndex
 	<doNotGenerate>
 	^'r', registerIndex printString! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 condName: condCode
 	<doNotGenerate>
 	^#('<' '>' '<=' '>=' '=' '~=' '==' '~~') at: condCode! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 printHandle: handleVal
 	<doNotGenerate>
 	| obj |
@@ -141,7 +141,7 @@ printHandle: handleVal
 		ifTrue: [obj printString]
 		ifFalse: [obj printString contractTo: 60]! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 packedArgsAt: index count: count
 	<doNotGenerate>
 	^String streamContents:
@@ -152,22 +152,22 @@ packedArgsAt: index count: count
 			argIndex > 0 ifTrue: [stream space].
 			stream nextPutAll: (self reg: ((word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255))]]! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
 irFlagAt: index
 	<doNotGenerate>
 	^oilIRFlag at: index! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
 irAuxAt: index
 	<doNotGenerate>
 	^oilIRAux at: index! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 irString
 	<doNotGenerate>
 	^String streamContents: [:s| self printIROn: s]! !
 
-!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 opcodeHistogram
 	"Answer a Bag of the opcode names in the buffer (for tests)."
 	<doNotGenerate>

@@ -79,7 +79,7 @@ initialize
 	"a scalar replaced instance of a class with fixed pointer fields only (a virtual object: its slots are high registers)"
 	OilDescObject := 5.
 	"a lazy class dependent value: the result of a bimorphic send answering nil for one class and a known non-nil value
-	 (self or a constant) for the other, whose comparison with nil is the class test (see OilBaseCompiler>>genBimorphicSelect:...)"
+	 (self or a constant) for the other, whose comparison with nil is the class test (see OilInliningCompiler>>genBimorphicSelect:...)"
 	OilDescSelect := 6.
 	"virtual register flags"
 	OilFlagImmutable := 1.
@@ -136,7 +136,7 @@ initialize
 	OilFailSpecialization := 17.
 	"deoptimization metadata (a hidden pinned Array referenced from the Oil CogMethod): header slots"
 	OilMDVersion := 0.
-	OilMDRootMethod := 1.
+	OilMDRootMethod := 1. OilMDHomeMethod := 1.
 	OilMDNumSites := 2.
 	OilMDSiteTable := 3.
 	OilMDNumFrames := 4.
@@ -184,7 +184,7 @@ initialize
 	OilSpecializationSize := 4.
 	OilMaxPICCases := 5.
 	"scalar replacement: the allocation sites (method, pc) whose objects are materialized when created (they escaped after a
-	 branch or a label, see OilBaseCompiler>>materializeVObj:), and the largest scalar replaced object"
+	 branch or a label, see OilInliningCompiler>>materializeVObj:), and the largest scalar replaced object"
 	OilMaxEagerSites := 16.
 	OilMaxVObjSlots := 16.! !
 

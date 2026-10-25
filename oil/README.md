@@ -1,6 +1,6 @@
 # Oil JIT: `ProfilingCogit` and Native Runtime
 
-`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilBaseCompiler` -> `OilLoopCompiler` -> `OilFullCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
+`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilInliningCompiler` -> `OilLoopOptimizer` -> `OilFullCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
 
 ## Files and Load Order
 
@@ -10,9 +10,9 @@ To generate the 64-bit Spur Oil VM (`src/spur64.oil`), file into `Spur64VMMaker.
 2. `image/oil/OilInstructionConstants.st` — shared pool of 32-bit linear IR instruction opcodes.
 3. `image/oil/OilConstants.st` — shared pool of descriptors, tags, limits, and runtime constants (imports `OilInstructionConstants`).
 4. `image/oil/OilBytecodeScanner.st` — `OilBytecodeDescriptor` and `OilBytecodeScanner`.
-5. `image/oil/OilCompiler.st` — `OilBaseCompiler` (Pass 1 and `#pipe` hook).
-6. `image/oil/OilCompilerBackend.st` — `OilBaseCompiler` (Pass 3 native code generation).
-7. `image/oil/OilCompilerPass2.st` — `OilLoopCompiler` (Pass 2 loop optimizer) and `OilFullCompiler`.
+5. `image/oil/OilCompiler.st` — `OilInliningCompiler` (Pass 1 and `#pipe` hook).
+6. `image/oil/OilCompilerBackend.st` — `OilInliningCompiler` (Pass 3 native code generation).
+7. `image/oil/OilCompilerPass2.st` — `OilLoopOptimizer` (Pass 2 loop optimizer) and `OilFullCompiler`.
 8. `oil/oil-m3-native-backend.st` — `ProfilingCogit` Oil driver (`oilMethod:receiverClass:`, `oilCompile:receiverClass:`, `oilGenerate:`), deoptimization metadata (`fillMetadata:cogMethod:`), `CoInterpreter>>ceOilBailout:`, selector table, invalidation on selector flush (`unlinkSendsOf:isMNUSelector:`), and primitives (`primitiveOilCompile`, `primitiveOilSetSelectors`, `primitiveOilMethodInfo`, `primitiveOilLastCompilation`).
 9. `oil/oil-m7-specialization.st` — method-level multi-specialization: the specialization table, the dispatch at the no-check entry of baseline methods (`ProfilingCogit>>compileEntry`), direct linking of monomorphic sends (`linkSendAt:in:to:offset:receiver:`), the interpreter's entry (`CoInterpreter>>activateNewCogMethod:inInterpreter:`), and `primitiveOilSpecialize`, `primitiveOilSpecializations`.
 

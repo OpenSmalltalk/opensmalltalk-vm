@@ -222,8 +222,8 @@ initializeWithOptions: optionsDictionary
 	super initializeWithOptions: optionsDictionary.
 	"Each counter is a 32-bit word, two to a 64-bit slot (see allocateCounters:)."
 	OilCounterBytes := 4.
-	"Trip after 2^16 - 1 executions of a site."
-	OilInitialCounterValue := (1 << 16) - 1.
+	"Trip after 2^13 - 1 executions of a site (8k)."
+	OilInitialCounterValue := (1 << 13) - 1.
 	"The kinds of trip site, passed to CoInterpreter>>ceOilTrip:."
 	OilTripBackJump := 0.
 	OilTripBlockEntry := 1.! !

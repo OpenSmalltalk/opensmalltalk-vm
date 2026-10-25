@@ -1,11 +1,11 @@
-OilBytecodeScanner subclass: #OilBaseCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj'
+OilBytecodeScanner subclass: #OilInliningCompiler
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
 
-!OilBaseCompiler commentStamp: 'cb 10/25/2026 00:45' prior: 0!
-I am the base compiler of Oil, the optimizing JIT of the 64-bit Spur Cog VM (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilFullCompiler).  Given the outer (home) method of a hot loop and the class of its receiver, Pass 1 translates its bytecodes, recursively inlining blocks, collection iterators and small methods, into a flat 32-bit compact linear IR in a preallocated static buffer, applying peephole reductions for tagged SmallInteger arithmetic on the fly.  Subclasses add optimization passes in #pipe (OilLoopCompiler adds Pass 2, the streaming loop optimizer), and Pass 3 (the native backend) generates machine code.  I allocate nothing: every table is a fixed size array (static/BSS memory in the VM, invisible to the GC).
+!OilInliningCompiler commentStamp: 'cb 10/25/2026 00:45' prior: 0!
+I am the base compiler of Oil, the optimizing JIT of the 64-bit Spur Cog VM (OilBytecodeScanner -> OilInliningCompiler -> OilLoopCompiler -> OilFullCompiler).  Given the outer (home) method of a hot loop and the class of its receiver, Pass 1 translates its bytecodes, recursively inlining blocks, collection iterators and small methods, into a flat 32-bit compact linear IR in a preallocated static buffer, applying peephole reductions for tagged SmallInteger arithmetic on the fly.  Subclasses add optimization passes in #pipe (OilLoopCompiler adds Pass 2, the streaming loop optimizer), and Pass 3 (the native backend) generates machine code.  I allocate nothing: every table is a fixed size array (static/BSS memory in the VM, invisible to the GC).
 
 IR format: oilIRBuffer is an array of OilBufferWords (4096) 32-bit words (16 KB).  An instruction is one word [Opcode:8 | Dest:8 | Src1:8 | Src2/Imm:8], possibly followed by a 64-bit operand (2 words, low word first) and packed argument words.  See the OilConstants class comment and OilCompiler>>printIROn: for the opcode set.  Branch targets are absolute IR word indices.  Instructions that can deoptimize (guards, bounds checks, tagged arithmetic, calls, non-boolean branches) are recorded in a side table of deopt sites (IR index, inlined frame, bytecode pc), and the frame table describes the inlined frames (method, base register, caller frame, call site pc) for the deoptimization metadata.
 
@@ -15,14 +15,14 @@ Each register has a descriptor (slotKind/slotValue): its own register, an alias 
 
 Inlining policy: see shouldInline:selector:numArgs:receiver:.  Receiver classes come from constants, from facts established by guards and inlining, or from type feedback (the inline caches of ProfilingCogit in the VM, simulated execution in the image).  Sends that are not inlined become OilCall0/OilCall1/OilCallN/OilCallSuper or uncommon traps (OilTrap).!
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
 initialize
 	"Simulation only: in the VM all tables are static (BSS) arrays, see OilCompiler class>>declareCVarsIn:."
 	<doNotGenerate>
 	super initialize.
 	self setUpSimulationTables! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
 setUpSimulationTables
 	<doNotGenerate>
 	oilIRBuffer1 := CArrayAccessor on: (WordArray new: OilBufferWords).
@@ -131,12 +131,12 @@ setUpSimulationTables
 	self setUpSimulationHandles.
 	self resetForCompilation! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 newTable: tableSize
 	<doNotGenerate>
 	^CArrayAccessor on: (Array new: tableSize withAll: 0)! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 setUpSimulationHandles
 	"In the VM, nil/true/false/SmallInteger are the object memory's oops (see resetForCompilation) and the special
 	 selectors are registered before compilation with registerSelector:kind:.  In the image they are simulated handles (see handleFor:)."
@@ -160,7 +160,7 @@ setUpSimulationHandles
 	self registerSelector: (PositionableStream >> #skipSeparators) kind: 10.
 	self registerSelector: (self handleFor: ReadStream) kind: 11! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 registerSelector: selector kind: kind
 	"Tell Oil about a selector it treats specially:
 	 kind 0-4: value selectors by arity, 5: bitXor:, 6: iterators, 7: cold (error paths);
@@ -187,7 +187,7 @@ registerSelector: selector kind: kind
 		[coldSelectors at: numColdSelectors put: selector.
 		 numColdSelectors := numColdSelectors + 1]! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 resetSelectorRegistry
 	"Forget the registered special selectors (the VM re-registers them before each compilation, since
 	 selector oops move when the garbage collector compacts the heap)."
@@ -195,7 +195,7 @@ resetSelectorRegistry
 	bitXorSelector := oilIndexOfAsciiMethod := oilSkipSeparatorsMethod := oilByteStreamClass := 0.
 	numColdSelectors := 0! !
 
-!OilBaseCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 resetForCompilation
 	self cCode:
 		[nilHandle := objectMemory nilObject.
@@ -232,53 +232,53 @@ resetForCompilation
 	oilClassBindingClass := 0.
 	failureCode := OilOK! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 irBudget: anInteger
 	irBudget := anInteger! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 typeFeedback: aTypeFeedbackOracle
 	<doNotGenerate>
 	typeFeedback := aTypeFeedbackOracle! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 failed
 	^failed! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 failureCode
 	^failureCode! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 eagerClosures
 	^eagerClosures! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 irIndex
 	^irIndex! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 irInstCount
 	^irInstCount! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 irWordAt: index
 	^oilIRBuffer at: index! !
 
-!OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
 numFrames
 	^numFrames! !
 
-!OilBaseCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 19:35'!
+!OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 19:35'!
 pipe
 	"Optimization pipeline hook between Pass 1 and Pass 3. Subclasses override to add optimization passes."
 	<inline: true>
 	oilPass1Words := irIndex.
 	^OilOK! !
 
-!OilBaseCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
-compileMethod: aMethod receiverClass: classHandle
-	"Pass 1: translate aMethod, the outer (home) method of a hot loop, specialized for receivers of class classHandle,
+!OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/24/2026 10:30'!
+compileMethod: aMethod receiverClass: classOop
+	"Pass 1: translate aMethod, the outer (home) method of a hot loop, specialized for receivers of class classOop,
 	 into the linear IR buffer.  Closures and temp vectors are first kept virtual (dissolved when their blocks are inlined);
 	 restarts (up to 12 times) materialize them when one escapes or stop inlining a frame the back end cannot encode.
 	 Answer true on success."
@@ -289,7 +289,7 @@ compileMethod: aMethod receiverClass: classHandle
 	oilEagerPC := oilEagerDepth := oilRefusePC := oilRefuseDepth := -1.
 	restarts := 0.
 	[oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := oilNumSelects := 0.
-	 self compileOnce: aMethod receiverClass: classHandle.
+	 self compileOnce: aMethod receiverClass: classOop.
 	 needsRestart and: [restarts < 12]] whileTrue:
 		[restarts := restarts + 1.
 		 (oilRestartNoInline or: [oilRestartEager]) ifFalse:
@@ -297,18 +297,18 @@ compileMethod: aMethod receiverClass: classHandle
 			 eagerClosures := true]].
 	^failed not! !
 
-!OilBaseCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
-compileOnce: aMethod receiverClass: classHandle
+!OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
+compileOnce: aMethod receiverClass: classOop
 	<inline: false>
 	| rootFrame |
 	self resetForCompilation.
-	rootMethod := aMethod.
-	rootClass := classHandle.
+	oilHomeMethod := aMethod.
+	receiverClass := classOop.
 	(self oilIsSistaV1Method: aMethod) ifFalse: "Oil only decodes SistaV1: leave the method to the baseline Cogit"
 		[^self abortCompilation: OilFailNotSistaV1].
 	(self oilIsDisqualified: aMethod) ifTrue: "it deoptimized too often"
 		[^self abortCompilation: OilFailDisqualified].
-	(self isContextClass: classHandle) ifTrue: "see isContextClass:"
+	(self isContextClass: classOop) ifTrue: "see isContextClass:"
 		[^self abortCompilation: OilFailUnsupportedBytecode].
 	(self oilPrimitiveIndexOf: aMethod) ~= 0 ifTrue:
 		[^self abortCompilation: OilFailPrimitiveMethod].
@@ -317,18 +317,18 @@ compileOnce: aMethod receiverClass: classHandle
 		[^self abortCompilation: OilFailUnsupportedBytecode].
 	frameSelfKind at: rootFrame put: OilDescReg.
 	frameSelfValue at: rootFrame put: 0.
-	frameSelfClass at: rootFrame put: classHandle.
-	knownClass at: 0 put: classHandle.
+	frameSelfClass at: rootFrame put: classOop.
+	knownClass at: 0 put: classOop.
 	self bindFrame: rootFrame base: 0 numArgs: (self numArgsOf: aMethod) numCopied: 0.
 	"The receiver's class is a speculation (inlined self sends are bound to it): guard it at entry.
 	 Deoptimizing there resumes the method from its first bytecode in the interpreter."
 	currentFrame := rootFrame.
 	currentPC := frameStartPC at: rootFrame.
 	self takeSnapshotFrame: rootFrame pc: currentPC.
-	self emitGuardOn: 0 class: classHandle.
+	self emitGuardOn: 0 class: classOop.
 	self translateFrame: rootFrame! !
 
-!OilBaseCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
 oilDisqualify: aMethod
 	"Remember that aMethod deoptimized too often: it will not be compiled again (oilDisqualified is a ring of the
 	 last OilMaxDisqualified methods; the entries are only compared, so stale ones after a compaction are harmless)."
@@ -337,33 +337,33 @@ oilDisqualify: aMethod
 	oilDisqualified at: oilNumDisqualified \\ OilMaxDisqualified put: aMethod.
 	oilNumDisqualified := oilNumDisqualified + 1! !
 
-!OilBaseCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
 oilDisqualifyLimit
 	"The number of deoptimizations after which an Oil method is disqualified (see CoInterpreter>>oilDisqualify:)."
 	<api>
 	^oilDisqualifyLimitValue > 0 ifTrue: [oilDisqualifyLimitValue] ifFalse: [OilDisqualifyDeopts]! !
 
-!OilBaseCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/24/2026 17:30'!
 oilDisqualifyLimit: limit
 	oilDisqualifyLimitValue := limit! !
 
-!OilBaseCompiler methodsFor: 'disqualification' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/25/2026 00:45'!
 includes: anItem in: table count: count
 	<var: #table type: #'sqInt *'>
 	0 to: count - 1 do:
 		[:index| (table at: index) = anItem ifTrue: [^true]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'disqualification' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/25/2026 00:45'!
 oilIsDisqualified: aMethod
 	^self includes: aMethod in: oilDisqualified count: (oilNumDisqualified min: OilMaxDisqualified)! !
 
-!OilBaseCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
 abortCompilation: code
 	failed ifFalse: [failureCode := code].
 	failed := true! !
 
-!OilBaseCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
 requireEagerClosures
 	"A virtual closure or temp vector must be materialized.  Restart in eager mode (or give up if already eager)."
 	eagerClosures
@@ -374,7 +374,7 @@ requireEagerClosures
 			 oilEagerDepth := currentFrame < 0 ifTrue: [-1] ifFalse: [frameDepth at: currentFrame].
 			 needsRestart := true. failed := true]! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 newFrameFor: aMethod base: baseReg isBlock: isBlock
 	"Allocate a frame for aMethod whose receiver (or closure) is in register baseReg, and pre-scan its bytecodes
 	 for branch targets.  Answer the frame index, or -1 if the method cannot be translated or resources are exhausted."
@@ -404,7 +404,7 @@ newFrameFor: aMethod base: baseReg isBlock: isBlock
 	pcMapTop := pcMapTop + mapSize.
 	^frameIndex! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 bindFrame: frameIndex base: baseReg numArgs: numArgs numCopied: numCopied
 	"Registers of frame frameIndex, whose receiver (or closure) is in baseReg: receiver and arguments are immutable
 	 (copied values, bound by the caller, follow the arguments), temps start as nil, then the stack."
@@ -426,7 +426,7 @@ bindFrame: frameIndex base: baseReg numArgs: numArgs numCopied: numCopied
 	frameStackStart at: frameIndex put: baseReg + numTemps + 1.
 	simStackTop := baseReg + numTemps! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 preScanFrame: frameIndex
 	"Mark the branch targets of frame frameIndex's method in its pc map region, and the pcs inside loops (pcLoop, from a
 	 backward branch's target to the branch).  Answer false if the method contains a bytecode Oil does not translate."
@@ -454,7 +454,7 @@ preScanFrame: frameIndex
 		 pc := oilNextPC].
 	^true! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 isFrameActive: frameIndex
 	| activeFrame |
 	activeFrame := currentFrame.
@@ -463,7 +463,7 @@ isFrameActive: frameIndex
 		 activeFrame := frameParent at: activeFrame].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 isMethodOnInlineStack: aMethod
 	| activeFrame |
 	activeFrame := currentFrame.
@@ -472,17 +472,17 @@ isMethodOnInlineStack: aMethod
 		 activeFrame := frameParent at: activeFrame].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/24/2026 10:30'!
 tempReg: index frame: frameIndex
 	<inline: true>
 	^(frameBase at: frameIndex) + 1 + index! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 pcMapIndex: pc frame: frameIndex
 	<inline: true>
 	^(framePCBase at: frameIndex) + pc - (frameStartPC at: frameIndex)! !
 
-!OilBaseCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
 exitFrame: frameIndex
 	"Bind the exit label of the inlined frame frameIndex: all its returns leave the result in its base register
 	 (or, for a single final return, as a lazy descriptor).  The base register becomes the caller's stack top."
@@ -514,7 +514,7 @@ exitFrame: frameIndex
 	baseReg to: (frameMaxReg at: frameIndex) do: [:regIndex| slotFlags at: regIndex put: 0].
 	pcMapTop := framePCBase at: frameIndex! !
 
-!OilBaseCompiler methodsFor: 'translation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'translation' stamp: 'cb 10/25/2026 00:45'!
 translateFrame: frameIndex
 	<inline: false>
 	"Translate the bytecodes of frame frameIndex into the IR buffer.  Answer false if compilation failed."
@@ -535,7 +535,7 @@ translateFrame: frameIndex
 		 pc := next].
 	^failed not! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:45'!
 takeSnapshotFrame: frameIndex pc: pc
 	"Record the virtual state at the start of the bytecode at pc of frame frameIndex: the descriptors of all live
 	 registers (the register window 0..simStackTop, which holds the receivers, temps and stacks of frameIndex and of
@@ -557,7 +557,7 @@ takeSnapshotFrame: frameIndex pc: pc
 		snapKind at: vreg put: (slotKind at: vreg).
 		snapValue at: vreg put: (slotValue at: vreg)]! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 10:45'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 10:45'!
 snapshotRefersTo: reg
 	"Answer whether a register descriptor of the current snapshot refers to reg."
 	<inline: false>
@@ -569,7 +569,7 @@ snapshotRefersTo: reg
 		((snapKind at: vreg) = OilDescReg and: [(snapValue at: vreg) = reg]) ifTrue: [^true]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 00:45'!
 copySnapshotToSite: siteIndex
 	"Append the current snapshot to the site pool for deopt site siteIndex.  A lazy comparison in the snapshot
 	 is materialized (in its own register) before the site's instruction is emitted (see recordSite:),
@@ -600,7 +600,7 @@ copySnapshotToSite: siteIndex
 		base := base + 1].
 	sitePoolTop := base! !
 
-!OilBaseCompiler methodsFor: 'translation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'translation' stamp: 'cb 10/25/2026 00:45'!
 translateTag: tag op1: op1 op2: op2 target: target next: next frame: frameIndex
 	<inline: false>
 	"Translate one (logical) bytecode.  Answer the pc of the next bytecode to translate."
@@ -647,7 +647,7 @@ translateTag: tag op1: op1 op2: op2 target: target next: next frame: frameIndex
 		otherwise: [self abortCompilation: OilFailUnsupportedBytecode].
 	^next! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 bindLabelAt: pc frame: frameIndex
 	"pc is a branch target of frame frameIndex.  Make the state canonical (or, coming out of dead code,
 	 adopt the canonical state of the branches to it), resolve pending forward branches and record the label."
@@ -667,7 +667,7 @@ bindLabelAt: pc frame: frameIndex
 	pcLabelIR at: mapIndex put: irIndex.
 	self forgetKnowledgeAtLabel! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 patchChain: head to: targetIndex
 	"Forward branches to a not yet bound label are chained through their 16-bit target fields."
 	| link next |
@@ -677,11 +677,11 @@ patchChain: head to: targetIndex
 		 self patchBranch: link to: targetIndex.
 		 link := next]! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 patchBranch: index to: targetIndex
 	oilIRBuffer at: index put: (((oilIRBuffer at: index) bitAnd: 16rFFFF0000) bitOr: (targetIndex bitAnd: 16rFFFF))! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 forgetKnowledgeAtLabel
 	"At a merge point, facts established on one path are lost: tagged-arithmetic relations and guarded classes.
 	 Only the classes of the active frames' receivers dominate every label (guarded before frame entry)."
@@ -698,7 +698,7 @@ forgetKnowledgeAtLabel
 			[knownClass at: (frameSelfValue at: ancestorFrame) put: (frameSelfClass at: ancestorFrame)].
 		 ancestorFrame := frameParent at: ancestorFrame]! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 flushFrame: frameIndex
 	"Before a branch or a label: make every mutable register of frame frameIndex (temps and stack) and every
 	 scalar replaced temp vector slot hold its value in its own register, so that all paths agree."
@@ -718,13 +718,13 @@ flushFrame: frameIndex
 			 self materializeSlot: slotIndex]].
 	self flushTVSlots! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 flushTVSlots
 	self releaseDeadVObjSlots.
 	highRegTop + 1 to: OilMaxReg do:
 		[:highReg| ((slotFlags at: highReg) bitAnd: OilFlagTVSlot) ~= 0 ifTrue: [self materializeSlot: highReg]]! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 resetMutableSlotsOfFrame: frameIndex
 	(frameTempStart at: frameIndex) to: simStackTop do:
 		[:slotIndex|
@@ -732,12 +732,12 @@ resetMutableSlotsOfFrame: frameIndex
 			[self setOwn: slotIndex]].
 	self resetTVSlotsToOwn! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 resetTVSlotsToOwn
 	highRegTop + 1 to: OilMaxReg do:
 		[:highReg| ((slotFlags at: highReg) bitAnd: OilFlagTVSlot) ~= 0 ifTrue: [self setOwn: highReg]]! !
 
-!OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 emitBranch: op cond: condReg to: target frame: frameIndex
 	"Emit a jump/branch to bytecode pc target of frame frameIndex: backward branches go to a bound label,
 	 forward branches are chained until their label is bound."
@@ -753,7 +753,7 @@ emitBranch: op cond: condReg to: target frame: frameIndex
 			 pcChain at: mapIndex put: chainInst.
 			 pcDepth at: mapIndex put: simStackTop]! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitOp: op a: a b: b c: c
 	<inline: false>
 	"Append the one word instruction [op | a | b | c].  Answer its index.
@@ -775,23 +775,23 @@ emitOp: op a: a b: b c: c
 	lastInstIR := idx.
 	^idx! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitOp: op a: a imm16: imm
 	^self emitOp: op a: a b: ((imm bitShift: -8) bitAnd: 255) c: (imm bitAnd: 255)! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitWord: word
 	irIndex < OilBufferWords ifTrue:
 		[oilIRBuffer at: irIndex put: (word bitAnd: 16rFFFFFFFF).
 		 irIndex := irIndex + 1]! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emit64: value
 	"64-bit operand (an oop: literal, selector, class tag), low word first."
 	self emitWord: (value bitAnd: 16rFFFFFFFF).
 	self emitWord: ((value bitShift: -32) bitAnd: 16rFFFFFFFF)! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitPackedArgs: firstReg count: n
 	"OilCallN/OilCallSuper argument registers, four 8-bit register numbers per word (unused bytes are 255)."
 	| word |
@@ -803,7 +803,7 @@ emitPackedArgs: firstReg count: n
 			word := (word bitShift: 8) bitOr: (i + j < n ifTrue: [firstReg + i + j] ifFalse: [255])].
 		self emitWord: word]! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 noteDef: r at: index
 	"Register r is (re)defined by the instruction at index."
 	lastDefIR at: r put: index.
@@ -811,7 +811,7 @@ noteDef: r at: index
 	affineBase at: r put: -1.
 	knownClass at: r put: 0! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitConst: handle into: r
 	"OilConstTagged for SmallIntegers whose tagged value fits 16 signed bits, OilConst64 otherwise."
 	| idx |
@@ -826,7 +826,7 @@ emitConst: handle into: r
 			 self emit64: handle.
 			 self noteDef: r at: idx]! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 emitMove: dst from: src
 	| idx |
 	dst = src ifTrue: [^self].
@@ -834,15 +834,15 @@ emitMove: dst from: src
 	self noteDef: dst at: idx.
 	knownClass at: dst put: (knownClass at: src)! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
-emitGuardOn: r class: classHandle
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+emitGuardOn: r class: classOop
 	| site |
 	site := self recordSite: OilSiteGuard.
 	self emitOp: OilGuardClass a: r imm16: site.
-	self emit64: classHandle.
-	knownClass at: r put: classHandle! !
+	self emit64: classOop.
+	knownClass at: r put: classOop! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 recordSite: kind
 	"Record a deopt site for the instruction about to be emitted: its IR index, the inlined frame and the bytecode pc,
 	 plus a copy of the virtual state at the start of that bytecode (see takeSnapshotFrame:pc:).  A pending lazy
@@ -864,7 +864,7 @@ recordSite: kind
 	numSites := n + 1.
 	^n! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 retractLastInstruction
 	"Delete the last emitted instruction (a one word instruction).  Its deopt site, if any, becomes dead
 	 (IR index -2); sites are not removed since a pending lazy comparison site (IR index -1) may follow."
@@ -874,7 +874,7 @@ retractLastInstruction
 		[:s| (siteIR at: s) >= irIndex ifTrue: [siteIR at: s put: -2]].
 	lastInstIR := -1! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 retractIfDeadDefinitionOf: r
 	"r is a consumed expression stack register.  If the last instruction only computed r, delete it."
 	(lastInstIR >= 0
@@ -886,7 +886,7 @@ retractIfDeadDefinitionOf: r
 	lastDefIR at: r put: -1.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 retarget: src to: dst
 	"src is a dead expression stack register.  If the last instruction defined it, make it define dst instead.
 	 Answer whether this was done (otherwise the caller emits a move)."
@@ -909,7 +909,7 @@ retarget: src to: dst
 	knownClass at: dst put: (knownClass at: src).
 	^true! !
 
-!OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 opcodeHasDest: op
 	(op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [op = OilLoadField or: [op = OilLoadElement]]]]) ifTrue: [^true].
 	((op between: OilAddTagged and: OilOddTagged) or: [(op between: OilCall0 and: OilAddImmTagged)
@@ -919,24 +919,24 @@ opcodeHasDest: op
 	  or: [op = OilModTagged or: [op = OilCompareBytes or: [op = OilCharValue or: [op = OilStreamNext or: [op = OilStreamNextPut
 	  or: [op = OilNewObject or: [op = OilStringHash]]]]]]]]]]]! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
 	<inline: true>
 	slotKind at: i put: k.
 	slotValue at: i put: v! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setOwn: i
 	<inline: true>
 	slotKind at: i put: OilDescReg.
 	slotValue at: i put: i! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 isImmutable: i
 	<inline: true>
 	^((slotFlags at: i) bitAnd: OilFlagImmutable) ~= 0! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 push: k value: v
 	| i |
 	i := simStackTop + 1.
@@ -948,7 +948,7 @@ push: k value: v
 	self setSlot: i kind: k value: v.
 	^i! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 pushOwnSlot
 	"Push a stack entry whose value the caller is about to compute into its own register."
 	| newSlot |
@@ -957,7 +957,7 @@ pushOwnSlot
 	affineBase at: newSlot put: -1.
 	^newSlot! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 pushResultOf: opcode b: srcReg1 c: srcReg2 site: aSiteKind
 	"Push a stack entry computed into its own register by the one word instruction [opcode | dest | srcReg1 | srcReg2]
 	 (which can deoptimize if aSiteKind ~= 0).  Answer the instruction's index (64-bit operands may follow)."
@@ -968,14 +968,14 @@ pushResultOf: opcode b: srcReg1 c: srcReg2 site: aSiteKind
 	self noteDef: destReg at: instIndex.
 	^instIndex! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 pushSmallIntegerResultOf: opcode b: srcReg1 c: srcReg2
 	"Tagged SmallInteger arithmetic: deoptimizes on a non-SmallInteger operand or on overflow."
 	self pushResultOf: opcode b: srcReg1 c: srcReg2 site: OilSiteArith.
 	knownClass at: simStackTop put: smallIntegerClassHandle.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 regForKind: descKind value: descValue scratch: scratchReg
 	"Answer a register holding the value described by (descKind, descValue), materializing a constant into scratchReg."
 	descKind = OilDescReg ifTrue: [^descValue].
@@ -993,7 +993,7 @@ regForKind: descKind value: descValue scratch: scratchReg
 	self requireEagerClosures.
 	^scratchReg! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 regForSlot: slotIndex
 	"Answer a register holding slotIndex's value.  A constant is materialized in slotIndex's own register
 	 (re-materialized at each use if slotIndex is immutable, so that no path dependent state is created)."
@@ -1003,7 +1003,7 @@ regForSlot: slotIndex
 	self materializeSlot: slotIndex.
 	^slotIndex! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 materializeSlot: slotIndex
 	"Make slotIndex hold its value in its own register (e.g. for a send's receiver and arguments)."
 	(slotKind at: slotIndex) = OilDescObject ifTrue: "materialized into a register of its own, then copied"
@@ -1014,7 +1014,7 @@ materializeSlot: slotIndex
 		ifFalse: [self regForKind: (slotKind at: slotIndex) value: (slotValue at: slotIndex) scratch: slotIndex].
 	self setOwn: slotIndex! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 stabilizeIncomingSlot: slotIndex
 	"An inlined frame's receiver/argument must not alias a temp vector slot register, which inlined blocks may assign."
 	| regVal |
@@ -1025,7 +1025,7 @@ stabilizeIncomingSlot: slotIndex
 		[self emitMove: slotIndex from: regVal.
 		 self setOwn: slotIndex]! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 invalidateAliasesOf: targetReg
 	"targetReg, a named temp or temp vector slot register, is about to be assigned.  Copy its current value into
 	 every live mutable slot aliasing it.  A live virtual closure or immutable slot that captured targetReg
@@ -1045,7 +1045,7 @@ invalidateAliasesOf: targetReg
 		(descKind = OilDescBlock and: [self virtualBlock: (slotValue at: slotIndex) captures: targetReg]) ifTrue:
 			[self requireEagerClosures]]! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 virtualBlock: vobjIndex captures: targetReg
 	"Does the virtual closure vobjIndex (or a virtual closure it captured, transitively) capture register targetReg?
 	 Iterative (explicit work stack) so that it translates to plain C."
@@ -1069,7 +1069,7 @@ virtualBlock: vobjIndex captures: targetReg
 				 sp := sp + 1]]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 newVObj: kind
 	| vobjIndex |
 	numVObjs >= OilMaxVObjs ifTrue:
@@ -1087,7 +1087,7 @@ newVObj: kind
 	vobjEpoch at: vobjIndex put: oilFlowEpoch.
 	^vobjIndex! !
 
-!OilBaseCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
 storeTopIntoReg: targetReg pop: popFlag
 	"Store the top of stack into targetReg, a named temp or a scalar replaced temp vector slot.
 	 Constants and virtual temp vectors are stored as descriptors; a value just computed into the stack top
@@ -1126,7 +1126,7 @@ storeTopIntoReg: targetReg pop: popFlag
 				ifTrue: [self setSlot: topSlot kind: OilDescReg value: targetReg]
 				ifFalse: [self setSlot: topSlot kind: (slotKind at: targetReg) value: (slotValue at: targetReg)]]! !
 
-!OilBaseCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
 genStoreRcvrVar: instVarIndex pop: popFlag frame: frameIndex
 	| valReg rcvrReg |
 	instVarIndex > 255 ifTrue: [^self abortCompilation: OilFailUnsupportedBytecode].
@@ -1138,7 +1138,7 @@ genStoreRcvrVar: instVarIndex pop: popFlag frame: frameIndex
 	self emitOp: OilStoreField a: valReg b: rcvrReg c: instVarIndex.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
-!OilBaseCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
 genStoreLitVar: literalIndex pop: popFlag frame: frameIndex
 	"Store into a global/class variable's binding (value is slot 1 of the binding)."
 	| valReg scratchReg |
@@ -1149,7 +1149,7 @@ genStoreLitVar: literalIndex pop: popFlag frame: frameIndex
 	self emitOp: OilStoreField a: valReg b: scratchReg c: 1.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
-!OilBaseCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
 genStoreRemoteTemp: remoteIndex inVector: vectorIndex pop: popFlag frame: frameIndex
 	| vectorReg valReg vecReg |
 	vectorReg := self tempReg: vectorIndex frame: frameIndex.
@@ -1161,31 +1161,31 @@ genStoreRemoteTemp: remoteIndex inVector: vectorIndex pop: popFlag frame: frameI
 	self emitOp: OilStoreField a: valReg b: vecReg c: remoteIndex.
 	popFlag ifTrue: [simStackTop := simStackTop - 1]! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 selfRegOfFrame: frameIndex scratch: scratchReg
 	^self regForKind: (frameSelfKind at: frameIndex) value: (frameSelfValue at: frameIndex) scratch: scratchReg! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushTemp: tempIndex frame: frameIndex
 	| tempReg |
 	tempReg := self tempReg: tempIndex frame: frameIndex.
 	self push: (slotKind at: tempReg) value: (slotValue at: tempReg)! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genDup
 	| top |
 	top := simStackTop.
 	((slotKind at: top) = OilDescCond or: [(slotKind at: top) = OilDescSelect]) ifTrue: [self materializeSlot: top].
 	self push: (slotKind at: top) value: (slotValue at: top)! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushRcvrVar: instVarIndex frame: frameIndex
 	instVarIndex > 255 ifTrue: [^self abortCompilation: OilFailUnsupportedBytecode].
 	(frameSelfKind at: frameIndex) = OilDescObject ifTrue: "a slot of a scalar replaced object"
 		[^self pushVObjSlot: instVarIndex of: (frameSelfValue at: frameIndex)].
 	self pushResultOf: OilLoadField b: (self selfRegOfFrame: frameIndex scratch: simStackTop + 1) c: instVarIndex site: 0! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushLitVar: literalIndex frame: frameIndex
 	"Read-only bindings (classes) fold to their value; other globals load slot 1 (value) of their binding."
 	| binding |
@@ -1195,7 +1195,7 @@ genPushLitVar: literalIndex frame: frameIndex
 	self emitConst: (self handleFor: binding) into: simStackTop + 1.
 	self pushResultOf: OilLoadField b: simStackTop + 1 c: 1 site: 0! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushNewArray: arraySize pop: popFlag
 	"A brace array {a. b} is allocated.  A temp vector (Array new: n, created by the bytecode compiler for
 	 temps assigned in closures) is scalar replaced: its slots become high registers."
@@ -1220,7 +1220,7 @@ genPushNewArray: arraySize pop: popFlag
 		self setSlot: highReg kind: OilDescConst value: nilHandle].
 	self push: OilDescTempVector value: vobjIndex! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushRemoteTemp: remoteIndex inVector: vectorIndex frame: frameIndex
 	| vectorReg slotRegister |
 	vectorReg := self tempReg: vectorIndex frame: frameIndex.
@@ -1229,7 +1229,7 @@ genPushRemoteTemp: remoteIndex inVector: vectorIndex frame: frameIndex
 		 ^self push: (slotKind at: slotRegister) value: (slotValue at: slotRegister)].
 	self pushResultOf: OilLoadField b: (self regForSlot: vectorReg) c: remoteIndex site: 0! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushFullClosure: literalIndex flags: closureFlags frame: frameIndex
 	"SistaV1 pushFullClosure.  flags = siyyyyyy: yyyyyy numCopied, s receiverOnStack, i ignoreOuterContext.
 	 Normally the closure stays virtual (no allocation): its copied values are captured as descriptors.
@@ -1274,7 +1274,7 @@ genPushFullClosure: literalIndex flags: closureFlags frame: frameIndex
 	simStackTop := lowestSlot - 1.
 	self push: OilDescBlock value: vobjIndex! !
 
-!OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 capture: slotIndex frame: frameIndex
 	"Append slotIndex's descriptor to the captured values pool.  A value living in one of the current frame's
 	 expression stack registers (about to be reused) is first copied to a stable high register."
@@ -1296,14 +1296,14 @@ capture: slotIndex frame: frameIndex
 	capturedValue at: capturedTop put: slotVal.
 	capturedTop := capturedTop + 1! !
 
-!OilBaseCompiler methodsFor: 'returns' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'returns' stamp: 'cb 10/24/2026 10:30'!
 genReturnTopNonLocal: isNonLocal frame: frameIndex next: nextPC
 	| topSlot |
 	topSlot := simStackTop.
 	simStackTop := topSlot - 1.
 	self genReturnKind: (slotKind at: topSlot) value: (slotValue at: topSlot) nonLocal: isNonLocal frame: frameIndex next: nextPC! !
 
-!OilBaseCompiler methodsFor: 'returns' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'returns' stamp: 'cb 10/24/2026 10:30'!
 genReturnKind: descKind value: descVal nonLocal: isNonLocal frame: frameIndex next: nextPC
 	<inline: false>
 	"Return (descKind, descVal) from frameIndex, or, for a non-local return from an inlined block, from its home frame.
@@ -1347,13 +1347,13 @@ genReturnKind: descKind value: descVal nonLocal: isNonLocal frame: frameIndex ne
 	instIndex := self emitOp: OilJump a: 0 imm16: (frameExitChain at: targetFrame).
 	frameExitChain at: targetFrame put: instIndex! !
 
-!OilBaseCompiler methodsFor: 'jumps' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'jumps' stamp: 'cb 10/24/2026 10:30'!
 genJumpTo: targetPC frame: frameIndex
 	self flushFrame: frameIndex.
 	self emitBranch: OilJump cond: 0 to: targetPC frame: frameIndex.
 	oilDeadCode := true! !
 
-!OilBaseCompiler methodsFor: 'jumps' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'jumps' stamp: 'cb 10/24/2026 10:30'!
 genJumpIf: aBoolean to: targetPC frame: frameIndex
 	| topSlot descKind slotVal condReg |
 	topSlot := simStackTop.
@@ -1377,7 +1377,7 @@ genJumpIf: aBoolean to: targetPC frame: frameIndex
 	self recordSite: OilSiteBranch. "mustBeBoolean"
 	self emitBranch: (aBoolean ifTrue: [OilBranchTrue] ifFalse: [OilBranchFalse]) cond: condReg to: targetPC frame: frameIndex! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genSpecialSend: index numArgs: numArgs frame: frameIndex next: nextPC
 	<inline: false>
 	"Special selectors: inline tagged SmallInteger arithmetic and comparisons, Float arithmetic and comparisons, identity,
@@ -1401,7 +1401,7 @@ genSpecialSend: index numArgs: numArgs frame: frameIndex next: nextPC
 	self genSend: (self specialSelectorHandle: index) numArgs: numArgs super: false frame: frameIndex.
 	^nextPC! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 07:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 07:30'!
 canInlineCharacterEqOn: rcvrSlot arg: argSlot
 	| rcvrKind rcvrVal argKind argVal |
 	rcvrKind := slotKind at: rcvrSlot.
@@ -1412,7 +1412,7 @@ canInlineCharacterEqOn: rcvrSlot arg: argSlot
 	(argKind = OilDescConst and: [self isCharacterHandle: argVal]) ifTrue: [^true].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 canInlineSmallIntegerOpOn: rcvrSlot arg: argSlot
 	"Speculate SmallInteger arithmetic if the receiver is a SmallInteger constant, is known to be a SmallInteger,
 	 or its send site only saw SmallIntegers; the argument must not be a non-SmallInteger constant or a virtual object.
@@ -1430,7 +1430,7 @@ canInlineSmallIntegerOpOn: rcvrSlot arg: argSlot
 	^profiledCls = smallIntegerClassHandle
 	  or: [profiledCls = 0 and: [self isUnlinkedSendAt: currentPC]]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 14:00'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 14:00'!
 isUnlinkedSendAt: pc
 	"Has the send at pc in the current frame's method never been sent (no inline cache information at all)?"
 	^self
@@ -1439,12 +1439,12 @@ isUnlinkedSendAt: pc
 			[typeFeedback isNil
 			 or: [(typeFeedback hasSiteAt: pc in: (frameMethod at: currentFrame)) not]]! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isKnownSmallInteger: slotIndex
 	(slotKind at: slotIndex) = OilDescConst ifTrue: [^self isSmallIntegerHandle: (slotValue at: slotIndex)].
 	^(slotKind at: slotIndex) = OilDescReg and: [(knownClass at: (slotValue at: slotIndex)) = smallIntegerClassHandle]! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 genFloatSend: index frame: frameIndex next: nextPC
 	"Special selectors + - < > <= >= = ~= * / on Floats: the receiver is a Float (see canInlineFloatOpOn:arg:) and
 	 the argument a number, or, for + * and the comparisons, the reverse (the operands are swapped).  The opcodes
@@ -1469,7 +1469,7 @@ genFloatSend: index frame: frameIndex next: nextPC
 	cond := swapped ifTrue: [self reversedCondition: index - 1] ifFalse: [index - 1].
 	^self genFloatCompare: cond rcvr: rcvrReg arg: argReg frame: frameIndex next: nextPC! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 genFloatCompare: cond rcvr: rcvrReg arg: argReg frame: frameIndex next: nextPC
 	"OilCmpFloat fused with the following conditional jump, or, if there is none, answering true or false."
 	| brTag brTarget brNext falseJump exitJump destReg |
@@ -1493,7 +1493,7 @@ genFloatCompare: cond rcvr: rcvrReg arg: argReg frame: frameIndex next: nextPC
 	lastLabelIR := irIndex.
 	^nextPC! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 canInlineFloatOpOn: rcvrSlot arg: argSlot
 	"Speculate Float arithmetic if the receiver is known to be a Float or its send site only saw Floats (SmallFloat64
 	 or BoxedFloat64) and the argument may be a number."
@@ -1502,14 +1502,14 @@ canInlineFloatOpOn: rcvrSlot arg: argSlot
 	^(slotKind at: rcvrSlot) = OilDescReg
 	  and: [self isFloatClass: (self profiledClassAt: currentPC)]! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 isNumberSlot: slotIndex
 	"May slotIndex hold a SmallInteger or a Float (a register, or such a constant)?"
 	(slotKind at: slotIndex) = OilDescReg ifTrue: [^true].
 	^(slotKind at: slotIndex) = OilDescConst
 	  and: [(self isSmallIntegerHandle: (slotValue at: slotIndex)) or: [self isFloatHandle: (slotValue at: slotIndex)]]! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 isFloatSlot: slotIndex
 	"Is slotIndex a Float constant, or a register of a known Float class or last assigned by Float arithmetic?"
 	| reg def |
@@ -1520,30 +1520,30 @@ isFloatSlot: slotIndex
 	def := lastDefIR at: reg.
 	^def >= 0 and: [def < irIndex and: [(self opcodeAt: def) between: OilAddFloat and: OilDivFloat]]! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
-isFloatClass: classHandle
-	"Is classHandle SmallFloat64 or BoxedFloat64?"
-	classHandle = 0 ifTrue: [^false].
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+isFloatClass: classOop
+	"Is classOop SmallFloat64 or BoxedFloat64?"
+	classOop = 0 ifTrue: [^false].
 	^self
-		cCode: [(objectMemory classTagForClass: classHandle) = objectMemory smallFloatTag
-				or: [(objectMemory classTagForClass: classHandle) = ClassFloatCompactIndex]]
-		inSmalltalk: [(self objectFor: classHandle) includesBehavior: Float]! !
+		cCode: [(objectMemory classTagForClass: classOop) = objectMemory smallFloatTag
+				or: [(objectMemory classTagForClass: classOop) = ClassFloatCompactIndex]]
+		inSmalltalk: [(self objectFor: classOop) includesBehavior: Float]! !
 
-!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 isFloatHandle: aHandle
-	^self isFloatClass: (self classHandleOf: aHandle)! !
+	^self isFloatClass: (self classOopOf: aHandle)! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genClassOf: slotIndex
 	"#class: fold when the receiver's class is known."
-	| classHandle |
-	classHandle := self staticClassOfSlot: slotIndex.
-	classHandle = 0 ifTrue: [^false].
+	| classOop |
+	classOop := self staticClassOfSlot: slotIndex.
+	classOop = 0 ifTrue: [^false].
 	simStackTop := slotIndex - 1.
-	self push: OilDescConst value: classHandle.
+	self push: OilDescConst value: classOop.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	<inline: false>
 	"A message send: inline a virtual block's evaluation, a quick method, an intrinsic primitive or the method
@@ -1563,7 +1563,7 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 		[(self genBitOp: OilXorTagged) ifTrue: [^self]].
 	guard := false.
 	isSuper
-		ifTrue: [rcvrClass := self superclassHandleOfMethodClassOf: (frameMethod at: (frameHome at: frameIndex))]
+		ifTrue: [rcvrClass := self superclassOopOfMethodClassOf: (frameMethod at: (frameHome at: frameIndex))]
 		ifFalse:
 			[rcvrClass := self staticClassOfSlot: rcvrSlot.
 			 rcvrClass = 0 ifTrue:
@@ -1607,33 +1607,33 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			[^self]].
 	self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
-isContextClass: classHandle
-	"Is classHandle Context?  The sender, pc and stackp of a context married to a stack frame are not in its slots (the
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
+isContextClass: classOop
+	"Is classOop Context?  The sender, pc and stackp of a context married to a stack frame are not in its slots (the
 	 interpreter and the baseline JIT map them from the frame), so Oil neither compiles nor inlines methods of contexts."
-	classHandle = 0 ifTrue: [^false].
+	classOop = 0 ifTrue: [^false].
 	^self
-		cCode: [(objectMemory classTagForClass: classHandle) = ClassMethodContextCompactIndex]
-		inSmalltalk: [(self objectFor: classHandle) == Context]! !
+		cCode: [(objectMemory classTagForClass: classOop) = ClassMethodContextCompactIndex]
+		inSmalltalk: [(self objectFor: classOop) == Context]! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 staticClassOfSlot: slotIndex
 	| descKind |
 	descKind := slotKind at: slotIndex.
-	descKind = OilDescConst ifTrue: [^self classHandleOf: (slotValue at: slotIndex)].
+	descKind = OilDescConst ifTrue: [^self classOopOf: (slotValue at: slotIndex)].
 	descKind = OilDescReg ifTrue: [^knownClass at: (slotValue at: slotIndex)].
 	descKind = OilDescObject ifTrue: [^vobjSelfClass at: (slotValue at: slotIndex)].
 	^0! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isValueSelector: selector numArgs: numArgs
 	^numArgs <= 4 and: [(valueSelectors at: numArgs) = selector]! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isColdSelector: selector
 	^self includes: selector in: coldSelectors count: numColdSelectors! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
 	"Inlining policy (see the class comment)."
 	| depth size takesBlock inLoop maxDepth |
@@ -1664,7 +1664,7 @@ shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
 	size <= OilMediumMethodBytes ifTrue: [^depth <= (OilMediumMethodDepth // 2)].
 	^depth <= (OilLargeMethodDepth // 2) and: [size <= OilMaxCalleeBytes]! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:00'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:00'!
 isInLoopFrame: frameIndex pc: targetPC
 	"Is targetPC of frameIndex inside a loop of its method, or is frameIndex inlined (transitively) from a pc inside a loop?"
 	| walkFrame walkPC |
@@ -1676,14 +1676,14 @@ isInLoopFrame: frameIndex pc: targetPC
 		 walkFrame := frameParent at: walkFrame].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
 isNeverSentAt: pc
 	"Has the method of the current frame machine code whose send at pc was never executed (an unlinked inline cache)?"
 	^self
 		cCode: [cogit oilSendSiteNeverSentAt: pc in: (frameMethod at: currentFrame)]
 		inSmalltalk: [typeFeedback notNil and: [(typeFeedback hasSiteAt: pc in: (frameMethod at: currentFrame)) not]]! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:30'!
 genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs
 	"A send in an inlined frame that the back end cannot encode, but that never executed: instead of a call, deoptimize
 	 there (an uncommon trap: the interpreter then performs the send; this counts as a deoptimization).  The send's
@@ -1694,17 +1694,17 @@ genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs
 	simStackTop := rcvrSlot - 1.
 	self pushResultOf: OilConstTagged b: 0 c: 1 site: 0! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:00'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:00'!
 hasOilCode: aMethod
 	^self
 		cCode: [cogit oilMethodHasOilCode: aMethod]
 		inSmalltalk: [false]! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isNoInline: aMethod
 	^self includes: aMethod in: oilNoInline count: oilNumNoInline! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isEncodableCall: selector super: isSuper
 	"Can the back end emit a send of selector?  Inline caches hold the index of their selector in the literals of the
 	 method (the root), among the special selectors or in the Oil selector table (which this adds selector to, see
@@ -1712,13 +1712,13 @@ isEncodableCall: selector super: isSuper
 	isSuper ifTrue: [^currentFrame = 0].
 	0 to: 31 do:
 		[:k| (self specialSelectorHandle: k) = selector ifTrue: [^true]].
-	0 to: (self cCode: [objectMemory literalCountOf: rootMethod] inSmalltalk: [rootMethod numLiterals]) - 1 do:
+	0 to: (self cCode: [objectMemory literalCountOf: oilHomeMethod] inSmalltalk: [oilHomeMethod numLiterals]) - 1 do:
 		[:k|
-		(self cCode: [coInterpreter literal: k ofMethod: rootMethod]
-			inSmalltalk: [self handleFor: (rootMethod literalAt: k + 1)]) = selector ifTrue: [^true]].
+		(self cCode: [coInterpreter literal: k ofMethod: oilHomeMethod]
+			inSmalltalk: [self handleFor: (oilHomeMethod literalAt: k + 1)]) = selector ifTrue: [^true]].
 	^self cCode: [(cogit oilExtraSelectorIndexOf: selector add: true) ~= OilNoLink] inSmalltalk: [false]! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 refuseInliningOfFrameOf: frameIndex
 	"Frame frameIndex (inlined) needs something the back end cannot do: a send of a selector that is not among the root
 	 method's literals, a super send, or a closure whose outerContext is frameIndex's context.  Compile again without inlining
@@ -1737,7 +1737,7 @@ refuseInliningOfFrameOf: frameIndex
 	needsRestart := true.
 	failed := true! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper
 	"A non-inlined send: receiver and arguments in consecutive registers rcvrSlot..rcvrSlot+numArgs, result in rcvrSlot.
 	 OilCall0 [Op|Dest|Rcvr|0], OilCall1 [Op|Dest|Rcvr|Arg0], OilCallN/OilCallSuper [Op|Dest|Rcvr|NumArgs];
@@ -1766,7 +1766,7 @@ genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper
 	self setOwn: rcvrSlot.
 	self noteDef: rcvrSlot at: instIndex! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genQuickMethod: prim receiver: rcvrSlot numArgs: numArgs
 	"Quick primitives: 256 ^self, 257 ^true, 258 ^false, 259 ^nil, 260-263 ^-1/0/1/2, 264-519 ^instVar (prim - 264)."
 	| descKind slotVal rcvrReg |
@@ -1788,7 +1788,7 @@ genQuickMethod: prim receiver: rcvrSlot numArgs: numArgs
 	simStackTop := rcvrSlot - 1.
 	self pushResultOf: OilLoadField b: rcvrReg c: prim - 264 site: 0! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 canInlineIntrinsic: prim class: cls numArgs: n
 	"at: (60), at:put: (61) and size (62) of pointer indexable objects without fixed fields (Array) and of byte objects
 	 (ByteArray, ByteString), at: (63) and at:put: (64) of byte strings (Characters), compareWith: (158, the byte
@@ -1809,7 +1809,7 @@ canInlineIntrinsic: prim class: cls numArgs: n
 		[^spec = 1].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes: isBytes
 	<inline: false>
 	| arrayReg indexReg valReg limitReg instIndex descKind slotVal |
@@ -1877,7 +1877,7 @@ genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes:
 		ifTrue: [self emitMove: self pushOwnSlot from: valReg]
 		ifFalse: [self push: descKind value: slotVal]! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
 genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard
 	"Byte scans the back end compiles to word-at-a-time (8 bytes per iteration) loops, falling back to the send itself on
 	 unexpected operands (so they have no deopt site): ByteString class>>indexOfAscii:inString:startingAt: (the search of
@@ -1903,7 +1903,7 @@ genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs 
 	self noteDef: rcvrSlot at: instIndex.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 	<inline: false>
 	"Tagged SmallInteger comparison (or identity comparison).  Folds constants; fuses with a following
@@ -1988,7 +1988,7 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 	numConds := numConds + 1.
 	^nextPC! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitCondCompare: condIndex
 	"Emit the comparison of the lazy comparison result condIndex (its deopt site is the comparison's bytecode)."
 	| savedPC savedFrame savedCond |
@@ -2008,7 +2008,7 @@ emitCondCompare: condIndex
 	currentPC := savedPC.
 	currentFrame := savedFrame! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitCond: condIndex booleanInto: destReg
 	<inline: false>
 	"Materialize the lazy comparison result condIndex as true or false in register destReg."
@@ -2024,7 +2024,7 @@ emitCond: condIndex booleanInto: destReg
 	lastLabelIR := irIndex.
 	knownClass at: destReg put: 0! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 materializePendingCond
 	<inline: false>
 	| slotIndex |
@@ -2037,7 +2037,7 @@ materializePendingCond
 		[self emitSelect: pendingCondIndex into: slotIndex.
 		 self setOwn: slotIndex]! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 reversedCondition: condCode
 	"The condition condCode with its operands swapped: x < y iff y > x."
 	condCode = OilCondLt ifTrue: [^OilCondGt].
@@ -2046,7 +2046,7 @@ reversedCondition: condCode
 	condCode = OilCondGe ifTrue: [^OilCondLe].
 	^condCode! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 canFuseBranchAt: targetPC frame: frameIndex
 	"Is the instruction at targetPC (in frame frameIndex) a conditional jump that is not itself a branch target?"
 	targetPC > (frameEndPC at: frameIndex) ifTrue: [^false].
@@ -2055,7 +2055,7 @@ canFuseBranchAt: targetPC frame: frameIndex
 	self decodeAt: targetPC.
 	^opcodeTag = OilTagJumpTrue or: [opcodeTag = OilTagJumpFalse]! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitCompare: condCode reg: regA reg: regB imm: immVal useImm: useImm identity: isIdentity
 	isIdentity ifFalse:
 		[emittingCond >= 0
@@ -2065,7 +2065,7 @@ emitCompare: condCode reg: regA reg: regB imm: immVal useImm: useImm identity: i
 		ifTrue: [self emitOp: OilCmpImmTagged a: condCode b: regA c: immVal]
 		ifFalse: [self emitOp: OilCmpTagged a: condCode b: regA c: regB]! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 14:00'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/24/2026 14:00'!
 useCondSite: siteIndex
 	"The comparison of a lazy comparison result is about to be emitted: bind its deopt site, recorded when the
 	 comparison was translated, to the instruction.  If it was already bound (the comparison is emitted again,
@@ -2090,7 +2090,7 @@ useCondSite: siteIndex
 	siteSnapHigh at: newSiteIndex put: (siteSnapHigh at: siteIndex).
 	numSites := newSiteIndex + 1! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 compareSmallInteger: val1 with: val2 cond: condCode
 	condCode = OilCondLt ifTrue: [^val1 < val2].
 	condCode = OilCondGt ifTrue: [^val1 > val2].
@@ -2099,7 +2099,7 @@ compareSmallInteger: val1 with: val2 cond: condCode
 	condCode = OilCondEq ifTrue: [^val1 = val2].
 	^val1 ~= val2! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genArith: selectorIndex
 	<inline: false>
 	"Special selector arithmetic on (speculated) SmallIntegers: + - * \\ bitShift: // bitAnd: bitOr:.
@@ -2119,7 +2119,7 @@ genArith: selectorIndex
 	selectorIndex = 15 ifTrue: [^self genBitOp: OilOrTagged].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 foldArith: selectorIndex
 	"Constant fold SmallInteger arithmetic when the result is a SmallInteger."
 	| rcvrSlot val1 val2 resultVal |
@@ -2142,7 +2142,7 @@ foldArith: selectorIndex
 	self push: OilDescConst value: (self handleForSmallInteger: resultVal).
 	^true! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genAdd
 	| rcvrSlot argSlot |
 	rcvrSlot := simStackTop - 1.
@@ -2153,7 +2153,7 @@ genAdd
 		[^self genAddConstant: (self smallIntegerValueOf: (slotValue at: rcvrSlot)) to: argSlot result: rcvrSlot].
 	^self genBinaryTagged: OilAddTagged! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genSub
 	| argSlot |
 	argSlot := simStackTop.
@@ -2161,7 +2161,7 @@ genSub
 		[^self genAddConstant: (self smallIntegerValueOf: (slotValue at: argSlot)) negated to: argSlot - 1 result: argSlot - 1].
 	^self genBinaryTagged: OilSubTagged! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genBinaryTagged: opcode
 	"Dest := Src1 op Src2 on tagged SmallIntegers (implicit tag/overflow checks, deopt on failure)."
 	| rcvrSlot argSlot regA regB |
@@ -2172,7 +2172,7 @@ genBinaryTagged: opcode
 	simStackTop := rcvrSlot - 1.
 	^self pushSmallIntegerResultOf: opcode b: regA c: regB! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genAddConstant: constantVal to: operandSlot result: resultSlot
 	"x + c with on-the-fly reduction: x + 0 => x; if x = y + c1 (an affine fact still valid) then
 	 x + c => y + (c1 + c), so (i - 1) + 1 => i and (i + 1) - 1 => i (no instruction) and (x + c1) - c2 => x + (c1 - c2).
@@ -2219,7 +2219,7 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	knownClass at: destReg put: smallIntegerClassHandle.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 constantPowerOfTwo: number
 	"Answer k if number = 2^k (k >= 0), else -1."
 	| power |
@@ -2229,14 +2229,14 @@ constantPowerOfTwo: number
 	[(1 bitShift: power) < number] whileTrue: [power := power + 1].
 	^power! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 replaceOperandsBy: descKind value: descVal
 	"Pop receiver and argument, push (descKind, descVal)."
 	simStackTop := simStackTop - 2.
 	self push: descKind value: descVal.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 emitShift: shiftCount of: srcReg into: destReg
 	"OilShiftTagged: shiftCount > 0 arithmetic right shift (exact floor division by 2^k: sarq 3+k, shlq 3, orq 1);
 	 shiftCount < 0 left shift by -shiftCount (multiplication by 2^-k, overflow checked)."
@@ -2246,7 +2246,7 @@ emitShift: shiftCount of: srcReg into: destReg
 	self noteDef: destReg at: instIndex.
 	knownClass at: destReg put: smallIntegerClassHandle! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genMul
 	"x * 1 => x; x * 0 => 0 (x known SmallInteger); x * 2^k => x << k; x * (2^k + 1) => (x << k) + x (e.g. x * 9);
 	 x * (2^k - 1) => (x << k) - x (e.g. x * 31, hash codes).  Otherwise an ordinary send."
@@ -2278,7 +2278,7 @@ genMul
 		 ^self pushSmallIntegerResultOf: OilSubTagged b: scratchReg c: srcReg].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genDiv
 	"x // 1 => x; x // 2^k => arithmetic right shift by k (floor division, no idiv)."
 	| rcvrSlot argSlot constantVal power srcReg |
@@ -2292,7 +2292,7 @@ genDiv
 	simStackTop := rcvrSlot - 1.
 	^self pushSmallIntegerResultOf: OilShiftTagged b: srcReg c: (power bitAnd: 255)! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genMod
 	"x \\ 2 => OilOddTagged ((x bitAnd: 8) bitOr: 1 on the tagged value: no division, no branch);
 	 x \\ 2^k => x bitAnd: 2^k - 1 (floored modulo by a positive power of two);
@@ -2312,7 +2312,7 @@ genMod
 	simStackTop := rcvrSlot - 1.
 	^self pushSmallIntegerResultOf: OilAndTagged b: srcReg c: argSlot! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 19:20'!
 genBitShift
 	"x bitShift: 0 => x; x bitShift: k => OilShiftTagged (left for k > 0, arithmetic right for k < 0)."
 	| rcvrSlot argSlot shiftCount srcReg |
@@ -2326,7 +2326,7 @@ genBitShift
 	simStackTop := rcvrSlot - 1.
 	^self pushSmallIntegerResultOf: OilShiftTagged b: srcReg c: (shiftCount negated bitAnd: 255)! !
 
-!OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genBitOp: opcode
 	"bitAnd:/bitOr:/bitXor: directly on tagged values: (8a+1) & (8b+1) = 8(a&b)+1, (8a+1) | (8b+1) = 8(a|b)+1,
 	 so andq/orq need no untagging; xor needs the tag bit restored.
@@ -2347,7 +2347,7 @@ genBitOp: opcode
 			[^self replaceOperandsBy: OilDescConst value: (self handleForSmallInteger: 0)]].
 	^self genBinaryTagged: opcode! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 19:20'!
 inlineMethod: aMethod receiver: rcvrReg numArgs: numArgs class: cls guard: guard
 	<inline: false>
 	"Inline aMethod, sent to the receiver in rcvrReg with its numArgs arguments in the following registers.
@@ -2370,7 +2370,7 @@ inlineMethod: aMethod receiver: rcvrReg numArgs: numArgs class: cls guard: guard
 	self exitFrame: frameIndex.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 19:20'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 19:20'!
 inlineBlock: vobjIndex receiver: closureReg numArgs: numArgs
 	<inline: false>
 	"Inline the evaluation (value, value:, ...) of the virtual closure vobjIndex held in closureReg: no closure is
@@ -2401,42 +2401,42 @@ inlineBlock: vobjIndex receiver: closureReg numArgs: numArgs
 	self exitFrame: frameIndex.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 opcodeAt: index
 	^(oilIRBuffer at: index) bitShift: -24! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 fieldAAt: index
 	^((oilIRBuffer at: index) bitShift: -16) bitAnd: 255! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 fieldBAt: index
 	^((oilIRBuffer at: index) bitShift: -8) bitAnd: 255! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 fieldCAt: index
 	^(oilIRBuffer at: index) bitAnd: 255! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 imm16At: index
 	^(oilIRBuffer at: index) bitAnd: 16rFFFF! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 signed8: byte
 	^byte > 127 ifTrue: [byte - 256] ifFalse: [byte]! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 signed16: word
 	^word > 32767 ifTrue: [word - 65536] ifFalse: [word]! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 word64At: index
 	"The 64-bit operand stored at index (low word) and index + 1 (high word), sign extended."
 	| val64 |
 	val64 := (oilIRBuffer at: index) + ((oilIRBuffer at: index + 1) bitShift: 32).
 	^self cCode: [val64] inSmalltalk: [val64 >= (1 bitShift: 63) ifTrue: [val64 - (1 bitShift: 64)] ifFalse: [val64]]! !
 
-!OilBaseCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
 instructionLengthAt: index
 	| op |
 	op := self opcodeAt: index.
@@ -2447,7 +2447,7 @@ instructionLengthAt: index
 	(op = OilCallN or: [op = OilCallSuper or: [op = OilIndexOfByte]]) ifTrue: [^3 + ((self fieldCAt: index) + 3 // 4)].
 	^1! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 handleFor: anObject
 	"In the VM an oop is its own handle.  In the image, SmallIntegers and Characters are tagged exactly like
 	 64-bit Spur immediates (8v+1, 8v+2) and other objects get an 8-byte aligned index into a registry."
@@ -2465,66 +2465,66 @@ handleFor: anObject
 							 simHandleIndex at: anObject put: handleVal.
 							 handleVal]]]]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 objectFor: aHandle
 	<doNotGenerate>
 	(aHandle bitAnd: 7) = 1 ifTrue: [^aHandle bitShift: -3].
 	(aHandle bitAnd: 7) = 2 ifTrue: [^Character value: (aHandle bitShift: -3)].
 	^simHandles at: (aHandle bitShift: -3)! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 isSmallIntegerHandle: aHandle
 	<inline: true>
 	^(aHandle bitAnd: 7) = 1! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 07:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 07:30'!
 isCharacterHandle: aHandle
 	<inline: true>
 	^self cCode: [objectMemory isCharacterObject: aHandle] inSmalltalk: [(aHandle bitAnd: 7) = 2]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 smallIntegerValueOf: aHandle
 	<inline: true>
 	^self cCode: [objectMemory integerValueOf: aHandle] inSmalltalk: [aHandle bitShift: -3]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 handleForSmallInteger: anInteger
 	<inline: true>
 	^self cCode: [objectMemory integerObjectOf: anInteger] inSmalltalk: [(anInteger bitShift: 3) + 1]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 handleForCharacter: anInteger
 	<inline: true>
 	^self cCode: [objectMemory characterObjectOf: anInteger] inSmalltalk: [(anInteger bitShift: 3) + 2]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 isSmallIntegerValue: anInteger
 	<inline: true>
 	^self cCode: [objectMemory isIntegerValue: anInteger] inSmalltalk: [anInteger between: SmallInteger minVal and: SmallInteger maxVal]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
-classHandleOf: aHandle
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+classOopOf: aHandle
 	^self cCode: [coInterpreter oilApiFetchClassOf: aHandle] inSmalltalk: [self handleFor: (self objectFor: aHandle) class]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
-oilInstSpecOfClass: classHandle
-	^self cCode: [coInterpreter oilApiInstSpecOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) instSpec]! !
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+oilInstSpecOfClass: classOop
+	^self cCode: [coInterpreter oilApiInstSpecOfClass: classOop] inSmalltalk: [(self objectFor: classOop) instSpec]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 oilLiteral: index ofMethod: aMethod
 	<inline: true>
 	^self cCode: [coInterpreter literal: index ofMethod: aMethod] inSmalltalk: [aMethod literalAt: index + 1]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 literalHandle: index frame: frameIndex
 	^self handleFor: (self oilLiteral: index ofMethod: (frameMethod at: frameIndex))! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 isReadOnlyBinding: binding
 	"Class bindings are read-only: fold them to their value."
 	^self cCode: [self isClassBinding: binding] inSmalltalk: [binding isKindOf: ClassBinding]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 isClassBinding: binding
 	"In the VM: is binding an instance of the class of class bindings (ClassBinding in Squeak 6), which is the class of
 	 the last literal (the method class association) of the instance side methods (whose key is the class's name; on the
@@ -2533,7 +2533,7 @@ isClassBinding: binding
 	oilClassBindingClass <= 0 ifTrue:
 		[oilClassBindingClass := coInterpreter oilApiClassBindingClassOf:
 									((oilClassBindingClass = 0 or: [currentFrame < 0])
-										ifTrue: [rootMethod]
+										ifTrue: [oilHomeMethod]
 										ifFalse: [frameMethod at: currentFrame]).
 		 oilClassBindingClass = 0 ifTrue: [oilClassBindingClass := -1]].
 	oilClassBindingClass <= 0 ifTrue: [^false].
@@ -2545,30 +2545,30 @@ isClassBinding: binding
 	meta := coInterpreter oilApiFetchClassOf: (coInterpreter oilApiFetchClassOf: (objectMemory fetchPointer: 1 ofObject: binding)).
 	^(coInterpreter oilApiFetchClassOf: (coInterpreter oilApiFetchClassOf: meta)) = meta! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 identityHashOf: aHandle
 	"The identity hash of a non-immediate constant (assigned now if it has none yet, as primitive 75 would)."
 	^self cCode: [coInterpreter oilApiHashBitsOf: aHandle] inSmalltalk: [(self objectFor: aHandle) identityHash]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 bindingValueHandle: binding
 	^self cCode: [objectMemory fetchPointer: 1 ofObject: binding] inSmalltalk: [self handleFor: binding value]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 specialSelectorHandle: index
 	^self cCode: [coInterpreter specialSelector: index] inSmalltalk: [self handleFor: (Smalltalk specialSelectors at: index * 2 + 1)]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 numArgsOf: aMethod
 	<inline: true>
 	^self cCode: [coInterpreter argumentCountOf: aMethod] inSmalltalk: [aMethod numArgs]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 numTempsOf: aMethod
 	<inline: true>
 	^self cCode: [coInterpreter tempCountOf: aMethod] inSmalltalk: [aMethod numTemps]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 frameSizeOf: aMethod
 	"Slots needed for temps and stack: 16 or 56 (large frame)."
 	<inline: true>
@@ -2576,30 +2576,30 @@ frameSizeOf: aMethod
 		cCode: [(coInterpreter methodNeedsLargeContext: aMethod) ifTrue: [56] ifFalse: [16]]
 		inSmalltalk: [aMethod frameSize]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 oilPrimitiveIndexOf: aMethod
 	<inline: true>
 	^self cCode: [coInterpreter primitiveIndexOf: aMethod] inSmalltalk: [aMethod primitive]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 oilIsQuickPrimitiveIndex: prim
 	<inline: true>
 	^prim between: 256 and: 519! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
-lookup: selector inClass: classHandle
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+lookup: selector inClass: classOop
 	"Answer the method found by looking up selector in the class, or 0."
 	^self
-		cCode: [coInterpreter oilApiLookupSelector: selector inClass: classHandle]
-		inSmalltalk: [((self objectFor: classHandle) lookupSelector: (self objectFor: selector)) ifNil: [0]]! !
+		cCode: [coInterpreter oilApiLookupSelector: selector inClass: classOop]
+		inSmalltalk: [((self objectFor: classOop) lookupSelector: (self objectFor: selector)) ifNil: [0]]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
-superclassHandleOfMethodClassOf: aMethod
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+superclassOopOfMethodClassOf: aMethod
 	^self
 		cCode: [coInterpreter oilApiSuperclassOf: (coInterpreter methodClassOf: aMethod)]
 		inSmalltalk: [self handleFor: aMethod methodClass superclass]! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 profiledClassAt: pc
 	"Type feedback for the send at pc in the current frame's method: the receiver class if the site is monomorphic, else 0.
 	 In the VM this queries ProfilingCogit's inline caches; in the image, a simulated-execution profile."
@@ -2612,10 +2612,10 @@ profiledClassAt: pc
 							ifNil: [0]
 							ifNotNil: [:cls| self handleFor: cls]]]! !
 
-!OilBaseCompiler class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
+!OilInliningCompiler class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 declareCVarsIn: aCCodeGenerator
 	"All of Pass 1's memory is static: the 16 KB IR buffer and fixed size tables (BSS), invisible to the GC."
-	self == OilBaseCompiler ifFalse: [^self].
+	self == OilInliningCompiler ifFalse: [^self].
 	"Pass 1 writes Buffer 1, Pass 2 streams it into Buffer 2; oilIRBuffer points to the current one."
 	aCCodeGenerator var: #oilIRBuffer1 declareC: 'static unsigned int oilIRBuffer1[OilBufferWords]'.
 	aCCodeGenerator var: #oilIRBuffer2 declareC: 'static unsigned int oilIRBuffer2[OilBufferWords]'.
@@ -2665,7 +2665,7 @@ declareCVarsIn: aCCodeGenerator
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxConds]'].
 	aCCodeGenerator var: #oilLiveMark declareC: 'static unsigned char oilLiveMark[OilPCMapSize]'.
 	"Pass 3 (native code generation) tables."
-	#(oilVRegReg oilVRegHome) do:
+	#(oilVRegReg oilVRegSpillTemp) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
 	aCCodeGenerator var: #oilIRTarget declareC: 'static unsigned char oilIRTarget[OilBufferWords]'.
 	aCCodeGenerator var: #oilLoopDepth declareC: 'static unsigned char oilLoopDepth[OilBufferWords]'.
@@ -2688,7 +2688,7 @@ declareCVarsIn: aCCodeGenerator
 	#(typeFeedback simHandles simHandleIndex) do:
 		[:var| aCCodeGenerator removeVariable: var]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard
 	"Scalar replacement of objects of classes with fixed pointer fields only: basicNew (primitive 70) of a constant class,
 	 and Number>>@ (primitive 18, a Point of the receiver and the argument, which its fallback code answers too) are not
@@ -2736,25 +2736,25 @@ genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard
 		[self materializeSlot: simStackTop].
 	^true! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
-isScalarReplaceableClass: classHandle
-	"Instances of classHandle have fixed pointer fields only (format 0 or 1: no indexable fields, not weak, not an
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+isScalarReplaceableClass: classOop
+	"Instances of classOop have fixed pointer fields only (format 0 or 1: no indexable fields, not weak, not an
 	 ephemeron), and it has a class index (its instances can be allocated with it)."
 	| spec |
-	classHandle = 0 ifTrue: [^false].
-	spec := self oilInstSpecOfClass: classHandle.
+	classOop = 0 ifTrue: [^false].
+	spec := self oilInstSpecOfClass: classOop.
 	(spec = 0 or: [spec = 1]) ifFalse: [^false].
-	^self cCode: [(coInterpreter oilApiClassIndexOfClass: classHandle) > 0] inSmalltalk: [true]! !
+	^self cCode: [(coInterpreter oilApiClassIndexOfClass: classOop) > 0] inSmalltalk: [true]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 pointClassHandle
 	^self cCode: [objectMemory splObj: ClassPoint] inSmalltalk: [self handleFor: Point]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
-oilFixedFieldsOfClass: classHandle
-	^self cCode: [coInterpreter oilApiFixedFieldsOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) instSize]! !
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+oilFixedFieldsOfClass: classOop
+	^self cCode: [coInterpreter oilApiFixedFieldsOfClass: classOop] inSmalltalk: [(self objectFor: classOop) instSize]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 pushVObjSlot: slotIndex of: vobjIndex
 	"Push slot slotIndex of the scalar replaced object vobjIndex (the descriptor of its slot register)."
 	| slotReg |
@@ -2763,7 +2763,7 @@ pushVObjSlot: slotIndex of: vobjIndex
 	slotReg := (vobjSlotBase at: vobjIndex) + slotIndex.
 	self push: (slotKind at: slotReg) value: (slotValue at: slotReg)! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 materializeVObj: vobjIndex scratch: scratchReg
 	"The scalar replaced object vobjIndex escapes: allocate it (OilNewObject, which stores its slot registers into it,
 	 without nil filling it first) into an immutable high register of its own, to which every descriptor of the object is
@@ -2801,7 +2801,7 @@ materializeVObj: vobjIndex scratch: scratchReg
 	self rewriteVObj: vobjIndex asReg: objReg.
 	^objReg! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 canMaterializeInPlace: vobjIndex depth: depth
 	"Can the scalar replaced object vobjIndex be materialized here, with all its descriptors rewritten to the register
 	 holding it?  Only if no branch or label was emitted since its creation (the same flow epoch: every path from its
@@ -2838,7 +2838,7 @@ canMaterializeInPlace: vobjIndex depth: depth
 	oilBlockingVObj := vobjIndex.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 rewriteVObj: vobjIndex asReg: objReg
 	"The scalar replaced object vobjIndex now lives in objReg: rewrite its descriptors (in the register window, the high
 	 registers, the pending results of inlined frames, and the deopt state of the current bytecode, for the deopt sites
@@ -2867,7 +2867,7 @@ rewriteVObj: vobjIndex asReg: objReg
 			[snapKind at: slotIndex put: OilDescReg.
 			 snapValue at: slotIndex put: objReg]]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 vobjIsReferenced: vobjIndex
 	"Does anything still refer to the scalar replaced object vobjIndex (but its own slots)?"
 	| baseReg activeFrame |
@@ -2895,7 +2895,7 @@ vobjIsReferenced: vobjIndex
 		 and: [(vobjSelfKind at: otherIndex) = OilDescObject and: [(vobjSelfValue at: otherIndex) = vobjIndex]]) ifTrue: [^true]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 releaseDeadVObjSlots
 	"The slot registers of the scalar replaced objects that nothing refers to any more, or that were materialized, are free:
 	 they need not be flushed at labels any more (the deopt states already recorded keep their descriptors)."
@@ -2912,14 +2912,14 @@ releaseDeadVObjSlots
 				slotFlags at: slotReg put: 0.
 				self setSlot: slotReg kind: OilDescConst value: nilHandle]]]! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 isEagerSite: aMethod pc: pc
 	0 to: oilNumEagerSites - 1 do:
 		[:siteIndex|
 		((oilEagerSiteMethod at: siteIndex) = aMethod and: [(oilEagerSitePC at: siteIndex) = pc]) ifTrue: [^true]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 requestEagerSite: vobjIndex
 	"The scalar replaced object vobjIndex escapes where it cannot be materialized (see canMaterializeInPlace:depth:):
 	 compile again, allocating the objects of its allocation site when they are created."
@@ -2934,7 +2934,7 @@ requestEagerSite: vobjIndex
 	needsRestart := true.
 	failed := true! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 isTemp: tempIndex deadFrom: startPC frame: frameIndex
 	"Is temp tempIndex of frame frameIndex dead at startPC: on every path from startPC through the frame's bytecodes, is it
 	 assigned (or the frame left) before it is read (pushed, or used as the temp vector of a remote temp)?  The interpreter
@@ -2975,7 +2975,7 @@ isTemp: tempIndex deadFrom: startPC frame: frameIndex
 									 pc := oilNextPC]]]]].
 	^true! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 profiledClass: caseIndex at: pc
 	"Type feedback for a polymorphic send at pc in the current frame's method: the receiver class of case caseIndex (0 or 1)
 	 of an inline cache that saw exactly two classes (a closed PIC of two cases), else 0."
@@ -2988,7 +2988,7 @@ profiledClass: caseIndex at: pc
 							ifNil: [0]
 							ifNotNil: [:cls| self handleFor: cls]]]! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 isBimorphicTarget: aMethod prim: prim selector: selector numArgs: numArgs receiver: rcvrSlot
 	"Can aMethod be inlined in one of the two paths of a bimorphic send: a quick method, or a small method (at most
 	 OilAccessorBytes bytecodes) that the inlining policy accepts?"
@@ -2998,7 +2998,7 @@ isBimorphicTarget: aMethod prim: prim selector: selector numArgs: numArgs receiv
 	(self oilEndPCOf: aMethod) - (self startPCOf: aMethod) + 1 > OilAccessorBytes ifTrue: [^false].
 	^self shouldInline: aMethod selector: selector numArgs: numArgs receiver: rcvrSlot! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot
 	"A send whose inline cache saw exactly two receiver classes, whose methods are quick or small: inline both, behind a
 	 class test (OilCmpClass) of the receiver.  If both are quick methods answering true and false (a predicate such as
@@ -3057,7 +3057,7 @@ genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot
 	oilNumBimorphic := oilNumBimorphic + 1.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 genBimorphicPath: aMethod prim: prim selector: selector numArgs: numArgs receiver: rcvrSlot class: cls
 	"One path of a bimorphic send: the receiver is an instance of cls; inline aMethod (or send it if it cannot be inlined
 	 after all), then make the result and the frame canonical."
@@ -3072,7 +3072,7 @@ genBimorphicPath: aMethod prim: prim selector: selector numArgs: numArgs receive
 	self materializeSlot: rcvrSlot.
 	self flushFrame: currentFrame! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
 	"A predicate (e.g. isSymbol) answering true for the instances of trueClass and false for those of falseClass, the two
 	 classes its send saw: guard that the receiver is an instance of one of them (OilGuardClass2), then answer the class
@@ -3105,7 +3105,7 @@ genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
 	oilNumPredicates := oilNumPredicates + 1.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
 isStringHashMethod: aMethod class: rcvrClass
 	"Is aMethod String>>hashWithInitialHash:'s primitive, primitiveStringHash of the MiscPrimitivePlugin, of a byte object?"
 	| spec |
@@ -3115,7 +3115,7 @@ isStringHashMethod: aMethod class: rcvrClass
 		cCode: [coInterpreter oilApiIsStringHashMethod: aMethod]
 		inSmalltalk: [(aMethod literalAt: 1) isArray and: [((aMethod literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveStringHash']]! !
 
-!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
 genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
 	"String>>hashWithInitialHash: (primitiveStringHash) of a byte object: computed now if both the string and the initial
 	 hash are constants (e.g. the hash of a literal Symbol), else by OilStringHash, which falls back to the send if the
@@ -3138,14 +3138,14 @@ genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
 	self pushResultOf: OilStringHash b: rcvrReg c: argReg site: 0.
 	self emit64: selector! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 stringHashOf: aHandle initialHash: initialHash
 	"primitiveStringHash of the byte object aHandle (a constant)."
 	^self
 		cCode: [coInterpreter oilApiStringHashOf: aHandle initialHash: initialHash]
 		inSmalltalk: [(self objectFor: aHandle) hashWithInitialHash: initialHash]! !
 
-!OilBaseCompiler methodsFor: 'returns' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'returns' stamp: 'cb 10/25/2026 09:30'!
 isFrame: frameIndex deadFrom: pc
 	"After a return: is the rest of frame frameIndex's bytecodes, from pc, unreachable (no pending forward branch targets
 	 it)?  Then the return is the frame's last (e.g. ^(x + aPoint x) @ (y + aPoint y) in Point>>+ when the test before it
@@ -3156,19 +3156,19 @@ isFrame: frameIndex deadFrom: pc
 		[:laterPC| (pcChain at: (self pcMapIndex: laterPC frame: frameIndex)) ~= OilNoLink ifTrue: [^false]].
 	^true! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
-classIndexOfClass: classHandle
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+classIndexOfClass: classOop
 	"The class index of a class (its identity hash, primitive 175), or 0 if it has none yet."
-	^self cCode: [coInterpreter oilApiClassIndexOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) identityHash]! !
+	^self cCode: [coInterpreter oilApiClassIndexOfClass: classOop] inSmalltalk: [(self objectFor: classOop) identityHash]! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
 siteAtIR: irOffset
 	"The (last) deopt site of the instruction at irOffset, or -1."
 	numSites - 1 to: 0 by: -1 do:
 		[:siteIndex| (siteIR at: siteIndex) = irOffset ifTrue: [^siteIndex]].
 	^-1! !
 
-!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
 recordAddSite: producerSite
 	"The deopt site of the add about to be emitted by genAddConstant:to:result:: a new one, or the site of the add it
 	 replaces (retracted, so marked dead: revive it at the new instruction)."
@@ -3177,14 +3177,14 @@ recordAddSite: producerSite
 	siteIR at: producerSite put: irIndex.
 	^producerSite! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 isNonNilQuickPrimitive: prim class: cls
 	"Does the quick method prim (sent to an instance of cls) answer a value known not to be nil: self (unless cls is
 	 UndefinedObject), true, false or a SmallInteger?"
-	prim = 256 ifTrue: [^cls ~= (self classHandleOf: nilHandle)].
+	prim = 256 ifTrue: [^cls ~= (self classOopOf: nilHandle)].
 	^prim = 257 or: [prim = 258 or: [prim between: 260 and: 263]]! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 genBimorphicSelect: nilClass other: otherClass prim: prim receiver: rcvrSlot
 	"A send whose two receiver classes answer nil (nilClass) and a known non-nil value (otherClass, quick method prim): guard
 	 that the receiver is an instance of one of them (OilGuardClass2) and answer a lazy class dependent value (OilDescSelect):
@@ -3227,7 +3227,7 @@ genBimorphicSelect: nilClass other: otherClass prim: prim receiver: rcvrSlot
 	oilNumSelects := oilNumSelects + 1.
 	^true! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 genSelectIsNil: condIndex cond: condCode slot: slotA frame: frameIndex next: nextPC
 	"x == nil (condCode OilCondIdentical) or x ~~ nil, x the lazy class dependent value condIndex (nil for the instances of
 	 condClass, non-nil otherwise): the class test, fused with the following conditional jump, or a lazy comparison."
@@ -3263,7 +3263,7 @@ genSelectIsNil: condIndex cond: condCode slot: slotA frame: frameIndex next: nex
 	numConds := numConds + 1.
 	^nextPC! !
 
-!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 emitSelect: condIndex into: destReg
 	"Materialize the lazy class dependent value condIndex into destReg: nil if the class test holds, else its other value."
 	<inline: false>
@@ -3282,7 +3282,7 @@ emitSelect: condIndex into: destReg
 	lastLabelIR := irIndex.
 	knownClass at: destReg put: 0! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
 hasVirtualObjectFrom: firstSlot to: lastSlot
 	"Does a slot from firstSlot to lastSlot hold a virtual closure, temp vector or object (which a call would materialize)?"
 	| descKind |
@@ -3292,7 +3292,7 @@ hasVirtualObjectFrom: firstSlot to: lastSlot
 		(descKind = OilDescBlock or: [descKind = OilDescTempVector or: [descKind = OilDescObject]]) ifTrue: [^true]].
 	^false! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
 inlineSendToVirtualBlock: selector numArgs: numArgs receiver: rcvrSlot
 	"A send other than value... to a virtual closure (e.g. aBlock timeToRun): inline the method of FullBlockClosure if it is
 	 not a primitive, the closure staying virtual as its self (and as an argument of what it sends, e.g. Time
@@ -3304,11 +3304,11 @@ inlineSendToVirtualBlock: selector numArgs: numArgs receiver: rcvrSlot
 	(self shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot) ifFalse: [^false].
 	^self inlineMethod: method receiver: rcvrSlot numArgs: numArgs class: cls guard: false! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
 fullBlockClosureClassHandle
 	^self cCode: [coInterpreter oilApiClassAtIndex: ClassFullBlockClosureCompactIndex] inSmalltalk: [self handleFor: FullBlockClosure]! !
 
-!OilBaseCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
 policyDepthOf: frameIndex
 	"The inlining depth of a send in frameIndex for the inlining policy: the depth below the closest inlined block whose home
 	 is the root frame (a block of the root method's own code), or below the root."
@@ -3320,7 +3320,7 @@ policyDepthOf: frameIndex
 		 walkFrame := frameParent at: walkFrame].
 	^(frameDepth at: frameIndex) + 1! !
 
-!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
 initVObjSlot: slotReg from: srcSlot
 	"Initialize the slot register slotReg of a new scalar replaced object with the value of the stack slot srcSlot."
 	| descKind |
@@ -3333,7 +3333,7 @@ initVObjSlot: slotReg from: srcSlot
 	self emitMove: slotReg from: (slotValue at: srcSlot).
 	self setOwn: slotReg! !
 
-!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
 isImmutableObject: aHandle
 	"Is the non-immediate constant aHandle read-only (e.g. a Symbol)?"
 	^self cCode: [coInterpreter oilApiIsImmutable: aHandle] inSmalltalk: [(self objectFor: aHandle) isReadOnlyObject]! !
