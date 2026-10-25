@@ -1346,12 +1346,10 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 19:15'!
 checkImageHeaderLoad
-	"Oil's minimums: a 4 MB code zone, and a 16 MB eden (young space: Oil code allocates, e.g. its materialized objects)."
+	"Oil's minimum: a 4 MB code zone."
 	<inline: #always>
 	cogCodeSize < (4 * 1024 * 1024) ifTrue:
-		[cogCodeSize := 4 * 1024 * 1024].
-	objectMemory edenBytes < (16 * 1024 * 1024) ifTrue:
-		[objectMemory edenBytes: 16 * 1024 * 1024]! !
+		[cogCodeSize := 4 * 1024 * 1024]! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 15:00'!
 attemptToSwitchToMachineCode: bcpc
