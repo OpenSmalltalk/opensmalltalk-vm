@@ -1,5 +1,5 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counters counterIndex ceOilTripTrampoline oilTripLog ceOilDeoptTrampoline oilSelectors oilExtraSelectors'
+	instanceVariableNames: 'numCounters counters counterIndex ceOilTripTrampoline oilTripLog ceOilDeoptTrampoline oilSelectors oilExtraSelectors oilSpecializations oilNumSpecializations oilNumMethodPICCases oilCompileMicroseconds oilKeepSpecializations'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -14,16 +14,22 @@ Instance Variables
 	counterIndex:			<Integer>
 	counters:				<Integer>
 	numCounters:			<Integer>
+	oilCompileMicroseconds:	<Integer>
 	oilExtraSelectors:		<Integer oop>
+	oilKeepSpecializations:	<Boolean>
+	oilNumMethodPICCases:	<Integer>
+	oilNumSpecializations:	<Integer>
+	oilSpecializations:		<Integer oop>
 	oilSelectors:			<Integer oop>
 	oilTripLog:				<Integer oop>
 !
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
 estimateOfAbstractOpcodesPerBytecodes
-	"Due to the trip counter code at back jumps and block entries the estimate is higher."
+	"Due to the trip counter code at back jumps and block entries the estimate is higher, and higher still for a method
+	 that dispatches to its Oil specializations (up to 8 instructions per case, see compileEntry)."
 	<inline: true>
-	^11! !
+	^oilNumMethodPICCases > 0 ifTrue: [16] ifFalse: [11]! !
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
 getOilTripLog
@@ -82,11 +88,14 @@ genOilTripCounter: kind
 compileCogFullBlockMethod: numCopied
 	<option: #SistaV1BytecodeSet>
 	counters := 0.
+	oilNumMethodPICCases := 0.
 	^super compileCogFullBlockMethod: numCopied! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
 compileCogMethod: selector
+	"Note how many Oil specializations the method has: its entry dispatches to them (see compileEntry)."
 	counters := 0.
+	oilNumMethodPICCases := self oilNumSpecializationsOf: methodObj.
 	^super compileCogMethod: selector! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/25/2026 01:50'!
@@ -174,10 +183,14 @@ fillInCounters: nCounters atStartAddress: startAddress
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
 fillInMethodHeader: method size: size selector: selector
+	"The cmUnusedFlag of a baseline method: whether it dispatches to Oil specializations (see compileEntry), so that the
+	 interpreter enters it at its no-check entry (see CoInterpreter>>activateNewCogMethod:inInterpreter:).  (Oil methods use
+	 the flag differently, see oilGenerateCogMethod.)"
 	super fillInMethodHeader: method size: size selector: selector.
 	counters ~= 0 ifTrue:
 		[self fillInCounters: numCounters atStartAddress: counters].
-	method counters: counters! !
+	method counters: counters.
+	method cmUnusedFlag: oilNumMethodPICCases > 0! !
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
 fillInOPICHeader: pic numArgs: numArgs selector: selector

@@ -768,13 +768,6 @@ genIdentityHashAt: i
 	jumpDone jmpTarget: cogit Label! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 03:00'!
-genByteScanPrologueAt: i
-	"The byte scans (genIndexOfByteAt:, genSkipSeparatorsAt:) use most machine registers: store the virtual registers in
-	 their homes and load their operands from there (reloadAll restores the registers, before the slow path's send too)."
-	<inline: true>
-	self spillAll! !
-
-!OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 03:00'!
 genIndexOfByteAt: i
 	"a := b indexOfAscii: c inString: d startingAt: e (ByteString class>>indexOfAscii:inString:startingAt:, b ignored): if c is a
 	 SmallInteger 0..255, d a byte object and e a SmallInteger >= 1, answer the index of the first byte of d equal to c at e
@@ -795,7 +788,9 @@ genIndexOfByteAt: i
 	<var: #jumpDone type: #'AbstractInstruction *'>
 	<var: #found type: #'AbstractInstruction *'>
 	numJumps := 0.
-	self genByteScanPrologueAt: i.
+	"The scan uses most machine registers: store the virtual registers in their homes and load the operands from there
+	 (genByteScanEpilogueAt:jumps:count:numArgs: reloads them, also before the slow path's send)."
+	self spillAll.
 	cogit MoveMw: (oilVRegHome at: (self callArg: 0 at: i)) r: FPReg R: Extra3Reg.
 	cogit MoveMw: (oilVRegHome at: (self callArg: 1 at: i)) r: FPReg R: Extra2Reg.
 	cogit MoveMw: (oilVRegHome at: (self callArg: 2 at: i)) r: FPReg R: SendNumArgsReg.
@@ -902,7 +897,7 @@ genSkipSeparatorsAt: i
 	<var: #jumpStop type: #'AbstractInstruction *'>
 	<var: #next type: #'AbstractInstruction *'>
 	numJumps := 0.
-	self genByteScanPrologueAt: i.
+	self spillAll. "(see genIndexOfByteAt:)"
 	cogit MoveMw: (oilVRegHome at: (self fieldBAt: i)) r: FPReg R: Extra0Reg.
 	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
 	cogit MoveMw: 2 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: Extra2Reg.
@@ -1516,7 +1511,7 @@ definitionIsTaggedAt: irOffset
 	opcode = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: irOffset)) ~= 0].
 	((opcode between: OilAddTagged and: OilOddTagged)
 	 or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC or: [opcode = OilLoadSize or: [opcode = OilModTagged
-	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue]]]]]]]]) ifTrue: [^true].
+	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue or: [opcode = OilIdentityHash]]]]]]]]]) ifTrue: [^true].
 	^false! !
 
 !OilBaseCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!

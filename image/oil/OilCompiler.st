@@ -1488,10 +1488,13 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	(self oilIsQuickPrimitiveIndex: prim) ifTrue:
 		[guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
 		 ^self genQuickMethod: prim receiver: rcvrSlot numArgs: numArgs].
-	(self genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard) ifTrue:
+	"(The intrinsics whose slow path is a send cannot compile super sends.)"
+	(isSuper not
+	 and: [self genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard]) ifTrue:
 		[^self].
 	prim ~= 0 ifTrue:
-		[(self canInlineIntrinsic: prim class: rcvrClass numArgs: numArgs) ifTrue:
+		[((isSuper not or: [(prim = 65 or: [prim = 66 or: [prim = 75]]) not])
+		  and: [self canInlineIntrinsic: prim class: rcvrClass numArgs: numArgs]) ifTrue:
 			[guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
 			 self genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes: (self oilInstSpecOfClass: rcvrClass) >= 16.
 			 ^self].
@@ -1699,7 +1702,9 @@ genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes:
 	prim = 110 ifTrue:
 		[^self genCompare: OilCondIdentical identity: true frame: currentFrame next: -1].
 	prim = 75 ifTrue: "the hash in the header (no deopt site: the back end falls back to the send if there is none yet)"
-		[arrayReg := self regForSlot: rcvrSlot.
+		[(self isEncodableCall: selector super: false) ifFalse:
+			[^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: false].
+		 arrayReg := self regForSlot: rcvrSlot.
 		 simStackTop := rcvrSlot - 1.
 		 self pushResultOf: OilIdentityHash b: arrayReg c: 0 site: 0.
 		 self emit64: selector.

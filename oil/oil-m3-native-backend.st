@@ -58,6 +58,8 @@ initialize
 	oilTripLog := 0.
 	oilSelectors := 0.
 	oilExtraSelectors := 0.
+	oilSpecializations := 0.
+	oilKeepSpecializations := false.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
@@ -238,18 +240,32 @@ oilCompile: aMethodObj receiverClass: classObj
 	 Answer OilOK or a failure code; see oilGenerate: for Pass 3."
 	<api>
 	<option: #ProfilingCogit>
+	| start result |
+	start := coInterpreter ioUTCMicrosecondsNow.
 	self oilRegisterSelectors.
-	^(self compileMethod: aMethodObj receiverClass: classObj)
-		ifTrue: [OilOK]
-		ifFalse: [self oilFailureCode]! !
+	result := (self compileMethod: aMethodObj receiverClass: classObj)
+				ifTrue: [OilOK]
+				ifFalse: [self oilFailureCode].
+	oilCompileMicroseconds := coInterpreter ioUTCMicrosecondsNow - start.
+	^result! !
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
 oilGenerate: aMethodObj
 	"Run the optimization pipeline (#pipe) and Pass 3 of Oil on the IR just produced by oilCompile:receiverClass:
 	 and install the resulting CogMethod as aMethodObj's machine code, which must have none.
-	 Answer OilOK or a failure code.
+	 Answer OilOK or a failure code.  oilCompileMicroseconds is then the time both took.
 	 N.B. Like cog:selector: this never reclaims the method zone (it calls for a compaction if it is full)."
 	<api>
+	<option: #ProfilingCogit>
+	| start result |
+	start := coInterpreter ioUTCMicrosecondsNow.
+	result := self oilGenerateCode: aMethodObj.
+	oilCompileMicroseconds := oilCompileMicroseconds + (coInterpreter ioUTCMicrosecondsNow - start).
+	^result! !
+
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
+oilGenerateCode: aMethodObj
+	"See oilGenerate:."
 	<option: #ProfilingCogit>
 	| result estimate |
 	(coInterpreter methodHasCogMethod: aMethodObj) ifTrue:
@@ -278,6 +294,7 @@ oilGenerate: aMethodObj
 							ifFalse: [0].
 	counters := 0.
 	numCounters := 0.
+	oilNumMethodPICCases := 0. "(see compileEntry)"
 	blockCount := 0.
 	blockEntryLabel := nil.
 	receiverTags := -1.
@@ -363,6 +380,11 @@ oilMetadataOf: cogMethod
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: (self isOilMethod: cogMethod).
 	^cogMethod counters - 1! !
+
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/25/2026 04:00'!
+getOilCompileMicroseconds
+	<api>
+	^oilCompileMicroseconds! !
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
 setOilSelectors: anArray
@@ -880,7 +902,8 @@ oilDisqualifyCogMethod: cogMethod
 	<var: #cogMethod type: #'CogMethod *'>
 	| methodObj |
 	methodObj := cogMethod methodObject.
-	cogit oilDisqualify: methodObj.
+	"(the root method: for a specialization, methodObj is a copy of it, see primitiveOilSpecialize)"
+	cogit oilDisqualify: (objectMemory fetchPointer: OilMDRootMethod ofObject: (cogit oilMetadataOf: cogMethod)).
 	(self oilHasFramesOf: cogMethod) ifFalse:
 		[cogit unlinkSendsTo: methodObj andFreeIf: true]! !
 
@@ -1353,7 +1376,8 @@ primitiveOilMethodInfo
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
-	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers. nil.
+	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers.
+	   microseconds Passes 1 to 3 took (including assembling the CogMethod and its metadata, not freeing the baseline code).
 	   Pass 1 IR words. Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
 	<export: true>
 	<essential: #ProfilingCogit>
@@ -1370,7 +1394,7 @@ primitiveOilLastCompilation
 		storePointer: 1 ofObject: result withValue: irArray.
 	2 to: 7 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: result withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: slotIndex + 1 at: 0))].
-	objectMemory storePointerUnchecked: 8 ofObject: result withValue: objectMemory nilObject.
+	objectMemory storePointerUnchecked: 8 ofObject: result withValue: (objectMemory integerObjectOf: cogit getOilCompileMicroseconds).
 	"Pass 1's IR (Buffer 1; the IR above is Pass 2's) and Pass 2's statistics."
 	irWordCount := cogit oilDebugInfo: 11 at: 0.
 	irArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: irWordCount.
