@@ -1,0 +1,103 @@
+"Oil end-to-end test (native) of the inlined selector invalidation table.  An Oil method records in its metadata every
+ selector Oil looked up when compiling it (inlined methods, quick methods/getters, intrinsics); defining a method of one of
+ them (Symbol>>flushCache, ProfilingCogit>>unlinkSendsOf:isMNUSelector:) frees the Oil method.  Each probe Oil-compiles a
+ caller, redefines a method it depends on, and checks that the Oil code is gone and that the result follows the new
+ definition; defining an unrelated selector must keep the Oil code.
+ Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-invalidation-result.txt next to the image."
+| out failures check sels model cls items arr compile hasOil |
+Utilities authorInitials: 'cb'.
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-invalidation-result.txt').
+failures := OrderedCollection new.
+check := [:name :bool |
+	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
+	bool == true ifFalse: [failures add: name]].
+Object subclass: #OilInvBase instanceVariableNames: 'x y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+(Smalltalk at: #OilInvBase) subclass: #OilInvItem instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Array variableSubclass: #OilInvArray instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilInvModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+#('x ^x' 'y ^y' 'x: ax y: ay x := ax. y := ay' 'double ^x + x') do: [:src | (Smalltalk at: #OilInvBase) compile: src classified: 'accessing'].
+cls := Smalltalk at: #OilInvModel.
+#('sumX: items | t | t := 0. items do: [:e | t := t + e x]. ^t'
+  'sumY: items | t | t := 0. items do: [:e | t := t + e y]. ^t'
+  'sumDouble: items | t | t := 0. items do: [:e | t := t + e double]. ^t'
+  'sumAt: anArray | t | t := 0. 1 to: anArray size do: [:i | t := t + (anArray at: i)]. ^t'
+  'sumBoth: items | t | t := 0. items do: [:e | t := t + e x + e y]. ^t')
+	do: [:src | cls compile: src classified: 'tests'].
+cls class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
+sels := OrderedCollection new.
+#(value value: value:value: value:value:value: value:value:value:value:) doWithIndex: [:s :i | sels add: i - 1; add: s].
+sels add: 5; add: #bitXor:.
+#(do: reverseDo: collect: select: reject: detect: detect:ifNone: inject:into: doWithIndex: withIndexDo: timesRepeat: to:do: to:by:do:)
+	do: [:s | sels add: 6; add: s].
+#(error: errorSubscriptBounds: errorNotIndexable subclassResponsibility halt doesNotUnderstand: primitiveFailed)
+	do: [:s | sels add: 7; add: s].
+check value: 'primitiveOilSetSelectors' value: (cls oilSetSelectors: sels asArray) ~~ #failed.
+model := cls new.
+items := (1 to: 10) collect: [:i | (Smalltalk at: #OilInvItem) new x: i y: 100 * i].
+arr := (Smalltalk at: #OilInvArray) new: 10.
+1 to: 10 do: [:i | arr at: i put: i].
+hasOil := [:sel | (cls >> sel) oilInfo notNil].
+compile := [:sel :arg | | r |
+	3 timesRepeat: [model perform: sel with: arg].
+	r := (cls >> sel) oilCompileFor: cls.
+	check value: sel, ' Oil-compiles' value: (r = 0 and: [hasOil value: sel]).
+	r].
+"1. a quick getter (^x), inlined: redefining it frees the Oil code"
+compile value: #sumX: value: items.
+check value: 'sumX: = 55' value: (model sumX: items) = 55.
+(Smalltalk at: #OilInvItem) compile: 'unrelatedOilInvSelector ^3' classified: 'accessing'.
+check value: 'an unrelated selector keeps the Oil code of sumX:' value: (hasOil value: #sumX:).
+(Smalltalk at: #OilInvBase) compile: 'x ^x * 2' classified: 'accessing'.
+check value: 'redefined quick getter x frees the Oil code of sumX:' value: (hasOil value: #sumX:) not.
+check value: 'sumX: = 110 after redefining x' value: (model sumX: items) = 110.
+"2. a quick getter found in a superclass: an override in the receiver's class frees the Oil code"
+compile value: #sumY: value: items.
+(Smalltalk at: #OilInvItem) compile: 'y ^1' classified: 'accessing'.
+check value: 'override of y frees the Oil code of sumY:' value: (hasOil value: #sumY:) not.
+check value: 'sumY: = 10 after overriding y' value: (model sumY: items) = 10.
+"3. an inlined method (an inlined frame)"
+compile value: #sumDouble: value: items.
+(Smalltalk at: #OilInvBase) compile: 'double ^x + x + 1' classified: 'accessing'.
+check value: 'redefined double frees the Oil code of sumDouble:' value: (hasOil value: #sumDouble:) not.
+check value: 'sumDouble: = 120 after redefining double' value: (model sumDouble: items) = 120.
+"4. an intrinsic (Object>>at: of an Array subclass, primitive 60): an override frees the Oil code"
+compile value: #sumAt: value: arr.
+check value: 'sumAt: = 55' value: (model sumAt: arr) = 55.
+(Smalltalk at: #OilInvArray) compile: 'at: index ^(super at: index) + 1000' classified: 'accessing'.
+check value: 'override of at: frees the Oil code of sumAt:' value: (hasOil value: #sumAt:) not.
+check value: 'sumAt: = 10055 after overriding at:' value: (model sumAt: arr) = 10055.
+"5. removing a method: the receivers find the superclass's again"
+compile value: #sumBoth: value: items.
+check value: 'sumBoth: = 120' value: (model sumBoth: items) = 120.
+(Smalltalk at: #OilInvItem) removeSelector: #y.
+check value: 'removing y frees the Oil code of sumBoth:' value: (hasOil value: #sumBoth:) not.
+check value: 'sumBoth: = 5610 after removing y' value: (model sumBoth: items) = 5610.
+"6. recompiled after the change, the Oil code inlines the new definitions"
+compile value: #sumX: value: items.
+check value: 'sumX: = 110 recompiled' value: (model sumX: items) = 110.
+Smalltalk garbageCollect.
+(Smalltalk at: #OilInvBase) compile: 'x ^x' classified: 'accessing'.
+check value: 'after a full GC, redefining x frees the Oil code of sumX:' value: (hasOil value: #sumX:) not.
+check value: 'sumX: = 55 at the end' value: (model sumX: items) = 55.
+"7. (found by the stress run) an Oil method deoptimized while called from an interpreter frame, then given baseline code
+ by its loop's back jump in the interpreter (convertToMachineCodeFrame:bcpc:) must return to its caller's pc.  Both methods
+ are compiled for OilInvBase and run on an OilInvItem: their entry guards fail, and deoptimized twice they are freed."
+(Smalltalk at: #OilInvBase) compile: 'val ^x' classified: 'accessing'.
+(Smalltalk at: #OilInvBase) compile: 'loop: n | t | t := 0. 1 to: n do: [:i | t := t + self val]. ^t' classified: 'tests'.
+(Smalltalk at: #OilInvBase) compile: 'callLoop: n | a | a := self val. ^a + (self loop: n) + 1' classified: 'tests'.
+[| base item r1 r2 |
+ base := (Smalltalk at: #OilInvBase) new x: 2 y: 0.
+ item := (Smalltalk at: #OilInvItem) new x: 3 y: 0.
+ 3 timesRepeat: [base callLoop: 10].
+ r1 := ((Smalltalk at: #OilInvBase) >> #loop:) oilCompileFor: (Smalltalk at: #OilInvBase).
+ r2 := ((Smalltalk at: #OilInvBase) >> #callLoop:) oilCompileFor: (Smalltalk at: #OilInvBase).
+ check value: 'loop: and callLoop: Oil-compile' value: (r1 = 0 and: [r2 = 0]).
+ check value: 'deopted from an interpreter frame, then switched to baseline code'
+	value: ((1 to: 4) allSatisfy: [:k | (item callLoop: 1000) = 3004]).
+ check value: 'callLoop: of an OilInvBase' value: (base callLoop: 1000) = 2003]
+	on: Error do: [:e | check value: 'deopt from an interpreter frame: ', e description value: false].
+out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
+out close.
+failures isEmpty ifFalse: [self error: 'Oil invalidation test failures: ', failures printString]

@@ -585,11 +585,18 @@ oilSendSiteNeverSentAt: bcpc in: aMethodObj
 
 !ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/24/2026 19:20'!
 oilMethod: cogMethod inlinesSelector: aSelector
-	"Answer whether cogMethod or any method inlined into it sends/defines aSelector."
-	| metadata nFrames frames inlinedMethod |
+	"Answer whether cogMethod depends on the methods of aSelector: it is one of them, or Oil inlined one of them (a
+	 method, quick method or intrinsic) or looked aSelector up (the inlined selectors of the metadata, see
+	 OilInliningCompiler>>noteInlinedSelector:), or a method of an inlined frame has that selector."
+	| metadata nFrames frames inlinedMethod inlined numInlined |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod selector = aSelector ifTrue: [^true].
 	metadata := self oilMetadataOf: cogMethod.
+	inlined := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDInlinedSelectors ofObject: metadata).
+	numInlined := objectMemory integerValueOf: (objectMemory fetchPointer: inlined ofObject: metadata).
+	numInlined < 0 ifTrue: [^true].
+	0 to: numInlined - 1 do:
+		[:selIndex| (objectMemory fetchPointer: inlined + 1 + selIndex ofObject: metadata) = aSelector ifTrue: [^true]].
 	nFrames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDNumFrames ofObject: metadata).
 	frames := objectMemory integerValueOf: (objectMemory fetchPointer: OilMDFrames ofObject: metadata).
 	0 to: nFrames - 1 do:
@@ -699,7 +706,7 @@ estimateOpcodesOfInstructionAt: irOffset
 metadataSize
 	"The number of slots of the deoptimization metadata (see fillMetadata:cogMethod:)."
 	| totalSlots |
-	totalSlots := OilMDHeaderSize + (numFrames * OilMDFrameSize) + (numVObjs * OilMDVObjSize) + (capturedTop * 2) + OilNumRegs + numSites.
+	totalSlots := OilMDHeaderSize + (numFrames * OilMDFrameSize) + (numVObjs * OilMDVObjSize) + (capturedTop * 2) + OilNumRegs + 1 + self numInlinedSelectorsInMetadata + numSites.
 	0 to: numSites - 1 do:
 		[:siteIndex| (oilSiteUsed at: siteIndex) ~= 0 ifTrue:
 			[totalSlots := totalSlots + OilMDSiteHeaderSize + (2 * (self siteStateSize: siteIndex))]].
@@ -727,17 +734,19 @@ metadata: metadata at: index putKind: kind value: value
 fillMetadata: metadata cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their
-	 captured values, the home slot (frame offset) of every virtual register, a table from deopt site index to
+	 captured values, the home slot (frame offset) of every virtual register, the inlined selectors (their count, -1 when
+	 there were too many to record, then the selectors; see noteInlinedSelector:), a table from deopt site index to
 	 site record, and the records of the sites used by the deopt stubs: kind, the guarded register and class
 	 tag (for the unforwarding fast path), the offset of the instruction to resume at, the inlined frame and
 	 bytecode pc, and the virtual state (descriptors of the register window and of the high registers)."
 	<var: #cogMethodAddress type: #usqInt>
-	| frames vobjs captured homes siteTable index frameRecord vobjRecord poolBase opcode parentFrame |
+	| frames vobjs captured homes inlined siteTable index frameRecord vobjRecord poolBase opcode parentFrame |
 	frames := OilMDHeaderSize.
 	vobjs := frames + (numFrames * OilMDFrameSize).
 	captured := vobjs + (numVObjs * OilMDVObjSize).
 	homes := captured + (capturedTop * 2).
-	siteTable := homes + OilNumRegs.
+	inlined := homes + OilNumRegs.
+	siteTable := inlined + 1 + self numInlinedSelectorsInMetadata.
 	self metadata: metadata at: OilMDVersion putInt: OilMDMagic.
 	self metadata: metadata at: OilMDRootMethod put: oilHomeMethod.
 	self metadata: metadata at: OilMDNumSites putInt: numSites.
@@ -751,6 +760,10 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	self metadata: metadata at: OilMDFastPaths putInt: 0.
 	self metadata: metadata at: OilMDNumArgs putInt: (self numArgsOf: oilHomeMethod).
 	self metadata: metadata at: OilMDCaptured putInt: captured.
+	self metadata: metadata at: OilMDInlinedSelectors putInt: inlined.
+	self metadata: metadata at: inlined putInt: (oilNumInlinedSelectors > OilMaxInlinedSelectors ifTrue: [-1] ifFalse: [oilNumInlinedSelectors]).
+	0 to: self numInlinedSelectorsInMetadata - 1 do:
+		[:selIndex| self metadata: metadata at: inlined + 1 + selIndex put: (oilInlinedSelectors at: selIndex)].
 	0 to: numFrames - 1 do:
 		[:frameIndex|
 		frameRecord := frames + (frameIndex * OilMDFrameSize).
@@ -1293,6 +1306,14 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 		longAt: theFP + FoxMethod put: homeMethod;
 		longAt: theFP + FoxIFSavedIP put: 0;
 		longAt: theFP + FoxIFReceiver put: (self oilValueAt: frameRecord + OilMDFrameSelf metadata: metadata values: regValues vobjs: vobjOops).
+	"Called from an interpreter frame, the machine code frame returns to ceReturnToInterpreterPC (the caller's pc is in its
+	 iframeSavedIP).  An interpreter frame called from an interpreter frame holds the caller's pc itself, which is what
+	 convertToMachineCodeFrame:bcpc: (on a back jump, if the method gets baseline code) moves into the caller's
+	 iframeSavedIP: it would move ceReturnToInterpreterPC there, and the caller would resume at that address."
+	((self isBaseFrame: theFP) not
+	 and: [(stackPages longAt: theFP + FoxCallerSavedIP) asUnsignedInteger = cogit ceReturnToInterpreterPC]) ifTrue:
+		[self assert: (self isMachineCodeFrame: (self frameCallerFP: theFP)) not.
+		 stackPages longAt: theFP + FoxCallerSavedIP put: (self iframeSavedIP: (self frameCallerFP: theFP))].
 	framePointers at: 0 put: theFP.
 	sp := theFP + FoxIFReceiver.
 	0 to: numFrames - 1 do:
