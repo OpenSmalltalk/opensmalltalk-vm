@@ -202,25 +202,25 @@ oilRegisterSelectors
 	"Tell Pass 1 the selectors it treats specially, from the Array supplied by the image (primitiveOilSetSelectors):
 	 pairs of kind (0-4 value selectors by arity, 5 bitXor:, 6 iterators, 7 cold) and selector.  Re-registered
 	 before each compilation since the garbage collector moves selectors."
-	| sels n kind sel |
+	| pairs numSlots kind selector |
 	self resetSelectorRegistry.
 	self oilDisqualifyLimit: 0.
-	sels := oilSelectors.
-	(sels = 0 or: [sels = objectMemory nilObject]) ifTrue: [^self].
-	(objectMemory isForwarded: sels) ifTrue:
-		[sels := objectMemory followForwarded: sels.
-		 oilSelectors := sels].
-	n := objectMemory numSlotsOf: sels.
-	0 to: n - 2 by: 2 do:
+	pairs := oilSelectors.
+	(pairs = 0 or: [pairs = objectMemory nilObject]) ifTrue: [^self].
+	(objectMemory isForwarded: pairs) ifTrue:
+		[pairs := objectMemory followForwarded: pairs.
+		 oilSelectors := pairs].
+	numSlots := objectMemory numSlotsOf: pairs.
+	0 to: numSlots - 2 by: 2 do:
 		[:i|
-		kind := objectMemory fetchPointer: i ofObject: sels.
-		sel := objectMemory fetchPointer: i + 1 ofObject: sels.
-		((objectMemory isIntegerObject: kind) and: [objectMemory isNonImmediate: sel]) ifTrue:
-			[(objectMemory isForwarded: sel) ifTrue: [sel := objectMemory followForwarded: sel].
-			 self registerSelector: sel kind: (objectMemory integerValueOf: kind)].
+		kind := objectMemory fetchPointer: i ofObject: pairs.
+		selector := objectMemory fetchPointer: i + 1 ofObject: pairs.
+		((objectMemory isIntegerObject: kind) and: [objectMemory isNonImmediate: selector]) ifTrue:
+			[(objectMemory isForwarded: selector) ifTrue: [selector := objectMemory followForwarded: selector].
+			 self registerSelector: selector kind: (objectMemory integerValueOf: kind)].
 		"kind 8: the number of deoptimizations after which an Oil method is disqualified (default OilDisqualifyDeopts)"
-		(kind = (objectMemory integerObjectOf: 8) and: [objectMemory isIntegerObject: sel]) ifTrue:
-			[self oilDisqualifyLimit: (objectMemory integerValueOf: sel)]]! !
+		(kind = (objectMemory integerObjectOf: 8) and: [objectMemory isIntegerObject: selector]) ifTrue:
+			[self oilDisqualifyLimit: (objectMemory integerValueOf: selector)]]! !
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
 oilMethod: aMethodObj receiverClass: classObj
@@ -428,21 +428,21 @@ oilExtraSelectorIndexOf: selector add: addIfAbsent
 	 (oilExtraSelectors, allocated by primitiveOilSetSelectors, a GC root; see CogObjectRepresentationFor64BitSpur>>oilWrapSelectorIndexDereferenceRoutine
 	 and indexForSelector:in:).  Answer selector's value, adding it if addIfAbsent, or OilNoLink if it is absent and not
 	 added (no table, or the table is full)."
-	| table sel |
+	| table tableSelector |
 	table := oilExtraSelectors.
 	(table = 0 or: [table = objectMemory nilObject]) ifTrue:
 		[^OilNoLink].
 	0 to: (objectMemory numSlotsOf: table) - 1 do:
-		[:k|
-		sel := objectMemory fetchPointer: k ofObject: table.
-		sel = selector ifTrue:
-			[^OilExtraSelectorBase + k].
-		sel = objectMemory nilObject ifTrue:
+		[:index|
+		tableSelector := objectMemory fetchPointer: index ofObject: table.
+		tableSelector = selector ifTrue:
+			[^OilExtraSelectorBase + index].
+		tableSelector = objectMemory nilObject ifTrue:
 			[(addIfAbsent and: [objectMemory isNonImmediate: selector]) ifFalse:
 				[^OilNoLink].
 			 "(with the write barrier: a young selector, e.g. of a method just compiled, remembers the table)"
-			 coInterpreter oilApiStorePointer: k ofObject: table withValue: selector.
-			 ^OilExtraSelectorBase + k]].
+			 coInterpreter oilApiStorePointer: index ofObject: table withValue: selector.
+			 ^OilExtraSelectorBase + index]].
 	^OilNoLink! !
 
 !ProfilingCogit methodsFor: 'oil selector table' stamp: 'cb 10/24/2026 18:00'!

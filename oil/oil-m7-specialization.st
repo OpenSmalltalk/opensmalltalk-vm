@@ -184,17 +184,17 @@ oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 	classTag := objectMemory classTagForClass: classObj.
 	entryIndex := -1.
 	0 to: OilMaxSpecializations - 1 do:
-		[:k|
+		[:index|
 		(entryIndex < 0
-		 and: [(self oilSpecializationAt: k field: OilSpecMethod) = objectMemory nilObject]) ifTrue:
-			[entryIndex := k]].
+		 and: [(self oilSpecializationAt: index field: OilSpecMethod) = objectMemory nilObject]) ifTrue:
+			[entryIndex := index]].
 	entryIndex < 0 ifTrue:
 		[0 to: OilMaxSpecializations - 1 do:
-			[:k|
-			copy := self oilSpecializationAt: k field: OilSpecCopy.
+			[:index|
+			copy := self oilSpecializationAt: index field: OilSpecCopy.
 			(entryIndex < 0
 			 and: [(self oilHasOilCode: copy) not]) ifTrue:
-				[entryIndex := k]]].
+				[entryIndex := index]]].
 	entryIndex < 0 ifTrue:
 		[entryIndex := oilNumSpecializations \\ OilMaxSpecializations].
 	oilNumSpecializations := oilNumSpecializations + 1.
