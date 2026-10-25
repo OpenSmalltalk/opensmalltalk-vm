@@ -76,7 +76,7 @@ initialize
 	OilIndexOfByte := 49.
 	OilSkipSeparators := 50.
 	"a new instance of a class with fixed pointer fields only [Op|Dest|FirstSlot|NumSlots] then the class: its slots are the
-	 registers FirstSlot..FirstSlot+NumSlots-1 (a scalar replaced object that escapes, see OilBaseCompiler>>materializeVObj:);
+	 registers FirstSlot..FirstSlot+NumSlots-1 (a scalar replaced object that escapes, see OilInliningCompiler>>materializeVObj:scratch:);
 	 young, so the stores need no store check, and not nil filled first.  Beyond the scavenge threshold it deoptimizes (OilSiteAlloc)"
 	OilNewObject := 51.
 	"[Op|Cond|Reg|0] then a class: the flags of class(Reg) == class (OilCondIdentical / OilCondNotIdentical), followed by a branch

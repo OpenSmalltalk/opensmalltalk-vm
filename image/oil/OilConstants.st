@@ -5,7 +5,7 @@ SharedPool subclass: #OilConstants
 	category: 'VMMaker-JIT-Oil'!
 
 !OilConstants commentStamp: 'cb 10/25/2026 00:15' prior: 0!
-I hold the non-instruction constants of Oil, the optimizing JIT for the 64-bit Spur Cog VM: comparison condition codes, bytecode classification tags and operand decoding modes of OilBytecodeScanner, virtual register descriptor kinds and flags, sizes and limits of the preallocated compiler tables, deopt site kinds, failure codes, and the flags Pass 2 (OilCompiler>>loopOptimize) marks instructions with.  The 32-bit linear IR opcodes are defined in OilInstructionConstants (imported via poolDictionaries).  Initialize with OilConstants initialize.!
+I hold the non-instruction constants of Oil, the optimizing JIT for the 64-bit Spur Cog VM: comparison condition codes, bytecode classification tags and operand decoding modes of OilBytecodeScanner, virtual register descriptor kinds and flags, sizes and limits of the preallocated compiler tables, deopt site kinds, failure codes, and the flags Pass 2 (OilLoopOptimizer>>loopOptimize) marks instructions with.  The 32-bit linear IR opcodes are defined in OilInstructionConstants (imported via poolDictionaries).  Initialize with OilConstants initialize.!
 
 !OilConstants class methodsFor: 'class initialization' stamp: 'cb 10/25/2026 00:15'!
 initialize
@@ -190,7 +190,7 @@ initialize
 	OilFloatUnboxed := 64.
 	"Pass 3: the XMM registers holding the values of a float chain (DPFPReg0..)"
 	OilNumXmms := 8.
-	"OilFullCompiler>>valueNumber: the facts (loaded fields, sizes, bounds and class checks) known at a time"
+	"OilFullCompiler>>valueNumberAt: the facts (loaded fields, sizes, bounds and class checks) known at a time"
 	OilMaxFacts := 64.
 	"Pass 3: in-place tagged adds (with an undo stub before deoptimizing) per method"
 	OilMaxUndos := 64.
