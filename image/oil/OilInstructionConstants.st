@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilLastOpcode'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilLastOpcode'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -67,11 +67,19 @@ initialize
 	OilMulFloat := 45.
 	OilDivFloat := 46.
 	OilCmpFloat := 47.
-	OilLastOpcode := 47.! !
+	"primitive 75 (identityHash) of a non-immediate [Op|Dest|Rcvr|0] then the selector: the hash in its header, or, if it
+	 has none yet, the send"
+	OilIdentityHash := 48.
+	"word-at-a-time byte scans, else (unexpected operands) the send: ByteString class>>indexOfAscii:inString:startingAt:
+	 [Op|Dest|Rcvr|3] then the selector and the packed argument registers (like OilCallN), and PositionableStream>>skipSeparators
+	 of a ReadStream on a ByteString [Op|Dest|Rcvr|0] then the selector"
+	OilIndexOfByte := 49.
+	OilSkipSeparators := 50.
+	OilLastOpcode := 50.! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:10'!
 opcodeNames
 	"Answer the opcode names indexed by opcode (1-based, as opcodes start at 1)."
-	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat)! !
+	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators)! !
 
 OilInstructionConstants initialize!

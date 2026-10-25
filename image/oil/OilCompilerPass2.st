@@ -78,8 +78,10 @@ valueNumber
 
 !OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 isCall: opcode
+	"(The byte scans fall back to sends, which may run any code.)"
 	<inline: true>
-	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]]! !
+	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper
+	  or: [opcode = OilIndexOfByte or: [opcode = OilSkipSeparators]]]]]! !
 
 !OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 flag: irOffset has: mask

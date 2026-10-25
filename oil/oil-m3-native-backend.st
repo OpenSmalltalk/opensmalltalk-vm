@@ -105,6 +105,12 @@ oilGenGetNumBytesOf: srcReg into: destReg
 	"The number of bytes of the byte object in srcReg (clobbers TempReg)."
 	^objectRepresentation genGetNumBytesOf: srcReg into: destReg! !
 
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 03:00'!
+oilGenGetHashOf: objReg into: destReg
+	"The identity hash in the header of the non-immediate in objReg, as a SmallInteger (0 if it has none yet).
+	 See OilCompiler>>genIdentityHashAt:."
+	^objectRepresentation genGetHashFieldNonImmOf: objReg asSmallIntegerInto: destReg! !
+
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 02:00'!
 oilGenGetSmallFloatValueOf: oopReg scratch: scratchReg into: dpReg
 	"The double value of the SmallFloat64 in oopReg (see OilCompiler>>genLoadDouble:into:ints:site:)."
@@ -625,7 +631,13 @@ estimateOpcodes
 									ifFalse:
 										[(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]])
 											ifTrue: [140]
-											ifFalse: [20]]]]).
+											ifFalse:
+												[opcode = OilIdentityHash
+													ifTrue: [60]
+													ifFalse:
+														[(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators])
+															ifTrue: [160 + (4 * oilNumAllocRegs)]
+															ifFalse: [20]]]]]]).
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 

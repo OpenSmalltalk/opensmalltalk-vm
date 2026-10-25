@@ -83,6 +83,9 @@ printInstructionAt: instIndex on: aStream
 		[OilStreamNext]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' next   (inlined, else sent)'].
 		[OilStreamNextPut]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' nextPut: ', (self reg: regC), '   (inlined, else sent)'].
 		[OilCharValue]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' asInteger'].
+		[OilIdentityHash]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' identityHash   (from the header, else sent)'].
+		[OilIndexOfByte]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' ', (self printHandle: (self word64At: instIndex + 1)), ' (', (self packedArgsAt: instIndex + 3 count: regC), ')   (8 bytes at a time, else sent)'].
+		[OilSkipSeparators]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' skipSeparators   (8 bytes at a time, else sent)'].
 		[OilLoadByteSize]	-> [aStream nextPutAll: (self reg: regA), ' := byteSize(', (self reg: regB), ')'].
 		[OilLoadByte]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), '[', (self reg: regC), '] (byte)'].
 		[OilLoadChar]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), '[', (self reg: regC), '] (Character)'].
@@ -355,7 +358,7 @@ step: instIndex
 	opcode = OilReturn ifTrue: [^#result -> (self r: destReg)].
 	opcode = OilGuardClass ifTrue:
 		[(self r: destReg) class == (comp objectFor: (comp word64At: instIndex + 1)) ifFalse: [^#deopt -> instIndex]. ^nextIndex].
-	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN]]) ifTrue:
+	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode between: OilIdentityHash and: OilSkipSeparators]]]) ifTrue:
 		[| selector args |
 		 selector := comp objectFor: (comp word64At: instIndex + 1).
 		 args := (1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex].
