@@ -81,7 +81,7 @@ isCall: opcode
 	"(The byte scans fall back to sends, which may run any code.)"
 	<inline: true>
 	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper
-	  or: [opcode = OilIndexOfByte or: [opcode = OilSkipSeparators]]]]]! !
+	  or: [opcode = OilIndexOfByte or: [opcode = OilSkipSeparators or: [opcode = OilStringHash]]]]]]! !
 
 !OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 flag: irOffset has: mask
@@ -532,8 +532,18 @@ pipe
 
 !OilFullCompiler methodsFor: 'optimization' stamp: 'cb 10/25/2026 02:00'!
 pass2Statistics: index
-	"8 loads removed, 9 bounds and class checks removed, 10 unboxed float results; see OilLoopCompiler."
+	"8 loads removed, 9 bounds and class checks removed, 10 unboxed float results; see OilLoopCompiler.
+	 And of Pass 1 and 3: 11 scalar replaced objects, 12 of them materialized, 13 bimorphic sends inlined, 14 bimorphic
+	 predicates (class tests), 15 allocation sites materialized when created, 16 allocations sharing a threshold check,
+	 17 bimorphic nil or object sends (collapsed into the class test when compared with nil)."
 	index = 8 ifTrue: [^oilNumLoadsRemoved].
+	index = 11 ifTrue: [^oilNumVirtualized].
+	index = 12 ifTrue: [^oilNumMaterialized].
+	index = 13 ifTrue: [^oilNumBimorphic].
+	index = 14 ifTrue: [^oilNumPredicates].
+	index = 15 ifTrue: [^oilNumEagerSites].
+	index = 16 ifTrue: [^oilNumAllocsCombined].
+	index = 17 ifTrue: [^oilNumSelects].
 	index = 9 ifTrue: [^oilNumChecksRemoved].
 	index = 10 ifTrue: [^oilNumUnboxed].
 	^super pass2Statistics: index! !

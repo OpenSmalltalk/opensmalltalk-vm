@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilLastOpcode'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilLastOpcode'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -75,11 +75,23 @@ initialize
 	 of a ReadStream on a ByteString [Op|Dest|Rcvr|0] then the selector"
 	OilIndexOfByte := 49.
 	OilSkipSeparators := 50.
-	OilLastOpcode := 50.! !
+	"a new instance of a class with fixed pointer fields only [Op|Dest|FirstSlot|NumSlots] then the class: its slots are the
+	 registers FirstSlot..FirstSlot+NumSlots-1 (a scalar replaced object that escapes, see OilBaseCompiler>>materializeVObj:);
+	 young, so the stores need no store check, and not nil filled first.  Beyond the scavenge threshold it deoptimizes (OilSiteAlloc)"
+	OilNewObject := 51.
+	"[Op|Cond|Reg|0] then a class: the flags of class(Reg) == class (OilCondIdentical / OilCondNotIdentical), followed by a branch
+	 on the flags (the class test of a bimorphic send or of a predicate answering true for one class and false for the other)"
+	OilCmpClass := 52.
+	"[Op|Reg|Site16] then two classes: deoptimize unless Reg is an instance of one of them (a bimorphic predicate)"
+	OilGuardClass2 := 53.
+	"primitiveStringHash (String>>hashWithInitialHash:) of a byte object [Op|Dest|Rcvr|InitialHash] then the selector:
+	 ((((h + b1) * 16r19660D) + b2) * 16r19660D ...) bitAnd: 16r0FFFFFFF, h the SmallInteger initial hash, else the send"
+	OilStringHash := 54.
+	OilLastOpcode := 54.! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:10'!
 opcodeNames
 	"Answer the opcode names indexed by opcode (1-based, as opcodes start at 1)."
-	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators)! !
+	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators NewObject CmpClass GuardClass2 StringHash)! !
 
 OilInstructionConstants initialize!

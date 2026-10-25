@@ -101,7 +101,11 @@ printInstructionAt: instIndex on: aStream
 		[OilSubFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' - ', (self reg: regC), '   (Float)'].
 		[OilMulFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' * ', (self reg: regC), '   (Float)'].
 		[OilDivFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' / ', (self reg: regC), '   (Float)'].
-		[OilCmpFloat]		-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self reg: regC), '   (Float)'] }
+		[OilCmpFloat]		-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self reg: regC), '   (Float)'].
+		[OilNewObject]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self printHandle: (self word64At: instIndex + 1)), ' new from ', (self reg: regB), '..', (self reg: regB + regC - 1), '   (materialized, not nil filled)'].
+		[OilCmpClass]		-> [aStream nextPutAll: 'class(', (self reg: regB), ') ', (self condName: regA), ' ', (self printHandle: (self word64At: instIndex + 1))].
+		[OilGuardClass2]	-> [aStream nextPutAll: 'class(', (self reg: regA), ') == ', (self printHandle: (self word64At: instIndex + 1)), ' or ', (self printHandle: (self word64At: instIndex + 3))].
+		[OilStringHash]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' hashWithInitialHash: ', (self reg: regC), '   (inlined, else sent)'] }
 		otherwise: [].
 	siteIndex := (0 to: numSites - 1) detect: [:s| (siteIR at: s) = instIndex] ifNone: [nil].
 	siteIndex ifNotNil:
@@ -207,6 +211,14 @@ classAt: pc in: aCompiledCode
 	| classes |
 	classes := sites at: {aCompiledCode. pc} ifAbsent: [^nil].
 	^classes size = 1 ifTrue: [classes anyOne] ifFalse: [nil]! !
+
+!OilSimulatedTypeFeedback methodsFor: 'accessing' stamp: 'cb 10/25/2026 09:30'!
+class: index of: numClasses at: pc in: aCompiledCode
+	"The index-th (1-based, by name) of the receiver classes of a site that saw exactly numClasses classes (a closed PIC), else nil."
+	| classes |
+	classes := sites at: {aCompiledCode. pc} ifAbsent: [^nil].
+	classes size = numClasses ifFalse: [^nil].
+	^(classes asArray sort: [:a :b | a name <= b name]) at: index! !
 
 !OilSimulatedTypeFeedback methodsFor: 'accessing' stamp: 'cb 10/24/2026 14:00'!
 hasSiteAt: pc in: aCompiledCode
@@ -358,10 +370,21 @@ step: instIndex
 	opcode = OilReturn ifTrue: [^#result -> (self r: destReg)].
 	opcode = OilGuardClass ifTrue:
 		[(self r: destReg) class == (comp objectFor: (comp word64At: instIndex + 1)) ifFalse: [^#deopt -> instIndex]. ^nextIndex].
-	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode between: OilIdentityHash and: OilSkipSeparators]]]) ifTrue:
+	opcode = OilGuardClass2 ifTrue:
+		[((self r: destReg) class == (comp objectFor: (comp word64At: instIndex + 1))
+		  or: [(self r: destReg) class == (comp objectFor: (comp word64At: instIndex + 3))]) ifFalse: [^#deopt -> instIndex]. ^nextIndex].
+	opcode = OilCmpClass ifTrue:
+		[flag := ((self r: srcReg1) class == (comp objectFor: (comp word64At: instIndex + 1))) = (destReg = OilCondIdentical). ^nextIndex].
+	opcode = OilNewObject ifTrue:
+		[| obj | obj := (comp objectFor: (comp word64At: instIndex + 1)) basicNew.
+		 0 to: srcReg2 - 1 do: [:slotIndex| obj instVarAt: slotIndex + 1 put: (self r: srcReg1 + slotIndex)].
+		 self r: destReg put: obj. ^nextIndex].
+	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [(opcode between: OilIdentityHash and: OilSkipSeparators) or: [opcode = OilStringHash]]]]) ifTrue:
 		[| selector args |
 		 selector := comp objectFor: (comp word64At: instIndex + 1).
-		 args := (1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex].
+		 args := opcode = OilStringHash
+					ifTrue: [{self r: srcReg2}]
+					ifFalse: [(1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex]].
 		 self r: destReg put: ((self r: srcReg1) perform: selector withArguments: args). ^nextIndex].
 	opcode = OilNewArray ifTrue:
 		[self r: destReg put: (srcReg1 = OilFlagsReg

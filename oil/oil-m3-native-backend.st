@@ -521,6 +521,36 @@ oilMonomorphicClassAt: bcpc in: aMethodObj
 	^class = objectMemory nilObject ifTrue: [0] ifFalse: [class]! !
 
 
+!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/25/2026 09:30'!
+oilPolymorphicClass: caseIndex at: bcpc in: aMethodObj
+	"Type feedback for Oil's bimorphic inlining: the receiver class of case caseIndex (0 or 1) of the send at the 0-relative
+	 bytecode pc bcpc of aMethodObj if its inline cache is linked to a closed PIC of exactly two cases, both to methods
+	 (not to the doesNotUnderstand: entry), else 0.  c.f. SistaCogit>>populate:withPICInfoFor:firstCacheTag:"
+	| mcpc entryPoint targetMethod pc cacheTag class |
+	<var: #targetMethod type: #'CogMethod *'>
+	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse: [^0].
+	mcpc := self oilSendMcpcAt: bcpc in: (coInterpreter cogMethodOf: aMethodObj).
+	mcpc = 0 ifTrue: [^0].
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc.
+	entryPoint <= methodZoneBase ifTrue: [^0].
+	self targetMethodAndSendTableFor: entryPoint
+		annotation: IsSendCall
+		into: [:target :sendTable| targetMethod := target].
+	(targetMethod isCMClosedPIC and: [targetMethod cPICNumCases = 2]) ifFalse: [^0].
+	1 to: 2 do:
+		[:i|
+		pc := self addressOfEndOfCase: i inCPIC: targetMethod.
+		entryPoint := i = 1
+						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
+						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
+		(targetMethod containsAddress: entryPoint) ifTrue: [^0]]. "a case of the PIC sends doesNotUnderstand:"
+	pc := self addressOfEndOfCase: caseIndex + 1 inCPIC: targetMethod.
+	cacheTag := caseIndex = 0
+					ifTrue: [backEnd inlineCacheTagAt: mcpc]
+					ifFalse: [backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize].
+	class := objectRepresentation classForInlineCacheTag: cacheTag.
+	^class = objectMemory nilObject ifTrue: [0] ifFalse: [class]! !
+
 !ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/24/2026 15:00'!
 oilSendSiteUnlinkedAt: bcpc in: aMethodObj
 	"Has the send at the 0-relative bytecode pc bcpc of aMethodObj never been sent, i.e. is its inline cache
@@ -648,14 +678,14 @@ estimateOpcodes
 						[(opcode = OilStoreField or: [opcode = OilStoreElement])
 							ifTrue: [48]
 							ifFalse:
-								[(opcode = OilNewArray or: [opcode = OilMakeClosure])
+								[(opcode = OilNewArray or: [opcode = OilMakeClosure or: [opcode = OilNewObject]])
 									ifTrue: [40 + (2 * (self fieldCAt: irOffset)) + (2 * OilMaxReg // 16)]
 									ifFalse:
 										[(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]])
 											ifTrue: [140]
 											ifFalse:
-												[opcode = OilIdentityHash
-													ifTrue: [60]
+												[(opcode = OilIdentityHash or: [opcode = OilStringHash])
+													ifTrue: [opcode = OilStringHash ifTrue: [100] ifFalse: [60]]
 													ifFalse:
 														[(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators])
 															ifTrue: [160 + (4 * oilNumAllocRegs)]
@@ -748,9 +778,10 @@ fillMetadata: md cogMethod: cogMethodAddress
 				 self md: md at: p + 6 putInt: captured + (2 * (vobjCopiedBase at: v)).
 				 self md: md at: p + 7 putInt: 0]
 			ifFalse:
-				[self md: md at: p + 1 putInt: (vobjSize at: v).
+				["a temp vector, or a scalar replaced object (OilDescObject; selfValue is its class): slots in high registers"
+				 self md: md at: p + 1 putInt: (vobjSize at: v).
 				 self md: md at: p + 2 putInt: -1.
-				 self md: md at: p + 3 putKind: OilDescConst value: objectMemory nilObject.
+				 self md: md at: p + 3 putKind: OilDescConst value: ((vobjKind at: v) = OilDescObject ifTrue: [vobjSelfClass at: v] ifFalse: [objectMemory nilObject]).
 				 self md: md at: p + 5 putInt: 0.
 				 self md: md at: p + 6 putInt: 0.
 				 self md: md at: p + 7 putInt: (vobjSlotBase at: v)]].
@@ -805,6 +836,76 @@ oilApiInstSpecOfClass: class
 	<api>
 	<essential: #ProfilingCogit>
 	^objectMemory instSpecOfClass: class! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiClassIndexOfClass: class
+	"The class index of class (its identity hash), or 0 if it has none (never instantiated)."
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory rawHashBitsOf: class! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiFixedFieldsOfClass: class
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory fixedFieldsOfClass: class! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiHashBitsOf: oop
+	"The identity hash of the non-immediate oop, assigned now if it has none yet (as primitive 75 does)."
+	<api>
+	<essential: #ProfilingCogit>
+	^objectMemory hashBitsOf: oop! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiClassBindingClassOf: aMethod
+	"The class of the last literal of aMethod, its method class association, if it is a class binding (pointers, at least
+	 two slots, a key; on the class side the key is nil), else 0."
+	<api>
+	<essential: #ProfilingCogit>
+	| numLits lit |
+	numLits := objectMemory literalCountOf: aMethod.
+	numLits <= 0 ifTrue: [^0].
+	lit := self literal: numLits - 1 ofMethod: aMethod.
+	((objectMemory isNonImmediate: lit)
+	 and: [(objectMemory isPointersNonImm: lit)
+	 and: [(objectMemory numSlotsOf: lit) >= 2
+	 and: [(objectMemory fetchPointer: 0 ofObject: lit) ~= objectMemory nilObject]]]) ifFalse: [^0].
+	^objectMemory fetchClassOf: lit! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiIsStringHashMethod: aMethod
+	"Is aMethod's primitive primitiveStringHash (of the MiscPrimitivePlugin, e.g. String>>hashWithInitialHash:)?
+	 Its first literal is then the named primitive's spec, whose second element is the function's name."
+	<api>
+	<essential: #ProfilingCogit>
+	| lit name ptr |
+	<var: #ptr type: #'char *'>
+	(self primitiveIndexOf: aMethod) = PrimNumberExternalCall ifFalse: [^false].
+	(objectMemory literalCountOf: aMethod) > 0 ifFalse: [^false].
+	lit := self literal: 0 ofMethod: aMethod.
+	((objectMemory isNonImmediate: lit)
+	 and: [(objectMemory isPointersNonImm: lit)
+	 and: [(objectMemory numSlotsOf: lit) >= 2]]) ifFalse: [^false].
+	name := objectMemory fetchPointer: 1 ofObject: lit.
+	((objectMemory isNonImmediate: name)
+	 and: [(objectMemory isBytesNonImm: name)
+	 and: [(objectMemory numBytesOf: name) = 19]]) ifFalse: [^false].
+	ptr := objectMemory firstIndexableField: name.
+	^(self strncmp: ptr _: 'primitiveStringHash' _: 19) = 0! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/25/2026 09:30'!
+oilApiStringHashOf: oop initialHash: speciesHash
+	"primitiveStringHash of the byte object oop (see MiscPrimitivePlugin>>primitiveStringHash)."
+	<api>
+	<essential: #ProfilingCogit>
+	| hash numBytes |
+	<var: #hash type: #'unsigned int'>
+	hash := speciesHash.
+	numBytes := objectMemory numBytesOf: oop.
+	0 to: numBytes - 1 do:
+		[:pos| hash := hash + (objectMemory fetchByte: pos ofObject: oop) * 16r19660D].
+	^hash bitAnd: 16r0FFFFFFF! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/24/2026 15:00'!
 oilApiFetchClassOf: oop
@@ -953,7 +1054,7 @@ oilValueAt: p metadata: md values: vals vobjs: vobjOops
 	kind := self oilMD: md at: p.
 	kind = OilDescConst ifTrue:
 		[^objectMemory fetchPointer: p + 1 ofObject: md].
-	(kind = OilDescBlock or: [kind = OilDescTempVector]) ifTrue:
+	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifTrue:
 		[^(vobjOops at: (self oilMD: md at: p + 1)) = 0
 			ifTrue: [objectMemory nilObject]
 			ifFalse: [vobjOops at: (self oilMD: md at: p + 1)]].
@@ -967,7 +1068,7 @@ oilNeedVObjAt: p metadata: md needed: needed
 	| kind v |
 	p = 0 ifTrue: [^self].
 	kind := self oilMD: md at: p.
-	(kind = OilDescBlock or: [kind = OilDescTempVector]) ifFalse: [^self].
+	(kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) ifFalse: [^self].
 	v := self oilMD: md at: p + 1.
 	(needed at: v) = 0 ifTrue: [needed at: v put: 1]! !
 
@@ -986,7 +1087,7 @@ oilStore: p at: address metadata: md values: vals vobjs: vobjOops needed: needed
 	stackPages longAt: address put: (self oilValueAt: p metadata: md values: vals vobjs: vobjOops).
 	p = 0 ifTrue: [^numFix].
 	kind := self oilMD: md at: p.
-	((kind = OilDescBlock or: [kind = OilDescTempVector]) and: [numFix < OilNumRegs]) ifFalse:
+	((kind = OilDescBlock or: [kind = OilDescTempVector or: [kind = OilDescObject]]) and: [numFix < OilNumRegs]) ifFalse:
 		[^numFix].
 	self oilNeedVObjAt: p metadata: md needed: needed.
 	fixAddr at: numFix put: address.
@@ -1162,10 +1263,17 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 							format: objectMemory indexablePointersFormat
 							classIndex: ClassFullBlockClosureCompactIndex]
 					ifFalse:
-						[objectMemory
-							allocateSlots: (self oilMD: md at: vr + 1)
-							format: objectMemory arrayFormat
-							classIndex: ClassArrayCompactIndex].
+						[kind = OilDescObject
+							ifTrue: "a scalar replaced object: an instance of the class in its record"
+								[objectMemory
+									allocateSlots: (self oilMD: md at: vr + 1)
+									format: (objectMemory instSpecOfClass: (objectMemory fetchPointer: vr + 4 ofObject: md))
+									classIndex: (objectMemory rawHashBitsOf: (objectMemory fetchPointer: vr + 4 ofObject: md))]
+							ifFalse:
+								[objectMemory
+									allocateSlots: (self oilMD: md at: vr + 1)
+									format: objectMemory arrayFormat
+									classIndex: ClassArrayCompactIndex]].
 			 self assert: obj notNil.
 			 objectMemory fillObj: obj numSlots: (objectMemory numSlotsOf: obj) with: objectMemory nilObject.
 			 vobjOops at: i put: obj]].
@@ -1212,9 +1320,12 @@ oilDeoptimizeFrame: oilFP metadata: md site: site
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 19:15'!
 checkImageHeaderLoad
+	"Oil's minimums: a 4 MB code zone, and a 16 MB eden (young space: Oil code allocates, e.g. its materialized objects)."
 	<inline: #always>
 	cogCodeSize < (4 * 1024 * 1024) ifTrue:
-		[cogCodeSize := 4 * 1024 * 1024]! !
+		[cogCodeSize := 4 * 1024 * 1024].
+	objectMemory edenBytes < (16 * 1024 * 1024) ifTrue:
+		[objectMemory edenBytes: 16 * 1024 * 1024]! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 15:00'!
 attemptToSwitchToMachineCode: bcpc
@@ -1402,9 +1513,9 @@ primitiveOilLastCompilation
 	0 to: irWordCount - 1 do:
 		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 11.
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 18.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 10 do:
+	0 to: 17 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !

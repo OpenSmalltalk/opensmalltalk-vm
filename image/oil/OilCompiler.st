@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilBaseCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -101,6 +101,18 @@ setUpSimulationTables
 	siteSnapTop := self newTable: OilMaxSites.
 	siteSnapHigh := self newTable: OilMaxSites.
 	vobjOuter := self newTable: OilMaxVObjs.
+	vobjEpoch := self newTable: OilMaxVObjs.
+	vobjPC := self newTable: OilMaxVObjs.
+	vobjMaterialized := self newTable: OilMaxVObjs.
+	oilEagerSiteMethod := self newTable: OilMaxEagerSites.
+	oilEagerSitePC := self newTable: OilMaxEagerSites.
+	oilNumEagerSites := 0.
+	condClass := self newTable: OilMaxConds.
+	condSelKind := self newTable: OilMaxConds.
+	condSelValue := self newTable: OilMaxConds.
+	oilNumSelects := 0.
+	oilLiveMark := self newTable: OilPCMapSize.
+	oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := oilNumAllocsCombined := 0.
 	oilIRMap := self newTable: OilBufferWords + 1.
 	oilIRFlag := self newTable: OilBufferWords.
 	oilIRAux := self newTable: OilBufferWords.
@@ -139,6 +151,9 @@ setUpSimulationHandles
 	self registerSelector: (self handleFor: #bitXor:) kind: 5.
 	"Error paths are cold: never inlined (they would bloat the IR of the hot loop for nothing)."
 	#(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed:) do:
+		[:sel| self registerSelector: (self handleFor: sel) kind: 7].
+	"Slow paths are cold too: OrderedCollection>>addLast: inlines its fast path (store, bump) and calls makeRoomAtLast."
+	#(makeRoomAtLast makeRoomAtFirst) do:
 		[:sel| self registerSelector: (self handleFor: sel) kind: 7].
 	"The methods and the stream class of the word-at-a-time byte scans (see genScanIntrinsic:selector:receiver:numArgs:class:guard:)."
 	self registerSelector: (ByteString class >> #indexOfAscii:inString:startingAt:) kind: 9.
@@ -212,7 +227,9 @@ resetForCompilation
 	pendingCondSlot := -1.
 	currentFrame := -1.
 	currentPC := 0.
-	oilDeadCode := failed := needsRestart := oilRestartNoInline := false.
+	oilDeadCode := failed := needsRestart := oilRestartNoInline := oilRestartEager := false.
+	oilFlowEpoch := 0.
+	oilClassBindingClass := 0.
 	failureCode := OilOK! !
 
 !OilBaseCompiler methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:30'!
@@ -268,12 +285,13 @@ compileMethod: aMethod receiverClass: classHandle
 	| restarts |
 	eagerClosures := false.
 	irBudget = 0 ifTrue: [irBudget := OilIRBudget]. "in the VM nothing else initializes it"
-	oilNumNoInline := 0.
+	oilNumNoInline := oilNumEagerSites := 0.
 	restarts := 0.
-	[self compileOnce: aMethod receiverClass: classHandle.
+	[oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := oilNumSelects := 0.
+	 self compileOnce: aMethod receiverClass: classHandle.
 	 needsRestart and: [restarts < 12]] whileTrue:
 		[restarts := restarts + 1.
-		 oilRestartNoInline ifFalse:
+		 (oilRestartNoInline or: [oilRestartEager]) ifFalse:
 			[eagerClosures ifTrue: [^false].
 			 eagerClosures := true]].
 	^failed not! !
@@ -482,7 +500,7 @@ exitFrame: frameIndex
 		ifFalse:
 			[(frameHasLazy at: frameIndex) ifTrue:
 				[self setSlot: baseReg kind: (frameLazyKind at: frameIndex) value: (frameLazyValue at: frameIndex).
-				 (frameLazyKind at: frameIndex) = OilDescCond ifTrue:
+				 ((frameLazyKind at: frameIndex) = OilDescCond or: [(frameLazyKind at: frameIndex) = OilDescSelect]) ifTrue:
 					[pendingCondSlot := baseReg.
 					 pendingCondIndex := frameLazyValue at: frameIndex].
 				 oilDeadCode := false]].
@@ -548,7 +566,7 @@ copySnapshotToSite: siteIndex
 	siteSnapHigh at: siteIndex put: snapHighTop.
 	0 to: snapTop do:
 		[:vreg|
-		(snapKind at: vreg) = OilDescCond
+		((snapKind at: vreg) = OilDescCond or: [(snapKind at: vreg) = OilDescSelect])
 			ifTrue:
 				[sitePoolKind at: base put: OilDescReg.
 				 sitePoolValue at: base put: vreg]
@@ -623,7 +641,8 @@ bindLabelAt: pc frame: frameIndex
 			 simStackTop := pcDepth at: mapIndex.
 			 self resetMutableSlotsOfFrame: frameIndex]
 		ifFalse:
-			[self flushFrame: frameIndex].
+			[self takeSnapshotFrame: frameIndex pc: pc. "(a scalar replaced object materialized by the flush deoptimizes here)"
+			 self flushFrame: frameIndex].
 	self patchChain: (pcChain at: mapIndex) to: irIndex.
 	pcChain at: mapIndex put: OilNoLink.
 	pcLabelIR at: mapIndex put: irIndex.
@@ -649,6 +668,7 @@ forgetKnowledgeAtLabel
 	 Only the classes of the active frames' receivers dominate every label (guarded before frame entry)."
 	| ancestorFrame |
 	lastLabelIR := irIndex.
+	oilFlowEpoch := oilFlowEpoch + 1.
 	0 to: OilMaxReg do:
 		[:regIndex|
 		affineBase at: regIndex put: -1.
@@ -664,11 +684,18 @@ flushFrame: frameIndex
 	"Before a branch or a label: make every mutable register of frame frameIndex (temps and stack) and every
 	 scalar replaced temp vector slot hold its value in its own register, so that all paths agree."
 	(frameTempStart at: frameIndex) to: simStackTop do:
-		[:slotIndex| ((self isImmutable: slotIndex) or: [(slotKind at: slotIndex) = OilDescTempVector]) ifFalse: [self materializeSlot: slotIndex]].
+		[:slotIndex| ((self isImmutable: slotIndex) or: [(slotKind at: slotIndex) = OilDescTempVector]) ifFalse:
+			[((slotKind at: slotIndex) = OilDescObject
+			  and: [slotIndex < (frameStackStart at: frameIndex)
+			  and: [self isTemp: slotIndex - (frameBase at: frameIndex) - 1 deadFrom: currentPC frame: frameIndex]])
+				ifTrue: "a scalar replaced object in a dead temp: forget it rather than materializing it"
+					[self setSlot: slotIndex kind: OilDescConst value: nilHandle]
+				ifFalse: [self materializeSlot: slotIndex]]].
 	self flushTVSlots! !
 
 !OilBaseCompiler methodsFor: 'labels' stamp: 'cb 10/24/2026 10:30'!
 flushTVSlots
+	self releaseDeadVObjSlots.
 	highRegTop + 1 to: OilMaxReg do:
 		[:highReg| ((slotFlags at: highReg) bitAnd: OilFlagTVSlot) ~= 0 ifTrue: [self materializeSlot: highReg]]! !
 
@@ -712,6 +739,8 @@ emitOp: op a: a b: b c: c
 		[self abortCompilation: OilFailBufferFull.
 		 ^0].
 	idx := irIndex.
+	(op = OilJump or: [op = OilBranchTrue or: [op = OilBranchFalse]]) ifTrue:
+		[oilFlowEpoch := oilFlowEpoch + 1].
 	oilIRBuffer at: idx put: ((op bitShift: 24)
 								bitOr: (((a bitAnd: 255) bitShift: 16)
 								bitOr: (((b bitAnd: 255) bitShift: 8)
@@ -839,6 +868,7 @@ retarget: src to: dst
 	| idx word |
 	idx := lastDefIR at: src.
 	(idx >= 0 and: [idx = lastInstIR and: [idx >= lastLabelIR]]) ifFalse: [^false].
+	(slotFlags at: src) ~= 0 ifTrue: [^false]. "(e.g. a materialized object's register, to which descriptors refer)"
 	word := oilIRBuffer at: idx.
 	(self opcodeHasDest: (word bitShift: -24)) ifFalse: [^false].
 	((word bitShift: -16) bitAnd: 255) = src ifFalse: [^false].
@@ -854,11 +884,13 @@ retarget: src to: dst
 
 !OilBaseCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 opcodeHasDest: op
-	^op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [(op between: OilAddTagged and: OilOddTagged)
-		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
-		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged
-		or: [(op between: OilLoadByteSize and: OilLoadChar) or: [op = OilCompareBytes or: [op = OilCharValue
-		or: [op = OilStreamNext or: [op = OilStreamNextPut or: [(op between: OilAddFloat and: OilDivFloat) or: [op between: OilIdentityHash and: OilSkipSeparators]]]]]]]]]]]]]]]]]]]! !
+	(op = OilConstTagged or: [op = OilConst64 or: [op = OilMove or: [op = OilLoadField or: [op = OilLoadElement]]]]) ifTrue: [^true].
+	((op between: OilAddTagged and: OilOddTagged) or: [(op between: OilCall0 and: OilAddImmTagged)
+	 or: [(op between: OilLoadByteSize and: OilLoadChar) or: [(op between: OilAddFloat and: OilDivFloat)
+	 or: [op between: OilIdentityHash and: OilSkipSeparators]]]]) ifTrue: [^true].
+	^op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC
+	  or: [op = OilModTagged or: [op = OilCompareBytes or: [op = OilCharValue or: [op = OilStreamNext or: [op = OilStreamNextPut
+	  or: [op = OilNewObject or: [op = OilStringHash]]]]]]]]]]]! !
 
 !OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -926,6 +958,11 @@ regForKind: descKind value: descValue scratch: scratchReg
 	descKind = OilDescCond ifTrue:
 		[self emitCond: descValue booleanInto: scratchReg.
 		 ^scratchReg].
+	descKind = OilDescObject ifTrue:
+		[^self materializeVObj: descValue scratch: scratchReg].
+	descKind = OilDescSelect ifTrue:
+		[self emitSelect: descValue into: scratchReg.
+		 ^scratchReg].
 	self requireEagerClosures.
 	^scratchReg! !
 
@@ -942,6 +979,9 @@ regForSlot: slotIndex
 !OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 materializeSlot: slotIndex
 	"Make slotIndex hold its value in its own register (e.g. for a send's receiver and arguments)."
+	(slotKind at: slotIndex) = OilDescObject ifTrue: "materialized into a register of its own, then copied"
+		[self materializeVObj: (slotValue at: slotIndex) scratch: slotIndex.
+		 (slotKind at: slotIndex) = OilDescObject ifTrue: [^self]]. "(failed: a restart)"
 	(slotKind at: slotIndex) = OilDescReg
 		ifTrue: [self emitMove: slotIndex from: (slotValue at: slotIndex)]
 		ifFalse: [self regForKind: (slotKind at: slotIndex) value: (slotValue at: slotIndex) scratch: slotIndex].
@@ -951,7 +991,7 @@ materializeSlot: slotIndex
 stabilizeIncomingSlot: slotIndex
 	"An inlined frame's receiver/argument must not alias a temp vector slot register, which inlined blocks may assign."
 	| regVal |
-	(slotKind at: slotIndex) = OilDescCond ifTrue: [^self materializeSlot: slotIndex].
+	((slotKind at: slotIndex) = OilDescCond or: [(slotKind at: slotIndex) = OilDescSelect]) ifTrue: [^self materializeSlot: slotIndex].
 	(slotKind at: slotIndex) = OilDescReg ifFalse: [^self].
 	regVal := slotValue at: slotIndex.
 	(regVal ~= slotIndex and: [((slotFlags at: regVal) bitAnd: OilFlagTVSlot) ~= 0]) ifTrue:
@@ -1016,6 +1056,8 @@ newVObj: kind
 	vobjSize at: vobjIndex put: 0.
 	vobjSlotBase at: vobjIndex put: 0.
 	vobjSelfClass at: vobjIndex put: 0.
+	vobjMaterialized at: vobjIndex put: -1.
+	vobjEpoch at: vobjIndex put: oilFlowEpoch.
 	^vobjIndex! !
 
 !OilBaseCompiler methodsFor: 'stores' stamp: 'cb 10/24/2026 10:30'!
@@ -1025,7 +1067,7 @@ storeTopIntoReg: targetReg pop: popFlag
 	 is retargeted to targetReg instead of being moved."
 	| topSlot descKind slotVal |
 	topSlot := simStackTop.
-	(slotKind at: topSlot) = OilDescCond ifTrue: [self materializeSlot: topSlot].
+	((slotKind at: topSlot) = OilDescCond or: [(slotKind at: topSlot) = OilDescSelect]) ifTrue: [self materializeSlot: topSlot].
 	descKind := slotKind at: topSlot.
 	slotVal := slotValue at: topSlot.
 	(descKind = OilDescReg and: [slotVal = targetReg]) ifTrue: "x := x"
@@ -1040,7 +1082,7 @@ storeTopIntoReg: targetReg pop: popFlag
 				[^self requireEagerClosures].
 			 self setSlot: targetReg kind: descKind value: slotVal]
 		ifFalse:
-			[descKind = OilDescConst
+			[(descKind = OilDescConst or: [descKind = OilDescObject])
 				ifTrue:
 					[self setSlot: targetReg kind: descKind value: slotVal.
 					 regVersion at: targetReg put: (regVersion at: targetReg) + 1.
@@ -1061,6 +1103,8 @@ storeTopIntoReg: targetReg pop: popFlag
 genStoreRcvrVar: instVarIndex pop: popFlag frame: frameIndex
 	| valReg rcvrReg |
 	instVarIndex > 255 ifTrue: [^self abortCompilation: OilFailUnsupportedBytecode].
+	(frameSelfKind at: frameIndex) = OilDescObject ifTrue: "a slot of a scalar replaced object"
+		[^self storeTopIntoReg: (vobjSlotBase at: (frameSelfValue at: frameIndex)) + instVarIndex pop: popFlag].
 	valReg := self regForSlot: simStackTop.
 	rcvrReg := self selfRegOfFrame: frameIndex scratch: simStackTop + 1.
 	self recordSite: OilSiteStore. "the store fails on an immutable object: the interpreter retries it"
@@ -1104,12 +1148,14 @@ genPushTemp: tempIndex frame: frameIndex
 genDup
 	| top |
 	top := simStackTop.
-	(slotKind at: top) = OilDescCond ifTrue: [self materializeSlot: top].
+	((slotKind at: top) = OilDescCond or: [(slotKind at: top) = OilDescSelect]) ifTrue: [self materializeSlot: top].
 	self push: (slotKind at: top) value: (slotValue at: top)! !
 
 !OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
 genPushRcvrVar: instVarIndex frame: frameIndex
 	instVarIndex > 255 ifTrue: [^self abortCompilation: OilFailUnsupportedBytecode].
+	(frameSelfKind at: frameIndex) = OilDescObject ifTrue: "a slot of a scalar replaced object"
+		[^self pushVObjSlot: instVarIndex of: (frameSelfValue at: frameIndex)].
 	self pushResultOf: OilLoadField b: (self selfRegOfFrame: frameIndex scratch: simStackTop + 1) c: instVarIndex site: 0! !
 
 !OilBaseCompiler methodsFor: 'pushes' stamp: 'cb 10/24/2026 10:30'!
@@ -1208,7 +1254,7 @@ capture: slotIndex frame: frameIndex
 	| descKind slotVal highReg |
 	capturedTop >= OilMaxCaptured ifTrue:
 		[^self abortCompilation: OilFailTooManyVirtualObjects].
-	(slotKind at: slotIndex) = OilDescCond ifTrue: [self materializeSlot: slotIndex].
+	((slotKind at: slotIndex) = OilDescCond or: [(slotKind at: slotIndex) = OilDescSelect]) ifTrue: [self materializeSlot: slotIndex].
 	descKind := slotKind at: slotIndex.
 	slotVal := slotValue at: slotIndex.
 	(descKind = OilDescReg and: [slotVal >= (frameStackStart at: frameIndex) and: [slotVal <= simStackTop]]) ifTrue:
@@ -1241,6 +1287,13 @@ genReturnKind: descKind value: descVal nonLocal: isNonLocal frame: frameIndex ne
 	targetFrame := isNonLocal ifTrue: [frameHome at: frameIndex] ifFalse: [frameIndex].
 	(descKind = OilDescBlock or: [descKind = OilDescTempVector]) ifTrue:
 		[^self requireEagerClosures].
+	(descKind = OilDescObject
+	 and: [targetFrame = 0 or: [isNonLocal or: [(frameExitChain at: frameIndex) ~= OilNoLink
+		or: [nextPC <= (frameEndPC at: frameIndex) and: [(self isFrame: frameIndex deadFrom: nextPC) not]]]]]) ifTrue:
+		"it escapes: not the single final return of an inlined frame (whose result stays a descriptor)"
+		[retReg := self materializeVObj: descVal scratch: simStackTop + 1.
+		 failed ifTrue: [^self].
+		 ^self genReturnKind: OilDescReg value: retReg nonLocal: isNonLocal frame: frameIndex next: nextPC].
 	targetFrame = 0 ifTrue:
 		[retReg := self regForKind: descKind value: descVal scratch: simStackTop + 1.
 		 self emitOp: OilReturn a: retReg b: 0 c: 0.
@@ -1248,7 +1301,7 @@ genReturnKind: descKind value: descVal nonLocal: isNonLocal frame: frameIndex ne
 	(self isFrameActive: targetFrame) ifFalse:
 		[^self abortCompilation: OilFailInternal].
 	baseReg := frameBase at: targetFrame.
-	isLast := isNonLocal not and: [nextPC > (frameEndPC at: frameIndex)].
+	isLast := isNonLocal not and: [nextPC > (frameEndPC at: frameIndex) or: [self isFrame: frameIndex deadFrom: nextPC]].
 	(isLast and: [(frameExitChain at: frameIndex) = OilNoLink]) ifTrue:
 		[retVal := descVal.
 		 (descKind = OilDescReg and: [descVal > baseReg and: [descVal <= highRegTop]]) ifTrue:
@@ -1339,7 +1392,7 @@ canInlineSmallIntegerOpOn: rcvrSlot arg: argSlot
 	 The tagged opcodes check their operands' tags and deoptimize on failure or overflow."
 	| argKind profiledCls |
 	argKind := slotKind at: argSlot.
-	(argKind = OilDescBlock or: [argKind = OilDescTempVector or: [argKind = OilDescCond]]) ifTrue: [^false].
+	(argKind = OilDescBlock or: [argKind = OilDescTempVector or: [argKind = OilDescCond or: [argKind = OilDescObject or: [argKind = OilDescSelect]]]]) ifTrue: [^false].
 	(argKind = OilDescConst and: [(self isSmallIntegerHandle: (slotValue at: argSlot)) not]) ifTrue: [^false].
 	(self isFloatSlot: argSlot) ifTrue: [^false]. "e.g. 2 * aFloat: see genFloatSend:frame:next:"
 	(self isKnownSmallInteger: rcvrSlot) ifTrue: [^true].
@@ -1487,6 +1540,8 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			 rcvrClass = 0 ifTrue:
 				[rcvrClass := self profiledClassAt: currentPC.
 				 guard := rcvrClass ~= 0]].
+	(rcvrClass = 0 and: [isSuper not and: [descKind = OilDescReg]]) ifTrue:
+		[(self genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot) ifTrue: [^self]].
 	(rcvrClass = 0 or: [self isContextClass: rcvrClass]) ifTrue:
 		[^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
 	method := self lookup: selector inClass: rcvrClass.
@@ -1499,6 +1554,15 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	(isSuper not
 	 and: [self genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard]) ifTrue:
 		[^self].
+	(prim = 175 and: [numArgs = 0 and: [(slotKind at: rcvrSlot) = OilDescConst
+	 and: [(self classIndexOfClass: (slotValue at: rcvrSlot)) > 0]]]) ifTrue:
+		["Behavior>>identityHash of a constant class: its class index"
+		 simStackTop := rcvrSlot - 1.
+		 ^self push: OilDescConst value: (self handleForSmallInteger: (self classIndexOfClass: (slotValue at: rcvrSlot)))].
+	(isSuper not and: [(prim = 70 and: [numArgs = 0]) or: [prim = 18 and: [numArgs = 1]]]) ifTrue:
+		[(self genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard) ifTrue: [^self]].
+	(isSuper not and: [prim = 117 and: [numArgs = 1 and: [self isStringHashMethod: method class: rcvrClass]]]) ifTrue:
+		[^self genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard].
 	prim ~= 0 ifTrue:
 		[((isSuper not or: [(prim = 65 or: [prim = 66 or: [prim = 75]]) not])
 		  and: [self canInlineIntrinsic: prim class: rcvrClass numArgs: numArgs]) ifTrue:
@@ -1526,6 +1590,7 @@ staticClassOfSlot: slotIndex
 	descKind := slotKind at: slotIndex.
 	descKind = OilDescConst ifTrue: [^self classHandleOf: (slotValue at: slotIndex)].
 	descKind = OilDescReg ifTrue: [^knownClass at: (slotValue at: slotIndex)].
+	descKind = OilDescObject ifTrue: [^vobjSelfClass at: (slotValue at: slotIndex)].
 	^0! !
 
 !OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
@@ -1675,6 +1740,9 @@ genQuickMethod: prim receiver: rcvrSlot numArgs: numArgs
 	prim <= 263 ifTrue:
 		[simStackTop := rcvrSlot - 1.
 		 ^self push: OilDescConst value: (self handleForSmallInteger: prim - 261)].
+	descKind = OilDescObject ifTrue: "a slot of a scalar replaced object"
+		[simStackTop := rcvrSlot - 1.
+		 ^self pushVObjSlot: prim - 264 of: slotVal].
 	rcvrReg := self regForSlot: rcvrSlot.
 	simStackTop := rcvrSlot - 1.
 	self pushResultOf: OilLoadField b: rcvrReg c: prim - 264 site: 0! !
@@ -1707,7 +1775,10 @@ genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes:
 	prim = 110 ifTrue:
 		[^self genCompare: OilCondIdentical identity: true frame: currentFrame next: -1].
 	prim = 75 ifTrue: "the hash in the header (no deopt site: the back end falls back to the send if there is none yet)"
-		[(self isEncodableCall: selector super: false) ifFalse:
+		[(slotKind at: rcvrSlot) = OilDescConst ifTrue: "of a constant: computed now (assigned if it has none yet, as the send would)"
+			[simStackTop := rcvrSlot - 1.
+			 ^self push: OilDescConst value: (self handleForSmallInteger: (self identityHashOf: (slotValue at: rcvrSlot)))].
+		 (self isEncodableCall: selector super: false) ifFalse:
 			[^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: false].
 		 arrayReg := self regForSlot: rcvrSlot.
 		 simStackTop := rcvrSlot - 1.
@@ -1803,6 +1874,17 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 	kindA := slotKind at: slotA. valA := slotValue at: slotA.
 	kindB := slotKind at: slotB. valB := slotValue at: slotB.
 	condCode := cond.
+	(isIdentity and: [kindA = OilDescObject or: [kindB = OilDescObject]]) ifTrue:
+		"a scalar replaced object exists nowhere else: it is identical only to itself"
+		[resultBool := (kindA = kindB and: [valA = valB]) = (condCode = OilCondIdentical).
+		 simStackTop := slotA - 1.
+		 self push: OilDescConst value: (resultBool ifTrue: [trueHandle] ifFalse: [falseHandle]).
+		 ^nextPC].
+	(isIdentity
+	 and: [(kindA = OilDescSelect and: [kindB = OilDescConst and: [valB = nilHandle]])
+		or: [kindB = OilDescSelect and: [kindA = OilDescConst and: [valA = nilHandle]]]]) ifTrue:
+		["x == nil where x answers nil for the instances of one class and a non-nil value for the other: the class test"
+		 ^self genSelectIsNil: (kindA = OilDescSelect ifTrue: [valA] ifFalse: [valB]) cond: condCode slot: slotA frame: frameIndex next: nextPC].
 	(isIdentity and: [(kindA = OilDescBlock or: [kindA = OilDescTempVector]) or: [kindB = OilDescBlock or: [kindB = OilDescTempVector]]]) ifTrue:
 		[self requireEagerClosures.
 		 ^nextPC].
@@ -1850,6 +1932,7 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 			 siteIR at: siteIndex put: -1.
 			 condSite at: numConds put: siteIndex].
 	condCond at: numConds put: condCode.
+	condClass at: numConds put: 0.
 	condRA at: numConds put: regA.
 	condRB at: numConds put: (useImm ifTrue: [0] ifFalse: [regB]).
 	condImm at: numConds put: (useImm ifTrue: [immVal] ifFalse: [0]).
@@ -1873,8 +1956,12 @@ emitCondCompare: condIndex
 	currentFrame := condFrame at: condIndex.
 	savedCond := emittingCond.
 	emittingCond := condIndex.
-	self emitCompare: (condCond at: condIndex) reg: (condRA at: condIndex) reg: (condRB at: condIndex)
-		imm: (condImm at: condIndex) useImm: (condUseImm at: condIndex) identity: (condIdentity at: condIndex).
+	(condClass at: condIndex) ~= 0
+		ifTrue: "the class test of a bimorphic predicate (see genBimorphicPredicate:...): no deopt"
+			[self emitOp: OilCmpClass a: (condCond at: condIndex) b: (condRA at: condIndex) c: 0.
+			 self emit64: (condClass at: condIndex)]
+		ifFalse: [self emitCompare: (condCond at: condIndex) reg: (condRA at: condIndex) reg: (condRB at: condIndex)
+		imm: (condImm at: condIndex) useImm: (condUseImm at: condIndex) identity: (condIdentity at: condIndex)].
 	emittingCond := savedCond.
 	currentPC := savedPC.
 	currentFrame := savedFrame! !
@@ -1903,6 +1990,9 @@ materializePendingCond
 	pendingCondSlot := -1.
 	(slotIndex <= simStackTop and: [(slotKind at: slotIndex) = OilDescCond and: [(slotValue at: slotIndex) = pendingCondIndex]]) ifTrue:
 		[self emitCond: pendingCondIndex booleanInto: slotIndex.
+		 self setOwn: slotIndex].
+	(slotIndex <= simStackTop and: [(slotKind at: slotIndex) = OilDescSelect and: [(slotValue at: slotIndex) = pendingCondIndex]]) ifTrue:
+		[self emitSelect: pendingCondIndex into: slotIndex.
 		 self setOwn: slotIndex]! !
 
 !OilBaseCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
@@ -2058,7 +2148,9 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 	((affineBase at: operandReg) >= 0 and: [(affineVersion at: operandReg) = (regVersion at: (affineBase at: operandReg))]) ifTrue:
 		[baseReg := affineBase at: operandReg.
 		 totalOffset := (affineConst at: operandReg) + constantVal.
-		 (operandReg >= resultSlot and: [operandReg <= simStackTop]) ifTrue: "its producer is now dead"
+		 "its producer is now dead, unless the deopt state of this bytecode (that of the add emitted below) refers to it"
+		 ((operandReg >= resultSlot and: [operandReg <= simStackTop])
+		  and: [totalOffset = 0 or: [(self snapshotRefersTo: operandReg) not]]) ifTrue:
 			[self retractIfDeadDefinitionOf: operandReg]].
 	simStackTop := resultSlot - 1.
 	totalOffset = 0 ifTrue:
@@ -2302,9 +2394,10 @@ word64At: index
 instructionLengthAt: index
 	| op |
 	op := self opcodeAt: index.
-	(op = OilConst64 or: [op = OilGuardClass or: [op = OilCall0 or: [op = OilCall1 or: [op = OilStreamNext or: [op = OilStreamNextPut
-	 or: [op = OilIdentityHash or: [op = OilSkipSeparators]]]]]]]) ifTrue: [^3].
+	(op = OilConst64 or: [op = OilGuardClass or: [op = OilCall0 or: [op = OilCall1 or: [op = OilStreamNext or: [op = OilStreamNextPut]]]]]) ifTrue: [^3].
+	(op = OilIdentityHash or: [op = OilSkipSeparators or: [op = OilNewObject or: [op = OilCmpClass or: [op = OilStringHash]]]]) ifTrue: [^3].
 	op = OilMakeClosure ifTrue: [^4].
+	op = OilGuardClass2 ifTrue: [^5].
 	(op = OilCallN or: [op = OilCallSuper or: [op = OilIndexOfByte]]) ifTrue: [^3 + ((self fieldCAt: index) + 3 // 4)].
 	^1! !
 
@@ -2383,7 +2476,28 @@ literalHandle: index frame: frameIndex
 !OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 isReadOnlyBinding: binding
 	"Class bindings are read-only: fold them to their value."
-	^self cCode: [false] inSmalltalk: [binding isKindOf: ClassBinding]! !
+	^self cCode: [self isClassBinding: binding] inSmalltalk: [binding isKindOf: ClassBinding]! !
+
+!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+isClassBinding: binding
+	"In the VM: is binding an instance of the class of class bindings (ClassBinding in Squeak 6), which is the class of
+	 the last literal (the method class association) of the instance side methods (whose key is the class's name; on the
+	 class side, the key is nil)?  It is found in the root method or the method of the current frame."
+	oilClassBindingClass <= 0 ifTrue:
+		[oilClassBindingClass := coInterpreter oilApiClassBindingClassOf:
+									((oilClassBindingClass = 0 or: [currentFrame < 0])
+										ifTrue: [rootMethod]
+										ifFalse: [frameMethod at: currentFrame]).
+		 oilClassBindingClass = 0 ifTrue: [oilClassBindingClass := -1]].
+	oilClassBindingClass <= 0 ifTrue: [^false].
+	^(objectMemory isNonImmediate: binding)
+	  and: [(coInterpreter oilApiFetchClassOf: binding) = oilClassBindingClass
+	  and: [(objectMemory fetchPointer: 1 ofObject: binding) ~= nilHandle]]! !
+
+!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+identityHashOf: aHandle
+	"The identity hash of a non-immediate constant (assigned now if it has none yet, as primitive 75 would)."
+	^self cCode: [coInterpreter oilApiHashBitsOf: aHandle] inSmalltalk: [(self objectFor: aHandle) identityHash]! !
 
 !OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 bindingValueHandle: binding
@@ -2492,6 +2606,13 @@ declareCVarsIn: aCCodeGenerator
 	#(sitePoolKind sitePoolValue) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilSitePoolSize]'].
 	aCCodeGenerator var: #vobjOuter declareC: 'static sqInt vobjOuter[OilMaxVObjs]'.
+	#(vobjEpoch vobjPC vobjMaterialized) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxVObjs]'].
+	#(oilEagerSiteMethod oilEagerSitePC) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxEagerSites]'].
+	#(condClass condSelKind condSelValue) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxConds]'].
+	aCCodeGenerator var: #oilLiveMark declareC: 'static unsigned char oilLiveMark[OilPCMapSize]'.
 	"Pass 3 (native code generation) tables."
 	#(oilVRegReg oilVRegHome) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
@@ -2515,3 +2636,579 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.
 	#(typeFeedback simHandles simHandleIndex) do:
 		[:var| aCCodeGenerator removeVariable: var]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard
+	"Scalar replacement of objects of classes with fixed pointer fields only: basicNew (primitive 70) of a constant class,
+	 and Number>>@ (primitive 18, a Point of the receiver and the argument, which its fallback code answers too) are not
+	 allocated but answer a virtual object (OilDescObject) whose slots are high registers (like the slots of a scalar
+	 replaced temp vector: named temps of the object, flushed at labels).  Inlined methods of the object read and write
+	 them (genPushRcvrVar:frame:, genStoreRcvrVar:pop:frame:, genQuickMethod:receiver:numArgs:), and if the object never
+	 escapes it is never allocated.  If it escapes it is materialized (see materializeVObj:scratch:).  Answer whether the
+	 send was compiled so."
+	| cls numSlots baseReg vobjIndex |
+	prim = 70
+		ifTrue:
+			[(slotKind at: rcvrSlot) = OilDescConst ifFalse: [^false].
+			 cls := slotValue at: rcvrSlot.
+			 (self isScalarReplaceableClass: cls) ifFalse: [^false]]
+		ifFalse:
+			[cls := self pointClassHandle.
+			 (self isScalarReplaceableClass: cls) ifFalse: [^false]].
+	numSlots := self oilFixedFieldsOfClass: cls.
+	(numSlots > OilMaxVObjSlots or: [prim = 18 and: [numSlots ~= 2]]) ifTrue: [^false].
+	((highRegTop - numSlots) <= (simStackTop + 32) or: [numVObjs >= OilMaxVObjs]) ifTrue: [^false].
+	guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
+	failed ifTrue: [^true].
+	vobjIndex := self newVObj: OilDescObject.
+	baseReg := highRegTop - numSlots + 1.
+	highRegTop := baseReg - 1.
+	vobjSize at: vobjIndex put: numSlots.
+	vobjSlotBase at: vobjIndex put: baseReg.
+	vobjSelfClass at: vobjIndex put: cls.
+	vobjSelfKind at: vobjIndex put: OilDescConst.
+	vobjSelfValue at: vobjIndex put: nilHandle.
+	vobjLiteral at: vobjIndex put: (frameMethod at: currentFrame).
+	vobjPC at: vobjIndex put: currentPC.
+	baseReg to: baseReg + numSlots - 1 do:
+		[:slotReg|
+		slotFlags at: slotReg put: OilFlagTVSlot.
+		self setSlot: slotReg kind: OilDescConst value: nilHandle].
+	prim = 18
+		ifTrue: "x := the receiver, y := the argument"
+			[self storeTopIntoReg: baseReg + 1 pop: true.
+			 self storeTopIntoReg: baseReg pop: true]
+		ifFalse: [simStackTop := rcvrSlot - 1].
+	self push: OilDescObject value: vobjIndex.
+	oilNumVirtualized := oilNumVirtualized + 1.
+	(self isEagerSite: (vobjLiteral at: vobjIndex) pc: currentPC) ifTrue: "its objects escape: allocate them now"
+		[self materializeSlot: simStackTop].
+	^true! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+isScalarReplaceableClass: classHandle
+	"Instances of classHandle have fixed pointer fields only (format 0 or 1: no indexable fields, not weak, not an
+	 ephemeron), and it has a class index (its instances can be allocated with it)."
+	| spec |
+	classHandle = 0 ifTrue: [^false].
+	spec := self oilInstSpecOfClass: classHandle.
+	(spec = 0 or: [spec = 1]) ifFalse: [^false].
+	^self cCode: [(coInterpreter oilApiClassIndexOfClass: classHandle) > 0] inSmalltalk: [true]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+pointClassHandle
+	^self cCode: [objectMemory splObj: ClassPoint] inSmalltalk: [self handleFor: Point]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+oilFixedFieldsOfClass: classHandle
+	^self cCode: [coInterpreter oilApiFixedFieldsOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) instSize]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+pushVObjSlot: slotIndex of: vobjIndex
+	"Push slot slotIndex of the scalar replaced object vobjIndex (the descriptor of its slot register)."
+	| slotReg |
+	slotIndex >= (vobjSize at: vobjIndex) ifTrue:
+		[^self abortCompilation: OilFailInternal].
+	slotReg := (vobjSlotBase at: vobjIndex) + slotIndex.
+	self push: (slotKind at: slotReg) value: (slotValue at: slotReg)! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+materializeVObj: vobjIndex scratch: scratchReg
+	"The scalar replaced object vobjIndex escapes: allocate it (OilNewObject, which stores its slot registers into it,
+	 without nil filling it first) into an immutable high register of its own, to which every descriptor of the object is
+	 then rewritten.  That is done here if every path from its creation goes through here (see canMaterializeInPlace:),
+	 so that the rewritten descriptors hold on every path; otherwise compilation restarts with its allocation site
+	 allocating its objects when they are created (see requestEagerSite:).  Answer the register (scratchReg on failure)."
+	| baseReg numSlots objReg instIndex |
+	(vobjMaterialized at: vobjIndex) >= 0 ifTrue: [^vobjMaterialized at: vobjIndex].
+	failed ifTrue: [^scratchReg].
+	(self canMaterializeInPlace: vobjIndex depth: 0) ifFalse:
+		[self requestEagerSite: vobjIndex.
+		 ^scratchReg].
+	baseReg := vobjSlotBase at: vobjIndex.
+	numSlots := vobjSize at: vobjIndex.
+	"Nested scalar replaced objects first, then every slot in its own register."
+	baseReg to: baseReg + numSlots - 1 do:
+		[:slotReg|
+		self materializeSlot: slotReg.
+		failed ifTrue: [^scratchReg]].
+	objReg := highRegTop.
+	objReg <= (simStackTop + 32) ifTrue:
+		[self abortCompilation: OilFailOutOfRegisters.
+		 ^scratchReg].
+	highRegTop := objReg - 1.
+	slotFlags at: objReg put: OilFlagImmutable.
+	self recordSite: OilSiteAlloc. "(the state before the allocation: the object is still virtual there)"
+	instIndex := self emitOp: OilNewObject a: objReg b: baseReg c: numSlots.
+	self emit64: (vobjSelfClass at: vobjIndex).
+	self noteDef: objReg at: instIndex.
+	knownClass at: objReg put: (vobjSelfClass at: vobjIndex).
+	self setOwn: objReg.
+	vobjMaterialized at: vobjIndex put: objReg.
+	oilNumMaterialized := oilNumMaterialized + 1.
+	self rewriteVObj: vobjIndex asReg: objReg.
+	^objReg! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+canMaterializeInPlace: vobjIndex depth: depth
+	"Can the scalar replaced object vobjIndex be materialized here, with all its descriptors rewritten to the register
+	 holding it?  Only if no branch or label was emitted since its creation (the same flow epoch: every path from its
+	 creation goes through here, so do those using the rewritten descriptors), the deopt state of the current bytecode is
+	 at hand (for the allocation's deopt site), and the static deoptimization records do not refer to it: it is not the
+	 receiver of an active inlined frame and no virtual closure captured it.  The same for the objects in its slots."
+	| activeFrame baseReg |
+	depth > 4 ifTrue: [^false].
+	(vobjMaterialized at: vobjIndex) >= 0 ifTrue: [^true].
+	((vobjEpoch at: vobjIndex) = oilFlowEpoch
+	 and: [snapFrame = currentFrame and: [snapPC = currentPC and: [emittingCond < 0]]]) ifFalse: [^false].
+	activeFrame := currentFrame.
+	[activeFrame >= 0] whileTrue:
+		[((frameSelfKind at: activeFrame) = OilDescObject and: [(frameSelfValue at: activeFrame) = vobjIndex]) ifTrue: [^false].
+		 activeFrame := frameParent at: activeFrame].
+	0 to: capturedTop - 1 do:
+		[:capturedIndex|
+		((capturedKind at: capturedIndex) = OilDescObject and: [(capturedValue at: capturedIndex) = vobjIndex]) ifTrue: [^false]].
+	0 to: numVObjs - 1 do:
+		[:otherIndex|
+		((vobjKind at: otherIndex) = OilDescBlock
+		 and: [(vobjSelfKind at: otherIndex) = OilDescObject and: [(vobjSelfValue at: otherIndex) = vobjIndex]]) ifTrue: [^false]].
+	baseReg := vobjSlotBase at: vobjIndex.
+	baseReg to: baseReg + (vobjSize at: vobjIndex) - 1 do:
+		[:slotReg|
+		((slotKind at: slotReg) = OilDescObject
+		 and: [(self canMaterializeInPlace: (slotValue at: slotReg) depth: depth + 1) not]) ifTrue: [^false]].
+	^true! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+rewriteVObj: vobjIndex asReg: objReg
+	"The scalar replaced object vobjIndex now lives in objReg: rewrite its descriptors (in the register window, the high
+	 registers, the pending results of inlined frames, and the deopt state of the current bytecode, for the deopt sites
+	 recorded after the allocation)."
+	0 to: simStackTop do:
+		[:slotIndex|
+		((slotKind at: slotIndex) = OilDescObject and: [(slotValue at: slotIndex) = vobjIndex]) ifTrue:
+			[self setSlot: slotIndex kind: OilDescReg value: objReg]].
+	highRegTop + 1 to: OilMaxReg do:
+		[:slotIndex|
+		((slotKind at: slotIndex) = OilDescObject and: [(slotValue at: slotIndex) = vobjIndex]) ifTrue:
+			[self setSlot: slotIndex kind: OilDescReg value: objReg]].
+	0 to: numFrames - 1 do:
+		[:frameIndex|
+		((frameHasLazy at: frameIndex) and: [(frameLazyKind at: frameIndex) = OilDescObject and: [(frameLazyValue at: frameIndex) = vobjIndex]]) ifTrue:
+			[frameLazyKind at: frameIndex put: OilDescReg.
+			 frameLazyValue at: frameIndex put: objReg]].
+	0 to: snapTop do:
+		[:slotIndex|
+		((snapKind at: slotIndex) = OilDescObject and: [(snapValue at: slotIndex) = vobjIndex]) ifTrue:
+			[snapKind at: slotIndex put: OilDescReg.
+			 snapValue at: slotIndex put: objReg]].
+	snapHighTop + 1 to: OilMaxReg do:
+		[:slotIndex|
+		((snapKind at: slotIndex) = OilDescObject and: [(snapValue at: slotIndex) = vobjIndex]) ifTrue:
+			[snapKind at: slotIndex put: OilDescReg.
+			 snapValue at: slotIndex put: objReg]]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+vobjIsReferenced: vobjIndex
+	"Does anything still refer to the scalar replaced object vobjIndex (but its own slots)?"
+	| baseReg activeFrame |
+	baseReg := vobjSlotBase at: vobjIndex.
+	0 to: simStackTop do:
+		[:slotIndex|
+		((slotKind at: slotIndex) = OilDescObject and: [(slotValue at: slotIndex) = vobjIndex]) ifTrue: [^true]].
+	highRegTop + 1 to: OilMaxReg do:
+		[:slotIndex|
+		((slotIndex < baseReg or: [slotIndex >= (baseReg + (vobjSize at: vobjIndex))])
+		 and: [(slotKind at: slotIndex) = OilDescObject and: [(slotValue at: slotIndex) = vobjIndex]]) ifTrue: [^true]].
+	0 to: numFrames - 1 do:
+		[:frameIndex|
+		((frameHasLazy at: frameIndex) and: [(frameLazyKind at: frameIndex) = OilDescObject and: [(frameLazyValue at: frameIndex) = vobjIndex]]) ifTrue: [^true]].
+	activeFrame := currentFrame.
+	[activeFrame >= 0] whileTrue:
+		[((frameSelfKind at: activeFrame) = OilDescObject and: [(frameSelfValue at: activeFrame) = vobjIndex]) ifTrue: [^true].
+		 activeFrame := frameParent at: activeFrame].
+	0 to: capturedTop - 1 do:
+		[:capturedIndex|
+		((capturedKind at: capturedIndex) = OilDescObject and: [(capturedValue at: capturedIndex) = vobjIndex]) ifTrue: [^true]].
+	0 to: numVObjs - 1 do:
+		[:otherIndex|
+		((vobjKind at: otherIndex) = OilDescBlock
+		 and: [(vobjSelfKind at: otherIndex) = OilDescObject and: [(vobjSelfValue at: otherIndex) = vobjIndex]]) ifTrue: [^true]].
+	^false! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+releaseDeadVObjSlots
+	"The slot registers of the scalar replaced objects that nothing refers to any more, or that were materialized, are free:
+	 they need not be flushed at labels any more (the deopt states already recorded keep their descriptors)."
+	| baseReg |
+	0 to: numVObjs - 1 do:
+		[:vobjIndex|
+		baseReg := vobjSlotBase at: vobjIndex.
+		((vobjKind at: vobjIndex) = OilDescObject
+		 and: [(vobjSize at: vobjIndex) > 0
+		 and: [((slotFlags at: baseReg) bitAnd: OilFlagTVSlot) ~= 0
+		 and: [(vobjMaterialized at: vobjIndex) >= 0 or: [(self vobjIsReferenced: vobjIndex) not]]]]) ifTrue:
+			[baseReg to: baseReg + (vobjSize at: vobjIndex) - 1 do:
+				[:slotReg|
+				slotFlags at: slotReg put: 0.
+				self setSlot: slotReg kind: OilDescConst value: nilHandle]]]! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+isEagerSite: aMethod pc: pc
+	0 to: oilNumEagerSites - 1 do:
+		[:siteIndex|
+		((oilEagerSiteMethod at: siteIndex) = aMethod and: [(oilEagerSitePC at: siteIndex) = pc]) ifTrue: [^true]].
+	^false! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+requestEagerSite: vobjIndex
+	"The scalar replaced object vobjIndex escapes where it cannot be materialized (see canMaterializeInPlace:depth:):
+	 compile again, allocating the objects of its allocation site when they are created."
+	(self isEagerSite: (vobjLiteral at: vobjIndex) pc: (vobjPC at: vobjIndex)) ifTrue:
+		[^self abortCompilation: OilFailEagerClosuresFailed].
+	oilNumEagerSites >= OilMaxEagerSites ifTrue:
+		[^self abortCompilation: OilFailTooManyVirtualObjects].
+	oilEagerSiteMethod at: oilNumEagerSites put: (vobjLiteral at: vobjIndex).
+	oilEagerSitePC at: oilNumEagerSites put: (vobjPC at: vobjIndex).
+	oilNumEagerSites := oilNumEagerSites + 1.
+	oilRestartEager := true.
+	needsRestart := true.
+	failed := true! !
+
+!OilBaseCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/25/2026 09:30'!
+isTemp: tempIndex deadFrom: startPC frame: frameIndex
+	"Is temp tempIndex of frame frameIndex dead at startPC: on every path from startPC through the frame's bytecodes, is it
+	 assigned (or the frame left) before it is read (pushed, or used as the temp vector of a remote temp)?  The interpreter
+	 then never reads its value.  Conservatively false if the path worklist overflows."
+	| startPC0 frameLastPC base work numWork pc tag |
+	<var: #work declareC: 'sqInt work[32]'>
+	self cCode: [] inSmalltalk: [work := CArrayAccessor on: (Array new: 32)].
+	startPC0 := frameStartPC at: frameIndex.
+	frameLastPC := frameEndPC at: frameIndex.
+	base := framePCBase at: frameIndex.
+	base to: base + (frameLastPC - startPC0) do: [:entryIndex| oilLiveMark at: entryIndex put: 0].
+	self setScanMethod: (frameMethod at: frameIndex).
+	work at: 0 put: startPC.
+	numWork := 1.
+	[numWork > 0] whileTrue:
+		[numWork := numWork - 1.
+		 pc := work at: numWork.
+		 [pc >= startPC0 and: [pc <= frameLastPC and: [(oilLiveMark at: base + pc - startPC0) = 0]]] whileTrue:
+			[oilLiveMark at: base + pc - startPC0 put: 1.
+			 self decodeAt: pc.
+			 tag := opcodeTag.
+			 (tag = OilTagPushTemp and: [operand1 = tempIndex]) ifTrue: [^false].
+			 ((tag = OilTagPushRemoteTemp or: [tag = OilTagStoreRemoteTemp or: [tag = OilTagPopIntoRemoteTemp]])
+			  and: [operand2 = tempIndex]) ifTrue: [^false].
+			 ((tag = OilTagStoreTemp or: [tag = OilTagPopIntoTemp]) and: [operand1 = tempIndex])
+				ifTrue: [pc := frameLastPC + 1] "assigned: this path is done"
+				ifFalse:
+					[(tag between: OilTagReturnSelf and: OilTagBlockReturnTop)
+						ifTrue: [pc := frameLastPC + 1]
+						ifFalse:
+							[tag = OilTagJump
+								ifTrue: [pc := oilTargetPC]
+								ifFalse:
+									[(tag = OilTagJumpTrue or: [tag = OilTagJumpFalse]) ifTrue:
+										[numWork >= 32 ifTrue: [^false].
+										 work at: numWork put: oilTargetPC.
+										 numWork := numWork + 1].
+									 pc := oilNextPC]]]]].
+	^true! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+profiledClass: caseIndex at: pc
+	"Type feedback for a polymorphic send at pc in the current frame's method: the receiver class of case caseIndex (0 or 1)
+	 of an inline cache that saw exactly two classes (a closed PIC of two cases), else 0."
+	^self
+		cCode: [cogit oilPolymorphicClass: caseIndex at: pc in: (frameMethod at: currentFrame)]
+		inSmalltalk:
+			[typeFeedback
+				ifNil: [0]
+				ifNotNil: [(typeFeedback class: caseIndex + 1 of: 2 at: pc in: (frameMethod at: currentFrame))
+							ifNil: [0]
+							ifNotNil: [:cls| self handleFor: cls]]]! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+isBimorphicTarget: aMethod prim: prim selector: selector numArgs: numArgs receiver: rcvrSlot
+	"Can aMethod be inlined in one of the two paths of a bimorphic send: a quick method, or a small method (at most
+	 OilAccessorBytes bytecodes) that the inlining policy accepts?"
+	aMethod = 0 ifTrue: [^false].
+	(self oilIsQuickPrimitiveIndex: prim) ifTrue: [^true].
+	prim ~= 0 ifTrue: [^false].
+	(self oilEndPCOf: aMethod) - (self startPCOf: aMethod) + 1 > OilAccessorBytes ifTrue: [^false].
+	^self shouldInline: aMethod selector: selector numArgs: numArgs receiver: rcvrSlot! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot
+	"A send whose inline cache saw exactly two receiver classes, whose methods are quick or small: inline both, behind a
+	 class test (OilCmpClass) of the receiver.  If both are quick methods answering true and false (a predicate such as
+	 isSymbol), the class test itself is the result (genBimorphicPredicate:...): no boolean object, no merge.  Otherwise:
+		CmpClass rcvr == C1; BranchFalse Lelse; <M1 inlined>; Jump Lexit;
+		Lelse: GuardClass rcvr == C2; <M2 inlined>; Lexit:
+	 with the result in the receiver's register.  Answer false (nothing emitted) if the send does not qualify."
+	| cls1 cls2 method1 method2 prim1 prim2 rcvrReg elseSite elseJump exitJump |
+	cls1 := self profiledClass: 0 at: currentPC.
+	cls2 := self profiledClass: 1 at: currentPC.
+	(cls1 = 0 or: [cls2 = 0 or: [cls1 = cls2 or: [(self isContextClass: cls1) or: [self isContextClass: cls2]]]]) ifTrue: [^false].
+	method1 := self lookup: selector inClass: cls1.
+	method2 := self lookup: selector inClass: cls2.
+	(method1 = 0 or: [method2 = 0]) ifTrue: [^false].
+	prim1 := self oilPrimitiveIndexOf: method1.
+	prim2 := self oilPrimitiveIndexOf: method2.
+	((self isBimorphicTarget: method1 prim: prim1 selector: selector numArgs: numArgs receiver: rcvrSlot)
+	 and: [self isBimorphicTarget: method2 prim: prim2 selector: selector numArgs: numArgs receiver: rcvrSlot]) ifFalse: [^false].
+	((prim1 = 257 or: [prim1 = 258]) and: [(prim2 = 257 or: [prim2 = 258]) and: [prim1 ~= prim2]]) ifTrue:
+		[^self genBimorphicPredicate: (prim1 = 257 ifTrue: [cls1] ifFalse: [cls2]) other: (prim1 = 257 ifTrue: [cls2] ifFalse: [cls1])
+				receiver: rcvrSlot].
+	(prim1 = 259 and: [self isNonNilQuickPrimitive: prim2 class: cls2]) ifTrue:
+		[^self genBimorphicSelect: cls1 other: cls2 prim: prim2 receiver: rcvrSlot].
+	(prim2 = 259 and: [self isNonNilQuickPrimitive: prim1 class: cls1]) ifTrue:
+		[^self genBimorphicSelect: cls2 other: cls1 prim: prim1 receiver: rcvrSlot].
+	numSites >= (OilMaxSites - 1) ifTrue: [^false].
+	rcvrReg := self regForSlot: rcvrSlot.
+	"Both paths start from the same canonical state, and leave the result in the receiver's own register."
+	self flushFrame: currentFrame.
+	rcvrReg := self regForSlot: rcvrSlot.
+	failed ifTrue: [^true].
+	"The deopt site of the second path's guard is recorded now, while the state of the send's bytecode is at hand; its
+	 instruction is bound later (see useCondSite:)."
+	elseSite := self recordSite: OilSiteGuard.
+	siteIR at: elseSite put: -1.
+	self emitOp: OilCmpClass a: OilCondIdentical b: rcvrReg c: 0.
+	self emit64: cls1.
+	elseJump := self emitOp: OilBranchFalse a: OilFlagsReg imm16: 0.
+	self genBimorphicPath: method1 prim: prim1 selector: selector numArgs: numArgs receiver: rcvrSlot class: cls1.
+	failed ifTrue: [^true].
+	exitJump := self emitOp: OilJump a: 0 imm16: 0.
+	self patchBranch: elseJump to: irIndex.
+	self forgetKnowledgeAtLabel.
+	simStackTop := rcvrSlot + numArgs.
+	self resetMutableSlotsOfFrame: currentFrame.
+	pendingCondSlot >= 0 ifTrue: [self materializePendingCond].
+	siteIR at: elseSite put: irIndex.
+	self emitOp: OilGuardClass a: rcvrReg imm16: elseSite.
+	self emit64: cls2.
+	self genBimorphicPath: method2 prim: prim2 selector: selector numArgs: numArgs receiver: rcvrSlot class: cls2.
+	failed ifTrue: [^true].
+	self patchBranch: exitJump to: irIndex.
+	self forgetKnowledgeAtLabel.
+	simStackTop := rcvrSlot.
+	self resetMutableSlotsOfFrame: currentFrame.
+	oilNumBimorphic := oilNumBimorphic + 1.
+	^true! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+genBimorphicPath: aMethod prim: prim selector: selector numArgs: numArgs receiver: rcvrSlot class: cls
+	"One path of a bimorphic send: the receiver is an instance of cls; inline aMethod (or send it if it cannot be inlined
+	 after all), then make the result and the frame canonical."
+	knownClass at: (self regForSlot: rcvrSlot) put: cls.
+	(self oilIsQuickPrimitiveIndex: prim)
+		ifTrue: [self genQuickMethod: prim receiver: rcvrSlot numArgs: numArgs]
+		ifFalse:
+			[(self inlineMethod: aMethod receiver: rcvrSlot numArgs: numArgs class: cls guard: false) ifFalse:
+				[self genCall: selector numArgs: numArgs receiver: rcvrSlot super: false]].
+	failed ifTrue: [^self].
+	simStackTop := rcvrSlot.
+	self materializeSlot: rcvrSlot.
+	self flushFrame: currentFrame! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
+	"A predicate (e.g. isSymbol) answering true for the instances of trueClass and false for those of falseClass, the two
+	 classes its send saw: guard that the receiver is an instance of one of them (OilGuardClass2), then answer the class
+	 test as a lazy comparison (OilDescCond): the conditional jump that consumes it branches on the flags of OilCmpClass,
+	 and no boolean object is materialized nor tested."
+	| rcvrReg site destSlot |
+	numConds >= OilMaxConds ifTrue: [^false].
+	rcvrReg := self regForSlot: rcvrSlot.
+	site := self recordSite: OilSiteArith. "(not OilSiteGuard: no unforwarding fast path for two classes)"
+	failed ifTrue: [^true].
+	self emitOp: OilGuardClass2 a: rcvrReg imm16: site.
+	self emit64: trueClass.
+	self emit64: falseClass.
+	simStackTop := rcvrSlot - 1.
+	condCond at: numConds put: OilCondIdentical.
+	condClass at: numConds put: trueClass.
+	condRA at: numConds put: rcvrReg.
+	condRB at: numConds put: 0.
+	condImm at: numConds put: 0.
+	condUseImm at: numConds put: false.
+	condIdentity at: numConds put: true.
+	condFrame at: numConds put: currentFrame.
+	condPC at: numConds put: currentPC.
+	condSite at: numConds put: -1.
+	destSlot := self push: OilDescCond value: numConds.
+	pendingCondSlot := destSlot.
+	pendingCondIndex := numConds.
+	numConds := numConds + 1.
+	oilNumPredicates := oilNumPredicates + 1.
+	^true! !
+
+!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
+isStringHashMethod: aMethod class: rcvrClass
+	"Is aMethod String>>hashWithInitialHash:'s primitive, primitiveStringHash of the MiscPrimitivePlugin, of a byte object?"
+	| spec |
+	spec := self oilInstSpecOfClass: rcvrClass.
+	(spec >= 16 and: [spec <= 23]) ifFalse: [^false].
+	^self
+		cCode: [coInterpreter oilApiIsStringHashMethod: aMethod]
+		inSmalltalk: [(aMethod literalAt: 1) isArray and: [((aMethod literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveStringHash']]! !
+
+!OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
+genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
+	"String>>hashWithInitialHash: (primitiveStringHash) of a byte object: computed now if both the string and the initial
+	 hash are constants (e.g. the hash of a literal Symbol), else by OilStringHash, which falls back to the send if the
+	 initial hash is not a SmallInteger."
+	| rcvrReg argReg |
+	((slotKind at: rcvrSlot) = OilDescConst
+	 and: [(slotKind at: rcvrSlot + 1) = OilDescConst
+	 and: [self isSmallIntegerHandle: (slotValue at: rcvrSlot + 1)]]) ifTrue:
+		[simStackTop := rcvrSlot - 1.
+		 ^self push: OilDescConst value: (self handleForSmallInteger:
+											(self stringHashOf: (slotValue at: rcvrSlot)
+												initialHash: (self smallIntegerValueOf: (slotValue at: rcvrSlot + 1))))].
+	(self isEncodableCall: selector super: false) ifFalse:
+		[^self genCall: selector numArgs: 1 receiver: rcvrSlot super: false].
+	guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
+	rcvrReg := self regForSlot: rcvrSlot.
+	argReg := self regForSlot: rcvrSlot + 1.
+	simStackTop := rcvrSlot - 1.
+	self pushResultOf: OilStringHash b: rcvrReg c: argReg site: 0.
+	self emit64: selector.
+	knownClass at: simStackTop put: smallIntegerClassHandle! !
+
+!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+stringHashOf: aHandle initialHash: initialHash
+	"primitiveStringHash of the byte object aHandle (a constant)."
+	^self
+		cCode: [coInterpreter oilApiStringHashOf: aHandle initialHash: initialHash]
+		inSmalltalk: [(self objectFor: aHandle) hashWithInitialHash: initialHash]! !
+
+!OilBaseCompiler methodsFor: 'returns' stamp: 'cb 10/25/2026 09:30'!
+isFrame: frameIndex deadFrom: pc
+	"After a return: is the rest of frame frameIndex's bytecodes, from pc, unreachable (no pending forward branch targets
+	 it)?  Then the return is the frame's last (e.g. ^(x + aPoint x) @ (y + aPoint y) in Point>>+ when the test before it
+	 was folded), and its result can stay a descriptor (see genReturnKind:value:nonLocal:frame:next:)."
+	| frameLastPC |
+	frameLastPC := frameEndPC at: frameIndex.
+	pc to: frameLastPC do:
+		[:laterPC| (pcChain at: (self pcMapIndex: laterPC frame: frameIndex)) ~= OilNoLink ifTrue: [^false]].
+	^true! !
+
+!OilBaseCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+classIndexOfClass: classHandle
+	"The class index of a class (its identity hash, primitive 175), or 0 if it has none yet."
+	^self cCode: [coInterpreter oilApiClassIndexOfClass: classHandle] inSmalltalk: [(self objectFor: classHandle) identityHash]! !
+
+!OilBaseCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
+snapshotRefersTo: vreg
+	"Does the deopt state of the current bytecode refer to register vreg?"
+	0 to: snapTop do:
+		[:slotIndex| ((snapKind at: slotIndex) = OilDescReg and: [(snapValue at: slotIndex) = vreg]) ifTrue: [^true]].
+	snapHighTop + 1 to: OilMaxReg do:
+		[:slotIndex| ((snapKind at: slotIndex) = OilDescReg and: [(snapValue at: slotIndex) = vreg]) ifTrue: [^true]].
+	^false! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+isNonNilQuickPrimitive: prim class: cls
+	"Does the quick method prim (sent to an instance of cls) answer a value known not to be nil: self (unless cls is
+	 UndefinedObject), true, false or a SmallInteger?"
+	prim = 256 ifTrue: [^cls ~= (self classHandleOf: nilHandle)].
+	^prim = 257 or: [prim = 258 or: [prim between: 260 and: 263]]! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+genBimorphicSelect: nilClass other: otherClass prim: prim receiver: rcvrSlot
+	"A send whose two receiver classes answer nil (nilClass) and a known non-nil value (otherClass, quick method prim): guard
+	 that the receiver is an instance of one of them (OilGuardClass2) and answer a lazy class dependent value (OilDescSelect):
+	 compared with nil (ifNil:, == nil) it is the class test itself (see genSelectIsNil:cond:slot:frame:next:), e.g.
+		(class == C1 ifTrue: [nil] ifFalse: [self]) ifNil: [A] ifNotNil: [B]  ==>  class == C1 ifTrue: [A] ifFalse: [B]
+	 and anywhere else it is materialized (emitSelect:into:)."
+	| rcvrReg site destSlot |
+	numConds >= OilMaxConds ifTrue: [^false].
+	rcvrReg := self regForSlot: rcvrSlot.
+	site := self recordSite: OilSiteArith.
+	failed ifTrue: [^true].
+	self emitOp: OilGuardClass2 a: rcvrReg imm16: site.
+	self emit64: nilClass.
+	self emit64: otherClass.
+	simStackTop := rcvrSlot - 1.
+	condCond at: numConds put: OilCondIdentical.
+	condClass at: numConds put: nilClass.
+	condRA at: numConds put: rcvrReg.
+	condRB at: numConds put: 0.
+	condImm at: numConds put: 0.
+	condUseImm at: numConds put: false.
+	condIdentity at: numConds put: true.
+	condFrame at: numConds put: currentFrame.
+	condPC at: numConds put: currentPC.
+	condSite at: numConds put: -1.
+	prim = 256
+		ifTrue:
+			[condSelKind at: numConds put: OilDescReg.
+			 condSelValue at: numConds put: rcvrReg]
+		ifFalse:
+			[condSelKind at: numConds put: OilDescConst.
+			 condSelValue at: numConds put: (prim = 257
+												ifTrue: [trueHandle]
+												ifFalse: [prim = 258 ifTrue: [falseHandle] ifFalse: [self handleForSmallInteger: prim - 261]])].
+	destSlot := self push: OilDescSelect value: numConds.
+	pendingCondSlot := destSlot.
+	pendingCondIndex := numConds.
+	numConds := numConds + 1.
+	oilNumSelects := oilNumSelects + 1.
+	^true! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+genSelectIsNil: condIndex cond: condCode slot: slotA frame: frameIndex next: nextPC
+	"x == nil (condCode OilCondIdentical) or x ~~ nil, x the lazy class dependent value condIndex (nil for the instances of
+	 condClass, non-nil otherwise): the class test, fused with the following conditional jump, or a lazy comparison."
+	| testCond brTag brTarget brNext destSlot |
+	pendingCondIndex = condIndex ifTrue: [pendingCondSlot := -1].
+	testCond := condCode = OilCondIdentical ifTrue: [OilCondIdentical] ifFalse: [OilCondNotIdentical].
+	simStackTop := slotA - 1.
+	(nextPC >= 0 and: [self canFuseBranchAt: nextPC frame: frameIndex]) ifTrue:
+		[brTag := opcodeTag. brTarget := oilTargetPC. brNext := oilNextPC.
+		 self flushFrame: frameIndex.
+		 self emitOp: OilCmpClass a: testCond b: (condRA at: condIndex) c: 0.
+		 self emit64: (condClass at: condIndex).
+		 self emitBranch: (brTag = OilTagJumpTrue ifTrue: [OilBranchTrue] ifFalse: [OilBranchFalse])
+			cond: OilFlagsReg to: brTarget frame: frameIndex.
+		 ^brNext].
+	numConds >= OilMaxConds ifTrue:
+		[self abortCompilation: OilFailTooManyVirtualObjects.
+		 ^nextPC].
+	condCond at: numConds put: testCond.
+	condClass at: numConds put: (condClass at: condIndex).
+	condRA at: numConds put: (condRA at: condIndex).
+	condRB at: numConds put: 0.
+	condImm at: numConds put: 0.
+	condUseImm at: numConds put: false.
+	condIdentity at: numConds put: true.
+	condFrame at: numConds put: currentFrame.
+	condPC at: numConds put: currentPC.
+	condSite at: numConds put: -1.
+	destSlot := self push: OilDescCond value: numConds.
+	pendingCondSlot := destSlot.
+	pendingCondIndex := numConds.
+	numConds := numConds + 1.
+	^nextPC! !
+
+!OilBaseCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+emitSelect: condIndex into: destReg
+	"Materialize the lazy class dependent value condIndex into destReg: nil if the class test holds, else its other value."
+	<inline: false>
+	| branchFalseJump exitJump |
+	pendingCondIndex = condIndex ifTrue: [pendingCondSlot := -1].
+	self emitOp: OilCmpClass a: OilCondIdentical b: (condRA at: condIndex) c: 0.
+	self emit64: (condClass at: condIndex).
+	branchFalseJump := self emitOp: OilBranchFalse a: OilFlagsReg imm16: 0.
+	self emitConst: nilHandle into: destReg.
+	exitJump := self emitOp: OilJump a: 0 imm16: 0.
+	self patchBranch: branchFalseJump to: irIndex.
+	(condSelKind at: condIndex) = OilDescReg
+		ifTrue: [self emitMove: destReg from: (condSelValue at: condIndex)]
+		ifFalse: [self emitConst: (condSelValue at: condIndex) into: destReg].
+	self patchBranch: exitJump to: irIndex.
+	lastLabelIR := irIndex.
+	knownClass at: destReg put: 0! !
