@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilBaseCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors iteratorSelectors numIteratorSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex rootMethod rootClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegHome oilNumHomes oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -111,6 +111,9 @@ setUpSimulationTables
 	oilLoopDepth := self newTable: OilBufferWords.
 	oilIRTarget := self newTable: OilBufferWords.
 	oilIRSite := self newTable: OilBufferWords.
+	oilXmmRegs := self newTable: OilNumXmms.
+	oilXmmVReg := self newTable: OilNumXmms.
+	oilXmmKind := self newTable: OilNumXmms.
 	simHandles := OrderedCollection new.
 	simHandleIndex := IdentityDictionary new.
 	irBudget := OilIRBudget.
@@ -844,7 +847,7 @@ opcodeHasDest: op
 		or: [op = OilLoadField or: [op = OilLoadElement or: [(op between: OilCall0 and: OilAddImmTagged)
 		or: [op = OilLoadSize or: [op = OilMakeClosure or: [op = OilNewArray or: [op = OilCallSuper or: [op = OilAddImmTaggedNC or: [op = OilModTagged
 		or: [(op between: OilLoadByteSize and: OilLoadChar) or: [op = OilCompareBytes or: [op = OilCharValue
-		or: [op = OilStreamNext or: [op = OilStreamNextPut]]]]]]]]]]]]]]]]]! !
+		or: [op = OilStreamNext or: [op = OilStreamNextPut or: [op between: OilAddFloat and: OilDivFloat]]]]]]]]]]]]]]]]]]! !
 
 !OilBaseCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: k value: v
@@ -1286,8 +1289,10 @@ genJumpIf: aBoolean to: targetPC frame: frameIndex
 !OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genSpecialSend: index numArgs: numArgs frame: frameIndex next: nextPC
 	<inline: false>
-	"Special selectors: inline tagged SmallInteger arithmetic and comparisons, identity, class; others are ordinary sends.
-	 Answer the pc to continue at (a comparison may be fused with the following conditional jump)."
+	"Special selectors: inline tagged SmallInteger arithmetic and comparisons, Float arithmetic and comparisons, identity,
+	 class; others are ordinary sends.  Answer the pc to continue at (a comparison may be fused with the following
+	 conditional jump)."
+	| floatPC |
 	(index between: 2 and: 7) ifTrue:
 		[(self canInlineSmallIntegerOpOn: simStackTop - 1 arg: simStackTop) ifTrue:
 			[^self genCompare: index - 1 identity: false frame: frameIndex next: nextPC]] "OilCondLt..OilCondNe".
@@ -1298,6 +1303,8 @@ genSpecialSend: index numArgs: numArgs frame: frameIndex next: nextPC
 	((index between: 0 and: 1) or: [index = 8 or: [(index between: 10 and: 15) and: [index ~= 11]]]) ifTrue:
 		[(self canInlineSmallIntegerOpOn: simStackTop - 1 arg: simStackTop) ifTrue:
 			[(self genArith: index) ifTrue: [^nextPC]]].
+	(index <= 9 and: [(floatPC := self genFloatSend: index frame: frameIndex next: nextPC) >= 0]) ifTrue:
+		[^floatPC].
 	self genSend: (self specialSelectorHandle: index) numArgs: numArgs super: false frame: frameIndex.
 	^nextPC! !
 
@@ -1310,6 +1317,7 @@ canInlineSmallIntegerOpOn: rcvrSlot arg: argSlot
 	argKind := slotKind at: argSlot.
 	(argKind = OilDescBlock or: [argKind = OilDescTempVector or: [argKind = OilDescCond]]) ifTrue: [^false].
 	(argKind = OilDescConst and: [(self isSmallIntegerHandle: (slotValue at: argSlot)) not]) ifTrue: [^false].
+	(self isFloatSlot: argSlot) ifTrue: [^false]. "e.g. 2 * aFloat: see genFloatSend:frame:next:"
 	(self isKnownSmallInteger: rcvrSlot) ifTrue: [^true].
 	(slotKind at: rcvrSlot) = OilDescReg ifFalse: [^false].
 	"The baseline JIT inlines SmallInteger arithmetic and comparisons and only sends the message for other
@@ -1331,6 +1339,95 @@ isUnlinkedSendAt: pc
 isKnownSmallInteger: slotIndex
 	(slotKind at: slotIndex) = OilDescConst ifTrue: [^self isSmallIntegerHandle: (slotValue at: slotIndex)].
 	^(slotKind at: slotIndex) = OilDescReg and: [(knownClass at: (slotValue at: slotIndex)) = smallIntegerClassHandle]! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+genFloatSend: index frame: frameIndex next: nextPC
+	"Special selectors + - < > <= >= = ~= * / on Floats: the receiver is a Float (see canInlineFloatOpOn:arg:) and
+	 the argument a number, or, for + * and the comparisons, the reverse (the operands are swapped).  The opcodes
+	 (OilAddFloat..OilCmpFloat) deoptimize unless the receiver is a Float and the argument a Float or a SmallInteger.
+	 Answer the pc to continue at, or -1 if the send is not inlined."
+	<inline: false>
+	| rcvrSlot argSlot swapped rcvrReg argReg cond |
+	rcvrSlot := simStackTop - 1.
+	argSlot := simStackTop.
+	swapped := (self canInlineFloatOpOn: rcvrSlot arg: argSlot) not.
+	(swapped and: [(index = 1 or: [index = 9])
+				or: [(self isFloatSlot: argSlot) not or: [(self isNumberSlot: rcvrSlot) not]]]) ifTrue:
+		[^-1].
+	rcvrReg := self regForSlot: rcvrSlot.
+	argReg := self regForSlot: argSlot.
+	swapped ifTrue: [| reg | reg := rcvrReg. rcvrReg := argReg. argReg := reg].
+	simStackTop := rcvrSlot - 1.
+	(index between: 2 and: 7) ifFalse:
+		[self pushResultOf: (index <= 1 ifTrue: [OilAddFloat + index] ifFalse: [OilMulFloat + index - 8])
+			b: rcvrReg c: argReg site: OilSiteArith.
+		 ^nextPC].
+	cond := swapped ifTrue: [self reversedCondition: index - 1] ifFalse: [index - 1].
+	^self genFloatCompare: cond rcvr: rcvrReg arg: argReg frame: frameIndex next: nextPC! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+genFloatCompare: cond rcvr: rcvrReg arg: argReg frame: frameIndex next: nextPC
+	"OilCmpFloat fused with the following conditional jump, or, if there is none, answering true or false."
+	| brTag brTarget brNext falseJump exitJump destReg |
+	(nextPC >= 0 and: [self canFuseBranchAt: nextPC frame: frameIndex]) ifTrue:
+		[brTag := opcodeTag. brTarget := oilTargetPC. brNext := oilNextPC.
+		 self flushFrame: frameIndex.
+		 self recordSite: OilSiteArith.
+		 self emitOp: OilCmpFloat a: cond b: rcvrReg c: argReg.
+		 self emitBranch: (brTag = OilTagJumpTrue ifTrue: [OilBranchTrue] ifFalse: [OilBranchFalse])
+			cond: OilFlagsReg to: brTarget frame: frameIndex.
+		 ^brNext].
+	self recordSite: OilSiteArith.
+	self emitOp: OilCmpFloat a: cond b: rcvrReg c: argReg.
+	falseJump := self emitOp: OilBranchFalse a: OilFlagsReg imm16: 0.
+	destReg := self pushOwnSlot.
+	self emitConst: trueHandle into: destReg.
+	exitJump := self emitOp: OilJump a: 0 imm16: 0.
+	self patchBranch: falseJump to: irIndex.
+	self emitConst: falseHandle into: destReg.
+	self patchBranch: exitJump to: irIndex.
+	lastLabelIR := irIndex.
+	^nextPC! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+canInlineFloatOpOn: rcvrSlot arg: argSlot
+	"Speculate Float arithmetic if the receiver is known to be a Float or its send site only saw Floats (SmallFloat64
+	 or BoxedFloat64) and the argument may be a number."
+	(self isNumberSlot: argSlot) ifFalse: [^false].
+	(self isFloatSlot: rcvrSlot) ifTrue: [^true].
+	^(slotKind at: rcvrSlot) = OilDescReg
+	  and: [self isFloatClass: (self profiledClassAt: currentPC)]! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+isNumberSlot: slotIndex
+	"May slotIndex hold a SmallInteger or a Float (a register, or such a constant)?"
+	(slotKind at: slotIndex) = OilDescReg ifTrue: [^true].
+	^(slotKind at: slotIndex) = OilDescConst
+	  and: [(self isSmallIntegerHandle: (slotValue at: slotIndex)) or: [self isFloatHandle: (slotValue at: slotIndex)]]! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+isFloatSlot: slotIndex
+	"Is slotIndex a Float constant, or a register of a known Float class or last assigned by Float arithmetic?"
+	| reg def |
+	(slotKind at: slotIndex) = OilDescConst ifTrue: [^self isFloatHandle: (slotValue at: slotIndex)].
+	(slotKind at: slotIndex) = OilDescReg ifFalse: [^false].
+	reg := slotValue at: slotIndex.
+	(self isFloatClass: (knownClass at: reg)) ifTrue: [^true].
+	def := lastDefIR at: reg.
+	^def >= 0 and: [def < irIndex and: [(self opcodeAt: def) between: OilAddFloat and: OilDivFloat]]! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+isFloatClass: classHandle
+	"Is classHandle SmallFloat64 or BoxedFloat64?"
+	classHandle = 0 ifTrue: [^false].
+	^self
+		cCode: [(objectMemory classTagForClass: classHandle) = objectMemory smallFloatTag
+				or: [(objectMemory classTagForClass: classHandle) = ClassFloatCompactIndex]]
+		inSmalltalk: [(self objectFor: classHandle) includesBehavior: Float]! !
+
+!OilBaseCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+isFloatHandle: aHandle
+	^self isFloatClass: (self classHandleOf: aHandle)! !
 
 !OilBaseCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 genClassOf: slotIndex
@@ -2330,6 +2427,9 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilSiteStub declareC: 'static AbstractInstruction *oilSiteStub[OilMaxSites]'.
 	aCCodeGenerator var: #oilSiteUsed declareC: 'static unsigned char oilSiteUsed[OilMaxSites]'.
 	aCCodeGenerator var: #oilAllocRegs declareC: 'static sqInt oilAllocRegs[16]'.
+	"Float chains: the XMM registers, the register whose value each holds (or -1) and how it was loaded (-1: computed)."
+	#(oilXmmRegs oilXmmVReg oilXmmKind) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumXmms]'].
 	aCCodeGenerator var: #valueSelectors declareC: 'static sqInt valueSelectors[5]'.
 	aCCodeGenerator var: #iteratorSelectors declareC: 'static sqInt iteratorSelectors[32]'.
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.

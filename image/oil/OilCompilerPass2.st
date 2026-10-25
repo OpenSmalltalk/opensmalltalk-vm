@@ -28,8 +28,9 @@ loopOptimize
 	    - counted loops (index from a constant >= 1, only incremented, tested against the size of an object):
 	      the increments cannot overflow (OilAddImmTaggedNC), the size of the object is the one loaded before
 	      the loop, and the bounds checks of the index right after the loop test are redundant.
-	 3. Dead code: pure instructions defining a register nothing reads (no instruction, no deopt state).
-	 4. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
+	 3. Redundant loads and checks (valueNumber: none here, see OilFullCompiler).
+	 4. Dead code: pure instructions defining a register nothing reads (no instruction, no deopt state).
+	 5. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
 	 Answer OilOK or a failure code."
 	| irOffset opcode branchTarget optimize |
 	oilIRBuffer := oilIRBuffer1.
@@ -65,8 +66,15 @@ loopOptimize
 			[((self opcodeAt: irOffset) = OilJump and: [(self imm16At: irOffset) <= irOffset]) ifTrue:
 				[self optimizeLoop: (self imm16At: irOffset) backJump: irOffset].
 			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+		 self valueNumber.
 		 self eliminateDeadCode].
 	^self emitOptimizedIR! !
+
+!OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 02:00'!
+valueNumber
+	"Eliminate redundant loads and checks (OilFullCompiler)."
+	<inline: true>
+	^self! !
 
 !OilLoopCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 isCall: opcode
@@ -483,25 +491,369 @@ pass2Statistics: index
 (Smalltalk hasClassNamed: #OilNumericCompiler) ifTrue: [(Smalltalk at: #OilNumericCompiler) removeFromSystem].!
 
 OilLoopCompiler subclass: #OilFullCompiler
-	instanceVariableNames: ''
+	instanceVariableNames: 'oilFactKind oilFactA oilFactB oilFactDest oilFactAt oilNumFacts oilNumLoadsRemoved oilNumChecksRemoved oilNumUnboxed'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
-!OilFullCompiler commentStamp: 'cb 10/25/2026 01:15' prior: 0!
-I am the full optimizing compiler of Oil (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilFullCompiler), bringing high-performance, lightweight JIT compilation to OpenSmalltalk's 64-bit Spur Cog VM.
+!OilFullCompiler commentStamp: 'cb 10/25/2026 02:00' prior: 0!
+I am the full optimizing compiler of Oil (OilBytecodeScanner -> OilBaseCompiler -> OilLoopCompiler -> OilFullCompiler), for the 64-bit Spur Cog VM.  To Pass 1 (translation and inlining into the linear IR), Pass 2 (the streaming loop optimizer) and Pass 3 (native code generation) I add:
+- dominator-scoped local value numbering (valueNumber, run by Pass 2 before dead code elimination): loads of fields and sizes already loaded, and bounds and class checks already done, on every path, are eliminated, without SSA or phis;
+- float fusion (fuseFloats, on Pass 2's IR): the intermediate results of a chain of Float arithmetic stay unboxed in XMM registers.
+All my tables are static too.!
 
-I combine a clean, robust 3-stage pipeline designed for extreme speed and zero memory allocation:
-1. Pass 1 (OilBaseCompiler): Front-end translation and inlining. Recursively flattens the outer home method, inlining blocks, monomorphic sends, standard collection iterators (do:, collect:, detect:), and small methods directly into a compact 32-bit linear IR in Buffer 1. Applies on-the-fly tagged SmallInteger peephole reductions and dissolves non-escaping temp vectors into registers.
-2. Pass 2 (OilLoopCompiler): Streaming loop optimization. Sweeps Buffer 1 into Buffer 2 with zero SSA complexity. Rotates innermost call-free loops into DO-WHILE headers, hoists invariant array bounds and class checks out of loop bodies into pre-headers, transforms induction variable increments into direct 1-cycle machine adds, and sweeps away dead pure instructions.
-3. Pass 3 (Native Backend): Back-end code generation. Maps linear IR directly to native machine code (x86-64 / ARM64) with backwards linear scan register allocation, leveraging the 64-bit Spur 3-bit tag arithmetic breakthrough to achieve raw C speed without boxing or OopMap overhead.
+!OilFullCompiler class methodsFor: 'translation' stamp: 'cb 10/25/2026 02:00'!
+declareCVarsIn: aCCodeGenerator
+	self == OilFullCompiler ifFalse: [^self].
+	#(oilFactKind oilFactA oilFactB oilFactDest oilFactAt) do:
+		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxFacts]']! !
 
-Because every buffer and side-table is pre-allocated in static BSS memory (< 200 KB total), I compile in under 100 microseconds synchronously without pausing the mutator, allocating zero heap objects, and generating native code that runs neck-and-neck with handwritten C.!
+!OilFullCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 02:00'!
+setUpSimulationTables
+	<doNotGenerate>
+	super setUpSimulationTables.
+	oilFactKind := self newTable: OilMaxFacts.
+	oilFactA := self newTable: OilMaxFacts.
+	oilFactB := self newTable: OilMaxFacts.
+	oilFactDest := self newTable: OilMaxFacts.
+	oilFactAt := self newTable: OilMaxFacts! !
 
-!OilFullCompiler methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 19:35'!
+!OilFullCompiler methodsFor: 'optimization' stamp: 'cb 10/25/2026 02:00'!
 pipe
 	<inline: true>
-	^super pipe! !
+	oilNumLoadsRemoved := oilNumChecksRemoved := oilNumUnboxed := 0.
+	super pipe.
+	failed ifTrue: [^failureCode].
+	self fuseFloats.
+	^OilOK! !
+
+!OilFullCompiler methodsFor: 'optimization' stamp: 'cb 10/25/2026 02:00'!
+pass2Statistics: index
+	"8 loads removed, 9 bounds and class checks removed, 10 unboxed float results; see OilLoopCompiler."
+	index = 8 ifTrue: [^oilNumLoadsRemoved].
+	index = 9 ifTrue: [^oilNumChecksRemoved].
+	index = 10 ifTrue: [^oilNumUnboxed].
+	^super pass2Statistics: index! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+valueNumber
+	"Dominator-scoped local value numbering, on Pass 2's input (Buffer 1, after the loop optimizations).  Walking the IR
+	 in order, remember facts: the field or the size of an object loaded into a register, an index within the bounds of
+	 a size, the class of an object.  A fact established at an instruction d still holds at a later p if d dominates p
+	 and none of its registers is assigned in between.  Branches go forward but for loops, so d dominates p unless a
+	 branch from before d targets a label between them: a label forgets the facts established after the earliest
+	 branch to it (a loop header, target of a back edge, forgets them all).  Assigning a register forgets the facts
+	 about it (anywhere after, conservatively).  A load already done becomes a move (OilP2ToMove) and a check already
+	 done is deleted (OilP2Delete).  A store forgets the loaded fields it may alias and is forwarded to later loads of
+	 the same field; calls (the GC may run, objects may change), allocations and other stores forget more."
+	| irOffset opcode branchTarget |
+	"oilIRMap (free until emission): the earliest branch to each label, 0 if a back edge targets it"
+	0 to: irIndex - 1 do: [:offset| oilIRMap at: offset put: 16rFFFF].
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (self isBranch: opcode) ifTrue:
+			[branchTarget := self imm16At: irOffset.
+			 oilIRMap at: branchTarget put: (branchTarget <= irOffset ifTrue: [0] ifFalse: [(oilIRMap at: branchTarget) min: irOffset])].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	oilNumFacts := oilNumLoadsRemoved := oilNumChecksRemoved := 0.
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[(oilIRTarget at: irOffset) ~= 0 ifTrue:
+			[self forgetFactsSince: (oilIRMap at: irOffset)].
+		 (self flag: irOffset has: OilP2Delete + OilP2ToMove)
+			ifTrue: [(self flag: irOffset has: OilP2ToMove) ifTrue: [self forgetFactsAbout: (self fieldAAt: irOffset)]]
+			ifFalse: [self valueNumberAt: irOffset].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+valueNumberAt: irOffset
+	"Fact kinds: 1 field (A object, B slot), 2 size (A object, B opcode), 3 bounds (A index, B limit), 4 class (A object, B class)."
+	| opcode regA regB kind key fact |
+	opcode := self opcodeAt: irOffset.
+	regA := self fieldAAt: irOffset.
+	regB := self fieldBAt: irOffset.
+	(opcode = OilLoadField or: [opcode = OilLoadSize or: [opcode = OilLoadByteSize]]) ifTrue:
+		[kind := opcode = OilLoadField ifTrue: [1] ifFalse: [2].
+		 key := opcode = OilLoadField ifTrue: [self fieldCAt: irOffset] ifFalse: [opcode].
+		 fact := self factIndex: kind a: regB b: key.
+		 fact >= 0 ifTrue:
+			[oilNumLoadsRemoved := oilNumLoadsRemoved + 1.
+			 (oilFactDest at: fact) = regA ifTrue: "regA still holds it"
+				[^self mark: irOffset with: OilP2Delete].
+			 self mark: irOffset with: OilP2ToMove.
+			 oilIRAux at: irOffset put: (oilFactDest at: fact)].
+		 self forgetFactsAbout: regA.
+		 regA ~= regB ifTrue: [self addFact: kind a: regB b: key dest: regA at: irOffset].
+		 ^self].
+	(opcode = OilCheckBounds or: [opcode = OilGuardClass]) ifTrue:
+		[kind := opcode = OilCheckBounds ifTrue: [3] ifFalse: [4].
+		 key := opcode = OilCheckBounds ifTrue: [regB] ifFalse: [self word64At: irOffset + 1].
+		 ((self factIndex: kind a: regA b: key) >= 0
+		  or: [kind = 3 and: [self isBoundedBySameSize: regA limit: regB]])
+			ifTrue:
+				[self mark: irOffset with: OilP2Delete.
+				 oilNumChecksRemoved := oilNumChecksRemoved + 1]
+			ifFalse: [self addFact: kind a: regA b: key dest: -1 at: irOffset].
+		 ^self].
+	opcode = OilStoreField ifTrue:
+		[self forgetFieldFacts: (self fieldCAt: irOffset).
+		 self addFact: 1 a: regB b: (self fieldCAt: irOffset) dest: regA at: irOffset.
+		 ^self].
+	((self isCall: opcode) or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut
+	 or: [opcode = OilMakeClosure or: [opcode = OilNewArray]]]]) ifTrue:
+		[oilNumFacts := 0].
+	(opcode = OilStoreElement or: [opcode = OilStoreByte or: [opcode = OilStoreChar]]) ifTrue:
+		[self forgetFieldFacts: -1].
+	(self opcodeHasDest: opcode) ifTrue:
+		[self forgetFactsAbout: regA]! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+factIndex: kind a: regA b: key
+	0 to: oilNumFacts - 1 do:
+		[:fact|
+		((oilFactKind at: fact) = kind and: [(oilFactA at: fact) = regA and: [(oilFactB at: fact) = key]]) ifTrue: [^fact]].
+	^-1! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+isBoundedBySameSize: indexReg limit: limitReg
+	"Is indexReg known to be within a limit that is the same size (of the same object) as limitReg?"
+	| sizeFact |
+	sizeFact := -1.
+	0 to: oilNumFacts - 1 do:
+		[:fact| ((oilFactKind at: fact) = 2 and: [(oilFactDest at: fact) = limitReg]) ifTrue: [sizeFact := fact]].
+	sizeFact < 0 ifTrue: [^false].
+	0 to: oilNumFacts - 1 do:
+		[:fact|
+		((oilFactKind at: fact) = 2
+		 and: [(oilFactA at: fact) = (oilFactA at: sizeFact)
+		 and: [(oilFactB at: fact) = (oilFactB at: sizeFact)
+		 and: [(self factIndex: 3 a: indexReg b: (oilFactDest at: fact)) >= 0]]]) ifTrue: [^true]].
+	^false! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+addFact: kind a: regA b: key dest: destReg at: irOffset
+	oilNumFacts >= OilMaxFacts ifTrue: [^self].
+	oilFactKind at: oilNumFacts put: kind.
+	oilFactA at: oilNumFacts put: regA.
+	oilFactB at: oilNumFacts put: key.
+	oilFactDest at: oilNumFacts put: destReg.
+	oilFactAt at: oilNumFacts put: irOffset.
+	oilNumFacts := oilNumFacts + 1! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+forgetFactsAbout: vreg
+	"Register vreg is assigned: forget the facts about its value (as an object, index, limit or result)."
+	oilNumFacts - 1 to: 0 by: -1 do:
+		[:fact|
+		((oilFactA at: fact) = vreg
+		 or: [(oilFactDest at: fact) = vreg
+		 or: [(oilFactKind at: fact) = 3 and: [(oilFactB at: fact) = vreg]]]) ifTrue:
+			[self removeFact: fact]]! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+forgetFactsSince: irOffset
+	"Forget the facts established at irOffset or later."
+	oilNumFacts - 1 to: 0 by: -1 do:
+		[:fact| (oilFactAt at: fact) >= irOffset ifTrue: [self removeFact: fact]]! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+forgetFieldFacts: slotIndex
+	"Forget the loaded fields of index slotIndex (of any object, which may be aliased), or all of them if slotIndex < 0."
+	oilNumFacts - 1 to: 0 by: -1 do:
+		[:fact|
+		((oilFactKind at: fact) = 1 and: [slotIndex < 0 or: [(oilFactB at: fact) = slotIndex]]) ifTrue:
+			[self removeFact: fact]]! !
+
+!OilFullCompiler methodsFor: 'value numbering' stamp: 'cb 10/25/2026 02:00'!
+removeFact: fact
+	"Replace fact by the last one."
+	oilNumFacts := oilNumFacts - 1.
+	oilFactKind at: fact put: (oilFactKind at: oilNumFacts).
+	oilFactA at: fact put: (oilFactA at: oilNumFacts).
+	oilFactB at: fact put: (oilFactB at: oilNumFacts).
+	oilFactDest at: fact put: (oilFactDest at: oilNumFacts).
+	oilFactAt at: fact put: (oilFactAt at: oilNumFacts)! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+fuseFloats
+	"Float fusion, on the final IR.  A float chain is a straight-line run of float instructions (OilAddFloat..OilCmpFloat,
+	 and the constants they use) whose results, but the last, are only read in the chain by its float instructions:
+	 they stay unboxed in XMM registers (OilFloatUnboxed), only the last result, if any, is boxed, and the checks of
+	 the inputs are done once per chain.  The chain has no side effect and assigns no register before its last
+	 instruction (unboxed results stay in XMM registers) but those of its constants, which the deopt state of its
+	 first instruction does not refer to.  So all its deopts go to that site (OilFloatChained, oilIRAux), and the
+	 interpreter then redoes the whole chain."
+	| irOffset opcode branchTarget |
+	oilNumUnboxed := 0.
+	0 to: irIndex - 1 do:
+		[:offset|
+		oilIRFlag at: offset put: 0.
+		oilIRTarget at: offset put: 0].
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (self isBranch: opcode) ifTrue:
+			[branchTarget := self imm16At: irOffset.
+			 oilIRTarget at: branchTarget put: ((oilIRTarget at: branchTarget) + 1 min: 255)].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	self computeIRSites.
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[irOffset := ((self opcodeAt: irOffset) between: OilAddFloat and: OilCmpFloat)
+						ifTrue: [self fuseFloatChainAt: irOffset]
+						ifFalse: [irOffset + (self instructionLengthAt: irOffset)]]! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+fuseFloatChainAt: start
+	"Mark the float chain starting with the float instruction at start, if any.  Answer the index to continue at."
+	<inline: false>
+	| site runEnd chainEnd irOffset opcode destReg numOps numUnboxedRegs |
+	site := oilIRSite at: start.
+	(site >= 0 and: [(siteSnapBase at: site) >= 0]) ifFalse: [^start + 1].
+	"The run: float instructions, and constants assigning no register of the site's state, up to a label."
+	runEnd := start.
+	[runEnd < irIndex
+	 and: [(runEnd = start or: [(oilIRTarget at: runEnd) = 0])
+	 and: [opcode := self opcodeAt: runEnd.
+		   (opcode between: OilAddFloat and: OilCmpFloat)
+		   or: [(opcode = OilConstTagged or: [opcode = OilConst64])
+				and: [(self state: site refersTo: (self fieldAAt: runEnd)) not]]]]] whileTrue:
+		[runEnd := runEnd + (self instructionLengthAt: runEnd)].
+	"The chain ends with the first float result that may be read after the run (or with the run)."
+	chainEnd := -1.
+	numOps := 0.
+	irOffset := start.
+	[chainEnd < 0 and: [irOffset < runEnd]] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (opcode between: OilAddFloat and: OilCmpFloat) ifTrue:
+			[numOps := numOps + 1.
+			 (opcode = OilCmpFloat or: [self isEscaping: irOffset runEnd: runEnd]) ifTrue: [chainEnd := irOffset]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	chainEnd < 0 ifTrue:
+		[irOffset := start.
+		 [irOffset < runEnd] whileTrue:
+			[((self opcodeAt: irOffset) between: OilAddFloat and: OilCmpFloat) ifTrue: [chainEnd := irOffset].
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)]].
+	numOps < 2 ifTrue: [^chainEnd + 1].
+	"The results before chainEnd must not be read after it, and must fit the XMM registers."
+	numUnboxedRegs := 0.
+	irOffset := start.
+	[irOffset < chainEnd] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (opcode between: OilAddFloat and: OilDivFloat) ifTrue:
+			[destReg := self fieldAAt: irOffset.
+			 ((self isAssigned: destReg from: irOffset + 1 to: chainEnd) not
+			  and: [self isRead: destReg from: chainEnd + 1 to: runEnd]) ifTrue: [^start + 1].
+			 (self isAssigned: destReg from: start to: irOffset - 1) ifFalse:
+				[numUnboxedRegs := numUnboxedRegs + 1]].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	numUnboxedRegs > (OilNumXmms - 3) ifTrue: [^start + 1].
+	"Mark it."
+	irOffset := start.
+	[irOffset <= chainEnd] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 self mark: irOffset with: OilFloatChained.
+		 oilIRAux at: irOffset put: site.
+		 (irOffset > start and: [(oilIRSite at: irOffset) >= 0]) ifTrue:
+			[siteIR at: (oilIRSite at: irOffset) put: -2].
+		 ((opcode between: OilAddFloat and: OilDivFloat)
+		  and: [irOffset < chainEnd or: [(self isEscaping: irOffset runEnd: runEnd) not]]) ifTrue:
+			[self mark: irOffset with: OilFloatUnboxed.
+			 oilNumUnboxed := oilNumUnboxed + 1].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^chainEnd + 1! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+isEscaping: irOffset runEnd: runEnd
+	"May the result of the float arithmetic at irOffset be read after the run ending at runEnd (it is not assigned
+	 again in the run, and live there)?"
+	| destReg |
+	destReg := self fieldAAt: irOffset.
+	^(self isAssigned: destReg from: irOffset + 1 to: runEnd - 1) not
+	  and: [self isLive: destReg from: runEnd]! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+isAssigned: vreg from: startOffset to: endOffset
+	"Is register vreg assigned by an instruction from startOffset to endOffset (inclusive, straight-line code)?"
+	| irOffset |
+	irOffset := startOffset.
+	[irOffset <= endOffset] whileTrue:
+		[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [^true].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^false! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+isRead: vreg from: startOffset to: endOffset
+	"Is register vreg read, by an instruction or the deopt state of a live site, from startOffset to before endOffset
+	 (straight-line code), before being assigned?"
+	| irOffset siteIndex |
+	irOffset := startOffset.
+	[irOffset < endOffset] whileTrue:
+		[oilUseProbe := vreg.
+		 oilUseProbeHit := false.
+		 self countUsesAt: irOffset.
+		 oilUseProbe := -1.
+		 oilUseProbeHit ifTrue: [^true].
+		 siteIndex := oilIRSite at: irOffset.
+		 (siteIndex >= 0 and: [(self isLiveSite: siteIndex) and: [self state: siteIndex refersTo: vreg]]) ifTrue: [^true].
+		 ((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [^false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	^false! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+isLive: vreg from: startOffset
+	"May register vreg be read at or after startOffset before being assigned?  Follows the control flow (both ways at
+	 conditional branches) for at most 256 instructions, answering true beyond.  Reads are the operands and the deopt
+	 states of live sites; the registers the deopt metadata of the frames and virtual objects refers to are live."
+	<inline: false>
+	| stack sp irOffset opcode budget siteIndex |
+	<var: #stack declareC: 'sqInt stack[16]'>
+	self cCode: [] inSmalltalk: [stack := CArrayAccessor on: (Array new: 16)].
+	(self isMetadataRegister: vreg) ifTrue: [^true].
+	stack at: 0 put: startOffset.
+	sp := 1.
+	budget := 256.
+	[sp > 0] whileTrue:
+		[sp := sp - 1.
+		 irOffset := stack at: sp.
+		 [irOffset < irIndex] whileTrue:
+			[(budget := budget - 1) < 0 ifTrue: [^true].
+			 opcode := self opcodeAt: irOffset.
+			 oilUseProbe := vreg.
+			 oilUseProbeHit := false.
+			 self countUsesAt: irOffset.
+			 oilUseProbe := -1.
+			 oilUseProbeHit ifTrue: [^true].
+			 siteIndex := oilIRSite at: irOffset.
+			 (siteIndex >= 0 and: [(self isLiveSite: siteIndex) and: [self state: siteIndex refersTo: vreg]]) ifTrue: [^true].
+			 ((opcode = OilReturn or: [opcode = OilTrap])
+			  or: [(self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]])
+				ifTrue: [irOffset := irIndex] "the path ends"
+				ifFalse:
+					[(opcode = OilBranchTrue or: [opcode = OilBranchFalse]) ifTrue:
+						[sp >= 16 ifTrue: [^true].
+						 stack at: sp put: (self imm16At: irOffset).
+						 sp := sp + 1].
+					 irOffset := opcode = OilJump
+									ifTrue: [self imm16At: irOffset]
+									ifFalse: [irOffset + (self instructionLengthAt: irOffset)]]]].
+	^false! !
+
+!OilFullCompiler methodsFor: 'float fusion' stamp: 'cb 10/25/2026 02:00'!
+isMetadataRegister: vreg
+	"Does the deoptimization metadata of an inlined frame (its receiver) or of a virtual object refer to register vreg?"
+	0 to: numFrames - 1 do:
+		[:frameIndex|
+		((frameSelfKind at: frameIndex) = OilDescReg and: [(frameSelfValue at: frameIndex) = vreg]) ifTrue: [^true]].
+	0 to: numVObjs - 1 do:
+		[:vobjIndex|
+		((vobjSelfKind at: vobjIndex) = OilDescReg and: [(vobjSelfValue at: vobjIndex) = vreg]) ifTrue: [^true].
+		0 to: (vobjNumCopied at: vobjIndex) - 1 do:
+			[:slotIndex|
+			((capturedKind at: (vobjCopiedBase at: vobjIndex) + slotIndex) = OilDescReg
+			 and: [(capturedValue at: (vobjCopiedBase at: vobjIndex) + slotIndex) = vreg]) ifTrue: [^true]]].
+	^false! !
 
 Smalltalk globals removeKey: #OilCompiler ifAbsent: [].
 Smalltalk at: #OilCompiler put: OilFullCompiler!

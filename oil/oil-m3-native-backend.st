@@ -105,6 +105,22 @@ oilGenGetNumBytesOf: srcReg into: destReg
 	"The number of bytes of the byte object in srcReg (clobbers TempReg)."
 	^objectRepresentation genGetNumBytesOf: srcReg into: destReg! !
 
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 02:00'!
+oilGenGetSmallFloatValueOf: oopReg scratch: scratchReg into: dpReg
+	"The double value of the SmallFloat64 in oopReg (see OilCompiler>>genLoadDouble:into:ints:site:)."
+	^objectRepresentation genGetSmallFloatValueOf: oopReg scratch: scratchReg into: dpReg! !
+
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 02:00'!
+oilGenJumpNotSmallFloatValueBits: reg scratch: scratchReg
+	"Answer a jump taken if the double bits in reg are out of the SmallFloat64 range (see OilCompiler>>genBoxDouble:into:site:)."
+	<returnTypeC: #'AbstractInstruction *'>
+	^objectRepresentation genJumpNotSmallFloatValueBits: reg scratch: scratchReg! !
+
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/25/2026 02:00'!
+oilGenConvertBitsToSmallFloatIn: reg scratch: scratchReg
+	"Convert the in range double bits in reg into a SmallFloat64."
+	^objectRepresentation genConvertBitsToSmallFloatIn: reg scratch: scratchReg! !
+
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 17:30'!
 oilGenStoreHeader: header into: objReg scratch: scratchReg
 	"Store the 64-bit header of a new object (see OilCompiler>>genAllocate:header:site:)."
@@ -1350,9 +1366,9 @@ primitiveOilLastCompilation
 	0 to: irWordCount - 1 do:
 		[:wordIndex| objectMemory storePointerUnchecked: wordIndex ofObject: irArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 12 at: wordIndex))].
 	objectMemory storePointer: 9 ofObject: result withValue: irArray.
-	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 8.
+	statsArray := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 11.
 	statsArray isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-	0 to: 7 do:
+	0 to: 10 do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: statsArray withValue: (objectMemory integerObjectOf: (cogit oilDebugInfo: 13 at: slotIndex))].
 	objectMemory storePointer: 10 ofObject: result withValue: statsArray.
 	self pop: argumentCount + 1 thenPush: result! !

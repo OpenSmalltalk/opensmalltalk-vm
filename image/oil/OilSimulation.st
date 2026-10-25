@@ -93,11 +93,19 @@ printInstructionAt: instIndex on: aStream
 		[OilAddImmTaggedNC]	-> [| immVal | immVal := self signed8: regC. aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), (immVal >= 0 ifTrue: [' + '] ifFalse: [' - ']), immVal abs printString, '   (addq $', (immVal * 8) printString, ', no overflow check)'].
 		[OilLoadSize]		-> [aStream nextPutAll: (self reg: regA), ' := size(', (self reg: regB), ')'].
 		[OilMakeClosure]	-> [aStream nextPutAll: (self reg: regA), ' := closure ', (self printHandle: (self word64At: instIndex + 1)), ' self ', (self reg: (self fieldCAt: instIndex + 3)), ' copied ', regC printString, ' from ', (self reg: regB)].
-		[OilNewArray]		-> [aStream nextPutAll: (self reg: regA), ' := Array new: ', regC printString, (regB = OilFlagsReg ifTrue: ['   (nil filled)'] ifFalse: ['   from ', (self reg: regB), '..', (self reg: regB + regC - 1)])] }
+		[OilNewArray]		-> [aStream nextPutAll: (self reg: regA), ' := Array new: ', regC printString, (regB = OilFlagsReg ifTrue: ['   (nil filled)'] ifFalse: ['   from ', (self reg: regB), '..', (self reg: regB + regC - 1)])].
+		[OilAddFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' + ', (self reg: regC), '   (Float)'].
+		[OilSubFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' - ', (self reg: regC), '   (Float)'].
+		[OilMulFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' * ', (self reg: regC), '   (Float)'].
+		[OilDivFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' / ', (self reg: regC), '   (Float)'].
+		[OilCmpFloat]		-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self reg: regC), '   (Float)'] }
 		otherwise: [].
 	siteIndex := (0 to: numSites - 1) detect: [:s| (siteIR at: s) = instIndex] ifNone: [nil].
 	siteIndex ifNotNil:
 		[aStream nextPutAll: '   ; deopt#'; print: siteIndex; nextPutAll: ' #'; print: (siteFrame at: siteIndex); nextPutAll: ' pc '; print: (sitePC at: siteIndex)].
+	(oilIRBuffer == oilIRBuffer2 and: [((oilIRFlag at: instIndex) bitAnd: OilFloatChained) ~= 0]) ifTrue:
+		[aStream nextPutAll: '   ; chain deopt#'; print: (oilIRAux at: instIndex).
+		 ((oilIRFlag at: instIndex) bitAnd: OilFloatUnboxed) ~= 0 ifTrue: [aStream nextPutAll: ' unboxed']].
 	aStream cr! !
 
 !OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
@@ -136,6 +144,16 @@ packedArgsAt: index count: count
 			word := oilIRBuffer at: index + (argIndex // 4).
 			argIndex > 0 ifTrue: [stream space].
 			stream nextPutAll: (self reg: ((word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255))]]! !
+
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
+irFlagAt: index
+	<doNotGenerate>
+	^oilIRFlag at: index! !
+
+!OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/25/2026 02:30'!
+irAuxAt: index
+	<doNotGenerate>
+	^oilIRAux at: index! !
 
 !OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 irString
@@ -194,17 +212,19 @@ hasSiteAt: pc in: aCompiledCode
 
 
 Object subclass: #OilIRInterpreter
-	instanceVariableNames: 'compiler regs flag steps'
+	instanceVariableNames: 'compiler regs flag steps xmms xmmChain'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants'
 	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilIRInterpreter commentStamp: 'cb 10/24/2026 10:40' prior: 0!
-I execute an OilCompiler's linear IR on host objects: run: receiver with: arguments answers the IR's result, or #deopt if a guard, a bounds check, a tag check or an overflow check fails (the VM would then deoptimize to the interpreter at the recorded deopt site).  Tagged SmallInteger opcodes are executed on untagged values with the SmallInteger checks they imply.!
+I execute an OilCompiler's linear IR on host objects: run: receiver with: arguments answers the IR's result, or #deopt if a guard, a bounds check, a tag check or an overflow check fails (the VM would then deoptimize to the interpreter at the recorded deopt site).  Tagged SmallInteger opcodes are executed on untagged values with the SmallInteger checks they imply.  The unboxed results of float chains (OilFullCompiler>>fuseFloats) are kept aside (xmms), as in XMM registers, and only read by the float instructions of their chain: if anything else read them, it would read a stale register.!
 
 !OilIRInterpreter methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:40'!
 on: anOilCompiler
 	compiler := anOilCompiler.
+	xmms := Dictionary new.
+	xmmChain := -1.
 	regs := Array new: 256! !
 
 !OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/24/2026 10:40'!
@@ -225,6 +245,7 @@ r: regIndex
 
 !OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/24/2026 10:40'!
 r: regIndex put: aValue
+	xmms removeKey: regIndex ifAbsent: [].
 	^regs at: regIndex + 1 put: aValue! !
 
 !OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/24/2026 10:40'!
@@ -239,10 +260,12 @@ tagged: aValue
 !OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/24/2026 10:40'!
 step: instIndex
 	"Execute the instruction at instIndex.  Answer the next index, or an Association #result -> value / #deopt -> site."
-	| comp opcode destReg srcReg1 srcReg2 nextIndex val1 val2 resVal |
+	| comp opcode destReg srcReg1 srcReg2 nextIndex val1 val2 resVal chainSite |
 	comp := compiler.
 	opcode := comp opcodeAt: instIndex. destReg := comp fieldAAt: instIndex. srcReg1 := comp fieldBAt: instIndex. srcReg2 := comp fieldCAt: instIndex.
 	nextIndex := instIndex + (comp instructionLengthAt: instIndex).
+	chainSite := ((comp irFlagAt: instIndex) bitAnd: OilFloatChained) ~= 0 ifTrue: [comp irAuxAt: instIndex] ifFalse: [-1].
+	chainSite ~= xmmChain ifTrue: [xmms removeAll. xmmChain := chainSite].
 	opcode = OilConstTagged ifTrue:
 		[self r: destReg put: (comp signed16: (comp imm16At: instIndex)) - 1 // 8. ^nextIndex].
 	opcode = OilConst64 ifTrue: [self r: destReg put: (comp objectFor: (comp word64At: instIndex + 1)). ^nextIndex].
@@ -259,6 +282,19 @@ step: instIndex
 		[val1 := self r: srcReg1. (self smallInt: val1) ifFalse: [^#deopt -> instIndex].
 		 resVal := self tagged: val1 + (comp signed8: srcReg2). resVal ifNil: [^#deopt -> instIndex]. self r: destReg put: resVal. ^nextIndex].
 	opcode = OilTrap ifTrue: [^#deopt -> instIndex].
+	(opcode between: OilAddFloat and: OilCmpFloat) ifTrue: "a Float receiver, a Float or SmallInteger argument, no zero divisor"
+		[val1 := xmms at: srcReg1 ifAbsent: [self r: srcReg1]. val2 := xmms at: srcReg2 ifAbsent: [self r: srcReg2].
+		 (val1 isFloat and: [val2 isFloat or: [self smallInt: val2]]) ifFalse: [^#deopt -> instIndex].
+		 opcode = OilCmpFloat ifTrue:
+			[flag := #(< > <= >= = ~=) at: destReg.
+			 flag := val1 perform: flag with: val2.
+			 ^nextIndex].
+		 (opcode = OilDivFloat and: [val2 isZero]) ifTrue: [^#deopt -> instIndex].
+		 resVal := val1 perform: (#(+ - * /) at: opcode - OilAddFloat + 1) with: val2.
+		 ((comp irFlagAt: instIndex) bitAnd: OilFloatUnboxed) ~= 0
+			ifTrue: [xmms at: destReg put: resVal]
+			ifFalse: [self r: destReg put: resVal].
+		 ^nextIndex].
 	opcode = OilStreamNext ifTrue: [self r: destReg put: (self r: srcReg1) next. ^nextIndex].
 	opcode = OilStreamNextPut ifTrue: [self r: destReg put: ((self r: srcReg1) nextPut: (self r: srcReg2)). ^nextIndex].
 	opcode = OilCharValue ifTrue: [self r: destReg put: (self r: srcReg1) asInteger. ^nextIndex].

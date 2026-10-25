@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilLastOpcode'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilLastOpcode'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -59,11 +59,19 @@ initialize
 	"streaming byte read/write intrinsics for buffered stream next / nextPut: without method dispatch"
 	OilStreamNext := 41.
 	OilStreamNextPut := 42.
-	OilLastOpcode := 42.! !
+	"Float arithmetic [Op|Dest|Rcvr|Arg] and comparison [Op|Cond|Rcvr|Arg] (then a branch on the flags, like OilCmpTagged)
+	 on doubles: the receiver must be a Float (SmallFloat64 or BoxedFloat64), the argument a Float or a SmallInteger, and
+	 a divisor non-zero, else they deoptimize; the result is boxed (see OilFullCompiler>>fuseFloats for chains of them)"
+	OilAddFloat := 43.
+	OilSubFloat := 44.
+	OilMulFloat := 45.
+	OilDivFloat := 46.
+	OilCmpFloat := 47.
+	OilLastOpcode := 47.! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:10'!
 opcodeNames
 	"Answer the opcode names indexed by opcode (1-based, as opcodes start at 1)."
-	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut)! !
+	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat)! !
 
 OilInstructionConstants initialize!
