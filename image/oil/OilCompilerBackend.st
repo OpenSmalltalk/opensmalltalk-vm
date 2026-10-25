@@ -648,17 +648,17 @@ genNewArray: destReg first: firstReg size: numSlots site: siteIndex
 	self setDst: destReg from: ClassReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
-genMakeClosureAt: i site: s
+genMakeClosureAt: irOffset site: siteIndex
 	"An escaping FullBlockClosure (eager mode): [OilMakeClosure|Dest|FirstCopied|NumCopied] block (64 bits)
 	 [frame:16|ignoreOuterContext:8|selfReg:8].  Its outerContext is the root frame's context (the frame is married
 	 through the baseline JIT's active context trampoline, all registers spilled around the call), or nil for a block
 	 that ignores it.  The context of an inlined frame does not exist: such closures are not supported."
-	| destReg baseReg numCopied blockMethod word selfReg ignoreContext frameIndex closureReg slotOffset |
-	destReg := self fieldAAt: i.
-	baseReg := self fieldBAt: i.
-	numCopied := self fieldCAt: i.
-	blockMethod := self word64At: i + 1.
-	word := oilIRBuffer at: i + 3.
+	| destReg baseReg numCopied blockMethod word selfReg ignoreContext frameIndex valueReg slotOffset |
+	destReg := self fieldAAt: irOffset.
+	baseReg := self fieldBAt: irOffset.
+	numCopied := self fieldCAt: irOffset.
+	blockMethod := self word64At: irOffset + 1.
+	word := oilIRBuffer at: irOffset + 3.
 	selfReg := word bitAnd: 255.
 	ignoreContext := (word bitAnd: 256) ~= 0.
 	frameIndex := word bitShift: -16.
@@ -677,19 +677,19 @@ genMakeClosureAt: i site: s
 					headerForSlots: FullClosureFirstCopiedValueIndex + numCopied
 					format: objectMemory indexablePointersFormat
 					classIndex: ClassFullBlockClosureCompactIndex)
-		site: s.
+		site: siteIndex.
 	slotOffset := objectMemory baseHeaderSize.
 	cogit MoveR: SendNumArgsReg Mw: ClosureOuterContextIndex * objectMemory wordSize + slotOffset r: ClassReg.
 	cogit genMoveConstant: blockMethod R: TempReg.
-	cogit MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	cogit MoveR: TempReg Mw: FullClosureCompiledBlockIndex * objectMemory wordSize + slotOffset r: ClassReg.
 	cogit MoveCq: (objectMemory integerObjectOf: (self numArgsOf: blockMethod)) R: TempReg.
 	cogit MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory wordSize + slotOffset r: ClassReg.
-	closureReg := self src: selfReg scratch: TempReg.
-	cogit MoveR: closureReg Mw: FullClosureReceiverIndex * objectMemory wordSize + slotOffset r: ClassReg.
+	valueReg := self src: selfReg scratch: TempReg.
+	cogit MoveR: valueReg Mw: FullClosureReceiverIndex * objectMemory wordSize + slotOffset r: ClassReg.
 	0 to: numCopied - 1 do:
 		[:copiedIndex|
-		closureReg := self src: baseReg + copiedIndex scratch: TempReg.
-		cogit MoveR: closureReg Mw: FullClosureFirstCopiedValueIndex + copiedIndex * objectMemory wordSize + slotOffset r: ClassReg].
+		valueReg := self src: baseReg + copiedIndex scratch: TempReg.
+		cogit MoveR: valueReg Mw: FullClosureFirstCopiedValueIndex + copiedIndex * objectMemory wordSize + slotOffset r: ClassReg].
 	self setDst: destReg from: ClassReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
