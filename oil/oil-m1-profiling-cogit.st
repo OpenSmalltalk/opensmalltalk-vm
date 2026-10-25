@@ -1,15 +1,16 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counters counterIndex oilTripLog ceOilDeoptTrampoline oilSelectors oilExtraSelectors'
-	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry OilTripBlockEntryMagic'
+	instanceVariableNames: 'numCounters counters counterIndex ceOilTripTrampoline oilTripLog ceOilDeoptTrampoline oilSelectors oilExtraSelectors'
+	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
-!ProfilingCogit commentStamp: 'cb 10/25/2026 00:30' prior: 0!
+!ProfilingCogit commentStamp: 'cb 10/25/2026 01:50' prior: 0!
 A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
 
-Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful full block entries (compileFullBlockMethodFrameBuild:).  Straight-line code, conditional branches and legacy vanilla blocks carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (65535), held in a pinned object on the Spur heap allocated with objectRepresentation allocateCounters: and referenced from the counters field of the method's header (a SistaCogMethod).  At each site the counter is decremented; when it reaches zero, instead of a separate trampoline call, the site invokes ceCheckForInterruptTrampoline (back jump) or methodAbortTrampoline (block entry) with SendNumArgsReg set to indicate a trip.  The trampoline distinguishes counter trips from interrupts/stack overflows, calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), and returns directly to machine code.  Nothing on the trip path allocates, collects garbage or changes the stack.
+Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful full block entries (compileFullBlockMethodFrameBuild:).  Straight-line code, conditional branches and legacy vanilla blocks carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (65535), held in a pinned object on the Spur heap allocated with objectRepresentation allocateCounters: and referenced from the counters field of the method's header (a SistaCogMethod).  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to indicate the kind of site (OilTripBackJump or OilTripBlockEntry).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), and returns directly to machine code.  Nothing on the trip path allocates, collects garbage or changes the stack.
 
 Instance Variables
 	ceOilDeoptTrampoline:	<Integer>
+	ceOilTripTrampoline:	<Integer>
 	counterIndex:			<Integer>
 	counters:				<Integer>
 	numCounters:			<Integer>
@@ -43,38 +44,37 @@ setOilTripLog: anArrayOrNil
 	oilTripLog := anArrayOrNil! !
 
 
-!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 00:30'!
+!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 01:50'!
 genJumpBackTo: targetBytecodePC
-	"Count loop iterations at the back jump, sharing ceCheckForInterruptTrampoline."
-	| counterAddress jumpTripped interruptCall |
-	<var: #jumpTripped type: #'AbstractInstruction *'>
-	<var: #interruptCall type: #'AbstractInstruction *'>
+	"Count loop iterations at the back jump, before the usual interrupt check."
 	self ssFlushTo: simStackPtr.
-	(counters ~= 0 and: [counterIndex < numCounters])
-		ifTrue:
-			[counterAddress := counters + (OilCounterBytes * counterIndex).
-			 counterIndex := counterIndex + 1.
-			 self MoveA32: counterAddress R: TempReg.
-			 self SubCq: 1 R: TempReg.
-			 self MoveR: TempReg A32: counterAddress.
-			 jumpTripped := self JumpZero: 0]
-		ifFalse:
-			[jumpTripped := nil].
+	self genOilTripCounter: OilTripBackJump.
+	^super genJumpBackTo: targetBytecodePC! !
 
-	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
-	self CmpR: TempReg R: SPReg.
-	self JumpAboveOrEqual: (self fixupAt: targetBytecodePC).
-
-	self MoveCq: 0 R: SendNumArgsReg. "0 = normal interrupt check"
-	interruptCall := self Label.
-	self CallRT: ceCheckForInterruptTrampoline.
-	self annotateBytecode: self Label.
-	self Jump: (self fixupAt: targetBytecodePC).
-
-	jumpTripped ifNotNil:
-		[jumpTripped jmpTarget: self Label.
-		 self MoveCq: 1 R: SendNumArgsReg. "1 = back jump counter trip"
-		 self Jump: interruptCall].
+!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 01:50'!
+genOilTripCounter: kind
+	"Generate the code for a trip counter site of the given kind:
+		counter := counter - 1. counter = 0 ifTrue: [ceOilTripTrampoline(kind)]
+	 The counter is decremented in TempReg and written back before the test; neither
+	 the store nor the address materialization changes the flags on x64 or ARMv8.
+	 The kind is passed in SendNumArgsReg, which is dead at both kinds of site.
+	 The trampoline preserves ReceiverResultReg, so no register state is lost.
+	 The call is not annotated as a bytecode pc since ceOilTrip: does not need to map
+	 the frame's pc (it neither allocates, collects garbage nor changes the stack)."
+	| counterAddress notTripped |
+	<var: #notTripped type: #'AbstractInstruction *'>
+	(counters = 0
+	 or: [counterIndex >= numCounters]) ifTrue:
+		[^0].
+	counterAddress := counters + (OilCounterBytes * counterIndex).
+	counterIndex := counterIndex + 1.
+	self MoveA32: counterAddress R: TempReg.
+	self SubCq: 1 R: TempReg.
+	self MoveR: TempReg A32: counterAddress.
+	notTripped := self JumpNonZero: 0.
+	self MoveCq: kind R: SendNumArgsReg.
+	self CallRT: ceOilTripTrampoline.
+	notTripped jmpTarget: self Label.
 	^0! !
 
 
@@ -89,34 +89,13 @@ compileCogMethod: selector
 	counters := 0.
 	^super compileCogMethod: selector! !
 
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/25/2026 00:30'!
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/25/2026 01:50'!
 compileFullBlockMethodFrameBuild: numCopied
-	"Count frameful full block activations once the frame is complete,
-	 sharing the method abort / stack overflow trampoline."
+	"Count frameful full block activations once the frame is complete."
 	<option: #SistaV1BytecodeSet>
-	| jumpTripped jumpOk counterAddress |
-	<var: #jumpTripped type: #'AbstractInstruction *'>
-	<var: #jumpOk type: #'AbstractInstruction *'>
-	needsFrame ifFalse: [^self].
 	super compileFullBlockMethodFrameBuild: numCopied.
-	(counters ~= 0 and: [counterIndex < numCounters])
-		ifTrue:
-			[counterAddress := counters + (OilCounterBytes * counterIndex).
-			 counterIndex := counterIndex + 1.
-			 self MoveA32: counterAddress R: TempReg.
-			 self SubCq: 1 R: TempReg.
-			 self MoveR: TempReg A32: counterAddress.
-			 jumpTripped := self JumpZero: 0]
-		ifFalse:
-			[jumpTripped := nil].
-
-	jumpTripped ifNotNil:
-		[jumpOk := self Jump: 0.
-		 jumpTripped jmpTarget: self Label.
-		 self MoveCq: 0 R: ReceiverResultReg. "0 = stack overflow / trip abort"
-		 self MoveCq: OilTripBlockEntryMagic R: SendNumArgsReg. "OilTripBlockEntryMagic = block entry counter trip"
-		 self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs).
-		 jumpOk jmpTarget: self Label]! !
+	needsFrame ifTrue:
+		[self genOilTripCounter: OilTripBlockEntry].! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
 maybeAllocAndInitCounters
@@ -220,100 +199,6 @@ oilFindSendAt: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc B
 	^mcpc asUnsignedInteger! !
 
 
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:30'!
-genCheckForInterruptsTrampoline
-	| jumpInterrupt |
-	<var: #jumpInterrupt type: #'AbstractInstruction *'>
-	self zeroOpcodeIndex.
-	self CmpCq: 0 R: SendNumArgsReg.
-	jumpInterrupt := self JumpZero: 0.
-
-	"SendNumArgsReg ~= 0 (1): Oil loop backjump counter trip"
-	self genSmalltalkToCStackSwitch: true.
-	self compileCallFor: #ceOilTrip:
-		numArgs: 1
-		arg: 0 "OilTripBackJump"
-		arg: nil
-		arg: nil
-		arg: nil
-		resultReg: NoReg
-		regsToSave: self emptyRegisterMask.
-	backEnd genLoadStackPointers.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
-	self genTrampolineReturn: true.
-
-	jumpInterrupt jmpTarget: self Label.
-	backEnd hasLinkRegister ifFalse:
-		[self PopR: TempReg.
-		 self MoveR: TempReg Aw: coInterpreter instructionPointerAddress].
-	^ceCheckForInterruptTrampoline := self genTrampolineFor: #ceCheckForInterrupt
-										called: 'ceCheckForInterruptTrampoline'
-										numArgs: 0
-										arg: nil
-										arg: nil
-										arg: nil
-										arg: nil
-										regsToSave: self emptyRegisterMask
-										pushLinkReg: false
-										resultReg: NoReg
-										appendOpcodes: true! !
-
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:30'!
-genMethodAbortTrampolineFor: numArgs
-	| jumpSICMiss jumpTrip |
-	<var: #jumpSICMiss type: #'AbstractInstruction *'>
-	<var: #jumpTrip type: #'AbstractInstruction *'>
-	self zeroOpcodeIndex.
-	self CmpCq: 0 R: ReceiverResultReg.
-	jumpSICMiss := self JumpNonZero: 0.
-
-	"ReceiverResultReg = 0: abort/stack overflow path.
-	 Check if this is an Oil block entry counter trip (SendNumArgsReg = OilTripBlockEntryMagic)."
-	self CmpCq: OilTripBlockEntryMagic R: SendNumArgsReg.
-	jumpTrip := self JumpZero: 0.
-
-	"Normal stack overflow: call ceStackOverflow:"
-	backEnd hasLinkRegister ifTrue:
-		[self MoveR: LinkReg Mw: 0 r: SPReg].
-	self compileTrampolineFor: #ceStackOverflow:
-		numArgs: 1
-		arg: SendNumArgsReg
-		arg: nil
-		arg: nil
-		arg: nil
-		regsToSave: self emptyRegisterMask
-		pushLinkReg: false
-		resultReg: NoReg.
-
-	"Oil block entry trip path:"
-	jumpTrip jmpTarget: self Label.
-	self genSmalltalkToCStackSwitch: true.
-	self compileCallFor: #ceOilTrip:
-		numArgs: 1
-		arg: 1 "OilTripBlockEntry"
-		arg: nil
-		arg: nil
-		arg: nil
-		resultReg: NoReg
-		regsToSave: self emptyRegisterMask.
-	backEnd genLoadStackPointers.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
-	self genTrampolineReturn: true.
-
-	jumpSICMiss jmpTarget: self Label.
-	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
-	^self genTrampolineFor: #ceSICMiss:
-		called: (self trampolineName: 'ceMethodAbort' numRegArgs: numArgs)
-		numArgs: 1
-		arg: ReceiverResultReg
-		arg: nil
-		arg: nil
-		arg: nil
-		regsToSave: self emptyRegisterMask
-		pushLinkReg: false
-		resultReg: NoReg
-		appendOpcodes: true! !
-
 "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- "!
 
 ProfilingCogit class
@@ -328,8 +213,7 @@ initializeWithOptions: optionsDictionary
 	OilInitialCounterValue := (1 << 16) - 1.
 	"The kinds of trip site, passed to CoInterpreter>>ceOilTrip:."
 	OilTripBackJump := 0.
-	OilTripBlockEntry := 1.
-	OilTripBlockEntryMagic := 16r54524950! !
+	OilTripBlockEntry := 1.! !
 
 
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:00'!
@@ -346,10 +230,10 @@ declareCVarsIn: aCodeGen
 	aCodeGen var: 'counters' type: #usqInt! !
 
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/25/2026 00:30'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/25/2026 01:50'!
 ceOilTrip: kind
-	"Called from ceCheckForInterruptTrampoline (back jump, kind 0) or methodAbortTrampoline
-	 (block entry, kind 1) when a ProfilingCogit trip counter reaches zero.  framePointer is the
+	"Called from ceOilTripTrampoline when a ProfilingCogit trip counter reaches zero, at a
+	 loop back jump (kind 0) or a frameful full block entry (kind 1).  framePointer is the
 	 tripping machine code frame and the top of stack is the return address into its code.
 	 Identify the method that should be the root of an Oil compilation:
 	 - in a block activation, the home method of the block, found by walking the closure's

@@ -44,7 +44,7 @@ printInstructionAt: instIndex on: aStream
 	| opcode regA regB regC name siteIndex |
 	opcode := self opcodeAt: instIndex. regA := self fieldAAt: instIndex. regB := self fieldBAt: instIndex. regC := self fieldCAt: instIndex.
 	name := (opcode between: 1 and: OilLastOpcode) ifTrue: [OilConstants opcodeNames at: opcode] ifFalse: ['?', opcode printString].
-	aStream nextPutAll: '  '; nextPutAll: (instIndex printPaddedWith: bash to: 4); nextPutAll: '  ';
+	aStream nextPutAll: '  '; nextPutAll: (instIndex printPaddedWith: $0 to: 4); nextPutAll: '  ';
 		nextPutAll: ((self hexWord: (oilIRBuffer at: instIndex))); nextPutAll: '  ';
 		nextPutAll: (name , (String new: (14 - name size max: 1) withAll: $ )).
 	opcode caseOf: {
@@ -56,21 +56,21 @@ printInstructionAt: instIndex on: aStream
 		[OilSubTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' - ', (self reg: regC)].
 		[OilAndTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' bitAnd: ', (self reg: regC), '   (andq, no untagging)'].
 		[OilOrTagged]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' bitOr: ', (self reg: regC), '   (orq, no untagging)'].
-		[OilXorTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' bitXor: ', (self reg: regC), '   (xorq; orq )'].
+		[OilXorTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' bitXor: ', (self reg: regC), '   (xorq; orq $1)'].
 		[OilShiftTagged]	-> [| shiftVal | shiftVal := self signed8: regC.
 							 aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB),
-								(shiftVal > 0 ifTrue: [' >> ', shiftVal printString, '   (// ', (1 bitShift: shiftVal) printString, ': sarq $', (3 + shiftVal) printString, '; shlq ; orq )']
+								(shiftVal > 0 ifTrue: [' >> ', shiftVal printString, '   (// ', (1 bitShift: shiftVal) printString, ': sarq $', (3 + shiftVal) printString, '; shlq $3; orq $1)']
 									ifFalse: [' << ', shiftVal negated printString, '   (* ', (1 bitShift: shiftVal negated) printString, ')'])].
-		[OilOddTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' \ 2   ((x bitAnd: 8) bitOr: 1)'].
+		[OilOddTagged]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' \\ 2   ((x bitAnd: 8) bitOr: 1)'].
 		[OilLoadField]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), '.slot[', regC printString, ']'].
 		[OilStoreField]	-> [aStream nextPutAll: (self reg: regB), '.slot[', regC printString, '] := ', (self reg: regA), '   (store check)'].
 		[OilLoadElement]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), '[', (self reg: regC), ']   (movq -1(arr,idx))'].
 		[OilStoreElement]	-> [aStream nextPutAll: (self reg: regB), '[', (self reg: regC), '] := ', (self reg: regA), '   (store check)'].
 		[OilCmpTagged]	-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self reg: regC)].
 		[OilCmpImmTagged]	-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self signed8: regC) printString].
-		[OilBranchTrue]	-> [aStream nextPutAll: (regA = OilFlagsReg ifTrue: ['flags'] ifFalse: [self reg: regA]), ' -> L', ((self imm16At: instIndex) printPaddedWith: bash to: 4)].
-		[OilBranchFalse]	-> [aStream nextPutAll: (regA = OilFlagsReg ifTrue: ['flags'] ifFalse: [self reg: regA]), ' -> L', ((self imm16At: instIndex) printPaddedWith: bash to: 4)].
-		[OilJump]			-> [aStream nextPutAll: '-> L', ((self imm16At: instIndex) printPaddedWith: bash to: 4)].
+		[OilBranchTrue]	-> [aStream nextPutAll: (regA = OilFlagsReg ifTrue: ['flags'] ifFalse: [self reg: regA]), ' -> L', ((self imm16At: instIndex) printPaddedWith: $0 to: 4)].
+		[OilBranchFalse]	-> [aStream nextPutAll: (regA = OilFlagsReg ifTrue: ['flags'] ifFalse: [self reg: regA]), ' -> L', ((self imm16At: instIndex) printPaddedWith: $0 to: 4)].
+		[OilJump]			-> [aStream nextPutAll: '-> L', ((self imm16At: instIndex) printPaddedWith: $0 to: 4)].
 		[OilReturn]		-> [aStream nextPutAll: (self reg: regA)].
 		[OilGuardClass]	-> [aStream nextPutAll: 'class(', (self reg: regA), ') == ', (self printHandle: (self word64At: instIndex + 1))].
 		[OilCheckBounds]	-> [aStream nextPutAll: '1 <= ', (self reg: regA), ' <= ', (self reg: regB)].
@@ -105,7 +105,7 @@ hexWord: word
 	<doNotGenerate>
 	| hexString |
 	hexString := (word printStringBase: 16) asUppercase.
-	^(String new: (8 - hexString size max: 0) withAll: bash), hexString! !
+	^(String new: (8 - hexString size max: 0) withAll: $0), hexString! !
 
 !OilBaseCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
 reg: registerIndex

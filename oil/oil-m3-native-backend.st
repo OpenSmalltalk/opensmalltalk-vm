@@ -62,15 +62,20 @@ initialize
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
 
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:30'!
+!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 01:50'!
 generateRunTimeTrampolines
-	"Add the trampoline called by the deopt sequence of Oil methods (it passes the deopt site index in
+	"Add the trampoline called when a trip counter reaches zero (it passes the kind of site, OilTripBackJump or
+	 OilTripBlockEntry, in SendNumArgsReg to ceOilTrip:, and preserves ReceiverResultReg, which may hold self),
+	 and the trampoline called by the deopt sequence of Oil methods (it passes the deopt site index in
 	 SendNumArgsReg to ceOilDeoptimize:, which answers the address to resume at in TempReg, unless it deoptimizes,
-	 in which case it does not return).
-	 Trip counters share ceCheckForInterruptTrampoline (back jump) and methodAbortTrampoline (block entry)."
+	 in which case it does not return)."
 	super generateRunTimeTrampolines.
 	"Let large (e.g. parser) methods get machine code, hence inline caches for Oil (the default limit is 60 literals)."
 	coInterpreter oilRaiseMaxLiteralCountForCompile.
+	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
+								called: 'ceOilTripTrampoline'
+								arg: SendNumArgsReg
+								regsToSave: (self registerMaskFor: ReceiverResultReg).
 	ceOilDeoptTrampoline := self genTrampolineFor: #ceOilDeoptimize:
 								called: 'ceOilDeoptTrampoline'
 								arg: SendNumArgsReg
@@ -574,9 +579,9 @@ maybeMarkCountersIn: cogMethod
 	obj := self countersObjectOf: cogMethod counters.
 	obj ~= 0 ifTrue: [objectMemory markAndTrace: obj]! !
 
-!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/25/2026 00:30'!
+!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/25/2026 01:50'!
 numTrampolines
-	^super numTrampolines + 1 "ceOilDeoptTrampoline"! !
+	^super numTrampolines + 2 "ceOilTripTrampoline, ceOilDeoptTrampoline"! !
 
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 ancilliaryClasses
