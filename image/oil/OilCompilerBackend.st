@@ -1,6 +1,6 @@
 "Pass 3 of Oil (OilInliningCompiler), the native back end.  It translates the linear IR in oilIRBuffer
  into the Cogit's abstract instructions (CogAbstractInstruction), which the Cogit then assembles into a CogMethod.
- See ProfilingCogit>>oilMethod:receiverClass: for the driver.  Author: cb."!
+ See ProfilingCogit>>oilGenerate: for the driver.  Author: cb."!
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 prepareNativeCode
@@ -2198,8 +2198,7 @@ oilFailureCode
 !OilInliningCompiler methodsFor: 'debugging' stamp: 'cb 10/25/2026 00:45'!
 oilDebugInfo: what at: index
 	"For primitiveOilLastCompilation: 0 failure code, 1 IR size, 2 IR word, 3 eager closures,
-	 4 failed IR index, 5 sites, 6 frames, 7 spill slots, 8 allocated regs, 9 metadata bytes, 10 metadata bytes as a pointer
-	 Array (before Milestone 11), 11/12 Pass 1 IR, 13 Pass 2 stats."
+	 4 failed IR index, 5 sites, 6 frames, 7 spill slots, 8 allocated regs, 9 metadata bytes, 11/12 Pass 1 IR, 13 Pass 2 stats."
 	<api>
 	what = 0 ifTrue: [^failureCode].
 	what = 1 ifTrue: [^irIndex].
@@ -2211,7 +2210,6 @@ oilDebugInfo: what at: index
 	what = 7 ifTrue: [^oilNumSpillTemps].
 	what = 8 ifTrue: [^oilNumAllocRegs].
 	what = 9 ifTrue: [^self metadataObjectBytes].
-	what = 10 ifTrue: [^self legacyMetadataBytes].
 	what = 11 ifTrue: [^oilPass1Words].
 	what = 12 ifTrue: [^(index between: 0 and: oilPass1Words - 1) ifTrue: [oilIRBuffer1 at: index] ifFalse: [0]].
 	what = 13 ifTrue: [^self pass2Statistics: index].

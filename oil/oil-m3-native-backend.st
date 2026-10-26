@@ -2252,7 +2252,7 @@ primitiveOilSetColdSelectors
 primitiveOilSetParameter
 	"Arguments: the index of a tuning parameter of Oil and its value, a SmallInteger: 8 the number of deoptimizations after
 	 which an Oil method is disqualified (0: OilDisqualifyDeopts); 12 to 18 the loop unrolling parameters (see
-	 OilLoopOptimizer>>oilUnrollParameter:value:; 0: the default); 19 autonomous compilation, 1 (the default) to compile
+	 OilInliningCompiler>>oilUnrollParameter:value:; 0: the default); 19 autonomous compilation, 1 (the default) to compile
 	 the hot methods the trip counters find (see ceOilTrip:), 0 not to.  Answer the receiver."
 	<export: true>
 	<essential: #ProfilingCogit>
