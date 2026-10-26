@@ -155,19 +155,27 @@ oilGenReturnFrom: numArgs
 		[self PopR: LinkReg].
 	self RetN: numArgs + 1 * objectMemory wordSize! !
 
-!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
-oilGenSend: selectorIndex numArgs: numArgs super: isSuper
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/26/2026 09:30'!
+oilGenSend: selectorIndex numArgs: numArgs super: isSuper above: methodClass
 	"An uninlined send from an Oil method, linked by the usual inline cache machinery: the receiver is in
 	 ReceiverResultReg and the arguments in registers or on the stack (see OilCompiler>>genCallAt:site:).
+	 A super send with a methodClass (not 0) is a directed super send (one of an inlined method), whose lookup
+	 starts in the superclass of methodClass, passed to the trampoline in TempReg.
 	 c.f. genMarshalledSend:numArgs:sendTable:"
 	| sendTable annotation |
 	<var: #sendTable type: #'sqInt *'>
-	sendTable := isSuper ifTrue: [superSendTrampolines] ifFalse: [ordinarySendTrampolines].
-	annotation := isSuper ifTrue: [IsSuperSend] ifFalse: [IsSendCall].
+	sendTable := isSuper
+					ifTrue: [methodClass ~= 0 ifTrue: [directedSuperSendTrampolines] ifFalse: [superSendTrampolines]]
+					ifFalse: [ordinarySendTrampolines].
+	annotation := isSuper
+					ifTrue: [methodClass ~= 0 ifTrue: [IsDirectedSuperSend] ifFalse: [IsSuperSend]]
+					ifFalse: [IsSendCall].
 	isSuper ifTrue: "Deal with stale super sends; see SpurMemoryManager's class comment."
 		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
 	numArgs >= (NumSendTrampolines - 1) ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
+	methodClass ~= 0 ifTrue:
+		[self genMoveConstant: methodClass R: TempReg].
 	selectorIndex >= OilExtraSelectorBase
 		ifTrue: [self MoveUniqueC32: selectorIndex R: ClassReg] "an index into the Oil selector table"
 		ifFalse:

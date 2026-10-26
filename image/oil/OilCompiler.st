@@ -13,7 +13,7 @@ Virtual registers (256, 8-bit operands) are allocated like a register window: th
 
 Each register has a descriptor (slotKind/slotValue): its own register, an alias of another register, a not yet materialized constant, a virtual (not allocated) closure, or a virtual temp vector.  Expression stack entries are descriptors, which enables constant folding, copy propagation and the dissolving of closures and temp vectors whose blocks are inlined.  At every control flow merge all mutable registers are made canonical (own register), which keeps the linear pass simple and correct without SSA or phis.  If a closure must exist (it escapes), compilation restarts once in eager mode where closures and temp vectors are materialized.
 
-Inlining policy: see shouldInline:selector:numArgs:receiver:.  Receiver classes come from constants, from facts established by guards and inlining, or from type feedback (the inline caches of ProfilingCogit in the VM, simulated execution in the image).  Sends that are not inlined become OilCall0/OilCall1/OilCallN/OilCallSuper or uncommon traps (OilTrap).!
+Inlining policy: see shouldInline:selector:numArgs:receiver:.  Receiver classes come from constants, from facts established by guards and inlining, or from type feedback (the inline caches of ProfilingCogit in the VM, simulated execution in the image).  Sends that are not inlined become OilCall0/OilCall1/OilCallN/OilCallSuper/OilCallDirectedSuper or uncommon traps (OilTrap).!
 
 !OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/24/2026 10:30'!
 initialize
@@ -804,9 +804,9 @@ emit64: value
 	self emitWord: (value bitAnd: 16rFFFFFFFF).
 	self emitWord: ((value bitShift: -32) bitAnd: 16rFFFFFFFF)! !
 
-!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/26/2026 09:30'!
 emitPackedArgs: firstReg count: n
-	"OilCallN/OilCallSuper argument registers, four 8-bit register numbers per word (unused bytes are 255)."
+	"OilCallN/OilCallSuper/OilCallDirectedSuper argument registers, four 8-bit register numbers per word (unused bytes are 255)."
 	| word |
 	0 to: n - 1 by: 4 do:
 		[:i|
@@ -922,13 +922,13 @@ retarget: src to: dst
 	knownClass at: dst put: (knownClass at: src).
 	^true! !
 
-!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/25/2026 15:00'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/26/2026 09:30'!
 isSendOpcode: opcode
-	"Is opcode a send (OilCall0, OilCall1, OilCallN or OilCallSuper)?"
+	"Is opcode a send (OilCall0, OilCall1, OilCallN, OilCallSuper or OilCallDirectedSuper)?"
 	<inline: true>
-	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper]]]! !
+	^opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [opcode = OilCallSuper or: [opcode = OilCallDirectedSuper]]]]! !
 
-!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/26/2026 09:30'!
 opcodeHasDest: opcode
 	(opcode = OilConstTagged or: [opcode = OilConst64 or: [opcode = OilMove or: [opcode = OilLoadField or: [opcode = OilLoadElement]]]]) ifTrue: [^true].
 	((opcode between: OilAddTagged and: OilOddTagged) or: [(opcode between: OilCall0 and: OilAddImmTagged)
@@ -936,7 +936,7 @@ opcodeHasDest: opcode
 	 or: [opcode between: OilIdentityHash and: OilSkipSeparators]]]]) ifTrue: [^true].
 	^opcode = OilLoadSize or: [opcode = OilMakeClosure or: [opcode = OilNewArray or: [opcode = OilCallSuper or: [opcode = OilAddImmTaggedNC
 	  or: [opcode = OilModTagged or: [opcode = OilCompareBytes or: [opcode = OilCharValue or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut
-	  or: [opcode = OilNewObject or: [opcode = OilStringHash]]]]]]]]]]]! !
+	  or: [opcode = OilNewObject or: [opcode = OilStringHash or: [opcode = OilCallDirectedSuper]]]]]]]]]]]]! !
 
 !OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
 setSlot: i kind: kind value: value
@@ -1723,12 +1723,15 @@ hasOilCode: aMethod
 isNoInline: aMethod
 	^self includes: aMethod in: oilNoInline count: oilNumNoInline! !
 
-!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/26/2026 09:30'!
 isEncodableCall: selector super: isSuper
 	"Can the back end emit a send of selector?  Inline caches hold the index of their selector in the literals of the
 	 method (the root), among the special selectors or in the Oil selector table (which this adds selector to, see
-	 ProfilingCogit>>oilExtraSelectorIndexOf:add:), and a super send binds to the root method's class."
-	isSuper ifTrue: [^currentFrame = 0].
+	 ProfilingCogit>>oilExtraSelectorIndexOf:add:).  A super send of the root binds to the root method's class; one of an
+	 inlined frame is a directed super send, which needs the class of the frame's method."
+	isSuper ifTrue:
+		[currentFrame = 0 ifTrue: [^true].
+		 (self methodClassOopOfFrame: currentFrame) = 0 ifTrue: [^false]].
 	0 to: 31 do:
 		[:index| (self specialSelectorHandle: index) = selector ifTrue: [^true]].
 	0 to: (self cCode: [objectMemory literalCountOf: oilHomeMethod] inSmalltalk: [oilHomeMethod numLiterals]) - 1 do:
@@ -1737,10 +1740,10 @@ isEncodableCall: selector super: isSuper
 			inSmalltalk: [self handleFor: (oilHomeMethod literalAt: index + 1)]) = selector ifTrue: [^true]].
 	^self cCode: [(cogit oilExtraSelectorIndexOf: selector add: true) ~= OilNoLink] inSmalltalk: [false]! !
 
-!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/26/2026 09:30'!
 refuseInliningOfFrameOf: frameIndex
 	"Frame frameIndex (inlined) needs something the back end cannot do: a send of a selector that is not among the root
-	 method's literals, a super send, or a closure whose outerContext is frameIndex's context.  Compile again without inlining
+	 method's literals, a super send of a method without a method class, or a closure whose outerContext is frameIndex's context.  Compile again without inlining
 	 the method that the root sends and that leads to frameIndex (its send is encodable)."
 	| walkFrame |
 	walkFrame := frameIndex.
@@ -1756,11 +1759,12 @@ refuseInliningOfFrameOf: frameIndex
 	needsRestart := true.
 	failed := true! !
 
-!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/26/2026 09:30'!
 genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper
 	"A non-inlined send: receiver and arguments in consecutive registers rcvrSlot..rcvrSlot+numArgs, result in rcvrSlot.
-	 OilCall0 [Op|Dest|Rcvr|0], OilCall1 [Op|Dest|Rcvr|Arg0], OilCallN/OilCallSuper [Op|Dest|Rcvr|NumArgs];
-	 then the 64-bit selector; then, for OilCallN/OilCallSuper, the packed argument registers."
+	 OilCall0 [Op|Dest|Rcvr|0], OilCall1 [Op|Dest|Rcvr|Arg0], OilCallN/OilCallSuper/OilCallDirectedSuper [Op|Dest|Rcvr|NumArgs];
+	 then the 64-bit selector; then, for OilCallDirectedSuper (a super send of an inlined frame), the 64-bit method class
+	 of the frame's method; then, for OilCallN/OilCallSuper/OilCallDirectedSuper, the packed argument registers."
 	| instIndex |
 	((self hasVirtualObjectFrom: rcvrSlot to: rcvrSlot + numArgs) and: [self isNeverSentAt: currentPC]) ifTrue:
 		["A send never executed so far would make a virtual closure or object escape (e.g. the high resolution clock path
@@ -1775,8 +1779,12 @@ genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper
 	self recordSite: OilSiteCall.
 	(isSuper or: [numArgs >= 2])
 		ifTrue:
-			[instIndex := self emitOp: (isSuper ifTrue: [OilCallSuper] ifFalse: [OilCallN]) a: rcvrSlot b: rcvrSlot c: numArgs.
+			[instIndex := self emitOp: (isSuper
+										ifTrue: [currentFrame = 0 ifTrue: [OilCallSuper] ifFalse: [OilCallDirectedSuper]]
+										ifFalse: [OilCallN]) a: rcvrSlot b: rcvrSlot c: numArgs.
 			 self emit64: selector.
+			 (isSuper and: [currentFrame > 0]) ifTrue:
+				[self emit64: (self methodClassOopOfFrame: currentFrame)].
 			 self emitPackedArgs: rcvrSlot + 1 count: numArgs]
 		ifFalse:
 			[instIndex := self emitOp: (numArgs = 0 ifTrue: [OilCall0] ifFalse: [OilCall1]) a: rcvrSlot b: rcvrSlot c: (numArgs = 0 ifTrue: [0] ifFalse: [rcvrSlot + 1]).
@@ -2460,7 +2468,7 @@ word64At: index
 	val64 := (oilIRBuffer at: index) + ((oilIRBuffer at: index + 1) bitShift: 32).
 	^self cCode: [val64] inSmalltalk: [val64 >= (1 bitShift: 63) ifTrue: [val64 - (1 bitShift: 64)] ifFalse: [val64]]! !
 
-!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'IR access' stamp: 'cb 10/26/2026 09:30'!
 instructionLengthAt: index
 	| opcode |
 	opcode := self opcodeAt: index.
@@ -2469,6 +2477,7 @@ instructionLengthAt: index
 	opcode = OilMakeClosure ifTrue: [^4].
 	opcode = OilGuardClass2 ifTrue: [^5].
 	(opcode = OilCallN or: [opcode = OilCallSuper or: [opcode = OilIndexOfByte]]) ifTrue: [^3 + ((self fieldCAt: index) + 3 // 4)].
+	opcode = OilCallDirectedSuper ifTrue: [^5 + ((self fieldCAt: index) + 3 // 4)].
 	^1! !
 
 !OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
@@ -2639,6 +2648,16 @@ noteInlinedSelector: selector
 numInlinedSelectorsInMetadata
 	"The number of selectors in the metadata's inlined selectors section (none when there are too many to record)."
 	^oilNumInlinedSelectors > OilMaxInlinedSelectors ifTrue: [0] ifFalse: [oilNumInlinedSelectors]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/26/2026 09:30'!
+methodClassOopOfFrame: frameIndex
+	"The class a super send of frame frameIndex binds to: the method class of its home method, or 0 if it has none."
+	| homeMethod methodClass |
+	homeMethod := frameMethod at: (frameHome at: frameIndex).
+	methodClass := self
+						cCode: [coInterpreter methodClassOf: homeMethod]
+						inSmalltalk: [self handleFor: homeMethod methodClass].
+	^methodClass = nilHandle ifTrue: [0] ifFalse: [methodClass]! !
 
 !OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
 superclassOopOfMethodClassOf: aMethod

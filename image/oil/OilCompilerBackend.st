@@ -133,7 +133,7 @@ recordUse: virtualReg
 			[virtualReg < OilFlagsReg ifTrue:
 				[oilVRegUses at: virtualReg put: (oilVRegUses at: virtualReg) + oilUseWeight]]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 countUsesAt: irOffset
 	"Count the registers the instruction at irOffset reads."
 	<inline: false>
@@ -164,7 +164,7 @@ countUsesAt: irOffset
 		 ^self recordUse: regB].
 	(opcode = OilReturn or: [opcode = OilGuardClass or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]]) ifTrue:
 		[^self recordUse: regA].
-	(opcode = OilCallN or: [opcode = OilCallSuper or: [opcode = OilIndexOfByte]]) ifTrue:
+	(opcode = OilCallN or: [opcode = OilCallSuper or: [opcode = OilCallDirectedSuper or: [opcode = OilIndexOfByte]]]) ifTrue:
 		[self recordUse: regB.
 		 1 to: regC do: [:argIndex| self recordUse: (self packedArg: argIndex - 1 at: irOffset)]].
 	opcode = OilNewArray ifTrue:
@@ -193,11 +193,12 @@ weighInstructionAt: irOffset
 		[self recordUse: (self fieldAAt: irOffset)].
 	self countUsesAt: irOffset! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 packedArg: argIndex at: irOffset
-	"The register of argument argIndex (0-based) of the OilCallN/OilCallSuper at irOffset: four per word after the selector."
+	"The register of argument argIndex (0-based) of the OilCallN/OilCallSuper/OilCallDirectedSuper at irOffset: four per word
+	 after the selector (and, for OilCallDirectedSuper, the method class)."
 	| word |
-	word := oilIRBuffer at: irOffset + 3 + (argIndex // 4).
+	word := oilIRBuffer at: irOffset + ((self opcodeAt: irOffset) = OilCallDirectedSuper ifTrue: [5] ifFalse: [3]) + (argIndex // 4).
 	^(word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
@@ -385,7 +386,7 @@ generateNativeCode
 		(oilFixupJump at: fixupIndex) jmpTarget: target].
 	^OilOK! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 genInstructionAt: irOffset
 	"Translate the IR instruction at irOffset.  Answer the index of the next instruction to translate."
 	<inline: false>
@@ -461,6 +462,7 @@ genInstructionAt: irOffset
 		[OilCall1]			-> [self genCallAt: irOffset site: siteIndex].
 		[OilCallN]			-> [self genCallAt: irOffset site: siteIndex].
 		[OilCallSuper]		-> [self genCallAt: irOffset site: siteIndex].
+		[OilCallDirectedSuper]	-> [self genCallAt: irOffset site: siteIndex].
 		[OilNewObject]		-> [self genNewObjectAt: irOffset site: siteIndex].
 		[OilCmpClass]		-> [^self genCmpClassAt: irOffset].
 		[OilGuardClass2]	-> [self genGuard2At: irOffset site: siteIndex].
@@ -1950,26 +1952,28 @@ selectorIndexOf: selector
 		[:litIndex| (coInterpreter literal: litIndex ofMethod: oilHomeMethod) = selector ifTrue: [^litIndex]].
 	^cogit oilExtraSelectorIndexOf: selector add: true! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 genCallAt: irOffset site: siteIndex
 	"An uninlined send, through the Cogit's inline cache and PIC machinery."
 	<inline: false>
 	| opcode numArgs isSuper |
 	opcode := self opcodeAt: irOffset.
 	numArgs := opcode = OilCall0 ifTrue: [0] ifFalse: [opcode = OilCall1 ifTrue: [1] ifFalse: [self fieldCAt: irOffset]].
-	isSuper := opcode = OilCallSuper.
-	"A super send binds to the method class of the frame's method, which must be the root method's."
-	(isSuper and: [siteIndex < 0 or: [(siteFrame at: siteIndex) ~= 0]]) ifTrue:
+	isSuper := opcode = OilCallSuper or: [opcode = OilCallDirectedSuper].
+	"An OilCallSuper binds to the method class of the frame's method, which must be the root method's (an
+	 OilCallDirectedSuper names its class)."
+	(opcode = OilCallSuper and: [siteIndex < 0 or: [(siteFrame at: siteIndex) ~= 0]]) ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	self genSendAt: irOffset numArgs: numArgs super: isSuper! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 genSendAt: irOffset numArgs: numArgs super: isSuper
 	"Spill everything (the callee may run the GC, which scans and updates the homes), marshal the receiver and
 	 arguments like the baseline JIT (registers for up to numRegArgs arguments, else pushed), call the send
-	 trampoline (linked later to the target method or a PIC), store the result and reload."
+	 trampoline (linked later to the target method or a PIC), store the result and reload.  An OilCallDirectedSuper
+	 passes its method class to the directed super send trampoline."
 	<inline: false>
-	| destReg receiverReg selIndex |
+	| destReg receiverReg selIndex methodClass |
 	destReg := self fieldAAt: irOffset.
 	receiverReg := self fieldBAt: irOffset.
 	selIndex := self selectorIndexOf: (self word64At: irOffset + 1).
@@ -1988,7 +1992,8 @@ genSendAt: irOffset numArgs: numArgs super: isSuper
 				cogit MoveMw: (oilVRegSpillTemp at: (self callArg: argIndex at: irOffset)) r: FPReg R: TempReg.
 				cogit PushR: TempReg]].
 	cogit MoveMw: (oilVRegSpillTemp at: receiverReg) r: FPReg R: ReceiverResultReg.
-	cogit oilGenSend: selIndex numArgs: numArgs super: isSuper.
+	methodClass := (self opcodeAt: irOffset) = OilCallDirectedSuper ifTrue: [self word64At: irOffset + 3] ifFalse: [0].
+	cogit oilGenSend: selIndex numArgs: numArgs super: isSuper above: methodClass.
 	cogit MoveR: ReceiverResultReg Mw: (oilVRegSpillTemp at: destReg) r: FPReg.
 	self reloadAll! !
 

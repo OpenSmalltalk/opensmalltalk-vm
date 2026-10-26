@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilLastOpcode'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilLastOpcode'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -87,11 +87,15 @@ initialize
 	"primitiveStringHash (String>>hashWithInitialHash:) of a byte object [Op|Dest|Rcvr|InitialHash] then the selector:
 	 ((((h + b1) * 16r19660D) + b2) * 16r19660D ...) bitAnd: 16r0FFFFFFF, h the SmallInteger initial hash, else the send"
 	OilStringHash := 54.
-	OilLastOpcode := 54.! !
+	"a super send of an inlined method [Op|Dest|Rcvr|NumArgs] then the selector, the method class of the inlined method
+	 (the lookup starts in its superclass) and the packed argument registers (like OilCallN): OilCallSuper binds to the
+	 method class of the root method, the directed super send trampolines take the class"
+	OilCallDirectedSuper := 55.
+	OilLastOpcode := 55.! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:10'!
 opcodeNames
 	"Answer the opcode names indexed by opcode (1-based, as opcodes start at 1)."
-	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators NewObject CmpClass GuardClass2 StringHash)! !
+	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators NewObject CmpClass GuardClass2 StringHash CallDirectedSuper)! !
 
 OilInstructionConstants initialize!

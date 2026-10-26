@@ -38,7 +38,7 @@ printIROn: aStream
 	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !
 
-!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/24/2026 10:40'!
+!OilInliningCompiler methodsFor: '*VMMaker-JIT-OilDebugging-printing' stamp: 'cb 10/26/2026 09:30'!
 printInstructionAt: instIndex on: aStream
 	<doNotGenerate>
 	| opcode regA regB regC name siteIndex |
@@ -78,6 +78,7 @@ printInstructionAt: instIndex on: aStream
 		[OilCall1]			-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' ', (self printHandle: (self word64At: instIndex + 1)), ' ', (self reg: regC)].
 		[OilCallN]			-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' ', (self printHandle: (self word64At: instIndex + 1)), ' (', (self packedArgsAt: instIndex + 3 count: regC), ')'].
 		[OilCallSuper]		-> [aStream nextPutAll: (self reg: regA), ' := super ', (self printHandle: (self word64At: instIndex + 1)), ' rcvr ', (self reg: regB), ' (', (self packedArgsAt: instIndex + 3 count: regC), ')'].
+		[OilCallDirectedSuper]	-> [aStream nextPutAll: (self reg: regA), ' := super ', (self printHandle: (self word64At: instIndex + 1)), ' above ', (self printHandle: (self word64At: instIndex + 3)), ' rcvr ', (self reg: regB), ' (', (self packedArgsAt: instIndex + 5 count: regC), ')'].
 		[OilAddImmTagged]	-> [| immVal | immVal := self signed8: regC. aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), (immVal >= 0 ifTrue: [' + '] ifFalse: [' - ']), immVal abs printString, '   (addq $', (immVal * 8) printString, ')'].
 		[OilTrap]			-> [aStream nextPutAll: 'uncommon trap'].
 		[OilStreamNext]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' next   (inlined, else sent)'].
@@ -272,7 +273,7 @@ tagged: aValue
 	"Result of a tagged op: deopt on overflow."
 	^(self smallInt: aValue) ifTrue: [aValue] ifFalse: [nil]! !
 
-!OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/24/2026 10:40'!
+!OilIRInterpreter methodsFor: 'running' stamp: 'cb 10/26/2026 09:30'!
 step: instIndex
 	"Execute the instruction at instIndex.  Answer the next index, or an Association #result -> value / #deopt -> site."
 	| comp opcode destReg srcReg1 srcReg2 nextIndex val1 val2 resVal chainSite |
@@ -386,6 +387,14 @@ step: instIndex
 					ifTrue: [{self r: srcReg2}]
 					ifFalse: [(1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex]].
 		 self r: destReg put: ((self r: srcReg1) perform: selector withArguments: args). ^nextIndex].
+	opcode = OilCallDirectedSuper ifTrue: "the lookup starts in the superclass of the method class"
+		[| selector args |
+		 selector := comp objectFor: (comp word64At: instIndex + 1).
+		 args := (1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex].
+		 self r: destReg put: ((self r: srcReg1)
+									perform: selector
+									withArguments: args
+									inSuperclass: (comp objectFor: (comp word64At: instIndex + 3)) superclass). ^nextIndex].
 	opcode = OilNewArray ifTrue:
 		[self r: destReg put: (srcReg1 = OilFlagsReg
 			ifTrue: [Array new: srcReg2]
