@@ -70,8 +70,8 @@ initialize
 
 !ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/25/2026 01:50'!
 generateRunTimeTrampolines
-	"Add the trampoline called when a trip counter reaches zero (it passes the kind of site, OilTripBackJump or
-	 OilTripBlockEntry, in SendNumArgsReg to ceOilTrip:, and preserves ReceiverResultReg, which may hold self),
+	"Add the trampoline called when a trip counter reaches zero (it passes the kind of site, OilTripBackJump,
+	 in SendNumArgsReg to ceOilTrip:, and preserves ReceiverResultReg, which may hold self),
 	 and the trampoline called by the deopt sequence of Oil methods (it passes the deopt site index in
 	 SendNumArgsReg to ceOilDeoptimize:, which answers the address to resume at in TempReg, unless it deoptimizes,
 	 in which case it does not return)."

@@ -1,5 +1,5 @@
 "ProfilingCogit end-to-end test: the trip counters and autonomous compilation (Milestone 15).  A counter trips at the
- 8191st execution of its site (a loop back jump or a frameful block entry), and the trip compiles the home method of the
+ 8191st execution of its site (a loop back jump), and the trip compiles the home method of the
  tripping frame with Oil (the method itself; for a block, or an iterator whose argument is a closure, the home method of
  the closure) and installs its Oil code for its next activations, while the running activations finish in the baseline
  code (see CoInterpreter>>ceOilTrip: and oilAutoCompile:receiver:).  Run with run-st.sh on a Squeak 6.x 64-bit image
@@ -60,7 +60,7 @@ check value: 'offSum: tripping in the middle of its loop computes correctly' val
 check value: 'offSum: then has Oil code' value: (hasOil value: mOffSum).
 check value: 'offSum: in the Oil code computes correctly' value: (m offSum: 100000) = 5000050000.
 
-"--- T2: frameful block entry inside a collection iteration: the home method (via the home context) is compiled ---"
+"--- T2: a block evaluated by a collection iteration (OrderedCollection>>do:): its home method is compiled ---"
 small := OrderedCollection new. 1 to: 10 do: [:i | small add: ((Smalltalk at: #OilTestItem) new score: i)].
 warm := (1 to: 5) collect: [:i | m sumScores: small].
 oc := OrderedCollection new.
