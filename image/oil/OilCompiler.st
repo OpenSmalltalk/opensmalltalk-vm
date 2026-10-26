@@ -496,7 +496,7 @@ pcMapIndex: pc frame: frameIndex
 	<inline: true>
 	^(framePCBase at: frameIndex) + pc - (frameStartPC at: frameIndex)! !
 
-!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'frames' stamp: 'cb 10/26/2026 22:05'!
 exitFrame: frameIndex
 	"Bind the exit label of the inlined frame frameIndex: all its returns leave the result in its base register
 	 (or, for a single final return, as a lazy descriptor).  The base register becomes the caller's stack top."
@@ -507,8 +507,10 @@ exitFrame: frameIndex
 	currentPC := frameCallPC at: frameIndex.
 	chain ~= OilNoLink
 		ifTrue:
-			["A final jump to the exit label that immediately precedes it is useless"
-			 (oilDeadCode and: [lastInstIR = chain and: [(self opcodeAt: chain) = OilJump]]) ifTrue:
+			["A final jump to the exit label that immediately precedes it is useless, unless a label was bound after it (e.g.
+			  the else branch of a final ifTrue:ifFalse: whose arm is empty, like ^self in Number>>abs): the branches to that label
+			  were patched to the index after the jump, which would then skip what the caller emits next."
+			 (oilDeadCode and: [lastInstIR = chain and: [(self opcodeAt: chain) = OilJump and: [lastLabelIR <= chain]]]) ifTrue:
 				[chain := self imm16At: chain.
 				 self retractLastInstruction].
 			 self patchChain: chain to: irIndex.
