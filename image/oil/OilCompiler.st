@@ -1754,6 +1754,7 @@ shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
 	depth > maxDepth ifTrue: [^false].
 	(self isColdSelector: selector) ifTrue: [^false].
 	(self isNoInline: method) ifTrue: [^false].
+	(self isSynchronizationMethod: method) ifTrue: [^false].
 	(self isMethodOnInlineStack: method) ifTrue: [^false].
 	size := (self oilEndPCOf: method) - (self startPCOf: method) + 1.
 	irInstCount + size > irBudget ifTrue: [^false].
@@ -1807,6 +1808,12 @@ hasOilCode: aMethod
 	^self
 		cCode: [cogit oilMethodHasOilCode: aMethod]
 		inSmalltalk: [false]! !
+
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/26/2026 16:30'!
+isSynchronizationMethod: aMethod
+	"A method of the process synchronization and timer classes is never inlined (in the VM; see
+	 CoInterpreter>>oilApiIsSynchronizationMethod:)."
+	^self cCode: [coInterpreter oilApiIsSynchronizationMethod: aMethod] inSmalltalk: [false]! !
 
 !OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 17:30'!
 isNoInline: aMethod

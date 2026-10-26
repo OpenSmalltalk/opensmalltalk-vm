@@ -2834,6 +2834,30 @@ oilApiClass: aClass isNamed: aCString
 	  and: [(objectMemory isPointersNonImm: aClass)
 	  and: [self classNameOf: aClass Is: aCString]]! !
 
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 16:30'!
+oilApiIsSynchronizationMethod: aMethod
+	"Is aMethod a method of the process synchronization and timer classes (Semaphore, Mutex, Monitor, Delay, Process,
+	 ProcessorScheduler, or their metaclasses)?  Oil neither compiles them on trips (see oilAutoCompile:receiver:) nor
+	 inlines them (see OilInliningCompiler>>shouldInline:selector:numArgs:receiver:): the timer process runs them, and their
+	 unwind blocks guard semaphores, which a deoptimization or a termination in the middle of them must not lose."
+	<api>
+	<essential: #ProfilingCogit>
+	| methodClass |
+	methodClass := self oilApiMethodClassOf: aMethod.
+	((objectMemory isNonImmediate: methodClass) and: [objectMemory isPointersNonImm: methodClass]) ifFalse:
+		[^false].
+	((objectMemory numSlotsOf: methodClass) = metaclassNumSlots "a metaclass: its sole instance"
+	 and: [thisClassIndex < metaclassNumSlots]) ifTrue:
+		[methodClass := objectMemory fetchPointer: thisClassIndex ofObject: methodClass.
+		 ((objectMemory isNonImmediate: methodClass) and: [objectMemory isPointersNonImm: methodClass]) ifFalse:
+			[^false]].
+	^(self classNameOf: methodClass Is: 'Semaphore')
+	  or: [(self classNameOf: methodClass Is: 'Mutex')
+	  or: [(self classNameOf: methodClass Is: 'Monitor')
+	  or: [(self classNameOf: methodClass Is: 'Delay')
+	  or: [(self classNameOf: methodClass Is: 'Process')
+	  or: [self classNameOf: methodClass Is: 'ProcessorScheduler']]]]]! !
+
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 15:00'!
 oilApiByteStringMetaclass
 	<api>
@@ -2858,7 +2882,8 @@ oilAutoCompile: homeMethod receiver: receiver
 	cogMethod := self cogMethodOf: homeMethod.
 	((cogit isOilMethod: cogMethod)
 	 or: [cogMethod cmUnusedFlag "it dispatches to its specializations (see ProfilingCogit>>compileEntry)"
-	 or: [cogit oilIsDisqualified: homeMethod]]) ifTrue:
+	 or: [(cogit oilIsDisqualified: homeMethod)
+	 or: [self oilApiIsSynchronizationMethod: homeMethod]]]) ifTrue:
 		[^nil].
 	self oilEnsureExtraSelectorTable ifFalse:
 		[^nil].
