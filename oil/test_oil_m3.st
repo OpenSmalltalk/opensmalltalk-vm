@@ -72,7 +72,7 @@ compileResult := m oilCompileFor: (Smalltalk at: #OilTestModel).
 out nextPutAll: 'oilCompileFor: result: '; print: compileResult; cr; flush.
 last := CompiledMethod oilLastCompilation.
 out nextPutAll: 'last compilation: failure '; print: (last at: 1); nextPutAll: ' eager '; print: (last at: 3); nextPutAll: ' failed at IR '; print: (last at: 4);
-	nextPutAll: ' sites '; print: (last at: 5); nextPutAll: ' frames '; print: (last at: 6); nextPutAll: ' homes '; print: (last at: 7); nextPutAll: ' allocated registers '; print: (last at: 8); cr;
+	nextPutAll: ' sites '; print: (last at: 5); nextPutAll: ' frames '; print: (last at: 6); nextPutAll: ' spill slots '; print: (last at: 7); nextPutAll: ' allocated registers '; print: (last at: 8); cr;
 	nextPutAll: 'IR ('; print: (last at: 2) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 2)); nextPutAll: 'trace: '; print: (last at: 9); cr; flush.
 last size >= 11 ifTrue: "Oil M4: the IR above is Pass 2's; Pass 1's and Pass 2's statistics"
 	[out nextPutAll: 'Pass 1 IR ('; print: (last at: 10) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 10));

@@ -6,7 +6,7 @@
 prepareNativeCode
 	"Pass 3, step 1.  Analyse the IR: branch targets, loop nesting, the deopt site of each instruction.
 	 Weigh every virtual register by its uses, ten times more per loop nesting level, give the heaviest ones
-	 machine registers and every live virtual register a home slot in the frame (where it is spilled around
+	 machine registers and every live virtual register a spill slot in the frame (where it is spilled around
 	 calls and deopts; the GC scans it, so it always holds an object).  Answer OilOK or a failure code."
 	| irOffset opcode branchTarget regsAllocated bestVReg bestWeight spillBase |
 	oilFailIndex := -2.
@@ -73,7 +73,7 @@ prepareNativeCode
 	[irOffset < irIndex] whileTrue:
 		[self weighInstructionAt: irOffset.
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-	"The receiver and arguments are copied in from the frame; registers referenced by deopt states need homes."
+	"The receiver and arguments are copied in from the frame; registers referenced by deopt states need spill slots."
 	0 to: (self numArgsOf: oilHomeMethod) do:
 		[:vreg| oilVRegUses at: vreg put: (oilVRegUses at: vreg) + 1].
 	self markMetadataRegisters.
@@ -91,7 +91,7 @@ prepareNativeCode
 			ifFalse:
 				[oilVRegReg at: bestVReg put: (oilAllocRegs at: regsAllocated).
 				 regsAllocated := regsAllocated + 1]].
-	"Home slots, below the frame's receiver and temps (the frame of an ordinary machine code method)."
+	"Spill slots, below the frame's receiver and temps (the frame of an ordinary machine code method)."
 	oilNumSpillTemps := 0.
 	spillBase := FoxMFReceiver - ((self numTempsOf: oilHomeMethod) - (self numArgsOf: oilHomeMethod) * objectMemory wordSize).
 	0 to: OilMaxReg do:
@@ -99,7 +99,7 @@ prepareNativeCode
 		(oilVRegUses at: vreg) > 0 ifTrue:
 			[oilNumSpillTemps := oilNumSpillTemps + 1.
 			 oilVRegSpillTemp at: vreg put: spillBase - (oilNumSpillTemps * objectMemory wordSize)]].
-	"Marrying or divorcing the frame copies its temps, homes and pushed values into a context, which is large (see
+	"Marrying or divorcing the frame copies its temps, spill slots and pushed values into a context, which is large (see
 	 ProfilingCogit>>oilGenerateCogMethod): they must fit.  Calls push the receiver and up to 15 arguments."
 	(self numTempsOf: oilHomeMethod) + oilNumSpillTemps + 16 > (LargeContextSlots - ReceiverIndex - 1) ifTrue:
 		[self abortCompilation: OilFailOutOfRegisters.
@@ -203,7 +203,7 @@ packedArg: argIndex at: irOffset
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 markMetadataRegisters
-	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a home."
+	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a spill slot."
 	| snapBase stateSize vreg |
 	0 to: numSites - 1 do:
 		[:siteIndex|
@@ -233,7 +233,7 @@ markMetadataRegisters
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 src: virtualReg scratch: scratchReg
-	"Answer a machine register holding virtual register virtualReg: its own, or scratchReg loaded from its home."
+	"Answer a machine register holding virtual register virtualReg: its own, or scratchReg loaded from its spill slot."
 	| reg |
 	reg := oilVRegReg at: virtualReg.
 	reg ~= NoReg ifTrue: [^reg].
@@ -264,14 +264,14 @@ setDst: virtualReg from: machineReg
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 spillAll
-	"Store every register-allocated virtual register into its home (before a call or a deopt)."
+	"Store every register-allocated virtual register into its spill slot (before a call or a deopt)."
 	0 to: OilMaxReg do:
 		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
 			[cogit MoveR: (oilVRegReg at: vreg) Mw: (oilVRegSpillTemp at: vreg) r: FPReg]]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 reloadAll
-	"Reload every register-allocated virtual register from its home (after a call: the GC may have moved objects)."
+	"Reload every register-allocated virtual register from its spill slot (after a call: the GC may have moved objects)."
 	0 to: OilMaxReg do:
 		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
 			[cogit MoveMw: (oilVRegSpillTemp at: vreg) r: FPReg R: (oilVRegReg at: vreg)]]! !
@@ -340,16 +340,16 @@ generateNativeCode
 	"Pass 3, step 2.  Emit the method body: copy the receiver and arguments into their locations, initialize the
 	 other allocated registers (they are spilled at calls and deopts, so they must always hold objects), then
 	 translate each IR instruction, then the deopt stubs.  The caller has emitted the method's entry and its
-	 frame build (including the home slots and the stack check).  Answer OilOK or a failure code."
+	 frame build (including the spill slots and the stack check).  Answer OilOK or a failure code."
 	| irOffset numArgs |
 	numArgs := self numArgsOf: oilHomeMethod.
-	"The home slots follow the method's temps.  They are pushed here, after the stack check, and not in the
+	"The spill slots follow the method's temps.  They are pushed here, after the stack check, and not in the
 	 frame build: the CoInterpreter also builds machine code frames itself (with the method's temps only, see
 	 activateNewCogMethod:inInterpreter:) and enters them at the stack check."
 	1 to: self codeShift do: "(a measurement aid, see OilLoopOptimizer>>codeShift)"
 		[:nopIndex| cogit Nop].
 	1 to: oilNumSpillTemps do:
-		[:homeIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
+		[:spillIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
 	0 to: numArgs do:
 		[:vreg| | dst |
 		dst := self dst: vreg scratch: TempReg.
@@ -748,7 +748,7 @@ genMakeClosureAt: irOffset site: siteIndex
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 spillMachineReg: reg
-	"Store the virtual register allocated to reg, if any, into its home (reg is about to be used as a scratch)."
+	"Store the virtual register allocated to reg, if any, into its spill slot (reg is about to be used as a scratch)."
 	0 to: OilMaxReg do:
 		[:vreg| (oilVRegReg at: vreg) = reg ifTrue:
 			[cogit MoveR: reg Mw: (oilVRegSpillTemp at: vreg) r: FPReg]]! !
@@ -935,7 +935,7 @@ genIndexOfByteAt: i
 	<var: #jumpDone type: #'AbstractInstruction *'>
 	<var: #found type: #'AbstractInstruction *'>
 	numJumps := 0.
-	"The scan uses most machine registers: store the virtual registers in their homes and load the operands from there
+	"The scan uses most machine registers: store the virtual registers in their spill slots and load the operands from there
 	 (genByteScanEpilogueAt:jumps:count:numArgs: reloads them, also before the slow path's send)."
 	self spillAll.
 	cogit MoveMw: (oilVRegSpillTemp at: (self callArg: 0 at: i)) r: FPReg R: Extra3Reg.
@@ -1968,7 +1968,7 @@ genCallAt: irOffset site: siteIndex
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 genSendAt: irOffset numArgs: numArgs super: isSuper
-	"Spill everything (the callee may run the GC, which scans and updates the homes), marshal the receiver and
+	"Spill everything (the callee may run the GC, which scans and updates the spill slots), marshal the receiver and
 	 arguments like the baseline JIT (registers for up to numRegArgs arguments, else pushed), call the send
 	 trampoline (linked later to the target method or a PIC), store the result and reload.  An OilCallDirectedSuper
 	 passes its method class to the directed super send trampoline."
@@ -2008,7 +2008,7 @@ callArg: argIndex at: irOffset
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genDeoptStubs
 	"After the body: one stub per deopt site used, passing the site index, and the common deoptimization sequence:
-	 spill everything (the deoptimizer reads the virtual registers from their homes), call ceOilDeoptTrampoline,
+	 spill everything (the deoptimizer reads the virtual registers from their spill slots), call ceOilDeoptTrampoline,
 	 which either deoptimizes the frame and continues in the interpreter (it does not return), or, having
 	 unforwarded the object a class guard failed on, answers the address of the guard to resume at."
 	| stub common |
@@ -2048,7 +2048,7 @@ oilFailureCode
 !OilInliningCompiler methodsFor: 'debugging' stamp: 'cb 10/25/2026 00:45'!
 oilDebugInfo: what at: index
 	"For primitiveOilLastCompilation: 0 failure code, 1 IR size, 2 IR word, 3 eager closures,
-	 4 failed IR index, 5 sites, 6 frames, 7 homes, 8 allocated regs, 11/12 Pass 1 IR, 13 Pass 2 stats."
+	 4 failed IR index, 5 sites, 6 frames, 7 spill slots, 8 allocated regs, 11/12 Pass 1 IR, 13 Pass 2 stats."
 	<api>
 	what = 0 ifTrue: [^failureCode].
 	what = 1 ifTrue: [^irIndex].

@@ -187,7 +187,7 @@ oilGenSend: selectorIndex numArgs: numArgs super: isSuper above: methodClass
 oilCompileFrameBuild
 	"Build an ordinary machine code frame, with the method's temps, and the stack overflow check (also the event
 	 check), exactly like SimpleStackBasedCogit>>compileFrameBuild: the CoInterpreter builds such frames itself
-	 (activateNewCogMethod:inInterpreter:) and enters them at the stack check.  The home slots of the virtual
+	 (activateNewCogMethod:inInterpreter:) and enters them at the stack check.  The spill slots of the virtual
 	 registers are pushed by OilCompiler>>generateNativeCode, after the stack check."
 	self genPushRegisterArgs.
 	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
@@ -373,7 +373,7 @@ oilGenerateCogMethod
 	self fillInBlockHeadersAt: startAddress.
 	selector := coInterpreter maybeSelectorOfMethod: methodObj.
 	selector isNil ifTrue: [selector := objectMemory nilObject].
-	"Oil frames hold the home slots of the virtual registers below the temps, and marrying or divorcing a frame copies
+	"Oil frames hold the spill slots of the virtual registers below the temps, and marrying or divorcing a frame copies
 	 all its slots into its context: give the method large contexts (prepareNativeCode keeps the frame within
 	 LargeContextSlots), and note whether the bit must be cleared from the method's header when it is freed."
 	added := (coInterpreter methodNeedsLargeContext: methodObj) not.
@@ -798,18 +798,18 @@ metadata: metadata at: index putKind: kind value: value
 fillMetadata: metadata cogMethod: cogMethodAddress
 	"Fill in the deoptimization metadata of the Oil method at cogMethodAddress, a hidden pinned Array:
 	 header (OilMD*), the inlined frames, the virtual objects (dissolved closures and temp vectors) and their
-	 captured values, the home slot (frame offset) of every virtual register, the inlined selectors (their count, -1 when
+	 captured values, the spill offset (frame offset) of every virtual register, the inlined selectors (their count, -1 when
 	 there were too many to record, then the selectors; see noteInlinedSelector:), a table from deopt site index to
 	 site record, and the records of the sites used by the deopt stubs: kind, the guarded register and class
 	 tag (for the unforwarding fast path), the offset of the instruction to resume at, the inlined frame and
 	 bytecode pc, and the virtual state (descriptors of the register window and of the high registers)."
 	<var: #cogMethodAddress type: #usqInt>
-	| frames vobjs captured homes inlined siteTable index frameRecord vobjRecord poolBase opcode parentFrame |
+	| frames vobjs captured spillOffsets inlined siteTable index frameRecord vobjRecord poolBase opcode parentFrame |
 	frames := OilMDHeaderSize.
 	vobjs := frames + (numFrames * OilMDFrameSize).
 	captured := vobjs + (numVObjs * OilMDVObjSize).
-	homes := captured + (capturedTop * 2).
-	inlined := homes + OilNumRegs.
+	spillOffsets := captured + (capturedTop * 2).
+	inlined := spillOffsets + OilNumRegs.
 	siteTable := inlined + 1 + self numInlinedSelectorsInMetadata.
 	self metadata: metadata at: OilMDVersion putInt: OilMDMagic.
 	self metadata: metadata at: OilMDRootMethod put: oilHomeMethod.
@@ -819,7 +819,7 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	self metadata: metadata at: OilMDFrames putInt: frames.
 	self metadata: metadata at: OilMDNumVObjs putInt: numVObjs.
 	self metadata: metadata at: OilMDVObjs putInt: vobjs.
-	self metadata: metadata at: OilMDHomes putInt: homes.
+	self metadata: metadata at: OilMDSpillOffsets putInt: spillOffsets.
 	self metadata: metadata at: OilMDDeopts putInt: 0.
 	self metadata: metadata at: OilMDFastPaths putInt: 0.
 	self metadata: metadata at: OilMDNumArgs putInt: (self numArgsOf: oilHomeMethod).
@@ -867,7 +867,7 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	0 to: capturedTop - 1 do:
 		[:j| self metadata: metadata at: captured + (2 * j) putKind: (capturedKind at: j) value: (capturedValue at: j)].
 	0 to: OilNumRegs - 1 do:
-		[:reg| self metadata: metadata at: homes + reg putInt: (oilVRegSpillTemp at: reg)].
+		[:reg| self metadata: metadata at: spillOffsets + reg putInt: (oilVRegSpillTemp at: reg)].
 	index := siteTable + numSites.
 	0 to: numSites - 1 do:
 		[:siteIndex|
@@ -1064,9 +1064,9 @@ oilMDIncrement: index of: metadata
 ceOilDeoptimize: siteIndex
 	"Called from ceOilDeoptTrampoline by the deopt sequence of an Oil method (see OilCompiler>>genDeoptStubs)
 	 when a guard fails at deopt site siteIndex.  framePointer is the Oil method's frame, whose virtual registers
-	 have all been spilled to their homes; the top of stack is the return address into the deopt sequence.
+	 have all been spilled to their spill slots; the top of stack is the return address into the deopt sequence.
 	 Fast path: a class guard failed on a forwarder (become:) whose target passes the guard: store the target in
-	 the register's home and answer the address of the guard; the machine code reloads its registers and resumes
+	 the register's spill slot and answer the address of the guard; the machine code reloads its registers and resumes
 	 there, without deoptimizing.
 	 Slow path: deoptimize.  Rebuild the interpreter frames of the method and of the methods and blocks inlined into
 	 it at the site, with the closures and temp vectors Oil dissolved rematerialized, and continue in the
@@ -1074,7 +1074,7 @@ ceOilDeoptimize: siteIndex
 	<api>
 	<essential: #ProfilingCogit>
 	<returnTypeC: #usqInt>
-	| cogMethod metadata siteRecord virtualReg homeOffset value |
+	| cogMethod metadata siteRecord virtualReg spillOffset value |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := self mframeHomeMethod: framePointer.
 	self assert: (cogit isOilMethod: cogMethod).
@@ -1083,13 +1083,13 @@ ceOilDeoptimize: siteIndex
 	self assert: siteRecord > 0.
 	(self oilMD: metadata at: siteRecord + OilMDSiteKind) = OilSiteGuard ifTrue:
 		[virtualReg := self oilMD: metadata at: siteRecord + OilMDSiteGuardReg.
-		 homeOffset := self oilMD: metadata at: (self oilMD: metadata at: OilMDHomes) + virtualReg.
-		 value := stackPages longAt: framePointer + homeOffset.
+		 spillOffset := self oilMD: metadata at: (self oilMD: metadata at: OilMDSpillOffsets) + virtualReg.
+		 value := stackPages longAt: framePointer + spillOffset.
 		 ((objectMemory isNonImmediate: value)
 		  and: [objectMemory isForwarded: value]) ifTrue:
 			[value := objectMemory followForwarded: value.
 			 (objectMemory fetchClassTagOf: value) = (self oilMD: metadata at: siteRecord + OilMDSiteClassTag) ifTrue:
-				[stackPages longAt: framePointer + homeOffset put: value.
+				[stackPages longAt: framePointer + spillOffset put: value.
 				 self oilMDIncrement: OilMDFastPaths of: metadata.
 				 ^cogMethod asUnsignedInteger + (self oilMD: metadata at: siteRecord + OilMDSiteResumeOffset)]]].
 	(self oilMD: metadata at: siteRecord + OilMDSiteKind) ~= OilSiteAlloc ifTrue: "an allocation beyond the scavenge threshold is not a failed speculation"
@@ -1167,7 +1167,7 @@ oilIsVirtualObjectKind: kind
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 15:00'!
 oilValueAt: descIndex metadata: metadata values: regValues vobjs: vobjOops
-	"Answer the value described by the descriptor at metadata index p: a register's value (read from its home before
+	"Answer the value described by the descriptor at metadata index p: a register's value (read from its spill slot before
 	 the frame was rewritten), a constant, or a rematerialized virtual object (or nil if not yet allocated)."
 	<essential: #ProfilingCogit>
 	<var: #regValues type: #'sqInt *'>
@@ -1286,7 +1286,7 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	 innermost frame; the caller then enters the interpreter."
 	<essential: #ProfilingCogit>
 	<var: #oilFP type: #'char *'>
-	| theFP framesBase vobjsBase homes numVObjs chain numFrames frameIndex chainIndex baseReg numArgs homeMethod frameRecord sp newFP needed vobjOops regValues
+	| theFP framesBase vobjsBase spillOffsets numVObjs chain numFrames frameIndex chainIndex baseReg numArgs homeMethod frameRecord sp newFP needed vobjOops regValues
 	  fixupAddrs fixupVObjs numFixups newPage numWords finalSP vobjRecord obj numCopied outerFrame context sitePC innermost topRegs framePointers stackPointers |
 	<var: #theFP type: #'char *'>
 	<var: #sp type: #'char *'>
@@ -1315,7 +1315,7 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	theFP := oilFP.
 	framesBase := self oilMD: metadata at: OilMDFrames.
 	vobjsBase := self oilMD: metadata at: OilMDVObjs.
-	homes := self oilMD: metadata at: OilMDHomes.
+	spillOffsets := self oilMD: metadata at: OilMDSpillOffsets.
 	numVObjs := self oilMD: metadata at: OilMDNumVObjs.
 	sitePC := self oilMD: metadata at: site + OilMDSitePC.
 	"1. The chain of inlined frames, root first, and the top register of each frame's part of the window."
@@ -1350,12 +1350,12 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 		 self setStackPageAndLimit: newPage.
 		 self setStackPointersFromPage: newPage.
 		 self assert: theFP = framePointer].
-	"3. Read the virtual registers from their homes before the frame is overwritten."
+	"3. Read the virtual registers from their spill slots before the frame is overwritten."
 	0 to: OilNumRegs - 1 do:
 		[:reg|
-		regValues at: reg put: ((self oilMD: metadata at: homes + reg) = 0
+		regValues at: reg put: ((self oilMD: metadata at: spillOffsets + reg) = 0
 							ifTrue: [objectMemory nilObject]
-							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: homes + reg)])].
+							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: spillOffsets + reg)])].
 	0 to: OilMaxVObjs - 1 do:
 		[:i| vobjOops at: i put: 0. needed at: i put: 0].
 	numFixups := 0.
@@ -1505,7 +1505,7 @@ oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP
 	<var: #theIP type: #usqInt>
 	<var: #cogMethod type: #'CogMethod *'>
 	<returnTypeC: #usqInt>
-	| metadata siteRecord framesBase vobjsBase homes numVObjs chain numFrames frameIndex chainIndex
+	| metadata siteRecord framesBase vobjsBase spillOffsets numVObjs chain numFrames frameIndex chainIndex
 	  baseReg numArgs homeMethod frameRecord sp vobjOops regValues fixupAddrs fixupVObjs numFixups
 	  vobjRecord obj numCopied sitePC topRegs |
 	<var: #sp type: #'char *'>
@@ -1520,7 +1520,7 @@ oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP
 	siteRecord = 0 ifTrue: [^theIP].
 	framesBase := self oilMD: metadata at: OilMDFrames.
 	vobjsBase := self oilMD: metadata at: OilMDVObjs.
-	homes := self oilMD: metadata at: OilMDHomes.
+	spillOffsets := self oilMD: metadata at: OilMDSpillOffsets.
 	numVObjs := self oilMD: metadata at: OilMDNumVObjs.
 	sitePC := self oilMD: metadata at: siteRecord + OilMDSitePC.
 
@@ -1540,12 +1540,12 @@ oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP
 	0 to: numFrames - 2 do:
 		[:i| topRegs at: i put: (self oilMD: metadata at: framesBase + ((chain at: i + 1) * OilMDFrameSize) + OilMDFrameBase) - 1].
 
-	"2. Read virtual registers from their homes before converting."
+	"2. Read virtual registers from their spill slots before converting."
 	0 to: OilNumRegs - 1 do:
 		[:reg|
-		regValues at: reg put: ((self oilMD: metadata at: homes + reg) = 0
+		regValues at: reg put: ((self oilMD: metadata at: spillOffsets + reg) = 0
 							ifTrue: [objectMemory nilObject]
-							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: homes + reg)])].
+							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: spillOffsets + reg)])].
 	0 to: OilMaxVObjs - 1 do:
 		[:i| vobjOops at: i put: 0].
 	numFixups := 0.
@@ -1887,7 +1887,7 @@ primitiveOilMethodInfo
 primitiveOilLastCompilation
 	"Answer an Array describing the last Oil compilation, for debugging:
 	 { failure code. IR words (an Array of SmallIntegers). eager closures (0/1). IR index the back end failed at.
-	   number of deopt sites. number of inlined frames. number of homes. number of allocated registers.
+	   number of deopt sites. number of inlined frames. number of spill slots. number of allocated registers.
 	   microseconds Passes 1 to 3 took (including assembling the CogMethod and its metadata, not freeing the baseline code).
 	   Pass 1 IR words (after loop unrolling, the IR Pass 2 optimized again, see OilLoopOptimizer>>loopOptimize).
 	   Pass 2 statistics (see OilCompiler>>pass2Statistics:) }"
