@@ -376,10 +376,12 @@ typedef struct _AbstractInstruction {
 	unsigned char	machineCodeSize;
 	unsigned char	maxSize;
 	unsigned char	annotation;
-	unsigned int		machineCode[3];
-	usqInt		operands[3];
-	usqInt	address;
+	int	addressOffset;
 	struct _AbstractInstruction *dependent;
+	union {
+		usqInt		operands[3];
+		unsigned int		machineCode[3];
+	};
  } AbstractInstruction;
 
 #define CogARMv8Compiler AbstractInstruction
@@ -481,6 +483,7 @@ typedef struct {
 #endif
 
 static NoDbgRegParms AbstractInstruction * addDependent(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstruction *anInstruction);
+static NoDbgRegParms usqInt address(AbstractInstruction *self_in_CogAbstractInstruction);
 static NoDbgRegParms sqInt availableFloatRegisterOrNoneFor(AbstractInstruction *self_in_CogAbstractInstruction, sqInt liveRegsMask);
 static NoDbgRegParms sqInt availableRegisterOrNoneFor(AbstractInstruction *self_in_CogAbstractInstruction, sqInt liveRegsMask);
 static NoDbgRegParms AbstractInstruction * cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstruction *existingLiteral);
@@ -2639,6 +2642,7 @@ static unsigned char useTwoPaths;
 #if IMMUTABILITY
 static sqInt ceStoreTrampolines[5];;
 #endif
+static AbstractInstruction concretizationScratch;
 #if WIN64
 static HANDLE Win32ProcessHandle;
 #endif
@@ -2684,6 +2688,7 @@ int traceFlags = 8 /* prim trace log on by default */;
 
 
 /*** Macros ***/
+#define machineCodeBuffer(instruction) (concretizationScratch.machineCode)
 #define dataCacheFlushRequired(ign) dataCacheFlushRequired
 #define dataCacheLineLength(ign) dataCacheLineLength
 #define flushDCacheFromto(me,startAddress,endAddress) ceFlushDCache(startAddress,endAddress)
@@ -2718,12 +2723,16 @@ int traceFlags = 8 /* prim trace log on by default */;
 #define ceCannotResumePC() ((usqInt)ceCannotResumeTrampoline)
 #define ceCheckForInterruptTrampoline() ceCheckForInterruptTrampoline
 #define ceReturnToInterpreterPC() ((usqInt)ceReturnToInterpreterTrampoline)
+#define codeAddressForOffset(offset) ((offset) ? codeBase - 1 + (sqInt)(offset) : 0)
 #define codeByteAtput(address,value) byteAtput((char *)(address) + codeToDataDelta, value)
 #define codeLong32Atput(address,value) long32Atput((char *)(address) + codeToDataDelta, value)
 #define codeLong64Atput(address,value) long64Atput((char *)(address) + codeToDataDelta, value)
 #define codeLongAtput(address,value) longAtput((char *)(address) + codeToDataDelta, value)
 #define codeMemcpy(dest,src,bytes) memcpy(dest,src,bytes)
 #define codeMemmove(dest,src,bytes) memmove((char *)(dest)+codeToDataDelta,src,bytes)
+#define codeOffsetForAddress(address) ((address) ? (int)((address) - (codeBase - 1)) : 0)
+#define concretizationBuffer() (concretizationScratch.machineCode)
+#define concretizationBufferSize() sizeof(concretizationScratch.machineCode)
 #define cr() putchar('\n')
 #if !defined(ensureExecutableCodeZoneAt)
 #define ensureExecutableCodeZoneAt(underscoreLine) 0
@@ -2809,6 +2818,18 @@ addDependent(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstru
 }
 
 
+/*	In C the address is held as a 32-bit offset from the code zone's base; see
+	Cogit>>codeAddressForOffset: 
+ */
+
+	/* CogAbstractInstruction>>#address */
+static NoDbgRegParms usqInt
+address(AbstractInstruction *self_in_CogAbstractInstruction)
+{
+	return codeAddressForOffset((self_in_CogAbstractInstruction->addressOffset));
+}
+
+
 /*	Answer an unused abstract register in the liveRegMask.
 	Subclasses with more registers can override to answer them. */
 
@@ -2879,7 +2900,7 @@ cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractIn
 {
 	assert((((existingLiteral->opcode)) == Literal)
 	 && ((!((self_in_CogAbstractInstruction->dependent)))
-	 && (!((self_in_CogAbstractInstruction->address)))));
+	 && (!(address(self_in_CogAbstractInstruction)))));
 	(self_in_CogAbstractInstruction->opcode) = Literal;
 	(self_in_CogAbstractInstruction->annotation) = (existingLiteral->annotation);
 	((self_in_CogAbstractInstruction->operands))[0] = (((existingLiteral->operands))[0]);
@@ -2890,14 +2911,22 @@ cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractIn
 
 
 /*	Generate concrete machine code for the instruction at actualAddress,
-	setting machineCodeSize, and answer the following address. */
+	setting machineCodeSize, and answer the following address.
+	In C the machine code is generated into a buffer and then copied into
+	machineCode, which shares storage with the operands; see
+	machineCodeBuffer.  */
 
 	/* CogAbstractInstruction>>#concretizeAt: */
 static NoDbgRegParms sqInt
 concretizeAt(AbstractInstruction *self_in_CogAbstractInstruction, sqInt actualAddress)
 {
-	(self_in_CogAbstractInstruction->address = actualAddress);
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(actualAddress);
+	assert((address(self_in_CogAbstractInstruction)) == actualAddress);
 	(self_in_CogAbstractInstruction->machineCodeSize) = dispatchConcretize(self_in_CogAbstractInstruction);
+	if (((self_in_CogAbstractInstruction->machineCodeSize)) > 0) {
+		memcpy((self_in_CogAbstractInstruction->machineCode), concretizationBuffer(), concretizationBufferSize());
+	}
 	assert((((self_in_CogAbstractInstruction->maxSize)) == null)
 	 || (((self_in_CogAbstractInstruction->maxSize)) >= ((self_in_CogAbstractInstruction->machineCodeSize))));
 	return actualAddress + ((self_in_CogAbstractInstruction->machineCodeSize));
@@ -3001,7 +3030,10 @@ initializeSharableLiteral(AbstractInstruction *self_in_CogAbstractInstruction, s
 
 	/* separate := nil for Slang */
 	(self_in_CogAbstractInstruction->annotation) = null;
-	(self_in_CogAbstractInstruction->address = null);
+
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(null);
+	assert((address(self_in_CogAbstractInstruction)) == null);
 	(self_in_CogAbstractInstruction->dependent) = null;
 	((self_in_CogAbstractInstruction->operands))[0] = literal;
 	((self_in_CogAbstractInstruction->operands))[1] = (1 + ((((usqInt)(BytesPerOop) << 1))));
@@ -3020,7 +3052,10 @@ initializeUniqueLiteral(AbstractInstruction *self_in_CogAbstractInstruction, sqI
 
 	/* separate := nil for Slang */
 	(self_in_CogAbstractInstruction->annotation) = null;
-	(self_in_CogAbstractInstruction->address = null);
+
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(null);
+	assert((address(self_in_CogAbstractInstruction)) == null);
 	(self_in_CogAbstractInstruction->dependent) = null;
 	((self_in_CogAbstractInstruction->operands))[0] = literal;
 	((self_in_CogAbstractInstruction->operands))[1] = (0 + ((((usqInt)(BytesPerOop) << 1))));
@@ -3172,10 +3207,10 @@ computeJumpTargetOffset(AbstractInstruction *self_in_CogARMv8Compiler)
 	if (/* isAnInstruction: */
 		(addressIsInInstructions(jumpTarget))
 	 || (jumpTarget == (methodLabel))) {
-		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+		jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 	}
 	assert(jumpTarget != 0);
-	return (((sqLong) jumpTarget)) - (((sqLong) ((self_in_CogARMv8Compiler->address))));
+	return (((sqLong) jumpTarget)) - (((sqLong) (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset)))));
 }
 
 
@@ -3427,8 +3462,8 @@ computeMaximumSize(AbstractInstruction *self_in_CogARMv8Compiler)
 	case MoveA32R:
 		return (((((((self_in_CogARMv8Compiler->operands))[0]) >= ((varBaseAddress) - (0x100))) && ((((self_in_CogARMv8Compiler->operands))[0]) <= (((varBaseAddress) + (0x1000)) - 1))))
 		 || (/* addressIsInCurrentCompilation: */
-			((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) >= ((methodLabel->address)))
-		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize)))))
+			((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)))))
 				? ((((self_in_CogARMv8Compiler->operands))[1]) != SP
 						? 4
 						: 8)
@@ -3440,8 +3475,8 @@ computeMaximumSize(AbstractInstruction *self_in_CogARMv8Compiler)
 	case MoveRA32:
 		return (((((((self_in_CogARMv8Compiler->operands))[1]) >= ((varBaseAddress) - (0x100))) && ((((self_in_CogARMv8Compiler->operands))[1]) <= (((varBaseAddress) + (0x1000)) - 1))))
 		 || (/* addressIsInCurrentCompilation: */
-			((((usqInt)(((self_in_CogARMv8Compiler->operands))[1]))) >= ((methodLabel->address)))
-		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[1]))) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize)))))
+			((((usqInt)(((self_in_CogARMv8Compiler->operands))[1]))) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[1]))) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)))))
 				? ((((self_in_CogARMv8Compiler->operands))[0]) != SP
 						? 4
 						: 8)
@@ -3535,13 +3570,13 @@ concretizeConditionalJump(AbstractInstruction *self_in_CogARMv8Compiler, sqInt c
 	if (/* isAnInstruction: */
 		(addressIsInInstructions(jumpTarget))
 	 || (jumpTarget == (methodLabel))) {
-		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+		jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 	}
 	assert(jumpTarget != 0);
-	offset = (((sqLong) jumpTarget)) - (((sqLong) ((self_in_CogARMv8Compiler->address))));
+	offset = (((sqLong) jumpTarget)) - (((sqLong) (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset)))));
 	assert((offset != 0)
 	 && (isInImmediateBranchRange(self_in_CogARMv8Compiler, offset)));
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((/* begin cond:offset: */
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((/* begin cond:offset: */
 	assert((offset & 3) == 0),
 ((0x54000000) + ((((usqInt)((offset & (0x1FFFFF))) << 3)))) + conditionCode));
 	return 4;
@@ -3563,7 +3598,7 @@ concretizeCwRArithmeticRd(AbstractInstruction *self_in_CogARMv8Compiler, sqInt a
 	   ADDS (extended register) on page C6-766
 	   SUB (extended register) on page C6-1308
 	   SUBS (extended register) on page C6-1318 */
-	((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[1])) << 5)))) + destRegOrXZR);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[1])) << 5)))) + destRegOrXZR);
 	return instrBytes + 4;
 }
 
@@ -3587,7 +3622,7 @@ concretizeCwRLogical(AbstractInstruction *self_in_CogARMv8Compiler, sqInt op)
 	   EON	(shifted register) - 64-bit variant on page C6-894
 	   ANDS	(shifted register) - 64-bit variant on page C6-781
 	   BICS	(shifted register) - 64-bit variant on page C6-810 */
-	((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(destReg) << 5)))) + destReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(destReg) << 5)))) + destReg);
 	return offset + 4;
 }
 
@@ -3624,7 +3659,7 @@ concretizeDataCacheControl(AbstractInstruction *self_in_CogARMv8Compiler)
 	}
 
 	/* begin concretizeCacheControlOp1:CRm:Op2: */
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xD50B7000U) + ((((usqInt)(cacheOpcode) << 8)))) + (32)) + (((self_in_CogARMv8Compiler->operands))[0]));
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xD50B7000U) + ((((usqInt)(cacheOpcode) << 8)))) + (32)) + (((self_in_CogARMv8Compiler->operands))[0]));
 
 	/* CRn
 	   cogit processor disassembleInstructionAt: 0 In: machineCode object */
@@ -3638,7 +3673,7 @@ concretizeDataCacheControl(AbstractInstruction *self_in_CogARMv8Compiler)
 static NoDbgRegParms sqInt
 concretizeFill32(AbstractInstruction *self_in_CogARMv8Compiler)
 {
-	((self_in_CogARMv8Compiler->machineCode))[0] = (((self_in_CogARMv8Compiler->operands))[0]);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((self_in_CogARMv8Compiler->operands))[0]);
 	return 4;
 }
 
@@ -3652,12 +3687,14 @@ concretizeLiteral(AbstractInstruction *self_in_CogARMv8Compiler)
 {
     usqInt literal;
     AbstractInstruction *literalAsInstruction;
+    AbstractInstruction *self_in_CogAbstractInstruction;
+    sqInt theAddress;
 
 	literalAsInstruction = ((AbstractInstruction *) (((self_in_CogARMv8Compiler->operands))[0]));
 	literal = (/* isAnInstruction: */
 			(addressIsInInstructions(literalAsInstruction))
 		 || (literalAsInstruction == (methodLabel))
-				? (literalAsInstruction->address)
+				? codeAddressForOffset((literalAsInstruction->addressOffset))
 				: ((usqInt)literalAsInstruction));
 	assert((((self_in_CogARMv8Compiler->dependent)))
 	 && (((((self_in_CogARMv8Compiler->dependent))->opcode)) == Literal));
@@ -3665,11 +3702,16 @@ concretizeLiteral(AbstractInstruction *self_in_CogARMv8Compiler)
 		assert(!((self_in_CogARMv8Compiler->annotation)));
 		(self_in_CogARMv8Compiler->annotation) = (((self_in_CogARMv8Compiler->dependent))->annotation);
 	}
-	if ((((self_in_CogARMv8Compiler->dependent))->address)) {
-		assert(((((self_in_CogARMv8Compiler->dependent))->address)) == ((self_in_CogARMv8Compiler->address)));
+	if (codeAddressForOffset((((self_in_CogARMv8Compiler->dependent))->addressOffset))) {
+		assert((address((self_in_CogARMv8Compiler->dependent))) == (address(self_in_CogARMv8Compiler)));
 	}
-	(((self_in_CogARMv8Compiler->dependent))->address = (self_in_CogARMv8Compiler->address));
-	((self_in_CogARMv8Compiler->machineCode))[0] = (literal & 0xFFFFFFFFU);
+	self_in_CogAbstractInstruction = (self_in_CogARMv8Compiler->dependent);
+	theAddress = codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset));
+
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(theAddress);
+	assert((address(self_in_CogAbstractInstruction)) == theAddress);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (literal & 0xFFFFFFFFU);
 	if (((/* begin literalSize */
 		assert(((self_in_CogARMv8Compiler->opcode)) == Literal),
 	(((self_in_CogARMv8Compiler->operands))[1]
@@ -3677,7 +3719,7 @@ concretizeLiteral(AbstractInstruction *self_in_CogARMv8Compiler)
 				: BytesPerOop))) == 4) {
 		return 4;
 	}
-	((self_in_CogARMv8Compiler->machineCode))[1] = ((literal) >> 32);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((literal) >> 32);
 	return 8;
 }
 
@@ -3697,13 +3739,13 @@ concretizeLoadEffectiveAddressMwrR(AbstractInstruction *self_in_CogARMv8Compiler
 	/* begin isPossiblyShiftableImm12:ifTrue:ifFalse: */
 	if (((offset >= 0) && (offset <= (0xFFF)))) {
 		/* C6.2.4		ADD (immediate)	C6-761 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0x91000000U) + ((((usqInt)(offset) << 10)))) + ((((usqInt)(baseReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0x91000000U) + ((((usqInt)(offset) << 10)))) + ((((usqInt)(baseReg) << 5)))) + destReg);
 		return 4;
 	}
 	if (((!(offset & (0xFFF))))
 	 && (((((offset) >> 12) >= 0) && (((offset) >> 12) <= (0xFFF))))) {
 		/* C6.2.4		ADD (immediate)	C6-761 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0x91000000U) + (((usqInt)(offset)) >> 2)) + ((((usqInt)(baseReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0x91000000U) + (((usqInt)(offset)) >> 2)) + ((((usqInt)(baseReg) << 5)))) + destReg);
 		return 4;
 	}
 	/* end isPossiblyShiftableImm12:ifTrue:ifFalse: */
@@ -3712,13 +3754,13 @@ l1:
 	/* begin isPossiblyShiftableImm12:ifTrue:ifFalse: */
 	if ((((-offset) >= 0) && ((-offset) <= (0xFFF)))) {
 		/* C6.2.308		SUB (immediate)	C6-1311 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xD1000000U) + ((((usqInt)((-offset)) << 10)))) + ((((usqInt)(baseReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xD1000000U) + ((((usqInt)((-offset)) << 10)))) + ((((usqInt)(baseReg) << 5)))) + destReg);
 		return 4;
 	}
 	if (((!((-offset) & (0xFFF))))
 	 && ((((((-offset)) >> 12) >= 0) && ((((-offset)) >> 12) <= (0xFFF))))) {
 		/* C6.2.308		SUB (immediate)	C6-1311 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xD1000000U) + (((usqInt)((-offset))) >> 2)) + ((((usqInt)(baseReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xD1000000U) + (((usqInt)((-offset))) >> 2)) + ((((usqInt)(baseReg) << 5)))) + destReg);
 		return 4;
 	}
 	/* end isPossiblyShiftableImm12:ifTrue:ifFalse: */
@@ -3726,7 +3768,7 @@ l2:
 	instrBytes = emitMoveCwintoRat(self_in_CogARMv8Compiler, offset, RISCTempReg, 0);
 
 	/* C6.2.3		ADD (extended register) C6-758 */
-	((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = (((((0x8B200000U) + ((((usqInt)(destReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(RISCTempReg) << 5)))) + destReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = (((((0x8B200000U) + ((((usqInt)(destReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(RISCTempReg) << 5)))) + destReg);
 	return instrBytes + 4;
 }
 
@@ -3777,7 +3819,7 @@ concretizeLogicalOpCqRDest(AbstractInstruction *self_in_CogARMv8Compiler, sqInt 
 		   10		1	EON (shifted register) - 64-bit variant on page C6-894
 		   11		0	ANDS (shifted register) - 64-bit variant on page C6-781
 		   11		0	BICS (shifted register) - 64-bit variant on page C6-810 */
-		((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
 		offset += 4;
 		goto l1;
 	}
@@ -3815,7 +3857,7 @@ concretizeLogicalOpCqRDest(AbstractInstruction *self_in_CogARMv8Compiler, sqInt 
 			   10		1	EON (shifted register) - 64-bit variant on page C6-894
 			   11		0	ANDS (shifted register) - 64-bit variant on page C6-781
 			   11		0	BICS (shifted register) - 64-bit variant on page C6-810 */
-			((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0x8A000000U) + ((((usqInt)(op) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
 			offset += 4;
 			goto l1;
 		}
@@ -3839,7 +3881,7 @@ concretizeLogicalOpCqRDest(AbstractInstruction *self_in_CogARMv8Compiler, sqInt 
 	nUsqInt = (((nImms) >> 6) & 1) ^ 1;
 	nImms = nImms & 0x3F;
 	assert((decodeNimmsimmr(self_in_CogARMv8Compiler, nUsqInt, nImms, immrSqInt)) == (((usqInt) constant)));
-	((self_in_CogARMv8Compiler->machineCode))[0] = (((((((0x92000000U) + ((((usqInt)(op) << 29)))) + ((nUsqInt << 22))) + ((((usqInt)(immrSqInt) << 16)))) + ((nImms << 10))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((0x92000000U) + ((((usqInt)(op) << 29)))) + ((nUsqInt << 22))) + ((((usqInt)(immrSqInt) << 16)))) + ((nImms << 10))) + ((((usqInt)(srcReg) << 5)))) + effectiveDestReg);
 	offset = 4;
 	/* end isImmNImmSImmREncodableBitmask:ifTrue:ifFalse: */
 l1:
@@ -3847,7 +3889,7 @@ l1:
 		 && (destReg == SP))) {
 		return offset;
 	}
-	((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (movernrd(self_in_CogARMv8Compiler, effectiveDestReg, destReg));
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (movernrd(self_in_CogARMv8Compiler, effectiveDestReg, destReg));
 	return offset + 4;
 }
 
@@ -3902,7 +3944,7 @@ concretizeMoveCqR(AbstractInstruction *self_in_CogARMv8Compiler)
 		mask = ((sqInt)((usqInt)((0xFFFF)) << lowBitMod16));
 		if ((constant & mask) == constant) {
 			/* Use MOVZ */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xD2800000U) + ((((usqInt)((lowBitMod16 / 16)) << 21)))) + ((((usqInt)((((usqInt)(constant)) >> lowBitMod16)) << 5)))) + destReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xD2800000U) + ((((usqInt)((lowBitMod16 / 16)) << 21)))) + ((((usqInt)((((usqInt)(constant)) >> lowBitMod16)) << 5)))) + destReg);
 			return 4;
 		}
 		lowBit = ((((sqLong) constant)) < -1
@@ -3910,7 +3952,7 @@ concretizeMoveCqR(AbstractInstruction *self_in_CogARMv8Compiler)
 					: 0);
 		if ((((sqLong) (constant | mask))) == -1) {
 			/* Use MOVN */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0x92800000U) + ((((usqInt)((lowBitMod16 / 16)) << 21)))) + ((((usqInt)(((((usqInt)((~(usqIntptr_t)constant))) >> lowBitMod16) & mask)) << 5)))) + destReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0x92800000U) + ((((usqInt)((lowBitMod16 / 16)) << 21)))) + ((((usqInt)(((((usqInt)((~(usqIntptr_t)constant))) >> lowBitMod16) & mask)) << 5)))) + destReg);
 			return 4;
 		}
 	}
@@ -3966,7 +4008,7 @@ concretizeMoveCqR(AbstractInstruction *self_in_CogARMv8Compiler)
 	assert((decodeNimmsimmr(self_in_CogARMv8Compiler, nUsqInt, nImms, immrSqInt)) == (((usqInt) constant)));
 	return (/* Use ORR */
 			
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((0xB2000000U) + ((nUsqInt << 22))) + ((((usqInt)(immrSqInt) << 16)))) + ((nImms << 10))) + ((((usqInt)(XZR) << 5)))) + destReg),
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((0xB2000000U) + ((nUsqInt << 22))) + ((((usqInt)(immrSqInt) << 16)))) + ((nImms << 10))) + ((((usqInt)(XZR) << 5)))) + destReg),
 		4);
 }
 
@@ -4000,7 +4042,7 @@ concretizeMoveMSrR(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unitSize
 static NoDbgRegParms sqInt
 concretizeMovePerfCnt64RL(AbstractInstruction *self_in_CogARMv8Compiler)
 {
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((3577471040U) + (((self_in_CogARMv8Compiler->operands))[0]));
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((3577471040U) + (((self_in_CogARMv8Compiler->operands))[0]));
 
 	/* MRS + op0
 	   op1
@@ -4041,7 +4083,7 @@ concretizeMoveRXSrR(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unitSiz
 	base = ((self_in_CogARMv8Compiler->operands))[2];
 	assert(!(((SP == src)
  || (SP == index))));
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(index) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (6144)) + ((((usqInt)(base) << 5)))) + src);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(index) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (6144)) + ((((usqInt)(base) << 5)))) + src);
 
 	/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 	return 4;
@@ -4065,7 +4107,7 @@ concretizeMoveXSrRR(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unitSiz
 	base = ((self_in_CogARMv8Compiler->operands))[1];
 	dest = ((self_in_CogARMv8Compiler->operands))[2];
 	assert(!((SP == dest)));
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38600000)) + ((((usqInt)(index) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (6144)) + ((((usqInt)(base) << 5)))) + dest);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38600000)) + ((((usqInt)(index) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (6144)) + ((((usqInt)(base) << 5)))) + dest);
 
 	/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 	return 4;
@@ -4092,8 +4134,8 @@ concretizeMulOverflowJump(AbstractInstruction *self_in_CogARMv8Compiler)
 	/* See concretizeMulOverflowRRR
 	   RISCTempReg := RISCTempReg + CArg1Reg/sign.
 	   JumpZero/NonZero */
-	((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x8B000000U) + ((((usqInt)(ArithmeticAddS) << 29)))) + ((((usqInt)(CArg1Reg) << 16)))) + ((((usqInt)(RISCTempReg) << 5)))) + RISCTempReg);
-	((self_in_CogARMv8Compiler->machineCode))[1] = ((/* begin cond:offset: */
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x8B000000U) + ((((usqInt)(ArithmeticAddS) << 29)))) + ((((usqInt)(CArg1Reg) << 16)))) + ((((usqInt)(RISCTempReg) << 5)))) + RISCTempReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((/* begin cond:offset: */
 	assert((offset & 3) == 0),
 ((0x54000000) + ((((usqInt)((offset & (0x1FFFFF))) << 3)))) + ((((self_in_CogARMv8Compiler->opcode)) == JumpMulOverflow
 		? NE
@@ -4117,12 +4159,12 @@ concretizeRRArithmeticRd(AbstractInstruction *self_in_CogARMv8Compiler, sqInt ar
 	/* cogit processor disassembleInstructionAt: 0 In: machineCode object
 	   cogit processor disassembleInstructionAt: 4 In: machineCode object */
 	if (SP == regB) {
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regA) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(regB) << 5)))) + rd);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regA) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(regB) << 5)))) + rd);
 		if (!((arithOp == ArithmeticSub)
 			 || (arithOp == ArithmeticSubS))) {
 			return 4;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[1] = (((((0x8B000000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(rd) << 16)))) + ((((usqInt)(XZR) << 5)))) + rd);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (((((0x8B000000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(rd) << 16)))) + ((((usqInt)(XZR) << 5)))) + rd);
 		return 8;
 	}
 
@@ -4133,7 +4175,7 @@ concretizeRRArithmeticRd(AbstractInstruction *self_in_CogARMv8Compiler, sqInt ar
 	   SUB (extended register) on page C6-1308
 	   SUBS (extended register) on page C6-1318 */
 	if (SP == regA) {
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regB) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(regA) << 5)))) + rd);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((0x8B200000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regB) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(regA) << 5)))) + rd);
 		return 4;
 	}
 
@@ -4153,7 +4195,7 @@ concretizeRRArithmeticRd(AbstractInstruction *self_in_CogARMv8Compiler, sqInt ar
 	   CMP (shifted register) on page C6-860
 	   SUB (shifted register) on page C6-1313
 	   SUBS (shifted register) on page C6-1323 */
-	((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x8B000000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regB) << 16)))) + ((((usqInt)(regA) << 5)))) + rd);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x8B000000U) + ((((usqInt)(arithOp) << 29)))) + ((((usqInt)(regB) << 16)))) + ((((usqInt)(regA) << 5)))) + rd);
 	return 4;
 }
 
@@ -4176,7 +4218,7 @@ concretizeRRLogical(AbstractInstruction *self_in_CogARMv8Compiler, sqInt logical
 
 	srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 	destReg = ((self_in_CogARMv8Compiler->operands))[1];
-	((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x8A000000U) + ((((usqInt)(logicalOp) << 29)))) + ((((usqInt)(srcReg) << 16)))) + ((((usqInt)(destReg) << 5)))) + destReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x8A000000U) + ((((usqInt)(logicalOp) << 29)))) + ((((usqInt)(srcReg) << 16)))) + ((((usqInt)(destReg) << 5)))) + destReg);
 	return 4;
 }
 
@@ -4194,7 +4236,7 @@ concretizeSignExtendRR(AbstractInstruction *self_in_CogARMv8Compiler, sqInt widt
 
 	rn = ((self_in_CogARMv8Compiler->operands))[0];
 	rd = ((self_in_CogARMv8Compiler->operands))[1];
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((((0x93400000U) + ((((usqInt)((width - 1)) << 10)))) + ((((usqInt)(rn) << 5)))) + rd);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0x93400000U) + ((((usqInt)((width - 1)) << 10)))) + ((((usqInt)(rn) << 5)))) + rd);
 	return 4;
 }
 
@@ -4212,7 +4254,7 @@ concretizeZeroExtendRR(AbstractInstruction *self_in_CogARMv8Compiler, sqInt widt
 
 	rn = ((self_in_CogARMv8Compiler->operands))[0];
 	rd = ((self_in_CogARMv8Compiler->operands))[1];
-	((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xD3400000U) + ((((usqInt)((width - 1)) << 10)))) + ((((usqInt)(rn) << 5)))) + rd);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xD3400000U) + ((((usqInt)((width - 1)) << 10)))) + ((((usqInt)(rn) << 5)))) + rd);
 	return 4;
 }
 
@@ -4603,7 +4645,7 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 			/* begin updateLabel: */
 			assert((((dependentChain->opcode)) == MoveCwR)
 			 || (((dependentChain->opcode)) == PushCw));
-			((dependentChain->operands))[0] = (((self_in_CogARMv8Compiler->address)) + (((self_in_CogARMv8Compiler->operands))[1]));
+			((dependentChain->operands))[0] = ((codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))) + (((self_in_CogARMv8Compiler->operands))[1]));
 			dependentChain = (dependentChain->dependent);
 		}
 		return 0;
@@ -4614,27 +4656,27 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 	case AlignmentNops:
 		/* begin concretizeAlignmentNops */
 		assert((((self_in_CogARMv8Compiler->machineCodeSize)) % 4) == 0);
-		((self_in_CogARMv8Compiler->machineCode))[0] = NOP;
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = NOP;
 		return (self_in_CogARMv8Compiler->machineCodeSize);
 
 	case Fill32:
 		/* begin concretizeFill32 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((self_in_CogARMv8Compiler->operands))[0]);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((self_in_CogARMv8Compiler->operands))[0]);
 		return 4;
 
 	case Nop:
 		/* begin concretizeNop */
-		((self_in_CogARMv8Compiler->machineCode))[0] = NOP;
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = NOP;
 		return 4;
 
 	case Call:
 		/* begin concretizeCall */
-		offset = ((sqLong) ((((self_in_CogARMv8Compiler->operands))[0]) - ((self_in_CogARMv8Compiler->address))));
+		offset = ((sqLong) ((((self_in_CogARMv8Compiler->operands))[0]) - (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset)))));
 		assert((!(offset & 3)));
 		assert(isInImmediateBranchAndLinkRange(self_in_CogARMv8Compiler, offset));
 
 		/* C6.2.33	BL		C6-812 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((/* begin bl: */
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((/* begin bl: */
 	assert((!(offset & 3))),
 (0x94000000U) + (((offset) >> 2) & (0x3FFFFFF))));
 		return 4;
@@ -4646,17 +4688,17 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, ((usqInt)jumpTarget), RISCTempReg, 0);
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (brlinkreg(self_in_CogARMv8Compiler, 1, RISCTempReg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (brlinkreg(self_in_CogARMv8Compiler, 1, RISCTempReg));
 		assert(instrOffset == (literalLoadInstructionBytes(self_in_CogARMv8Compiler)));
 		return instrOffset + 4;
 
 	case JumpR:
 		/* begin concretizeJumpR */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0xD6000000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0xD6000000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5))));
 		return 4;
 
 	case JumpFull:
@@ -4666,42 +4708,42 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, ((usqInt)jumpTarget), RISCTempReg, 0);
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (brlinkreg(self_in_CogARMv8Compiler, 0, RISCTempReg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (brlinkreg(self_in_CogARMv8Compiler, 0, RISCTempReg));
 		assert(instrOffset == (literalLoadInstructionBytes(self_in_CogARMv8Compiler)));
 		return instrOffset + 4;
 
 	case JumpLong:
 		/* begin concretizeJumpLong */
-		offset = (((self_in_CogARMv8Compiler->operands))[0]) - ((self_in_CogARMv8Compiler->address));
+		offset = (((self_in_CogARMv8Compiler->operands))[0]) - (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset)));
 		assert((!(offset & 3)));
 		assert(((((offset) >> 2) >= (-67108864)) && (((offset) >> 2) <= (0x3FFFFFF))));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
 		return 4;
 
 	case JumpLongZero:
 		/* begin concretizeConditionalLongJump: */
-		offset = (((self_in_CogARMv8Compiler->operands))[0]) - (((self_in_CogARMv8Compiler->address)) + 4);
+		offset = (((self_in_CogARMv8Compiler->operands))[0]) - ((codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))) + 4);
 		assert((!(offset & 3)));
 		assert(((((offset) >> 2) >= (-67108864)) && (((offset) >> 2) <= (0x3FFFFFF))));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((0x54000040) + NE);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((0x54000040) + NE);
 
 		/* skip next instruction */
-		((self_in_CogARMv8Compiler->machineCode))[1] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
 		return 8;
 
 	case JumpLongNonZero:
 		/* begin concretizeConditionalLongJump: */
-		offset = (((self_in_CogARMv8Compiler->operands))[0]) - (((self_in_CogARMv8Compiler->address)) + 4);
+		offset = (((self_in_CogARMv8Compiler->operands))[0]) - ((codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))) + 4);
 		assert((!(offset & 3)));
 		assert(((((offset) >> 2) >= (-67108864)) && (((offset) >> 2) <= (0x3FFFFFF))));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((0x54000040) + EQ);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((0x54000040) + EQ);
 
 		/* skip next instruction */
-		((self_in_CogARMv8Compiler->machineCode))[1] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((0x14000000) + (((offset) >> 2) & (0x3FFFFFF)));
 		return 8;
 
 	case Jump:
@@ -4769,13 +4811,13 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 
 		/* C6.2.218 RET p1147 */
 		if (!offset) {
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
 			return 4;
 		}
 
 		/* C6.2.4 ADD (immediate) p761 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (addrnrdimmshiftBy12(self_in_CogARMv8Compiler, SPReg, SPReg, offset, 0));
-		((self_in_CogARMv8Compiler->machineCode))[1] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (addrnrdimmshiftBy12(self_in_CogARMv8Compiler, SPReg, SPReg, offset, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
 		return 8;
 
 	case NativeRetN:
@@ -4784,18 +4826,18 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 
 		/* C6.2.218 RET p1147 */
 		if (!offset) {
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
 			return 4;
 		}
 
 		/* C6.2.4 ADD (immediate) p761 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (addrnrdimmshiftBy12(self_in_CogARMv8Compiler, SP, SP, offset, 0));
-		((self_in_CogARMv8Compiler->machineCode))[1] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (addrnrdimmshiftBy12(self_in_CogARMv8Compiler, SP, SP, offset, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (((0xD6400000U) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(LR) << 5))));
 		return 8;
 
 	case Stop:
 		/* begin concretizeStop */
-		((self_in_CogARMv8Compiler->machineCode))[0] = 0xD4400000U /* stop */;
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = 0xD4400000U /* stop */;
 		return 4;
 
 	case AddCqR:
@@ -4809,7 +4851,7 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 		if (((constant >= 0) && (constant <= (0xFFF)))) {
 			/* C6.2.4		ADD (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* ADD */ 0x122
 		: /* ADDS */ 354))) << 23))) + ((((usqInt)(constant) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4818,7 +4860,7 @@ dispatchConcretize(AbstractInstruction *self_in_CogARMv8Compiler)
 		 && (((((constant) >> 12) >= 0) && (((constant) >> 12) <= (0xFFF))))) {
 			/* C6.2.4		ADD (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* ADD */ 0x122
 		: /* ADDS */ 354))) << 23))) + ((((usqInt)(constant)) >> 2) + (0x400000))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4830,7 +4872,7 @@ l1:
 		if ((((-constant) >= 0) && ((-constant) <= (0xFFF)))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* SUB */ 418
 		: /* SUBS */ 482))) << 23))) + ((((usqInt)((-constant)) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4839,7 +4881,7 @@ l1:
 		 && ((((((-constant)) >> 12) >= 0) && ((((-constant)) >> 12) <= (0xFFF))))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* SUB */ 418
 		: /* SUBS */ 482))) << 23))) + ((((usqInt)((-constant))) >> 2) + (0x400000))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4852,7 +4894,7 @@ l2:
 		offset = emitMoveCwintoRat(self_in_CogARMv8Compiler, constant, RISCTempReg, 0);
 
 		/* C6.2.7		ADDS (extended register)		C6-766 */
-		((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0xAB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(SXTX) << 13)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0xAB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(SXTX) << 13)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 		return offset + 4;
 
 	case AddCqRR:
@@ -4866,7 +4908,7 @@ l2:
 		if (((constant >= 0) && (constant <= (0xFFF)))) {
 			/* C6.2.4		ADD (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* ADD */ 0x122
 		: /* ADDS */ 354))) << 23))) + ((((usqInt)(constant) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4875,7 +4917,7 @@ l2:
 		 && (((((constant) >> 12) >= 0) && (((constant) >> 12) <= (0xFFF))))) {
 			/* C6.2.4		ADD (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* ADD */ 0x122
 		: /* ADDS */ 354))) << 23))) + ((((usqInt)(constant)) >> 2) + (0x400000))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4887,7 +4929,7 @@ l3:
 		if ((((-constant) >= 0) && ((-constant) <= (0xFFF)))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* SUB */ 418
 		: /* SUBS */ 482))) << 23))) + ((((usqInt)((-constant)) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4896,7 +4938,7 @@ l3:
 		 && ((((((-constant)) >> 12) >= 0) && ((((-constant)) >> 12) <= (0xFFF))))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((srcReg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((srcReg == SP
 		? /* SUB */ 418
 		: /* SUBS */ 482))) << 23))) + ((((usqInt)((-constant))) >> 2) + (0x400000))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 			return 4;
@@ -4909,7 +4951,7 @@ l4:
 		offset = emitMoveCwintoRat(self_in_CogARMv8Compiler, constant, RISCTempReg, 0);
 
 		/* C6.2.7		ADDS (extended register)		C6-766 */
-		((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0xAB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(SXTX) << 13)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0xAB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(SXTX) << 13)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 		return offset + 4;
 
 	case AndCqR:
@@ -4935,14 +4977,14 @@ l4:
 		if (((constant >= 0) && (constant <= (0xFFF)))) {
 			/* C6.2.61	CMP (immediate)	C6-858
 			   C6.2.314	SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xF1000000U) + ((((usqInt)(constant) << 10)))) + ((((usqInt)(rn) << 5)))) + XZR);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xF1000000U) + ((((usqInt)(constant) << 10)))) + ((((usqInt)(rn) << 5)))) + XZR);
 			return 4;
 		}
 		if (((!(constant & (0xFFF))))
 		 && (((((constant) >> 12) >= 0) && (((constant) >> 12) <= (0xFFF))))) {
 			/* C6.2.61	CMP (immediate)	C6-858
 			   C6.2.314	SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xF1000000U) + ((((usqInt)(constant)) >> 2) + (0x400000))) + ((((usqInt)(rn) << 5)))) + XZR);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xF1000000U) + ((((usqInt)(constant)) >> 2) + (0x400000))) + ((((usqInt)(rn) << 5)))) + XZR);
 			return 4;
 		}
 		/* end isPossiblyShiftableImm12:ifTrue:ifFalse: */
@@ -4952,14 +4994,14 @@ l5:
 		if ((((-constant) >= 0) && ((-constant) <= (0xFFF)))) {
 			/* C6.2.58	CMN (immediate)	C6-852
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xB1000000U) + ((((usqInt)((-constant)) << 10)))) + ((((usqInt)(rn) << 5)))) + XZR);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xB1000000U) + ((((usqInt)((-constant)) << 10)))) + ((((usqInt)(rn) << 5)))) + XZR);
 			return 4;
 		}
 		if (((!((-constant) & (0xFFF))))
 		 && ((((((-constant)) >> 12) >= 0) && ((((-constant)) >> 12) <= (0xFFF))))) {
 			/* C6.2.58	CMN (immediate)	C6-852
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xB1000000U) + ((((usqInt)((-constant))) >> 2) + (0x400000))) + ((((usqInt)(rn) << 5)))) + XZR);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xB1000000U) + ((((usqInt)((-constant))) >> 2) + (0x400000))) + ((((usqInt)(rn) << 5)))) + XZR);
 			return 4;
 		}
 		/* end isPossiblyShiftableImm12:ifTrue:ifFalse: */
@@ -4967,7 +5009,7 @@ l6:
 		offset = emitMoveCwintoRat(self_in_CogARMv8Compiler, constant, RISCTempReg, 0);
 
 		/* C6.2.60	CMP (extended register)	C6-856 */
-		((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0xEB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(rn) << 5)))) + XZR);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0xEB200000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(rn) << 5)))) + XZR);
 		return offset + 4;
 
 	case SubCqR:
@@ -4979,7 +5021,7 @@ l6:
 		if (((constant >= 0) && (constant <= (0xFFF)))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((reg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((reg == SP
 		? 418
 		: 482))) << 23))) + ((((usqInt)(constant) << 10)))) + ((((usqInt)(reg) << 5)))) + reg);
 			return 4;
@@ -4988,7 +5030,7 @@ l6:
 		 && (((((constant) >> 12) >= 0) && (((constant) >> 12) <= (0xFFF))))) {
 			/* C6.2.308		SUB (immediate)	C6-1311
 			   C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((reg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((reg == SP
 		? 418
 		: 482))) << 23))) + ((((usqInt)(constant)) >> 2) + (0x400000))) + ((((usqInt)(reg) << 5)))) + reg);
 			return 4;
@@ -5000,7 +5042,7 @@ l7:
 		if ((((-constant) >= 0) && ((-constant) <= (0xFFF)))) {
 			/* C6.2.4		ADDS (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((reg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((reg == SP
 		? 0x122
 		: 354))) << 23))) + ((((usqInt)((-constant)) << 10)))) + ((((usqInt)(reg) << 5)))) + reg);
 			return 4;
@@ -5009,7 +5051,7 @@ l7:
 		 && ((((((-constant)) >> 12) >= 0) && ((((-constant)) >> 12) <= (0xFFF))))) {
 			/* C6.2.4		ADDS (immediate)	C6-761
 			   C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = (((((((usqInt)(((reg == SP
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((((usqInt)(((reg == SP
 		? 0x122
 		: 354))) << 23))) + ((((usqInt)((-constant))) >> 2) + (0x400000))) + ((((usqInt)(reg) << 5)))) + reg);
 			return 4;
@@ -5023,7 +5065,7 @@ l8:
 		assert(!((SP == reg)));
 
 		/* C6.2.313	SUBS (extended register)		C6-1318 */
-		((self_in_CogARMv8Compiler->machineCode))[offset / 4] = (((((0x8B000000U) + ((((usqInt)(ArithmeticSubS) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(reg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset / 4] = (((((0x8B000000U) + ((((usqInt)(ArithmeticSubS) << 29)))) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(reg) << 5)))) + reg);
 		return offset + 4;
 
 	case TstCqR:
@@ -5045,16 +5087,16 @@ l8:
 		/* begin concretizeCmpC32R */
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		rn = ((self_in_CogARMv8Compiler->operands))[1];
-		assert(addressIsInCurrentCompilation((((self_in_CogARMv8Compiler->dependent))->address)));
-		assert((((((self_in_CogARMv8Compiler->dependent))->address)) % 4) == 0);
-		assert((SQABS((((usqInt)((((self_in_CogARMv8Compiler->dependent))->address)))) - (((usqInt)((self_in_CogARMv8Compiler->address)))))) < (0x40000));
+		assert(addressIsInCurrentCompilation(address((self_in_CogARMv8Compiler->dependent))));
+		assert(((address((self_in_CogARMv8Compiler->dependent))) % 4) == 0);
+		assert((SQABS((((usqInt)(address((self_in_CogARMv8Compiler->dependent))))) - (((usqInt)(address(self_in_CogARMv8Compiler)))))) < (0x40000));
 
 		/* C6.2.131	LDR (literal)		C6-979 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x18000000) + ((((usqInt)((((((self_in_CogARMv8Compiler->dependent))->address)) - ((self_in_CogARMv8Compiler->address)))) << 3)))) + RISCTempReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x18000000) + ((((usqInt)(((codeAddressForOffset((((self_in_CogARMv8Compiler->dependent))->addressOffset))) - (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))))) << 3)))) + RISCTempReg);
 
 		/* 5 - 2
 		   C6.2.60	CMP (extended register)	C6-856 */
-		((self_in_CogARMv8Compiler->machineCode))[1] = (((((0x6B200000) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(rn) << 5)))) + XZR);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (((((0x6B200000) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + ((((usqInt)(rn) << 5)))) + XZR);
 
 		/* N.B. sf == 0!! */
 		return 8;
@@ -5096,14 +5138,14 @@ l8:
 		/* begin concretizeMathRdRd: */
 		srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 		destReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (0x2800)) + ((((usqInt)(destReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (0x2800)) + ((((usqInt)(destReg) << 5)))) + destReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
 
 	case CmpRdRd:
 		/* begin concretizeCmpRdRd */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0x1E600000) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 16)))) + (0x2000)) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[1])) << 5))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0x1E600000) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 16)))) + (0x2000)) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[1])) << 5))));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5112,7 +5154,7 @@ l8:
 		/* begin concretizeMathRdRd: */
 		srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 		destReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (6144)) + ((((usqInt)(destReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (6144)) + ((((usqInt)(destReg) << 5)))) + destReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5121,7 +5163,7 @@ l8:
 		/* begin concretizeMathRdRd: */
 		srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 		destReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (0x800)) + ((((usqInt)(destReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (0x800)) + ((((usqInt)(destReg) << 5)))) + destReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5130,7 +5172,7 @@ l8:
 		/* begin concretizeMathRdRd: */
 		srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 		destReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (14336)) + ((((usqInt)(destReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x1E600000) + ((((usqInt)(srcReg) << 16)))) + (14336)) + ((((usqInt)(destReg) << 5)))) + destReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5139,7 +5181,7 @@ l8:
 		/* begin concretizeXorRdRd */
 		srcReg = ((self_in_CogARMv8Compiler->operands))[0];
 		destReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x2E200000) + ((((usqInt)(srcReg) << 16)))) + (7168)) + ((((usqInt)(destReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x2E200000) + ((((usqInt)(srcReg) << 16)))) + (7168)) + ((((usqInt)(destReg) << 5)))) + destReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5147,7 +5189,7 @@ l8:
 	case SqrtRd:
 		/* begin concretizeSqrtRd */
 		reg = ((self_in_CogARMv8Compiler->operands))[0];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((509722624) + ((((usqInt)(reg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((509722624) + ((((usqInt)(reg) << 5)))) + reg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5156,7 +5198,7 @@ l8:
 		/* begin concretizeNegateR */
 		reg = ((self_in_CogARMv8Compiler->operands))[0];
 		assert(!((SP == reg)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xCB000000U) + ((((usqInt)(reg) << 16)))) + ((((usqInt)(XZR) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xCB000000U) + ((((usqInt)(reg) << 16)))) + ((((usqInt)(XZR) << 5)))) + reg);
 		return 4;
 
 	case LoadEffectiveAddressMwrR:
@@ -5167,7 +5209,7 @@ l8:
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		reg = ((self_in_CogARMv8Compiler->operands))[1];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x93400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(reg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x93400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(reg) << 5)))) + reg);
 		return 4;
 
 	case ArithmeticShiftRightCqRR:
@@ -5176,7 +5218,7 @@ l8:
 		srcReg = ((self_in_CogARMv8Compiler->operands))[1];
 		destReg = ((self_in_CogARMv8Compiler->operands))[2];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x93400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(srcReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x93400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(srcReg) << 5)))) + destReg);
 		return 4;
 
 	case LogicalShiftRightCqR:
@@ -5184,7 +5226,7 @@ l8:
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		reg = ((self_in_CogARMv8Compiler->operands))[1];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xD3400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(reg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xD3400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(reg) << 5)))) + reg);
 		return 4;
 
 	case LogicalShiftRightCqRR:
@@ -5193,7 +5235,7 @@ l8:
 		srcReg = ((self_in_CogARMv8Compiler->operands))[1];
 		destReg = ((self_in_CogARMv8Compiler->operands))[2];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xD3400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(srcReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xD3400000U) + ((((usqInt)(constant) << 16)))) + (0xFC00)) + ((((usqInt)(srcReg) << 5)))) + destReg);
 		return 4;
 
 	case LogicalShiftLeftCqR:
@@ -5201,7 +5243,7 @@ l8:
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		reg = ((self_in_CogARMv8Compiler->operands))[1];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xD3400000U) + ((((usqInt)((64 - constant)) << 16)))) + ((((usqInt)((0x3F - constant)) << 10)))) + ((((usqInt)(reg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xD3400000U) + ((((usqInt)((64 - constant)) << 16)))) + ((((usqInt)((0x3F - constant)) << 10)))) + ((((usqInt)(reg) << 5)))) + reg);
 		return 4;
 
 	case LogicalShiftLeftCqRR:
@@ -5210,14 +5252,14 @@ l8:
 		srcReg = ((self_in_CogARMv8Compiler->operands))[1];
 		destReg = ((self_in_CogARMv8Compiler->operands))[2];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xD3400000U) + ((((usqInt)((64 - constant)) << 16)))) + ((((usqInt)((0x3F - constant)) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xD3400000U) + ((((usqInt)((64 - constant)) << 16)))) + ((((usqInt)((0x3F - constant)) << 10)))) + ((((usqInt)(srcReg) << 5)))) + destReg);
 		return 4;
 
 	case ArithmeticShiftRightRR:
 		/* begin concretizeShiftRR: */
 		shiftCountReg = ((self_in_CogARMv8Compiler->operands))[0];
 		shiftedReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (0x2800)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (0x2800)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5226,7 +5268,7 @@ l8:
 		/* begin concretizeShiftRR: */
 		shiftCountReg = ((self_in_CogARMv8Compiler->operands))[0];
 		shiftedReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (0x2000)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (0x2000)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5235,7 +5277,7 @@ l8:
 		/* begin concretizeShiftRR: */
 		shiftCountReg = ((self_in_CogARMv8Compiler->operands))[0];
 		shiftedReg = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (9216)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9AC00000U) + ((((usqInt)(shiftCountReg) << 16)))) + (9216)) + ((((usqInt)(shiftedReg) << 5)))) + shiftedReg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5246,7 +5288,7 @@ l8:
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		reg = ((self_in_CogARMv8Compiler->operands))[1];
 		assert(((constant >= 1) && (constant <= 0x3F)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x93C00000U) + ((((usqInt)(reg) << 16)))) + ((((usqInt)(((RotateRightCqR == ((self_in_CogARMv8Compiler->opcode))
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x93C00000U) + ((((usqInt)(reg) << 16)))) + ((((usqInt)(((RotateRightCqR == ((self_in_CogARMv8Compiler->opcode))
 		? constant
 		: 64 - constant))) << 10)))) + ((((usqInt)(reg) << 5)))) + reg);
 
@@ -5258,7 +5300,7 @@ l8:
 		/* begin concretizeClzRR */
 		maskReg = ((self_in_CogARMv8Compiler->operands))[0];
 		dest = ((self_in_CogARMv8Compiler->operands))[1];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((3670020096U) + ((((usqInt)(maskReg) << 5)))) + dest);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((3670020096U) + ((((usqInt)(maskReg) << 5)))) + dest);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5268,7 +5310,7 @@ l8:
 		reg1 = ((self_in_CogARMv8Compiler->operands))[0];
 		reg2 = ((self_in_CogARMv8Compiler->operands))[1];
 		reg3 = ((self_in_CogARMv8Compiler->operands))[2];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9B000000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + reg3);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9B000000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + reg3);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5280,13 +5322,13 @@ l8:
 		reg3 = ((self_in_CogARMv8Compiler->operands))[2];
 
 		/* RISCTempReg := high(reg1 * reg2); must precede destructive MUL */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9B400000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + RISCTempReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9B400000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + RISCTempReg);
 
 		/* reg3 := reg1 * reg2 */
-		((self_in_CogARMv8Compiler->machineCode))[1] = (((((0x9B000000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + reg3);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (((((0x9B000000U) + ((((usqInt)(reg1) << 16)))) + ((((usqInt)(XZR) << 10)))) + ((((usqInt)(reg2) << 5)))) + reg3);
 
 		/* CArg1Reg := sign(reg3) */
-		((self_in_CogARMv8Compiler->machineCode))[2] = (((0xD37FFC00U) + ((((usqInt)(reg3) << 5)))) + CArg1Reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[2] = (((0xD37FFC00U) + ((((usqInt)(reg3) << 5)))) + CArg1Reg);
 		return 12;
 
 	case DivRRR:
@@ -5294,7 +5336,7 @@ l8:
 		reg1 = ((self_in_CogARMv8Compiler->operands))[0];
 		reg2 = ((self_in_CogARMv8Compiler->operands))[1];
 		reg3 = ((self_in_CogARMv8Compiler->operands))[2];
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0x9AC00000U) + ((((usqInt)(reg2) << 16)))) + (0xC00)) + ((((usqInt)(reg1) << 5)))) + reg3);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0x9AC00000U) + ((((usqInt)(reg2) << 16)))) + (0xC00)) + ((((usqInt)(reg1) << 5)))) + reg3);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5305,7 +5347,7 @@ l8:
 		rN = (((self_in_CogARMv8Compiler->operands))[0]) & 0x1F;
 		rA = ((self_in_CogARMv8Compiler->operands))[1];
 		rD = ((self_in_CogARMv8Compiler->operands))[2];
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((0x9B000000U) + ((((usqInt)(rM) << 16)))) + (0x8000)) + ((((usqInt)(rA) << 10)))) + ((rN << 5))) + rD);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((0x9B000000U) + ((((usqInt)(rM) << 16)))) + (0x8000)) + ((((usqInt)(rA) << 10)))) + ((rN << 5))) + rD);
 		return 4;
 
 	case DC:
@@ -5314,7 +5356,7 @@ l8:
 	case DSB:
 		/* begin concretizeDataSynchronizationBarrier */
 		CRm = ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 2))) + (((self_in_CogARMv8Compiler->operands))[1]);
-		((self_in_CogARMv8Compiler->machineCode))[0] = (0xD503309FU + ((((usqInt)(CRm) << 8))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (0xD503309FU + ((((usqInt)(CRm) << 8))));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5322,7 +5364,7 @@ l8:
 	case IC:
 		/* begin concretizeInstructionCacheControl */
 		/* begin concretizeCacheControlOp1:CRm:Op2: */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((3574297888U) + (((self_in_CogARMv8Compiler->operands))[0]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((3574297888U) + (((self_in_CogARMv8Compiler->operands))[0]));
 
 		/* CRn
 		   cogit processor disassembleInstructionAt: 0 In: machineCode object */
@@ -5331,7 +5373,7 @@ l8:
 	case ISB:
 		/* begin concretizeInstructionSynchronizationBarrier */
 		CRm = 15;
-		((self_in_CogARMv8Compiler->machineCode))[0] = (0xD50330DFU + ((((usqInt)(CRm) << 8))));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (0xD50330DFU + ((((usqInt)(CRm) << 8))));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5339,7 +5381,7 @@ l8:
 	case MRS_CTR_EL0:
 		/* begin concretizeMRS_CTR_EL0 */
 		/* begin concretizeMRSOp1:CRn:CRm:Op2: */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((3577413664U) + (((self_in_CogARMv8Compiler->operands))[0]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((3577413664U) + (((self_in_CogARMv8Compiler->operands))[0]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5347,7 +5389,7 @@ l8:
 	case MRS_ID_AA64ISAR0_EL1:
 		/* begin concretizeMRS_ID_AA64ISAR0_EL1 */
 		/* begin concretizeMRSOp1:CRn:CRm:Op2: */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((3577218560U) + (((self_in_CogARMv8Compiler->operands))[0]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((3577218560U) + (((self_in_CogARMv8Compiler->operands))[0]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5362,12 +5404,12 @@ l8:
 		/* begin concretizeMoveC32R */
 		constant = ((self_in_CogARMv8Compiler->operands))[0];
 		rn = ((self_in_CogARMv8Compiler->operands))[1];
-		assert(addressIsInCurrentCompilation((((self_in_CogARMv8Compiler->dependent))->address)));
-		assert((((((self_in_CogARMv8Compiler->dependent))->address)) % 4) == 0);
-		assert((((((self_in_CogARMv8Compiler->dependent))->address)) - ((self_in_CogARMv8Compiler->address))) < (0x100000));
+		assert(addressIsInCurrentCompilation(address((self_in_CogARMv8Compiler->dependent))));
+		assert(((address((self_in_CogARMv8Compiler->dependent))) % 4) == 0);
+		assert(((address((self_in_CogARMv8Compiler->dependent))) - (address(self_in_CogARMv8Compiler))) < (0x100000));
 
 		/* C6.2.143	LDRSW (literal)	C6-1008 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x98000000U) + ((((usqInt)(((((((self_in_CogARMv8Compiler->dependent))->address)) - ((self_in_CogARMv8Compiler->address))) & (0x1FFFFF))) << 3)))) + rn);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x98000000U) + ((((usqInt)((((codeAddressForOffset((((self_in_CogARMv8Compiler->dependent))->addressOffset))) - (codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset)))) & (0x1FFFFF))) << 3)))) + rn);
 
 		/* 5 - 2 */
 		return 4;
@@ -5379,7 +5421,7 @@ l8:
 
 		/* C6.2.184 MOV (to/from SP) p1089
 		   C6.2.188 MOV (register) p1096 */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((srcReg == SP)
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((srcReg == SP)
  || (destReg == SP)
 		? ((0x91000000U) + ((((usqInt)(srcReg) << 5)))) + destReg
 		: (((0xAA000000U) + ((((usqInt)(srcReg) << 16)))) + ((((usqInt)(XZR) << 5)))) + destReg));
@@ -5387,14 +5429,14 @@ l8:
 
 	case MoveRRd:
 		/* begin concretizeMoveRRd */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x9E670000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x9E670000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
 
 	case MoveRdR:
 		/* begin concretizeMoveRdR */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x9E660000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x9E660000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5410,7 +5452,7 @@ l8:
 				return emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 3, VarBaseReg, destReg, srcAddr - (varBaseAddress), 0, 0);
 			}
 			instrOffset = emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 3, VarBaseReg, RISCTempReg, srcAddr - (varBaseAddress), 0, 0);
-			((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
 			return instrOffset + 4;
 		}
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, srcAddr, RISCTempReg, 0);
@@ -5418,7 +5460,7 @@ l8:
 			return emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 3, RISCTempReg, destReg, 0, 0, instrOffset);
 		}
 		instrOffset = emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 3, RISCTempReg, RISCTempReg, 0, 0, instrOffset);
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
 		return instrOffset + 4;
 
 	case MoveRAw:
@@ -5429,20 +5471,20 @@ l8:
 		/* str srcReg, [VarBaseReg, #offset] except that this is illegal for srcReg = SP/X31 */
 		if (((destAddr >= ((varBaseAddress) - (0x100))) && (destAddr <= (((varBaseAddress) + (0x1000)) - 1)))) {
 			if (srcReg != SP) {
-				((self_in_CogARMv8Compiler->machineCode))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
+				(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
 				return 4;
 			}
-			((self_in_CogARMv8Compiler->machineCode))[0] = (movernrd(self_in_CogARMv8Compiler, srcReg, RISCTempReg));
-			((self_in_CogARMv8Compiler->machineCode))[1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, VarBaseReg, RISCTempReg, destAddr - (varBaseAddress), 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (movernrd(self_in_CogARMv8Compiler, srcReg, RISCTempReg));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, VarBaseReg, RISCTempReg, destAddr - (varBaseAddress), 0));
 			return 8;
 		}
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, destAddr, RISCTempReg, 0);
 		if (SP != srcReg) {
-			((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, RISCTempReg, srcReg, 0, 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, RISCTempReg, srcReg, 0, 0));
 			return instrOffset + 4;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, srcReg, CArg1Reg));
-		((self_in_CogARMv8Compiler->machineCode))[(instrOffset / 4) + 1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, RISCTempReg, CArg1Reg, 0, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, srcReg, CArg1Reg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[(instrOffset / 4) + 1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 3, RISCTempReg, CArg1Reg, 0, 0));
 		return instrOffset + 8;
 
 	case MoveAwRR:
@@ -5463,12 +5505,12 @@ l8:
 		if (reg2 == SP) {
 			reg2 = RISCTempReg;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xA9400000U) + ((((usqInt)(((pairAddress - (varBaseAddress)) / 8)) << 15)))) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(VarBaseReg) << 5)))) + reg1);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xA9400000U) + ((((usqInt)(((pairAddress - (varBaseAddress)) / 8)) << 15)))) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(VarBaseReg) << 5)))) + reg1);
 		if ((reg1 != RISCTempReg)
 		 && (reg2 != RISCTempReg)) {
 			return 4;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[1] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, SP));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, SP));
 		return 8;
 
 	case MoveRRAw:
@@ -5491,13 +5533,13 @@ l8:
 		}
 		if ((reg1 == RISCTempReg)
 		 || (reg2 == RISCTempReg)) {
-			((self_in_CogARMv8Compiler->machineCode))[0] = (movernrd(self_in_CogARMv8Compiler, SP, RISCTempReg));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (movernrd(self_in_CogARMv8Compiler, SP, RISCTempReg));
 			offset = 1;
 		}
 		else {
 			offset = 0;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[offset] = (((((0xA9000000U) + ((((usqInt)(((pairAddress - (varBaseAddress)) / 8)) << 15)))) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(VarBaseReg) << 5)))) + reg1);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offset] = (((((0xA9000000U) + ((((usqInt)(((pairAddress - (varBaseAddress)) / 8)) << 15)))) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(VarBaseReg) << 5)))) + reg1);
 
 		/* cogit processor
 		   disassembleInstructionAt: 0 In: machineCode object;
@@ -5515,7 +5557,7 @@ l8:
 				return emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 2, VarBaseReg, destReg, srcAddr - (varBaseAddress), 0, 0);
 			}
 			instrOffset = emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 2, VarBaseReg, RISCTempReg, srcAddr - (varBaseAddress), 0, 0);
-			((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
 			return instrOffset + 4;
 		}
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, srcAddr, RISCTempReg, 0);
@@ -5523,7 +5565,7 @@ l8:
 			return emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 2, RISCTempReg, destReg, 0, 0, instrOffset);
 		}
 		instrOffset = emitLdrnrtimmshiftBy12at(self_in_CogARMv8Compiler, 2, RISCTempReg, RISCTempReg, 0, 0, instrOffset);
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, RISCTempReg, destReg));
 		return instrOffset + 4;
 
 	case MoveRA32:
@@ -5534,20 +5576,20 @@ l8:
 		/* str srcReg, [VarBaseReg, #offset] except that this is illegal for srcReg = SP/X31 */
 		if (((destAddr >= ((varBaseAddress) - (0x100))) && (destAddr <= (((varBaseAddress) + (0x1000)) - 1)))) {
 			if (srcReg != SP) {
-				((self_in_CogARMv8Compiler->machineCode))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
+				(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
 				return 4;
 			}
-			((self_in_CogARMv8Compiler->machineCode))[0] = (movernrd(self_in_CogARMv8Compiler, srcReg, RISCTempReg));
-			((self_in_CogARMv8Compiler->machineCode))[1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, VarBaseReg, RISCTempReg, destAddr - (varBaseAddress), 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (movernrd(self_in_CogARMv8Compiler, srcReg, RISCTempReg));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, VarBaseReg, RISCTempReg, destAddr - (varBaseAddress), 0));
 			return 8;
 		}
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, destAddr, RISCTempReg, 0);
 		if (SP != srcReg) {
-			((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, RISCTempReg, srcReg, 0, 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, RISCTempReg, srcReg, 0, 0));
 			return instrOffset + 4;
 		}
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, srcReg, CArg1Reg));
-		((self_in_CogARMv8Compiler->machineCode))[(instrOffset / 4) + 1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, RISCTempReg, CArg1Reg, 0, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (movernrd(self_in_CogARMv8Compiler, srcReg, CArg1Reg));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[(instrOffset / 4) + 1] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 2, RISCTempReg, CArg1Reg, 0, 0));
 		return instrOffset + 8;
 
 	case MoveAbR:
@@ -5569,11 +5611,11 @@ l8:
 		destAddr = ((self_in_CogARMv8Compiler->operands))[1];
 		assert(!((SP == srcReg)));
 		if (((destAddr >= ((varBaseAddress) - (0x100))) && (destAddr <= (((varBaseAddress) + (0x1000)) - 1)))) {
-			((self_in_CogARMv8Compiler->machineCode))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 0, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 0, VarBaseReg, srcReg, destAddr - (varBaseAddress), 0));
 			return 4;
 		}
 		instrOffset = emitMoveCwintoRat(self_in_CogARMv8Compiler, destAddr, RISCTempReg, 0);
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 0, RISCTempReg, srcReg, 0, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = (strnrtimmshiftBy12(self_in_CogARMv8Compiler, 0, RISCTempReg, srcReg, 0, 0));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return instrOffset + 4;
@@ -5632,7 +5674,7 @@ l8:
 		baseReg = ((self_in_CogARMv8Compiler->operands))[1];
 		rd = ((self_in_CogARMv8Compiler->operands))[2];
 		assert((!(offset & 7)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xFD400000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + rd);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xFD400000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + rd);
 
 		/* 10 - 3
 		   cogit processor disassembleInstructionAt: 0 In: machineCode object */
@@ -5644,7 +5686,7 @@ l8:
 		offset = ((self_in_CogARMv8Compiler->operands))[1];
 		baseReg = ((self_in_CogARMv8Compiler->operands))[2];
 		assert((!(offset & 7)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xFD000000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + rd);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xFD000000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + rd);
 
 		/* 10 - 3
 		   cogit processor disassembleInstructionAt: 0 In: machineCode object */
@@ -5654,7 +5696,7 @@ l8:
 		/* begin concretizePopR */
 		reg = ((self_in_CogARMv8Compiler->operands))[0];
 		assert(!((SP == reg)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((4164977664U) + ((((usqInt)(SPReg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((4164977664U) + ((((usqInt)(SPReg) << 5)))) + reg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5663,7 +5705,7 @@ l8:
 		/* begin concretizePushR */
 		reg = ((self_in_CogARMv8Compiler->operands))[0];
 		assert(!((SP == reg)));
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + reg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + reg);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5674,7 +5716,7 @@ l8:
 		reg2 = ((self_in_CogARMv8Compiler->operands))[1];
 
 		/* Post-index */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xA8C10000U) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(SP) << 5)))) + reg1);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xA8C10000U) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(SP) << 5)))) + reg1);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5685,7 +5727,7 @@ l8:
 		reg2 = ((self_in_CogARMv8Compiler->operands))[1];
 
 		/* Pre-index */
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xA9BF0000U) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(SP) << 5)))) + reg1);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xA9BF0000U) + ((((usqInt)(reg2) << 10)))) + ((((usqInt)(SP) << 5)))) + reg1);
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5696,7 +5738,7 @@ l8:
 		instrBytes = concretizeMoveCqR(self_in_CogARMv8Compiler);
 
 		/* C6.2.273	STR (immediate)	Pre-index	C6-1239 */
-		((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + RISCTempReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + RISCTempReg);
 		return instrBytes + 4;
 
 	case PushCw:
@@ -5704,7 +5746,7 @@ l8:
 		instrBytes = emitMoveCwintoRat(self_in_CogARMv8Compiler, ((self_in_CogARMv8Compiler->operands))[0], RISCTempReg, 0);
 
 		/* C6.2.273	STR (immediate)	Pre-index	C6-1239 */
-		((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + RISCTempReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = (((((0xF8000000U) + ((((usqInt)((-8 & (0x1FF))) << 12)))) + (0xC00)) + ((((usqInt)(SPReg) << 5)))) + RISCTempReg);
 		return instrBytes + 4;
 
 	case PrefetchAw:
@@ -5715,27 +5757,27 @@ l8:
 				error("shouldBeImplemented");
 				return 4;
 			}
-			((self_in_CogARMv8Compiler->machineCode))[0] = (prnimmshiftBy12(self_in_CogARMv8Compiler, VarBaseReg, srcAddr - (varBaseAddress), 0));
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (prnimmshiftBy12(self_in_CogARMv8Compiler, VarBaseReg, srcAddr - (varBaseAddress), 0));
 			return 4;
 		}
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		asserta((emitMoveCwintoRat(self_in_CogARMv8Compiler, srcAddr, RISCTempReg, 0)) == 4);
-		((self_in_CogARMv8Compiler->machineCode))[1] = (prnimmshiftBy12(self_in_CogARMv8Compiler, RISCTempReg, 0, 0));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = (prnimmshiftBy12(self_in_CogARMv8Compiler, RISCTempReg, 0, 0));
 
 		/* cogit processor disassembleInstructionAt: 4 In: machineCode object */
 		return 8;
 
 	case ConvertRRd:
 		/* begin concretizeConvertRRd */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x9E620000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x9E620000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
 
 	case ConvertRdR:
 		/* begin concretizeConvertRdR */
-		((self_in_CogARMv8Compiler->machineCode))[0] = (((0x9E780000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = (((0x9E780000U) + ((((usqInt)((((self_in_CogARMv8Compiler->operands))[0])) << 5)))) + (((self_in_CogARMv8Compiler->operands))[1]));
 
 		/* cogit processor disassembleInstructionAt: 0 In: machineCode object */
 		return 4;
@@ -5815,7 +5857,7 @@ emitLdfprnrtimmshiftBy12at(AbstractInstruction *self_in_CogARMv8Compiler, sqInt 
 
 	if (((offset % 8) == 0)
 	 && ((((offset / 8) >= 0) && ((offset / 8) <= (0xFFF))))) {
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = ((((0xFD400000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + targetDPReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = ((((0xFD400000U) + ((((usqInt)(offset) << 7)))) + ((((usqInt)(baseReg) << 5)))) + targetDPReg);
 
 		/* 10 - 3 */
 		return instrOffset + 4;
@@ -5826,7 +5868,7 @@ emitLdfprnrtimmshiftBy12at(AbstractInstruction *self_in_CogARMv8Compiler, sqInt 
 	instrBytes = emitMoveCwintoRat(self_in_CogARMv8Compiler, offset, RISCTempReg, instrOffset);
 
 	/* C7.2.186	LDR (register, SIMD&FP)	C7-1806 */
-	((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = ((((((0xFC600000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + targetDPReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = ((((((0xFC600000U) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + targetDPReg);
 	return instrBytes + 4;
 }
 
@@ -5853,18 +5895,18 @@ emitLdrnrtimmshiftBy12at(AbstractInstruction *self_in_CogARMv8Compiler, sqInt un
 	/* Unsigned offset, C6-977 */
 	if (((offset % unitSize) == 0)
 	 && ((((offset / unitSize) >= 0) && ((offset / unitSize) <= (0xFFF))))) {
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x39400000)) + ((((usqInt)(offset) << (10 - unitSizeLog2MinusOne))))) + ((((usqInt)(baseReg) << 5)))) + targetReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x39400000)) + ((((usqInt)(offset) << (10 - unitSizeLog2MinusOne))))) + ((((usqInt)(baseReg) << 5)))) + targetReg);
 		return instrOffset + 4;
 	}
 	if (((offset >= -256) && (offset <= 0xFF))) {
-		((self_in_CogARMv8Compiler->machineCode))[instrOffset / 4] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38400000)) + (((offset & 0x1FF) << 12))) + ((((usqInt)(baseReg) << 5)))) + targetReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[instrOffset / 4] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38400000)) + (((offset & 0x1FF) << 12))) + ((((usqInt)(baseReg) << 5)))) + targetReg);
 		return instrOffset + 4;
 	}
 
 	/* Unscaled signed 9-bit offset, C6-1058
 	   C6.2.132	LDR (register)	C6-981 */
 	instrBytes = emitMoveCwintoRat(self_in_CogARMv8Compiler, offset, RISCTempReg, instrOffset);
-	((self_in_CogARMv8Compiler->machineCode))[instrBytes / 4] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38600000)) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + targetReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[instrBytes / 4] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38600000)) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + targetReg);
 	return instrBytes + 4;
 }
 
@@ -5889,7 +5931,7 @@ emitMoveCwintoRat(AbstractInstruction *self_in_CogARMv8Compiler, usqInt constant
 	constant = (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) constantArg)))
 		 || ((((AbstractInstruction *) constantArg)) == (methodLabel))
-				? ((((AbstractInstruction *) constantArg))->address)
+				? codeAddressForOffset(((((AbstractInstruction *) constantArg))->addressOffset))
 				: constantArg);
 	if (((((self_in_CogARMv8Compiler->opcode)) == MoveCwR)
 	 || (((self_in_CogARMv8Compiler->opcode)) == PushCw))
@@ -5898,22 +5940,22 @@ emitMoveCwintoRat(AbstractInstruction *self_in_CogARMv8Compiler, usqInt constant
 		(addressIsInInstructions(((AbstractInstruction *) constant)))
 	 || ((((AbstractInstruction *) constant)) == (methodLabel)))
 	 || (/* addressIsInCurrentCompilation: */
-		((((usqInt)constant)) >= ((methodLabel->address)))
-	 && ((((usqInt)constant)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))))) {
+		((((usqInt)constant)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)constant)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))))) {
 		/* C6.2.10 	ADR	C6-773 */
 		unaligned = constant & 3;
 		aligned = constant - unaligned;
-		pcRelativeOffset = ((aligned - (((sqInt)((self_in_CogARMv8Compiler->address)))))) >> 2;
+		pcRelativeOffset = ((aligned - (((sqInt)(codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))))))) >> 2;
 		assert(((pcRelativeOffset >= (-262144)) && (pcRelativeOffset <= (0x3FFFF))));
-		((self_in_CogARMv8Compiler->machineCode))[offsetBytes / 4] = (((((unaligned << 29)) + (0x10000000)) + ((((usqInt)((pcRelativeOffset & (0x7FFFF))) << 5)))) + destReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[offsetBytes / 4] = (((((unaligned << 29)) + (0x10000000)) + ((((usqInt)((pcRelativeOffset & (0x7FFFF))) << 5)))) + destReg);
 		return offsetBytes + 4;
 	}
-	assert(addressIsInCurrentCompilation((((self_in_CogARMv8Compiler->dependent))->address)));
-	assert((((((self_in_CogARMv8Compiler->dependent))->address)) % 4) == 0);
-	assert((SQABS((((usqInt)((((self_in_CogARMv8Compiler->dependent))->address)))) - (((usqInt)(((self_in_CogARMv8Compiler->address)) + offsetBytes))))) < (0x100000));
+	assert(addressIsInCurrentCompilation(address((self_in_CogARMv8Compiler->dependent))));
+	assert(((address((self_in_CogARMv8Compiler->dependent))) % 4) == 0);
+	assert((SQABS((((usqInt)(address((self_in_CogARMv8Compiler->dependent))))) - (((usqInt)((address(self_in_CogARMv8Compiler)) + offsetBytes))))) < (0x100000));
 
 	/* C6.2.131	LDR (literal)		C6-979 */
-	((self_in_CogARMv8Compiler->machineCode))[offsetBytes / 4] = (((0x58000000) + ((((usqInt)(((((((self_in_CogARMv8Compiler->dependent))->address)) - (((self_in_CogARMv8Compiler->address)) + offsetBytes)) & (0x1FFFFF))) << 3)))) + destReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[offsetBytes / 4] = (((0x58000000) + ((((usqInt)((((codeAddressForOffset((((self_in_CogARMv8Compiler->dependent))->addressOffset))) - ((codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset))) + offsetBytes)) & (0x1FFFFF))) << 3)))) + destReg);
 
 	/* 5 - 2 */
 	return offsetBytes + 4;
@@ -5938,11 +5980,11 @@ emitStrnrtimmshiftBy12(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unit
 	/* Unsigned offset, C6-1240 */
 	if (((offset % unitSize) == 0)
 	 && ((((offset / unitSize) >= 0) && ((offset / unitSize) <= (0xFFF))))) {
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x39000000)) + ((((usqInt)(offset) << (10 - unitSizeLog2MinusOne))))) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x39000000)) + ((((usqInt)(offset) << (10 - unitSizeLog2MinusOne))))) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
 		return 4;
 	}
 	if (((offset >= -256) && (offset <= 0xFF))) {
-		((self_in_CogARMv8Compiler->machineCode))[0] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38000000)) + (((offset & 0x1FF) << 12))) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38000000)) + (((offset & 0x1FF) << 12))) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
 		return 4;
 	}
 
@@ -5956,26 +5998,26 @@ emitStrnrtimmshiftBy12(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unit
 		/* begin isPossiblyShiftableImm12:ifTrue:ifFalse: */
 		if (((offset >= 0) && (offset <= (0xFFF)))) {
 			/* C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xB1000000U) + ((((usqInt)(offset) << 10)))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xB1000000U) + ((((usqInt)(offset) << 10)))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
 			goto l2;
 		}
 		if (((!(offset & (0xFFF))))
 		 && (((((offset) >> 12) >= 0) && (((offset) >> 12) <= (0xFFF))))) {
 			/* C6.2.8		ADDS (immediate)	C6-769 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xB1000000U) + ((((usqInt)(offset)) >> 2) + (0x400000))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xB1000000U) + ((((usqInt)(offset)) >> 2) + (0x400000))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
 			goto l2;
 		}
 
 		/* begin isPossiblyShiftableImm12:ifTrue:ifFalse: */
 		if ((((-offset) >= 0) && ((-offset) <= (0xFFF)))) {
 			/* C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xF1000000U) + ((((usqInt)((-offset)) << 10)))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xF1000000U) + ((((usqInt)((-offset)) << 10)))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
 			goto l1;
 		}
 		if (((!((-offset) & (0xFFF))))
 		 && ((((((-offset)) >> 12) >= 0) && ((((-offset)) >> 12) <= (0xFFF))))) {
 			/* C6.2.314		SUBS (immediate)	C6-1321 */
-			((self_in_CogARMv8Compiler->machineCode))[0] = ((((0xF1000000U) + ((((usqInt)((-offset))) >> 2) + (0x400000))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
+			(machineCodeBuffer(self_in_CogARMv8Compiler))[0] = ((((0xF1000000U) + ((((usqInt)((-offset))) >> 2) + (0x400000))) + ((((usqInt)(baseReg) << 5)))) + RISCTempReg);
 			goto l1;
 		}
 		error("cannot happen");
@@ -5983,7 +6025,7 @@ emitStrnrtimmshiftBy12(AbstractInstruction *self_in_CogARMv8Compiler, sqInt unit
 l1:
 		/* end isPossiblyShiftableImm12:ifTrue:ifFalse: */
 l2:
-		((self_in_CogARMv8Compiler->machineCode))[1] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(RISCTempReg) << 5)))) + sourceReg);
+		(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(XZR) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(RISCTempReg) << 5)))) + sourceReg);
 		return 8;
 	}
 
@@ -5991,7 +6033,7 @@ l2:
 	   cogit processor disassembleInstructionAt: 4 In: machineCode object */
 	instrBytes = emitMoveCwintoRat(self_in_CogARMv8Compiler, offset, RISCTempReg, 0);
 	assert(instrBytes == 4);
-	((self_in_CogARMv8Compiler->machineCode))[1] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
+	(machineCodeBuffer(self_in_CogARMv8Compiler))[1] = ((((((((((usqInt)(unitSizeLog2MinusOne) << 30))) + (0x38200000)) + ((((usqInt)(RISCTempReg) << 16)))) + ((((usqInt)(UXTX) << 13)))) + (0x800)) + ((((usqInt)(baseReg) << 5)))) + sourceReg);
 	return 8;
 }
 
@@ -7513,9 +7555,13 @@ static NoDbgRegParms unsigned char
 sizePCDependentInstructionAt(AbstractInstruction *self_in_CogARMv8Compiler, sqInt eventualAbsoluteAddress)
 {
     sqInt alignment;
+    AbstractInstruction *self_in_CogAbstractInstruction;
+    sqInt theAddress;
 
 	if (((self_in_CogARMv8Compiler->opcode)) == AlignmentNops) {
-		(self_in_CogARMv8Compiler->address = eventualAbsoluteAddress);
+		/* begin address: */
+		(self_in_CogARMv8Compiler->addressOffset) = codeOffsetForAddress(eventualAbsoluteAddress);
+		assert((address(self_in_CogARMv8Compiler)) == eventualAbsoluteAddress);
 		alignment = ((self_in_CogARMv8Compiler->operands))[0];
 		return ((self_in_CogARMv8Compiler->machineCodeSize) = ((eventualAbsoluteAddress + (alignment - 1)) & (-alignment)) - eventualAbsoluteAddress);
 	}
@@ -7527,11 +7573,19 @@ sizePCDependentInstructionAt(AbstractInstruction *self_in_CogARMv8Compiler, sqIn
 	if (((((self_in_CogARMv8Compiler->opcode)) >= FirstJump) && (((self_in_CogARMv8Compiler->opcode)) <= LastJump))) {
 		resolveJumpTarget(self_in_CogARMv8Compiler);
 	}
-	(self_in_CogARMv8Compiler->address = eventualAbsoluteAddress);
+
+	/* begin address: */
+	(self_in_CogARMv8Compiler->addressOffset) = codeOffsetForAddress(eventualAbsoluteAddress);
+	assert((address(self_in_CogARMv8Compiler)) == eventualAbsoluteAddress);
 	if ((((self_in_CogARMv8Compiler->dependent)))
 	 && (((((self_in_CogARMv8Compiler->dependent))->opcode)) == Literal)) {
 		if (((self_in_CogARMv8Compiler->opcode)) == Literal) {
-			(((self_in_CogARMv8Compiler->dependent))->address = (self_in_CogARMv8Compiler->address));
+			self_in_CogAbstractInstruction = (self_in_CogARMv8Compiler->dependent);
+			theAddress = codeAddressForOffset((self_in_CogARMv8Compiler->addressOffset));
+
+			/* begin address: */
+			(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(theAddress);
+			assert((address(self_in_CogAbstractInstruction)) == theAddress);
 		}
 		if (((self_in_CogARMv8Compiler->annotation)) == (getIsObjectReference())) {
 			(((self_in_CogARMv8Compiler->dependent))->annotation = (self_in_CogARMv8Compiler->annotation));
@@ -7810,8 +7864,8 @@ l2:
 			(addressIsInInstructions(((AbstractInstruction *) (((self_in_CogARMv8Compiler->operands))[0]))))
 		 || ((((AbstractInstruction *) (((self_in_CogARMv8Compiler->operands))[0]))) == (methodLabel)))
 		 || (/* addressIsInCurrentCompilation: */
-			((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) >= ((methodLabel->address)))
-		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))));
+			((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)(((self_in_CogARMv8Compiler->operands))[0]))) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))));
 
 	case MoveAwR:
 	case MoveA32R:
@@ -8066,8 +8120,8 @@ addCogMethodsToHeapMap(void)
 static NoDbgRegParms sqInt
 addressIsInCurrentCompilation(sqInt address)
 {
-	return ((((usqInt)address)) >= ((methodLabel->address)))
-	 && ((((usqInt)address)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))));
+	return ((((usqInt)address)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)address)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))));
 }
 
 	/* Cogit>>#addressIsInFixups: */
@@ -9632,7 +9686,10 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	(methodLabel->address = startAddress);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(startAddress);
+	assert((address(methodLabel)) == startAddress);
 	(methodLabel->dependent = null);
 
 	/* stack allocate the various collections so that they
@@ -9661,7 +9718,7 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 		ensureWritableCodeZoneAt(__LINE__);
 	}
 	mapSize = generateMapAtstart((startAddress + openPICSize) - 1, startAddress + cmNoCheckEntryOffset);
-	assert((((entry->address)) - startAddress) == cmEntryOffset);
+	assert(((address(entry)) - startAddress) == cmEntryOffset);
 	assert(((roundUpLength((sizeof(CogMethod)) + codeSize)) + (roundUpLength(mapSize))) <= openPICSize);
 	end = outputInstructionsAt(startAddress + (sizeof(CogMethod)));
 	pic = ((CogMethod *) ((((usqInt)startAddress)) + codeToDataDelta));
@@ -11003,9 +11060,9 @@ computeEntryOffsets(void)
 	compileEntry();
 	computeMaximumSizes();
 	generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	cmEntryOffset = ((entry->address)) - methodZoneBase;
-	cmNoCheckEntryOffset = ((noCheckEntry->address)) - methodZoneBase;
-	missOffset = (((sendMissCall->address)) + ((sendMissCall->machineCodeSize))) - methodZoneBase;
+	cmEntryOffset = (codeAddressForOffset((entry->addressOffset))) - methodZoneBase;
+	cmNoCheckEntryOffset = (codeAddressForOffset((noCheckEntry->addressOffset))) - methodZoneBase;
+	missOffset = ((codeAddressForOffset((sendMissCall->addressOffset))) + ((sendMissCall->machineCodeSize))) - methodZoneBase;
 	entryPointMask = BytesPerWord - 1;
 	while ((cmEntryOffset & entryPointMask) == (cmNoCheckEntryOffset & entryPointMask)) {
 		entryPointMask = (entryPointMask + entryPointMask) + 1;
@@ -11050,8 +11107,8 @@ computeFullBlockEntryOffsets(void)
 	compileFullBlockEntry();
 	computeMaximumSizes();
 	generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	cbEntryOffset = ((fullBlockEntry->address)) - methodZoneBase;
-	cbNoSwitchEntryOffset = ((fullBlockNoContextSwitchEntry->address)) - methodZoneBase;
+	cbEntryOffset = (codeAddressForOffset((fullBlockEntry->addressOffset))) - methodZoneBase;
+	cbNoSwitchEntryOffset = (codeAddressForOffset((fullBlockNoContextSwitchEntry->addressOffset))) - methodZoneBase;
 }
 
 
@@ -11098,7 +11155,10 @@ computeGoodVarBaseAddress(void)
 	eliminates jump fixups.
 	It hence assigns the maximum address an instruction will occur at which
 	allows the next
-	pass to conservatively size jumps. */
+	pass to conservatively size jumps. Virtual addresses start at codeBase
+	rather than 0
+	because in C instruction addresses are held as offsets from codeBase (see
+	codeOffsetForAddress:); only differences between virtual addresses matter. */
 
 	/* Cogit>>#computeMaximumSizes */
 static void
@@ -11106,14 +11166,17 @@ computeMaximumSizes(void)
 {
     AbstractInstruction *abstractInstruction;
     sqInt i;
-    sqInt relativeAddress;
+    usqInt relativeAddress;
 
 	dumpLiterals(0);
-	relativeAddress = 0;
+	relativeAddress = codeBase;
 	for (i = 0; i < opcodeIndex; i += 1) {
 		maybeBreakGeneratingInstructionWithIndex(i);
 		abstractInstruction = abstractInstructionAt(i);
-		(abstractInstruction->address = relativeAddress);
+
+		/* begin address: */
+		(abstractInstruction->addressOffset) = codeOffsetForAddress(relativeAddress);
+		assert((address(abstractInstruction)) == relativeAddress);
 		(abstractInstruction->maxSize = computeMaximumSize(abstractInstruction));
 		relativeAddress += (abstractInstruction->maxSize);
 	}
@@ -11826,24 +11889,24 @@ fillInBlockHeadersAt(sqInt startAddress)
 		return null;
 	}
 	if (blockNoContextSwitchOffset) {
-		assert(blockNoContextSwitchOffset == (((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address))));
+		assert(blockNoContextSwitchOffset == ((address(blockEntryLabel)) - (address(blockEntryNoContextSwitch))));
 	}
 	else {
-		blockNoContextSwitchOffset = ((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address));
+		blockNoContextSwitchOffset = (codeAddressForOffset((blockEntryLabel->addressOffset))) - (codeAddressForOffset((blockEntryNoContextSwitch->addressOffset)));
 	}
 	for (i = 0; i < blockCount; i += 1) {
 		blockStart = blockStartAt(i);
-		aCogMethodOrInteger = (((blockStart->fakeHeader))->address);
+		aCogMethodOrInteger = codeAddressForOffset((((blockStart->fakeHeader))->addressOffset));
 
 		/* begin writableBlockMethodFor: */
 		blockHeader = ((CogBlockMethod *) ((((usqInt)aCogMethodOrInteger)) + codeToDataDelta));
-		(blockHeader->homeOffset = ((((blockStart->fakeHeader))->address)) - startAddress);
+		(blockHeader->homeOffset = (codeAddressForOffset((((blockStart->fakeHeader))->addressOffset))) - startAddress);
 		(blockHeader->startpc = (blockStart->startpc));
 		(blockHeader->cmType = CMBlock);
 		(blockHeader->cmNumArgs = (blockStart->numArgs));
 		(blockHeader->cbUsesInstVars = (blockStart->hasInstVarRef));
 		(blockHeader->stackCheckOffset = ((blockStart->stackCheckLabel)
-				? ((((blockStart->stackCheckLabel))->address)) - ((((blockStart->fakeHeader))->address))
+				? (codeAddressForOffset((((blockStart->stackCheckLabel))->addressOffset))) - (codeAddressForOffset((((blockStart->fakeHeader))->addressOffset)))
 				: 0));
 	}
 	return 0;
@@ -11893,18 +11956,18 @@ fillInMethodHeadersizeselector(CogMethod *method, sqInt size, sqInt selector)
 	(method->cpicHasMNUCaseOrCMIsFullBlock) = 0;
 	(method->cmUsesPenultimateLit = maxLitIndex >= ((literalCountOfMethodHeader(methodHeader)) - 2));
 	(method->blockEntryOffset = (blockEntryLabel
-			? ((blockEntryLabel->address)) - actualMethodLocation
+			? (codeAddressForOffset((blockEntryLabel->addressOffset))) - actualMethodLocation
 			: 0));
 
 	/* This can be an error check since a large stackCheckOffset is caused by compiling
 	   a machine-code primitive, and hence depends on the Cogit, not the input method. */
 	if (needsFrame) {
-		if (!((((stackCheckLabel->address)) - actualMethodLocation) <= MaxStackCheckOffset)) {
+		if (!(((codeAddressForOffset((stackCheckLabel->addressOffset))) - actualMethodLocation) <= MaxStackCheckOffset)) {
 			error("too much code for stack check offset");
 		}
 	}
 	(method->stackCheckOffset = (needsFrame
-			? ((stackCheckLabel->address)) - actualMethodLocation
+			? (codeAddressForOffset((stackCheckLabel->addressOffset))) - actualMethodLocation
 			: 0));
 	assert((callTargetFromReturnAddress(backEnd, actualMethodLocation + missOffset)) == (methodAbortTrampolineFor((method->cmNumArgs))));
 	assert(size == (roundUpLength(size)));
@@ -12039,8 +12102,8 @@ static sqInt
 firstPrototypeMethodOop(void)
 {
 	return (/* addressIsInCurrentCompilation: */
-		((((usqInt)0x5EAF00D)) >= ((methodLabel->address)))
-	 && ((((usqInt)0x5EAF00D)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))
+		((((usqInt)0x5EAF00D)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)0x5EAF00D)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))
 			? 0xCA7F00D
 			: 0x5EAF00D);
 }
@@ -12599,7 +12662,10 @@ generateClosedPICPrototype(void)
 	firstOpcodeIndex = 0x10000;
 	nextLiteralIndex = (lastDumpedLiteralIndex = 0);
 	labelCounter = 0;
-	(methodLabel->address = methodZoneBase);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneBase);
+	assert((address(methodLabel)) == methodZoneBase);
 	(methodLabel->dependent = null);
 
 	/* begin compileClosedPICPrototype */
@@ -12644,9 +12710,11 @@ generateClosedPICPrototype(void)
 			endCPICCase1 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 	}
+	wordConstant = codeAddressForOffset((methodLabel->addressOffset));
 
-	/* #MoveCw:R: #gen:literal:operand: */
-	checkLiteralforInstruction((methodLabel->address), genoperandoperand(MoveCwR, (methodLabel->address), ClassReg));
+	/* begin MoveCw:R: */
+	/* gen:literal:operand: */
+	checkLiteralforInstruction(wordConstant, genoperandoperand(MoveCwR, wordConstant, ClassReg));
 	jumpTarget = cPICMissTrampolineFor(numArgs);
 
 	/* begin JumpLong: */
@@ -12658,16 +12726,16 @@ generateClosedPICPrototype(void)
 	closedPICSize = (sizeof(CogMethod)) + (generateInstructionsAt(methodZoneBase + (sizeof(CogMethod))));
 	endAddress = outputInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
 	assert((methodZoneBase + closedPICSize) == endAddress);
-	firstCPICCaseOffset = ((endCPICCase0->address)) - methodZoneBase;
-	cPICEndOfCodeOffset = ((cPICEndOfCodeLabel->address)) - methodZoneBase;
-	cPICCaseSize = ((endCPICCase1->address)) - ((endCPICCase0->address));
+	firstCPICCaseOffset = (codeAddressForOffset((endCPICCase0->addressOffset))) - methodZoneBase;
+	cPICEndOfCodeOffset = (codeAddressForOffset((cPICEndOfCodeLabel->addressOffset))) - methodZoneBase;
+	cPICCaseSize = (codeAddressForOffset((endCPICCase1->addressOffset))) - (codeAddressForOffset((endCPICCase0->addressOffset)));
 	cPICEndSize = closedPICSize - (((MaxCPICCases - 1) * cPICCaseSize) + firstCPICCaseOffset);
 	closedPICSize = roundUpToMethodAlignment(backEnd, closedPICSize);
-	assert(((picInterpretAbort->address)) == (((methodLabel->address)) + (picInterpretAbortOffset())));
+	assert((address(picInterpretAbort)) == ((address(methodLabel)) + (picInterpretAbortOffset())));
 	assert((expectedClosedPICPrototype(cPIC)) == 0);
 
 	/* tpr this is a little tiresome but after any assert checking we need to 0 out the case0 objRef rather than leaving 16r5EAF00D lying around */
-	storeLiteralbeforeFollowingAddress(backEnd, 0, ((endCPICCase0->address)) - (jumpLongByteSize(backEnd)));
+	storeLiteralbeforeFollowingAddress(backEnd, 0, (codeAddressForOffset((endCPICCase0->addressOffset))) - (jumpLongByteSize(backEnd)));
 
 	/* finish up */
 	recordGeneratedRunTimeaddress("cPICPrototype", methodZoneBase);
@@ -12699,14 +12767,19 @@ generateCogFullBlock(void)
     CogMethod *method;
     sqInt result;
     usqInt startAddress;
+    sqInt theAddress;
     int totalSize;
 
 	headerSize = sizeof(CogMethod);
-	(methodLabel->address = freeStart());
+	theAddress = freeStart();
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(theAddress);
+	assert((address(methodLabel)) == theAddress);
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
-	codeSize = generateInstructionsAt(((methodLabel->address)) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), ((methodLabel->address)) + cbNoSwitchEntryOffset);
+	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
+	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cbNoSwitchEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -12715,8 +12788,8 @@ generateCogFullBlock(void)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	assert((startAddress + cbEntryOffset) == ((fullBlockEntry->address)));
-	assert((startAddress + cbNoSwitchEntryOffset) == ((fullBlockNoContextSwitchEntry->address)));
+	assert((startAddress + cbEntryOffset) == (address(fullBlockEntry)));
+	assert((startAddress + cbNoSwitchEntryOffset) == (address(fullBlockNoContextSwitchEntry)));
 	result = outputInstructionsAt(startAddress + headerSize);
 	assert(((startAddress + headerSize) + codeSize) == result);
 	padIfPossibleWithStopsFromto(backEnd, result, ((startAddress + totalSize) - mapSize) - 1);
@@ -12766,14 +12839,19 @@ generateCogMethod(sqInt selector)
     sqInt mapSize;
     sqInt result;
     usqInt startAddress;
+    sqInt theAddress;
     int totalSize;
 
 	headerSize = sizeof(CogMethod);
-	(methodLabel->address = freeStart());
+	theAddress = freeStart();
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(theAddress);
+	assert((address(methodLabel)) == theAddress);
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
-	codeSize = generateInstructionsAt(((methodLabel->address)) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), ((methodLabel->address)) + cmNoCheckEntryOffset);
+	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
+	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cmNoCheckEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -12782,8 +12860,8 @@ generateCogMethod(sqInt selector)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	assert((startAddress + cmEntryOffset) == ((entry->address)));
-	assert((startAddress + cmNoCheckEntryOffset) == ((noCheckEntry->address)));
+	assert((startAddress + cmEntryOffset) == (address(entry)));
+	assert((startAddress + cmNoCheckEntryOffset) == (address(noCheckEntry)));
 	result = outputInstructionsAt(startAddress + headerSize);
 	assert(((startAddress + headerSize) + codeSize) == result);
 	padIfPossibleWithStopsFromto(backEnd, result, ((startAddress + totalSize) - mapSize) - 1);
@@ -12852,8 +12930,8 @@ generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
 			 || (((instruction->opcode)) == Literal));
 			mcpc = /* mapEntryAddress */
 					(((instruction->opcode)) == Literal
-						? (instruction->address)
-						: ((instruction->address)) + ((instruction->machineCodeSize)));
+						? codeAddressForOffset((instruction->addressOffset))
+						: (codeAddressForOffset((instruction->addressOffset))) + ((instruction->machineCodeSize)));
 			while (((delta = (mcpc - location) / 4 /* codeGranularity */)) > DisplacementMask) {
 				maxDelta = (((((delta < MaxX2NDisplacement) ? delta : MaxX2NDisplacement)) | DisplacementMask) - DisplacementMask);
 				assert((((usqInt)(maxDelta)) >> AnnotationShift) <= DisplacementMask);
@@ -12919,7 +12997,10 @@ generateOpenPICPrototype(void)
 	firstOpcodeIndex = 0x10000;
 	nextLiteralIndex = (lastDumpedLiteralIndex = 0);
 	labelCounter = 0;
-	(methodLabel->address = methodZoneBase);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneBase);
+	assert((address(methodLabel)) == methodZoneBase);
 	(methodLabel->dependent = null);
 
 	/* Need a real selector here so that the map accomodates the annotations for the selector.
@@ -13058,7 +13139,10 @@ generateTrampolines(void)
     usqIntptr_t opcodeSize;
 
 	methodZoneStart = methodZoneBase;
-	(methodLabel->address = methodZoneStart);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneStart);
+	assert((address(methodLabel)) == methodZoneStart);
 
 	/* begin allocateOpcodes:bytecodes: */
 	numAbstractOpcodes = 80;
@@ -15882,7 +15966,7 @@ outputInstructionsAt(sqInt startAddress)
 	for (i = 0; i < opcodeIndex; i += 1) {
 		maybeBreakGeneratingInstructionWithIndex(i);
 		abstractInstruction = abstractInstructionAt(i);
-		assert(((abstractInstruction->address)) == absoluteAddress);
+		assert((address(abstractInstruction)) == absoluteAddress);
 
 		/* begin outputMachineCodeAt: */
 		for (j = 0; j < ((abstractInstruction->machineCodeSize)); j += 4) {
@@ -15906,7 +15990,10 @@ outputInstructionsForGeneratedRuntimeAt(sqInt startAddress)
     sqInt size;
 
 	computeMaximumSizes();
-	(methodLabel->address = startAddress);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(startAddress);
+	assert((address(methodLabel)) == startAddress);
 	size = generateInstructionsAt(startAddress);
 	endAddress = outputInstructionsAt(startAddress);
 	assert((startAddress + size) == endAddress);
@@ -16328,8 +16415,8 @@ recordRunTimeObjectReferences(void)
 			}
 			objectReferencesInRuntime[runtimeObjectRefIndex] = (((usqInt)(/* mapEntryAddress */
 	(((instruction->opcode)) == Literal
-		? (instruction->address)
-		: ((instruction->address)) + ((instruction->machineCodeSize))))));
+		? codeAddressForOffset((instruction->addressOffset))
+		: (codeAddressForOffset((instruction->addressOffset))) + ((instruction->machineCodeSize))))));
 			runtimeObjectRefIndex += 1;
 		}
 	}
@@ -16960,8 +17047,8 @@ static sqInt
 subsequentPrototypeMethodOop(void)
 {
 	return (/* addressIsInCurrentCompilation: */
-		((((usqInt)0xBADA550)) >= ((methodLabel->address)))
-	 && ((((usqInt)0xBADA550)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))
+		((((usqInt)0xBADA550)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)0xBADA550)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))
 			? 0xDEADEAD
 			: 0xBADA550);
 }
@@ -35622,8 +35709,8 @@ generateInstructionsAt(sqInt eventualAbsoluteAddress)
 		fixup = fixupAtIndex(j);
 		maybeBreakGeneratingInstructionWithIndex((fixup->instructionIndex));
 		abstractInstruction = abstractInstructionAt((fixup->instructionIndex));
-		maybeBreakGeneratingFromto((abstractInstruction->address), (((abstractInstruction->address)) + ((abstractInstruction->maxSize))) - 1);
-		concretizeAt(abstractInstruction, (abstractInstruction->address));
+		maybeBreakGeneratingFromto(codeAddressForOffset((abstractInstruction->addressOffset)), ((codeAddressForOffset((abstractInstruction->addressOffset))) + ((abstractInstruction->maxSize))) - 1);
+		concretizeAt(abstractInstruction, codeAddressForOffset((abstractInstruction->addressOffset)));
 	}
 	return absoluteAddress - eventualAbsoluteAddress;
 }

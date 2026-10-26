@@ -363,10 +363,12 @@ typedef struct _AbstractInstruction {
 	unsigned char	machineCodeSize;
 	unsigned char	maxSize;
 	unsigned char	annotation;
-	usqInt		operands[3];
-	usqInt	address;
+	int	addressOffset;
 	struct _AbstractInstruction *dependent;
-	unsigned char		machineCode[14];
+	union {
+		usqInt		operands[3];
+		unsigned char		machineCode[14];
+	};
  } AbstractInstruction;
 
 #define CogInLineLiteralsX64Compiler AbstractInstruction
@@ -469,6 +471,7 @@ typedef struct {
 #endif
 
 static NoDbgRegParms AbstractInstruction * addDependent(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstruction *anInstruction);
+static NoDbgRegParms usqInt address(AbstractInstruction *self_in_CogAbstractInstruction);
 static NoDbgRegParms sqInt availableFloatRegisterOrNoneFor(AbstractInstruction *self_in_CogAbstractInstruction, sqInt liveRegsMask);
 static NoDbgRegParms AbstractInstruction * cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstruction *existingLiteral);
 static NoDbgRegParms sqInt concretizeAt(AbstractInstruction *self_in_CogAbstractInstruction, sqInt actualAddress);
@@ -1064,7 +1067,7 @@ static NoDbgRegParms usqInt jumpLongTargetBeforeFollowingAddress(AbstractInstruc
 static NoDbgRegParms usqInt jumpTargetPCAt(AbstractInstruction *self_in_CogX64Compiler, sqInt pc);
 static NoDbgRegParms sqInt leafCallStackPointerDelta(AbstractInstruction *self_in_CogX64Compiler);
 static NoDbgRegParms sqInt loadPICLiteralByteSize(AbstractInstruction *self_in_CogX64Compiler);
-static NoDbgRegParms unsigned char machineCodeAt(AbstractInstruction *self_in_CogX64Compiler, sqInt anOffset);
+static NoDbgRegParms sqInt machineCodeAt(AbstractInstruction *self_in_CogX64Compiler, sqInt anOffset);
 static NoDbgRegParms sqInt machineCodeBytes(AbstractInstruction *self_in_CogX64Compiler);
 static NoDbgRegParms usqInt modRMRO(AbstractInstruction *self_in_CogX64Compiler, sqInt mod, sqInt regMode, sqInt regOpcode);
 static NoDbgRegParms sqInt numIntRegArgs(AbstractInstruction *self_in_CogX64Compiler);
@@ -2573,6 +2576,7 @@ static int labelCounter;
 #if IMMUTABILITY
 static sqInt ceStoreTrampolines[5];;
 #endif
+static AbstractInstruction concretizationScratch;
 sqInt blockNoContextSwitchOffset;
 sqInt cbEntryOffset;
 sqInt cbNoSwitchEntryOffset;
@@ -2615,6 +2619,7 @@ int traceFlags = 8 /* prim trace log on by default */;
 
 
 /*** Macros ***/
+#define machineCodeBuffer(instruction) (concretizationScratch.machineCode)
 #define roundUpToMethodAlignment(ignored,numBytes) ((numBytes) + 7 & -8)
 #define cPICNumCases stackCheckOffset
 #define cPICNumCasesHack hack hack hack i.e. the getter macro does all the work
@@ -2636,12 +2641,16 @@ int traceFlags = 8 /* prim trace log on by default */;
 #define ceCannotResumePC() ((usqInt)ceCannotResumeTrampoline)
 #define ceCheckForInterruptTrampoline() ceCheckForInterruptTrampoline
 #define ceReturnToInterpreterPC() ((usqInt)ceReturnToInterpreterTrampoline)
+#define codeAddressForOffset(offset) ((offset) ? codeBase - 1 + (sqInt)(offset) : 0)
 #define codeByteAtput(address,value) byteAtput((char *)(address) + codeToDataDelta, value)
 #define codeLong32Atput(address,value) long32Atput((char *)(address) + codeToDataDelta, value)
 #define codeLong64Atput(address,value) long64Atput((char *)(address) + codeToDataDelta, value)
 #define codeLongAtput(address,value) longAtput((char *)(address) + codeToDataDelta, value)
 #define codeMemcpy(dest,src,bytes) memcpy(dest,src,bytes)
 #define codeMemmove(dest,src,bytes) memmove((char *)(dest)+codeToDataDelta,src,bytes)
+#define codeOffsetForAddress(address) ((address) ? (int)((address) - (codeBase - 1)) : 0)
+#define concretizationBuffer() (concretizationScratch.machineCode)
+#define concretizationBufferSize() sizeof(concretizationScratch.machineCode)
 #define cr() putchar('\n')
 #if !defined(ensureExecutableCodeZoneAt)
 #define ensureExecutableCodeZoneAt(underscoreLine) 0
@@ -2735,6 +2744,18 @@ addDependent(AbstractInstruction *self_in_CogAbstractInstruction, AbstractInstru
 }
 
 
+/*	In C the address is held as a 32-bit offset from the code zone's base; see
+	Cogit>>codeAddressForOffset: 
+ */
+
+	/* CogAbstractInstruction>>#address */
+static NoDbgRegParms usqInt
+address(AbstractInstruction *self_in_CogAbstractInstruction)
+{
+	return codeAddressForOffset((self_in_CogAbstractInstruction->addressOffset));
+}
+
+
 /*	Answer an unused abstract register in the liveRegMask.
 	Subclasses with more registers can override to answer them. */
 
@@ -2778,7 +2799,7 @@ cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractIn
 {
 	assert((((existingLiteral->opcode)) == Literal)
 	 && ((!((self_in_CogAbstractInstruction->dependent)))
-	 && (!((self_in_CogAbstractInstruction->address)))));
+	 && (!(address(self_in_CogAbstractInstruction)))));
 	(self_in_CogAbstractInstruction->opcode) = Literal;
 	(self_in_CogAbstractInstruction->annotation) = (existingLiteral->annotation);
 	((self_in_CogAbstractInstruction->operands))[0] = (((existingLiteral->operands))[0]);
@@ -2789,14 +2810,22 @@ cloneLiteralFrom(AbstractInstruction *self_in_CogAbstractInstruction, AbstractIn
 
 
 /*	Generate concrete machine code for the instruction at actualAddress,
-	setting machineCodeSize, and answer the following address. */
+	setting machineCodeSize, and answer the following address.
+	In C the machine code is generated into a buffer and then copied into
+	machineCode, which shares storage with the operands; see
+	machineCodeBuffer.  */
 
 	/* CogAbstractInstruction>>#concretizeAt: */
 static NoDbgRegParms sqInt
 concretizeAt(AbstractInstruction *self_in_CogAbstractInstruction, sqInt actualAddress)
 {
-	(self_in_CogAbstractInstruction->address = actualAddress);
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(actualAddress);
+	assert((address(self_in_CogAbstractInstruction)) == actualAddress);
 	(self_in_CogAbstractInstruction->machineCodeSize) = dispatchConcretize(self_in_CogAbstractInstruction);
+	if (((self_in_CogAbstractInstruction->machineCodeSize)) > 0) {
+		memcpy((self_in_CogAbstractInstruction->machineCode), concretizationBuffer(), concretizationBufferSize());
+	}
 	assert((((self_in_CogAbstractInstruction->maxSize)) == null)
 	 || (((self_in_CogAbstractInstruction->maxSize)) >= ((self_in_CogAbstractInstruction->machineCodeSize))));
 	return actualAddress + ((self_in_CogAbstractInstruction->machineCodeSize));
@@ -2958,7 +2987,10 @@ initializeSharableLiteral(AbstractInstruction *self_in_CogAbstractInstruction, s
 
 	/* separate := nil for Slang */
 	(self_in_CogAbstractInstruction->annotation) = null;
-	(self_in_CogAbstractInstruction->address = null);
+
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(null);
+	assert((address(self_in_CogAbstractInstruction)) == null);
 	(self_in_CogAbstractInstruction->dependent) = null;
 	((self_in_CogAbstractInstruction->operands))[0] = literal;
 	((self_in_CogAbstractInstruction->operands))[1] = (1 + ((((usqInt)(BytesPerOop) << 1))));
@@ -2977,7 +3009,10 @@ initializeUniqueLiteral(AbstractInstruction *self_in_CogAbstractInstruction, sqI
 
 	/* separate := nil for Slang */
 	(self_in_CogAbstractInstruction->annotation) = null;
-	(self_in_CogAbstractInstruction->address = null);
+
+	/* begin address: */
+	(self_in_CogAbstractInstruction->addressOffset) = codeOffsetForAddress(null);
+	assert((address(self_in_CogAbstractInstruction)) == null);
 	(self_in_CogAbstractInstruction->dependent) = null;
 	((self_in_CogAbstractInstruction->operands))[0] = literal;
 	((self_in_CogAbstractInstruction->operands))[1] = (0 + ((((usqInt)(BytesPerOop) << 1))));
@@ -3185,21 +3220,21 @@ concretizeArithCwR(AbstractInstruction *self_in_CogInLineLiteralsX64Compiler, sq
 	/* Tst & Cmp; backwards */
 	reverse = (x64opcode == 133)
 		 || (x64opcode == 57);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, RISCTempReg, 0, RISCTempReg));
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[1] = 184;
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[2] = (value & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[10] = ((reverse
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, RISCTempReg, 0, RISCTempReg));
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[1] = (184 + (RISCTempReg & 7));
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[2] = (value & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[10] = ((reverse
 		? rexRxb(self_in_CogInLineLiteralsX64Compiler, RISCTempReg, 0, reg)
 		: rexRxb(self_in_CogInLineLiteralsX64Compiler, reg, 0, RISCTempReg)));
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[11] = x64opcode;
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[12] = ((reverse
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[11] = x64opcode;
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[12] = ((reverse
 		? modRMRO(self_in_CogInLineLiteralsX64Compiler, ModReg, reg, RISCTempReg)
 		: modRMRO(self_in_CogInLineLiteralsX64Compiler, ModReg, RISCTempReg, reg)));
 	assert(((machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[12]) > 144);
@@ -3222,34 +3257,34 @@ concretizeMoveCwR(AbstractInstruction *self_in_CogInLineLiteralsX64Compiler)
 	if (/* isAnInstruction: */
 		(addressIsInInstructions(((AbstractInstruction *) value)))
 	 || ((((AbstractInstruction *) value)) == (methodLabel))) {
-		value = ((((AbstractInstruction *) value))->address);
+		value = codeAddressForOffset(((((AbstractInstruction *) value))->addressOffset));
 	}
 	if (/* addressIsInCurrentCompilation: */
-		((((usqInt)value)) >= ((methodLabel->address)))
-	 && ((((usqInt)value)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))) {
-		offset = value - (((self_in_CogInLineLiteralsX64Compiler->address)) + 7);
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, reg, 0, 0));
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[1] = 141;
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[2] = (modRMRO(self_in_CogInLineLiteralsX64Compiler, ModRegInd, 5, reg));
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[3] = (offset & 0xFF);
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[4] = ((((usqInt)(offset)) >> 8) & 0xFF);
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[5] = ((((usqInt)(offset)) >> 16) & 0xFF);
-		((self_in_CogInLineLiteralsX64Compiler->machineCode))[6] = ((((usqInt)(offset)) >> 24) & 0xFF);
+		((((usqInt)value)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)value)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))) {
+		offset = value - ((codeAddressForOffset((self_in_CogInLineLiteralsX64Compiler->addressOffset))) + 7);
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, reg, 0, 0));
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[1] = 141;
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[2] = (modRMRO(self_in_CogInLineLiteralsX64Compiler, ModRegInd, 5, reg));
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[3] = (offset & 0xFF);
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[4] = ((((usqInt)(offset)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[5] = ((((usqInt)(offset)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[6] = ((((usqInt)(offset)) >> 24) & 0xFF);
 		return 7;
 	}
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, 0, 0, reg));
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[1] = (184 + (reg & 7));
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[2] = (value & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[0] = (rexRxb(self_in_CogInLineLiteralsX64Compiler, 0, 0, reg));
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[1] = (184 + (reg & 7));
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[2] = (value & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
 
 	/* Add a nop to disambiguate between MoveCwR/PushCw and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0) */
-	((self_in_CogInLineLiteralsX64Compiler->machineCode))[10] = 144;
+	(machineCodeBuffer(self_in_CogInLineLiteralsX64Compiler))[10] = 144;
 	return 11;
 }
 
@@ -3330,7 +3365,9 @@ sizePCDependentInstructionAt(AbstractInstruction *self_in_CogInLineLiteralsX64Co
     sqInt target;
 
 	if (((self_in_CogInLineLiteralsX64Compiler->opcode)) == AlignmentNops) {
-		(self_in_CogInLineLiteralsX64Compiler->address = eventualAbsoluteAddress);
+		/* begin address: */
+		(self_in_CogInLineLiteralsX64Compiler->addressOffset) = codeOffsetForAddress(eventualAbsoluteAddress);
+		assert((address(self_in_CogInLineLiteralsX64Compiler)) == eventualAbsoluteAddress);
 		alignment = ((self_in_CogInLineLiteralsX64Compiler->operands))[0];
 		return ((self_in_CogInLineLiteralsX64Compiler->machineCodeSize) = ((eventualAbsoluteAddress + (alignment - 1)) & (-alignment)) - eventualAbsoluteAddress);
 	}
@@ -3340,14 +3377,17 @@ sizePCDependentInstructionAt(AbstractInstruction *self_in_CogInLineLiteralsX64Co
 	if (/* isAnInstruction: */
 		(addressIsInInstructions(abstractInstruction))
 	 || (abstractInstruction == (methodLabel))) {
-		maximumSpan = ((abstractInstruction->address)) - (((abstractInstructionfollows(self_in_CogInLineLiteralsX64Compiler, abstractInstruction)
+		maximumSpan = (codeAddressForOffset((abstractInstruction->addressOffset))) - (((abstractInstructionfollows(self_in_CogInLineLiteralsX64Compiler, abstractInstruction)
 		? eventualAbsoluteAddress
-		: (self_in_CogInLineLiteralsX64Compiler->address))) + 2);
+		: codeAddressForOffset((self_in_CogInLineLiteralsX64Compiler->addressOffset)))) + 2);
 	}
 	else {
 		maximumSpan = target - (eventualAbsoluteAddress + 2);
 	}
-	(self_in_CogInLineLiteralsX64Compiler->address = eventualAbsoluteAddress);
+
+	/* begin address: */
+	(self_in_CogInLineLiteralsX64Compiler->addressOffset) = codeOffsetForAddress(eventualAbsoluteAddress);
+	assert((address(self_in_CogInLineLiteralsX64Compiler)) == eventualAbsoluteAddress);
 	if (((self_in_CogInLineLiteralsX64Compiler->opcode)) >= FirstShortJump) {
 		(self_in_CogInLineLiteralsX64Compiler->machineCodeSize) = (isQuick(self_in_CogInLineLiteralsX64Compiler, maximumSpan)
 					? 2
@@ -4957,7 +4997,10 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	(methodLabel->address = startAddress);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(startAddress);
+	assert((address(methodLabel)) == startAddress);
 	(methodLabel->dependent = null);
 
 	/* stack allocate the various collections so that they
@@ -4981,7 +5024,7 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 
 	/* begin ensureWritableCodeZone */
 	mapSize = generateMapAtstart((startAddress + openPICSize) - 1, startAddress + cmNoCheckEntryOffset);
-	assert((((entry->address)) - startAddress) == cmEntryOffset);
+	assert(((address(entry)) - startAddress) == cmEntryOffset);
 	assert(((roundUpLength((sizeof(CogMethod)) + codeSize)) + (roundUpLength(mapSize))) <= openPICSize);
 	end = outputInstructionsAt(startAddress + (sizeof(CogMethod)));
 	pic = ((CogMethod *) ((((usqInt)startAddress)) + codeToDataDelta));
@@ -6293,9 +6336,9 @@ computeEntryOffsets(void)
 	compileEntry();
 	computeMaximumSizes();
 	generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	cmEntryOffset = ((entry->address)) - methodZoneBase;
-	cmNoCheckEntryOffset = ((noCheckEntry->address)) - methodZoneBase;
-	missOffset = (((sendMissCall->address)) + ((sendMissCall->machineCodeSize))) - methodZoneBase;
+	cmEntryOffset = (codeAddressForOffset((entry->addressOffset))) - methodZoneBase;
+	cmNoCheckEntryOffset = (codeAddressForOffset((noCheckEntry->addressOffset))) - methodZoneBase;
+	missOffset = ((codeAddressForOffset((sendMissCall->addressOffset))) + ((sendMissCall->machineCodeSize))) - methodZoneBase;
 	entryPointMask = BytesPerWord - 1;
 	while ((cmEntryOffset & entryPointMask) == (cmNoCheckEntryOffset & entryPointMask)) {
 		entryPointMask = (entryPointMask + entryPointMask) + 1;
@@ -6338,8 +6381,8 @@ computeFullBlockEntryOffsets(void)
 	compileFullBlockEntry();
 	computeMaximumSizes();
 	generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	cbEntryOffset = ((fullBlockEntry->address)) - methodZoneBase;
-	cbNoSwitchEntryOffset = ((fullBlockNoContextSwitchEntry->address)) - methodZoneBase;
+	cbEntryOffset = (codeAddressForOffset((fullBlockEntry->addressOffset))) - methodZoneBase;
+	cbNoSwitchEntryOffset = (codeAddressForOffset((fullBlockNoContextSwitchEntry->addressOffset))) - methodZoneBase;
 }
 
 
@@ -6386,7 +6429,10 @@ computeGoodVarBaseAddress(void)
 	eliminates jump fixups.
 	It hence assigns the maximum address an instruction will occur at which
 	allows the next
-	pass to conservatively size jumps. */
+	pass to conservatively size jumps. Virtual addresses start at codeBase
+	rather than 0
+	because in C instruction addresses are held as offsets from codeBase (see
+	codeOffsetForAddress:); only differences between virtual addresses matter. */
 
 	/* Cogit>>#computeMaximumSizes */
 static void
@@ -6394,13 +6440,16 @@ computeMaximumSizes(void)
 {
     AbstractInstruction *abstractInstruction;
     sqInt i;
-    sqInt relativeAddress;
+    usqInt relativeAddress;
 
-	relativeAddress = 0;
+	relativeAddress = codeBase;
 	for (i = 0; i < opcodeIndex; i += 1) {
 		maybeBreakGeneratingInstructionWithIndex(i);
 		abstractInstruction = abstractInstructionAt(i);
-		(abstractInstruction->address = relativeAddress);
+
+		/* begin address: */
+		(abstractInstruction->addressOffset) = codeOffsetForAddress(relativeAddress);
+		assert((address(abstractInstruction)) == relativeAddress);
 		(abstractInstruction->maxSize = computeMaximumSize(abstractInstruction));
 		relativeAddress += (abstractInstruction->maxSize);
 	}
@@ -7092,24 +7141,24 @@ fillInBlockHeadersAt(sqInt startAddress)
 		return null;
 	}
 	if (blockNoContextSwitchOffset) {
-		assert(blockNoContextSwitchOffset == (((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address))));
+		assert(blockNoContextSwitchOffset == ((address(blockEntryLabel)) - (address(blockEntryNoContextSwitch))));
 	}
 	else {
-		blockNoContextSwitchOffset = ((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address));
+		blockNoContextSwitchOffset = (codeAddressForOffset((blockEntryLabel->addressOffset))) - (codeAddressForOffset((blockEntryNoContextSwitch->addressOffset)));
 	}
 	for (i = 0; i < blockCount; i += 1) {
 		blockStart = blockStartAt(i);
-		aCogMethodOrInteger = (((blockStart->fakeHeader))->address);
+		aCogMethodOrInteger = codeAddressForOffset((((blockStart->fakeHeader))->addressOffset));
 
 		/* begin writableBlockMethodFor: */
 		blockHeader = ((CogBlockMethod *) ((((usqInt)aCogMethodOrInteger)) + codeToDataDelta));
-		(blockHeader->homeOffset = ((((blockStart->fakeHeader))->address)) - startAddress);
+		(blockHeader->homeOffset = (codeAddressForOffset((((blockStart->fakeHeader))->addressOffset))) - startAddress);
 		(blockHeader->startpc = (blockStart->startpc));
 		(blockHeader->cmType = CMBlock);
 		(blockHeader->cmNumArgs = (blockStart->numArgs));
 		(blockHeader->cbUsesInstVars = (blockStart->hasInstVarRef));
 		(blockHeader->stackCheckOffset = ((blockStart->stackCheckLabel)
-				? ((((blockStart->stackCheckLabel))->address)) - ((((blockStart->fakeHeader))->address))
+				? (codeAddressForOffset((((blockStart->stackCheckLabel))->addressOffset))) - (codeAddressForOffset((((blockStart->fakeHeader))->addressOffset)))
 				: 0));
 	}
 	return 0;
@@ -7157,18 +7206,18 @@ fillInMethodHeadersizeselector(CogMethod *method, sqInt size, sqInt selector)
 	(method->cpicHasMNUCaseOrCMIsFullBlock) = 0;
 	(method->cmUsesPenultimateLit = maxLitIndex >= ((literalCountOfMethodHeader(methodHeader)) - 2));
 	(method->blockEntryOffset = (blockEntryLabel
-			? ((blockEntryLabel->address)) - actualMethodLocation
+			? (codeAddressForOffset((blockEntryLabel->addressOffset))) - actualMethodLocation
 			: 0));
 
 	/* This can be an error check since a large stackCheckOffset is caused by compiling
 	   a machine-code primitive, and hence depends on the Cogit, not the input method. */
 	if (needsFrame) {
-		if (!((((stackCheckLabel->address)) - actualMethodLocation) <= MaxStackCheckOffset)) {
+		if (!(((codeAddressForOffset((stackCheckLabel->addressOffset))) - actualMethodLocation) <= MaxStackCheckOffset)) {
 			error("too much code for stack check offset");
 		}
 	}
 	(method->stackCheckOffset = (needsFrame
-			? ((stackCheckLabel->address)) - actualMethodLocation
+			? (codeAddressForOffset((stackCheckLabel->addressOffset))) - actualMethodLocation
 			: 0));
 	assert((callTargetFromReturnAddress(backEnd, actualMethodLocation + missOffset)) == (methodAbortTrampolineFor((method->cmNumArgs))));
 	assert(size == (roundUpLength(size)));
@@ -7300,8 +7349,8 @@ static sqInt
 firstPrototypeMethodOop(void)
 {
 	return (/* addressIsInCurrentCompilation: */
-		((((usqInt)0x5EAF00D)) >= ((methodLabel->address)))
-	 && ((((usqInt)0x5EAF00D)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))
+		((((usqInt)0x5EAF00D)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)0x5EAF00D)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))
 			? 0xCA7F00D
 			: 0x5EAF00D);
 }
@@ -7747,7 +7796,10 @@ generateClosedPICPrototype(void)
 	/* begin zeroOpcodeIndexForNewOpcodes */
 	opcodeIndex = 0;
 	labelCounter = 0;
-	(methodLabel->address = methodZoneBase);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneBase);
+	assert((address(methodLabel)) == methodZoneBase);
 	(methodLabel->dependent = null);
 
 	/* begin compileClosedPICPrototype */
@@ -7790,9 +7842,12 @@ generateClosedPICPrototype(void)
 			endCPICCase1 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 	}
+	wordConstant = codeAddressForOffset((methodLabel->addressOffset));
 
-	/* #MoveCw:R: #gen:literal:operand: #checkLiteral:forInstruction: */
-	genoperandoperand(MoveCwR, (methodLabel->address), ClassReg);
+	/* begin MoveCw:R: */
+	/* gen:literal:operand: */
+	/* checkLiteral:forInstruction: */
+	genoperandoperand(MoveCwR, wordConstant, ClassReg);
 	jumpTarget = cPICMissTrampolineFor(numArgs);
 
 	/* begin JumpLong: */
@@ -7803,16 +7858,16 @@ generateClosedPICPrototype(void)
 	closedPICSize = (sizeof(CogMethod)) + (generateInstructionsAt(methodZoneBase + (sizeof(CogMethod))));
 	endAddress = outputInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
 	assert((methodZoneBase + closedPICSize) == endAddress);
-	firstCPICCaseOffset = ((endCPICCase0->address)) - methodZoneBase;
-	cPICEndOfCodeOffset = ((cPICEndOfCodeLabel->address)) - methodZoneBase;
-	cPICCaseSize = ((endCPICCase1->address)) - ((endCPICCase0->address));
+	firstCPICCaseOffset = (codeAddressForOffset((endCPICCase0->addressOffset))) - methodZoneBase;
+	cPICEndOfCodeOffset = (codeAddressForOffset((cPICEndOfCodeLabel->addressOffset))) - methodZoneBase;
+	cPICCaseSize = (codeAddressForOffset((endCPICCase1->addressOffset))) - (codeAddressForOffset((endCPICCase0->addressOffset)));
 	cPICEndSize = closedPICSize - (((MaxCPICCases - 1) * cPICCaseSize) + firstCPICCaseOffset);
 	closedPICSize = roundUpToMethodAlignment(backEnd, closedPICSize);
-	assert(((picInterpretAbort->address)) == (((methodLabel->address)) + (picInterpretAbortOffset())));
+	assert((address(picInterpretAbort)) == ((address(methodLabel)) + (picInterpretAbortOffset())));
 	assert((expectedClosedPICPrototype(cPIC)) == 0);
 
 	/* tpr this is a little tiresome but after any assert checking we need to 0 out the case0 objRef rather than leaving 16r5EAF00D lying around */
-	storeLiteralbeforeFollowingAddress(backEnd, 0, ((endCPICCase0->address)) - (jumpLongByteSize(backEnd)));
+	storeLiteralbeforeFollowingAddress(backEnd, 0, (codeAddressForOffset((endCPICCase0->addressOffset))) - (jumpLongByteSize(backEnd)));
 
 	/* finish up */
 	recordGeneratedRunTimeaddress("cPICPrototype", methodZoneBase);
@@ -7844,14 +7899,19 @@ generateCogFullBlock(void)
     CogMethod *method;
     sqInt result;
     usqInt startAddress;
+    sqInt theAddress;
     int totalSize;
 
 	headerSize = sizeof(CogMethod);
-	(methodLabel->address = freeStart());
+	theAddress = freeStart();
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(theAddress);
+	assert((address(methodLabel)) == theAddress);
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
-	codeSize = generateInstructionsAt(((methodLabel->address)) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), ((methodLabel->address)) + cbNoSwitchEntryOffset);
+	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
+	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cbNoSwitchEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -7860,8 +7920,8 @@ generateCogFullBlock(void)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	assert((startAddress + cbEntryOffset) == ((fullBlockEntry->address)));
-	assert((startAddress + cbNoSwitchEntryOffset) == ((fullBlockNoContextSwitchEntry->address)));
+	assert((startAddress + cbEntryOffset) == (address(fullBlockEntry)));
+	assert((startAddress + cbNoSwitchEntryOffset) == (address(fullBlockNoContextSwitchEntry)));
 	result = outputInstructionsAt(startAddress + headerSize);
 	assert(((startAddress + headerSize) + codeSize) == result);
 	padIfPossibleWithStopsFromto(backEnd, result, ((startAddress + totalSize) - mapSize) - 1);
@@ -7897,14 +7957,19 @@ generateCogMethod(sqInt selector)
     sqInt mapSize;
     sqInt result;
     usqInt startAddress;
+    sqInt theAddress;
     int totalSize;
 
 	headerSize = sizeof(CogMethod);
-	(methodLabel->address = freeStart());
+	theAddress = freeStart();
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(theAddress);
+	assert((address(methodLabel)) == theAddress);
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
-	codeSize = generateInstructionsAt(((methodLabel->address)) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), ((methodLabel->address)) + cmNoCheckEntryOffset);
+	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
+	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cmNoCheckEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -7913,8 +7978,8 @@ generateCogMethod(sqInt selector)
 	if (!startAddress) {
 		return ((CogMethod *) InsufficientCodeSpace);
 	}
-	assert((startAddress + cmEntryOffset) == ((entry->address)));
-	assert((startAddress + cmNoCheckEntryOffset) == ((noCheckEntry->address)));
+	assert((startAddress + cmEntryOffset) == (address(entry)));
+	assert((startAddress + cmNoCheckEntryOffset) == (address(noCheckEntry)));
 	result = outputInstructionsAt(startAddress + headerSize);
 	assert(((startAddress + headerSize) + codeSize) == result);
 	padIfPossibleWithStopsFromto(backEnd, result, ((startAddress + totalSize) - mapSize) - 1);
@@ -7964,7 +8029,7 @@ generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
 	for (i = 0; i < opcodeIndex; i += 1) {
 		instruction = abstractInstructionAt(i);
 		if ((annotation = (instruction->annotation))) {
-			mcpc = ((instruction->address)) + ((instruction->machineCodeSize));
+			mcpc = (codeAddressForOffset((instruction->addressOffset))) + ((instruction->machineCodeSize));
 			while (((delta = (mcpc - location) / 1 /* codeGranularity */)) > DisplacementMask) {
 				maxDelta = (((((delta < MaxX2NDisplacement) ? delta : MaxX2NDisplacement)) | DisplacementMask) - DisplacementMask);
 				assert((((usqInt)(maxDelta)) >> AnnotationShift) <= DisplacementMask);
@@ -8028,7 +8093,10 @@ generateOpenPICPrototype(void)
 	/* begin zeroOpcodeIndexForNewOpcodes */
 	opcodeIndex = 0;
 	labelCounter = 0;
-	(methodLabel->address = methodZoneBase);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneBase);
+	assert((address(methodLabel)) == methodZoneBase);
 	(methodLabel->dependent = null);
 
 	/* Need a real selector here so that the map accomodates the annotations for the selector.
@@ -8170,7 +8238,10 @@ generateTrampolines(void)
     usqIntptr_t opcodeSize;
 
 	methodZoneStart = methodZoneBase;
-	(methodLabel->address = methodZoneStart);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(methodZoneStart);
+	assert((address(methodLabel)) == methodZoneStart);
 
 	/* begin allocateOpcodes:bytecodes: */
 	numAbstractOpcodes = 80;
@@ -10612,7 +10683,7 @@ outputInstructionsAt(sqInt startAddress)
 	for (i = 0; i < opcodeIndex; i += 1) {
 		maybeBreakGeneratingInstructionWithIndex(i);
 		abstractInstruction = abstractInstructionAt(i);
-		assert(((abstractInstruction->address)) == absoluteAddress);
+		assert((address(abstractInstruction)) == absoluteAddress);
 
 		/* begin outputMachineCodeAt: */
 		for (j = 0; j < ((abstractInstruction->machineCodeSize)); j += 1) {
@@ -10636,7 +10707,10 @@ outputInstructionsForGeneratedRuntimeAt(sqInt startAddress)
     sqInt size;
 
 	computeMaximumSizes();
-	(methodLabel->address = startAddress);
+
+	/* begin address: */
+	(methodLabel->addressOffset) = codeOffsetForAddress(startAddress);
+	assert((address(methodLabel)) == startAddress);
 	size = generateInstructionsAt(startAddress);
 	endAddress = outputInstructionsAt(startAddress);
 	assert((startAddress + size) == endAddress);
@@ -11016,7 +11090,7 @@ recordRunTimeObjectReferences(void)
 			if (hasYoungReferent) {
 				error("attempt to generate run-time routine containing young object reference.  Cannot initialize Cogit run-time.");
 			}
-			objectReferencesInRuntime[runtimeObjectRefIndex] = (((usqInt)(((instruction->address)) + ((instruction->machineCodeSize)))));
+			objectReferencesInRuntime[runtimeObjectRefIndex] = (((usqInt)((codeAddressForOffset((instruction->addressOffset))) + ((instruction->machineCodeSize)))));
 			runtimeObjectRefIndex += 1;
 		}
 	}
@@ -11608,8 +11682,8 @@ static sqInt
 subsequentPrototypeMethodOop(void)
 {
 	return (/* addressIsInCurrentCompilation: */
-		((((usqInt)0xBADA550)) >= ((methodLabel->address)))
-	 && ((((usqInt)0xBADA550)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))
+		((((usqInt)0xBADA550)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)0xBADA550)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))
 			? 0xDEADEAD
 			: 0xBADA550);
 }
@@ -22814,8 +22888,8 @@ computeMaximumSize(AbstractInstruction *self_in_CogX64Compiler)
 			(addressIsInInstructions(((AbstractInstruction *) (((self_in_CogX64Compiler->operands))[0]))))
 		 || ((((AbstractInstruction *) (((self_in_CogX64Compiler->operands))[0]))) == (methodLabel)))
 		 || (/* addressIsInCurrentCompilation: */
-			((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) >= ((methodLabel->address)))
-		 && ((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize)))))
+			((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)))))
 				? 7
 				: 11 /* moveCwRByteSize */);
 
@@ -23143,8 +23217,8 @@ computeSizeOfPushCw(AbstractInstruction *self_in_CogX64Compiler)
 		(addressIsInInstructions(((AbstractInstruction *) (((self_in_CogX64Compiler->operands))[0]))))
 	 || ((((AbstractInstruction *) (((self_in_CogX64Compiler->operands))[0]))) == (methodLabel)))
 	 || (/* addressIsInCurrentCompilation: */
-		((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) >= ((methodLabel->address)))
-	 && ((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize)))))
+		((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) >= (codeAddressForOffset((methodLabel->addressOffset))))
+	 && ((((usqInt)(((self_in_CogX64Compiler->operands))[0]))) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)))))
 			? 9
 			: 12 /* pushCwByteSize */);
 }
@@ -23161,28 +23235,28 @@ concretizeArithCqRWithROraxOpcode(AbstractInstruction *self_in_CogX64Compiler, s
 
 	value = ((self_in_CogX64Compiler->operands))[0];
 	reg = ((self_in_CogX64Compiler->operands))[1];
-	((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 	if (isQuick(self_in_CogX64Compiler, value)) {
-		((self_in_CogX64Compiler->machineCode))[1] = 131;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, regOpcode));
-		((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 131;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, regOpcode));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
 		return 4;
 	}
 	if (is32BitSignedImmediate(self_in_CogX64Compiler, value)) {
 		if (!reg) {
-			((self_in_CogX64Compiler->machineCode))[1] = raxOpcode;
-			((self_in_CogX64Compiler->machineCode))[2] = (value & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = raxOpcode;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
 			return 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 129;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, regOpcode));
-		((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 129;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, regOpcode));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
 		return 7;
 	}
 	return concretizeArithCwR(self_in_CogX64Compiler, (raxOpcode == 61
@@ -23197,10 +23271,10 @@ concretizeFill32(AbstractInstruction *self_in_CogX64Compiler)
     usqIntptr_t word;
 
 	word = ((self_in_CogX64Compiler->operands))[0];
-	((self_in_CogX64Compiler->machineCode))[0] = (word & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[1] = (((word) >> 8) & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[2] = (((word) >> 16) & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[3] = (((word) >> 24) & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (word & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = (((word) >> 8) & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = (((word) >> 16) & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[3] = (((word) >> 24) & 0xFF);
 	return 4;
 }
 
@@ -23228,38 +23302,38 @@ concretizeMovePerfCnt64RL(AbstractInstruction *self_in_CogX64Compiler)
 	liveRegisterMask = ((self_in_CogX64Compiler->operands))[1];
 	offset = 0;
 	if (((liveRegisterMask & ((1U << RAX))) != 0)) {
-		((self_in_CogX64Compiler->machineCode))[0] = 80;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 80;
 		offset += 1;
 	}
 	if (((liveRegisterMask & ((1U << RDX))) != 0)) {
-		((self_in_CogX64Compiler->machineCode))[offset] = 82;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 82;
 		offset += 1;
 	}
 
 	/* too lazy to define the swap cases for the moment... */
 	assert(!((reg == RDX)));
-	((self_in_CogX64Compiler->machineCode))[offset] = 15;
-	((self_in_CogX64Compiler->machineCode))[offset + 1] = 49;
-	((self_in_CogX64Compiler->machineCode))[offset + 2] = (rexRxb(self_in_CogX64Compiler, 0, 0, RDX));
-	((self_in_CogX64Compiler->machineCode))[offset + 3] = 193;
-	((self_in_CogX64Compiler->machineCode))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModReg, RDX, 4));
-	((self_in_CogX64Compiler->machineCode))[offset + 5] = 32;
-	((self_in_CogX64Compiler->machineCode))[offset + 6] = (rexRxb(self_in_CogX64Compiler, RAX, 0, RDX));
-	((self_in_CogX64Compiler->machineCode))[offset + 7] = 11;
-	((self_in_CogX64Compiler->machineCode))[offset + 8] = (modRMRO(self_in_CogX64Compiler, ModReg, RDX, RAX));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 15;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 1] = 49;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 2] = (rexRxb(self_in_CogX64Compiler, 0, 0, RDX));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 3] = 193;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModReg, RDX, 4));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 5] = 32;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 6] = (rexRxb(self_in_CogX64Compiler, RAX, 0, RDX));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 7] = 11;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 8] = (modRMRO(self_in_CogX64Compiler, ModReg, RDX, RAX));
 	offset += 9;
 	if (reg) {
-		((self_in_CogX64Compiler->machineCode))[offset] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[offset + 1] = 137;
-		((self_in_CogX64Compiler->machineCode))[offset + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, RAX));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 1] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, RAX));
 		offset += 3;
 	}
 	if (((liveRegisterMask & ((1U << RDX))) != 0)) {
-		((self_in_CogX64Compiler->machineCode))[offset] = 90;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 90;
 		offset += 1;
 	}
 	if (((liveRegisterMask & ((1U << RAX))) != 0)) {
-		((self_in_CogX64Compiler->machineCode))[offset] = 88;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 88;
 		offset += 1;
 	}
 	return offset;
@@ -23280,22 +23354,22 @@ concretizeMoveRX32rR(AbstractInstruction *self_in_CogX64Compiler)
 	if ((index > 7)
 	 || ((base > 7)
 	 || (src > 7))) {
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 0, src, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 0, src, index, base));
 		offset = 1;
 	}
 	else {
 		offset = 0;
 	}
 	if ((base & 7) != RBP) {
-		((self_in_CogX64Compiler->machineCode))[offset] = 137;
-		((self_in_CogX64Compiler->machineCode))[offset + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
-		((self_in_CogX64Compiler->machineCode))[offset + 2] = (sib(self_in_CogX64Compiler, SIB4, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 2] = (sib(self_in_CogX64Compiler, SIB4, index, base));
 		return offset + 3;
 	}
-	((self_in_CogX64Compiler->machineCode))[offset] = 137;
-	((self_in_CogX64Compiler->machineCode))[offset + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
-	((self_in_CogX64Compiler->machineCode))[offset + 2] = (sib(self_in_CogX64Compiler, SIB4, index, base));
-	((self_in_CogX64Compiler->machineCode))[offset + 3] = 0;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset] = 137;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 2] = (sib(self_in_CogX64Compiler, SIB4, index, base));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 3] = 0;
 	return offset + 4;
 }
 
@@ -23314,28 +23388,28 @@ concretizeMoveX32rRR(AbstractInstruction *self_in_CogX64Compiler)
 	index = ((self_in_CogX64Compiler->operands))[0];
 	base = ((self_in_CogX64Compiler->operands))[1];
 	dest = ((self_in_CogX64Compiler->operands))[2];
-	((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, dest, 0, dest));
-	((self_in_CogX64Compiler->machineCode))[1] = 49;
-	((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, dest, dest));
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, dest, 0, dest));
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = 49;
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, dest, dest));
 	if ((index > 7)
 	 || ((base > 7)
 	 || (dest > 7))) {
-		((self_in_CogX64Compiler->machineCode))[3] = (rexwrxb(self_in_CogX64Compiler, 0, dest, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (rexwrxb(self_in_CogX64Compiler, 0, dest, index, base));
 		offset = 1;
 	}
 	else {
 		offset = 0;
 	}
 	if ((base & 7) != RBP) {
-		((self_in_CogX64Compiler->machineCode))[offset + 3] = 139;
-		((self_in_CogX64Compiler->machineCode))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
-		((self_in_CogX64Compiler->machineCode))[offset + 5] = (sib(self_in_CogX64Compiler, SIB4, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 3] = 139;
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
+		(machineCodeBuffer(self_in_CogX64Compiler))[offset + 5] = (sib(self_in_CogX64Compiler, SIB4, index, base));
 		return offset + 6;
 	}
-	((self_in_CogX64Compiler->machineCode))[offset + 3] = 139;
-	((self_in_CogX64Compiler->machineCode))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
-	((self_in_CogX64Compiler->machineCode))[offset + 5] = (sib(self_in_CogX64Compiler, SIB4, index, base));
-	((self_in_CogX64Compiler->machineCode))[offset + 6] = 0;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 3] = 139;
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 4] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 5] = (sib(self_in_CogX64Compiler, SIB4, index, base));
+	(machineCodeBuffer(self_in_CogX64Compiler))[offset + 6] = 0;
 	return offset + 7;
 }
 
@@ -23348,9 +23422,9 @@ concretizeOpRR(AbstractInstruction *self_in_CogX64Compiler, sqInt x64opcode)
 
 	regLHS = ((self_in_CogX64Compiler->operands))[0];
 	regRHS = ((self_in_CogX64Compiler->operands))[1];
-	((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, regRHS, 0, regLHS));
-	((self_in_CogX64Compiler->machineCode))[1] = x64opcode;
-	((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regLHS, regRHS));
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, regRHS, 0, regLHS));
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = x64opcode;
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regLHS, regRHS));
 	return 3;
 }
 
@@ -23373,13 +23447,13 @@ concretizePrefetchAw(AbstractInstruction *self_in_CogX64Compiler)
 		return 0;
 	}
 	offset = operand - (varBaseAddress);
-	((self_in_CogX64Compiler->machineCode))[0] = 15;
-	((self_in_CogX64Compiler->machineCode))[1] = 24;
-	((self_in_CogX64Compiler->machineCode))[2] = 147;
-	((self_in_CogX64Compiler->machineCode))[3] = (offset & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offset)) >> 16) & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offset)) >> 8) & 0xFF);
-	((self_in_CogX64Compiler->machineCode))[6] = (((usqInt)(offset)) >> 24);
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = 24;
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = 147;
+	(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offset & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offset)) >> 16) & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offset)) >> 8) & 0xFF);
+	(machineCodeBuffer(self_in_CogX64Compiler))[6] = (((usqInt)(offset)) >> 24);
 	return 7;
 }
 
@@ -23396,9 +23470,9 @@ concretizeReverseOpRR(AbstractInstruction *self_in_CogX64Compiler, sqInt x64opco
 
 	regRHS = ((self_in_CogX64Compiler->operands))[0];
 	regLHS = ((self_in_CogX64Compiler->operands))[1];
-	((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, regRHS, 0, regLHS));
-	((self_in_CogX64Compiler->machineCode))[1] = x64opcode;
-	((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regLHS, regRHS));
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, regRHS, 0, regLHS));
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = x64opcode;
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regLHS, regRHS));
 	return 3;
 }
 
@@ -23416,13 +23490,13 @@ concretizeXCHGRR(AbstractInstruction *self_in_CogX64Compiler)
 		r1 = RAX;
 	}
 	if (!r1) {
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, r2));
-		((self_in_CogX64Compiler->machineCode))[1] = (144 + (r2 % 8));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, r2));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (r2 % 8));
 		return 2;
 	}
-	((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, r1, 0, r2));
-	((self_in_CogX64Compiler->machineCode))[1] = 135;
-	((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, r2, r1));
+	(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, r1, 0, r2));
+	(machineCodeBuffer(self_in_CogX64Compiler))[1] = 135;
+	(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, r2, r1));
 	return 3;
 }
 
@@ -23544,7 +23618,7 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 			/* begin updateLabel: */
 			assert((((dependentChain->opcode)) == MoveCwR)
 			 || (((dependentChain->opcode)) == PushCw));
-			((dependentChain->operands))[0] = (((self_in_CogX64Compiler->address)) + (((self_in_CogX64Compiler->operands))[1]));
+			((dependentChain->operands))[0] = ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + (((self_in_CogX64Compiler->operands))[1]));
 			dependentChain = (dependentChain->dependent);
 		}
 		return 0;
@@ -23552,83 +23626,83 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 	case AlignmentNops:
 		/* begin concretizeAlignmentNops */
 		for (i = 0; i < ((self_in_CogX64Compiler->machineCodeSize)); i += 1) {
-			((self_in_CogX64Compiler->machineCode))[i] = 144;
+			(machineCodeBuffer(self_in_CogX64Compiler))[i] = 144;
 		}
 		return (self_in_CogX64Compiler->machineCodeSize);
 
 	case Fill32:
 		/* begin concretizeFill32 */
 		word = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = (word & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[1] = (((word) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2] = (((word) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = (((word) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (word & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (((word) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (((word) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (((word) >> 24) & 0xFF);
 		return 4;
 
 	case Nop:
 		/* begin concretizeNop */
-		((self_in_CogX64Compiler->machineCode))[0] = 144;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 144;
 		return 1;
 
 	case Call:
 		/* begin concretizeCall */
 		assert((((self_in_CogX64Compiler->operands))[0]) != 0);
-		offset = (((int) (((self_in_CogX64Compiler->operands))[0]))) - (((int) (((self_in_CogX64Compiler->address)) + 5)));
-		((self_in_CogX64Compiler->machineCode))[0] = 232;
-		((self_in_CogX64Compiler->machineCode))[1] = (offset & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
+		offset = (((int) (((self_in_CogX64Compiler->operands))[0]))) - (((int) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 5)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 232;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
 		return 5;
 
 	case CallR:
 		/* begin concretizeCallR */
 		reg = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = 0xFF;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 2));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 0xFF;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 2));
 		return 3;
 
 	case CallFull:
 		/* begin concretizeCallFull */
 		operand = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = 72;
-		((self_in_CogX64Compiler->machineCode))[1] = 184;
-		((self_in_CogX64Compiler->machineCode))[2] = (operand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(operand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(operand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(operand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(operand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(operand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(operand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(operand)) >> 56) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[10] = 0xFF;
-		((self_in_CogX64Compiler->machineCode))[11] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, 2));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 184;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (operand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(operand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(operand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(operand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(operand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(operand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(operand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(operand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[10] = 0xFF;
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, 2));
 		return 12;
 
 	case JumpR:
 		/* begin concretizeJumpR */
 		reg = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = 0xFF;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 0xFF;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
 		return 3;
 
 	case JumpFull:
 		/* begin concretizeJumpFull */
 		operand = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = 72;
-		((self_in_CogX64Compiler->machineCode))[1] = 184;
-		((self_in_CogX64Compiler->machineCode))[2] = (operand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(operand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(operand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(operand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(operand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(operand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(operand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(operand)) >> 56) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[10] = 0xFF;
-		((self_in_CogX64Compiler->machineCode))[11] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, 4));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 184;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (operand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(operand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(operand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(operand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(operand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(operand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(operand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(operand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[10] = 0xFF;
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, 4));
 		return 12;
 
 	case JumpLong:
@@ -23637,15 +23711,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset = ((int) ((((char *)jumpTarget)) - (((char *)(((self_in_CogX64Compiler->address)) + 5)))));
-		((self_in_CogX64Compiler->machineCode))[0] = 233;
-		((self_in_CogX64Compiler->machineCode))[1] = (offset & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
+		offset = ((int) ((((char *)jumpTarget)) - (((char *)((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 5)))));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 233;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
 		return 5;
 
 	case JumpLongZero:
@@ -23659,15 +23733,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (116);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (116);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23681,16 +23755,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (132);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (132);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpLongNonZero:
@@ -23704,15 +23778,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (117);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (117);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23726,16 +23800,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (133);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (133);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case Jump:
@@ -23745,25 +23819,25 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset = ((int) ((((char *)jumpTarget)) - (((char *)(((self_in_CogX64Compiler->address)) + 2)))));
+		offset = ((int) ((((char *)jumpTarget)) - (((char *)((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)))));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset))) {
-			((self_in_CogX64Compiler->machineCode))[0] = 235;
-			((self_in_CogX64Compiler->machineCode))[1] = (offset & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 235;
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset & 0xFF);
 			return 2;
 		}
 
 		/* size not determined because no sizeJump pass; generating initial trampolines */
-		offset = ((int) ((((char *)jumpTarget)) - (((char *)(((self_in_CogX64Compiler->address)) + 5)))));
-		((self_in_CogX64Compiler->machineCode))[0] = 233;
-		((self_in_CogX64Compiler->machineCode))[1] = (offset & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
+		offset = ((int) ((((char *)jumpTarget)) - (((char *)((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 5)))));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 233;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = ((((usqInt)(offset)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offset)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offset)) >> 24) & 0xFF);
 		return 5;
 
 	case JumpNegative:
@@ -23775,15 +23849,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (120);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (120);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23797,16 +23871,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (136);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (136);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpNonNegative:
@@ -23818,15 +23892,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (121);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (121);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23840,16 +23914,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (137);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (137);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpOverflow:
@@ -23861,15 +23935,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (112);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (112);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23883,16 +23957,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (128);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (128);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpNoOverflow:
@@ -23904,15 +23978,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (113);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (113);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23926,16 +24000,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (129);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (129);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpCarry:
@@ -23949,15 +24023,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (114);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (114);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -23971,16 +24045,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (130);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (130);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpNoCarry:
@@ -23994,15 +24068,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (115);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (115);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24016,16 +24090,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (131);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (131);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpLess:
@@ -24037,15 +24111,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (0x7C);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (0x7C);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24059,16 +24133,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (140);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (140);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpGreaterOrEqual:
@@ -24080,15 +24154,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (125);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (125);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24102,16 +24176,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (141);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (141);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpGreater:
@@ -24123,15 +24197,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (0x7F);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (0x7F);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24145,16 +24219,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (143);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (143);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpLessOrEqual:
@@ -24166,15 +24240,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (0x7E);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (0x7E);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24188,16 +24262,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (142);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (142);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpAbove:
@@ -24210,15 +24284,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (119);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (119);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24232,16 +24306,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (135);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (135);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpBelowOrEqual:
@@ -24254,15 +24328,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (118);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (118);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24276,16 +24350,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (134);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (134);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpFPOrdered:
@@ -24297,15 +24371,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (123);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (123);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24319,16 +24393,16 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (139);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (139);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case JumpFPUnordered:
@@ -24340,15 +24414,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offset1 = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 2)));
+		offset1 = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 2)));
 		if (((self_in_CogX64Compiler->machineCodeSize)
 				? ((self_in_CogX64Compiler->machineCodeSize)) == 2
 				: isQuick(self_in_CogX64Compiler, offset1))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (122);
-			((self_in_CogX64Compiler->machineCode))[1] = (offset1 & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (122);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offset1 & 0xFF);
 			return 2;
 		}
 
@@ -24362,33 +24436,33 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(jumpTarget))
 		 || (jumpTarget == (methodLabel))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+			jumpTarget = ((AbstractInstruction *) (codeAddressForOffset((jumpTarget->addressOffset))));
 		}
 		assert(jumpTarget != 0);
-		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) (((self_in_CogX64Compiler->address)) + 6)));
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = (138);
-		((self_in_CogX64Compiler->machineCode))[2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		offsetSqInt = (((sqLong) jumpTarget)) - (((sqLong) ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 6)));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (138);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 6;
 
 	case RetN:
 		/* begin concretizeRetN */
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		if (!offsetSqInt) {
-			((self_in_CogX64Compiler->machineCode))[0] = 195;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 195;
 			return 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = 194;
-		((self_in_CogX64Compiler->machineCode))[1] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2] = (((usqInt)(offsetSqInt)) >> 8);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 194;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (((usqInt)(offsetSqInt)) >> 8);
 		return 3;
 
 	case Stop:
 		/* begin concretizeStop */
-		((self_in_CogX64Compiler->machineCode))[0] = 204;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 204;
 		return 1;
 
 	case AddCqR:
@@ -24407,34 +24481,34 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		/* begin concretizeSEEOpRsRs: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 88;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 88;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case AddRdRd:
 		/* begin concretizeSEE2OpRdRd: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 88;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 88;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case AndCqR:
@@ -24450,28 +24524,28 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		/* begin concretizeTstCqR */
 		value = ((self_in_CogX64Compiler->operands))[0];
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (isQuick(self_in_CogX64Compiler, value)) {
-			((self_in_CogX64Compiler->machineCode))[1] = 246;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
-			((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 246;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
 			return 4;
 		}
 		if (is32BitSignedImmediate(self_in_CogX64Compiler, value)) {
 			if (!reg) {
-				((self_in_CogX64Compiler->machineCode))[1] = 169;
-				((self_in_CogX64Compiler->machineCode))[2] = (value & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[1] = 169;
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (value & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
 				return 6;
 			}
-			((self_in_CogX64Compiler->machineCode))[1] = 247;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
-			((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 247;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
 			return 7;
 		}
 		return concretizeArithCwR(self_in_CogX64Compiler, 133);
@@ -24488,23 +24562,23 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		reg = ((self_in_CogX64Compiler->operands))[1];
 		if (reg) {
 			if (reg > 7) {
-				((self_in_CogX64Compiler->machineCode))[0] = 65;
+				(machineCodeBuffer(self_in_CogX64Compiler))[0] = 65;
 				skip = 2;
 			}
 			else {
 				skip = 1;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip - 1] = 129;
-			((self_in_CogX64Compiler->machineCode))[skip] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip - 1] = 129;
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[0] = 61;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 61;
 			skip = 0;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = ((((usqInt)(value)) >> 24) & 0xFF);
 		return 5 + skip;
 
 	case CmpRR:
@@ -24514,17 +24588,17 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		/* begin concretizeCmpRdRd */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 46;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 46;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case CmpRsRs:
@@ -24536,79 +24610,79 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 46;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 46;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 3;
 
 	case DivRdRd:
 		/* begin concretizeSEE2OpRdRd: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 94;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 94;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case DivRsRs:
 		/* begin concretizeSEEOpRsRs: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 94;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 94;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case MulRdRd:
 		/* begin concretizeSEE2OpRdRd: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 89;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 89;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case MulRsRs:
 		/* begin concretizeSEEOpRsRs: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 89;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 89;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case OrCqR:
@@ -24636,64 +24710,64 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		/* begin concretizeSEE2OpRdRd: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 92;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 92;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case SubRsRs:
 		/* begin concretizeSEEOpRsRs: */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 92;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 92;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case SqrtRd:
 		/* begin concretizeSqrtRd */
 		reg = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if (reg <= 7) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, reg, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, reg, 0, reg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 81;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 81;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
 		return skip + 4;
 
 	case SqrtRs:
 		/* begin concretizeSqrtRs */
 		reg = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if (reg <= 7) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, reg, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, reg, 0, reg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 81;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 81;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
 		return skip + 4;
 
 	case XorCqR:
@@ -24709,41 +24783,41 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		/* begin concretizeXorRdRd */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 87;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 87;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 4;
 
 	case XorRsRs:
 		/* begin concretizeXorRsRs */
 		regRHS = ((self_in_CogX64Compiler->operands))[0];
 		regLHS = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
 		if ((regLHS <= 7)
 		 && (regRHS <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, regLHS, 0, regRHS));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 87;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 87;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModReg, regRHS, regLHS));
 		return skip + 3;
 
 	case NegateR:
 		/* begin concretizeNegateR */
 		reg = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = 247;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 3));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 247;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 3));
 		return 3;
 
 	case LoadEffectiveAddressMwrR:
@@ -24751,36 +24825,36 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 141;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 141;
 		if ((srcReg != RSP)
 		 && (srcReg != R12)) {
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 				return 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
 
 		/* ESP/R12: */
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 			return 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 8;
 
 	case RotateLeftCqR:
@@ -24788,15 +24862,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		distance = ((self_in_CogX64Compiler->operands))[0];
 		assert(((distance >= 1) && (distance <= 0x3F)));
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (distance == 1) {
-			((self_in_CogX64Compiler->machineCode))[1] = 209;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 209;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
 			return 3;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 193;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
-		((self_in_CogX64Compiler->machineCode))[3] = distance;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 193;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = distance;
 		return 4;
 
 	case RotateRightCqR:
@@ -24804,15 +24878,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		distance = ((self_in_CogX64Compiler->operands))[0];
 		assert(((distance >= 1) && (distance <= 0x3F)));
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (distance == 1) {
-			((self_in_CogX64Compiler->machineCode))[1] = 209;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 1));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 209;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 1));
 			return 3;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 193;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 1));
-		((self_in_CogX64Compiler->machineCode))[3] = distance;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 193;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 1));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = distance;
 		return 4;
 
 	case ArithmeticShiftRightCqR:
@@ -24820,15 +24894,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		distance = ((self_in_CogX64Compiler->operands))[0];
 		assert(((distance >= 1) && (distance <= 0x3F)));
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (distance == 1) {
-			((self_in_CogX64Compiler->machineCode))[1] = 209;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 209;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
 			return 3;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 193;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
-		((self_in_CogX64Compiler->machineCode))[3] = distance;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 193;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = distance;
 		return 4;
 
 	case LogicalShiftRightCqR:
@@ -24836,15 +24910,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		distance = ((self_in_CogX64Compiler->operands))[0];
 		assert(((distance >= 1) && (distance <= 0x3F)));
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (distance == 1) {
-			((self_in_CogX64Compiler->machineCode))[1] = 209;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 5));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 209;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 5));
 			return 3;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 193;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 5));
-		((self_in_CogX64Compiler->machineCode))[3] = distance;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 193;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 5));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = distance;
 		return 4;
 
 	case LogicalShiftLeftCqR:
@@ -24852,15 +24926,15 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		distance = ((self_in_CogX64Compiler->operands))[0];
 		assert(((distance >= 1) && (distance <= 0x3F)));
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
 		if (distance == 1) {
-			((self_in_CogX64Compiler->machineCode))[1] = 209;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 209;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
 			return 3;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 193;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
-		((self_in_CogX64Compiler->machineCode))[3] = distance;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 193;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 4));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = distance;
 		return 4;
 
 	case ArithmeticShiftRightRR:
@@ -24868,9 +24942,9 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		shiftCountReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
 		if (shiftCountReg == RCX) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, destReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 211;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, 7));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 211;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, 7));
 			return 3;
 		}
 		regToShift = (destReg == shiftCountReg
@@ -24879,24 +24953,24 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 							? shiftCountReg
 							: destReg));
 		if (!shiftCountReg) {
-			((self_in_CogX64Compiler->machineCode))[0] = 72;
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + RCX);
-			((self_in_CogX64Compiler->machineCode))[2] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
-			((self_in_CogX64Compiler->machineCode))[3] = 211;
-			((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 7));
-			((self_in_CogX64Compiler->machineCode))[5] = 72;
-			((self_in_CogX64Compiler->machineCode))[6] = (144 + RCX);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 72;
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + RCX);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = 211;
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 7));
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = 72;
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = (144 + RCX);
 			return 7;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
-		((self_in_CogX64Compiler->machineCode))[1] = 135;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
-		((self_in_CogX64Compiler->machineCode))[4] = 211;
-		((self_in_CogX64Compiler->machineCode))[5] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 7));
-		((self_in_CogX64Compiler->machineCode))[6] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
-		((self_in_CogX64Compiler->machineCode))[7] = 135;
-		((self_in_CogX64Compiler->machineCode))[8] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 135;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = 211;
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = 135;
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
 		return 9;
 
 	case LogicalShiftLeftRR:
@@ -24904,9 +24978,9 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		shiftCountReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
 		if (shiftCountReg == RCX) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, destReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 211;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, 4));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 211;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, 4));
 			return 3;
 		}
 		regToShift = (destReg == shiftCountReg
@@ -24915,24 +24989,24 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 							? shiftCountReg
 							: destReg));
 		if (!shiftCountReg) {
-			((self_in_CogX64Compiler->machineCode))[0] = 72;
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + RCX);
-			((self_in_CogX64Compiler->machineCode))[2] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
-			((self_in_CogX64Compiler->machineCode))[3] = 211;
-			((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 4));
-			((self_in_CogX64Compiler->machineCode))[5] = 72;
-			((self_in_CogX64Compiler->machineCode))[6] = (144 + RCX);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 72;
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + RCX);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = 211;
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 4));
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = 72;
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = (144 + RCX);
 			return 7;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
-		((self_in_CogX64Compiler->machineCode))[1] = 135;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
-		((self_in_CogX64Compiler->machineCode))[4] = 211;
-		((self_in_CogX64Compiler->machineCode))[5] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 4));
-		((self_in_CogX64Compiler->machineCode))[6] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
-		((self_in_CogX64Compiler->machineCode))[7] = 135;
-		((self_in_CogX64Compiler->machineCode))[8] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 135;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (rexRxb(self_in_CogX64Compiler, 0, 0, regToShift));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = 211;
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = (modRMRO(self_in_CogX64Compiler, ModReg, regToShift, 4));
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = (rexRxb(self_in_CogX64Compiler, shiftCountReg, 0, RCX));
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = 135;
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = (modRMRO(self_in_CogX64Compiler, ModReg, RCX, shiftCountReg));
 		return 9;
 
 	case ClzRR:
@@ -24940,11 +25014,11 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		assert(hasLZCNTInstructions(self_in_CogX64Compiler));
 		maskReg = ((self_in_CogX64Compiler->operands))[0];
 		dest = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
-		((self_in_CogX64Compiler->machineCode))[1] = (rexwrxb(self_in_CogX64Compiler, 1, dest, 0, maskReg));
-		((self_in_CogX64Compiler->machineCode))[2] = 15;
-		((self_in_CogX64Compiler->machineCode))[3] = 189;
-		((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, maskReg, dest));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexwrxb(self_in_CogX64Compiler, 1, dest, 0, maskReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = 189;
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, maskReg, dest));
 		return 5;
 
 	case MoveCqR:
@@ -24953,30 +25027,30 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		reg = ((self_in_CogX64Compiler->operands))[1];
 		if (is32BitSignedImmediate(self_in_CogX64Compiler, value)) {
 			if (!value) {
-				((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, reg));
-				((self_in_CogX64Compiler->machineCode))[1] = 49;
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, reg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[1] = 49;
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, reg));
 				return 3;
 			}
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = 199;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
-			((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 199;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
 			return 7;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = (184 + (reg & 7));
-		((self_in_CogX64Compiler->machineCode))[2] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (184 + (reg & 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
 		return 10;
 
 	case MoveCwR:
@@ -24986,47 +25060,47 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) value)))
 		 || ((((AbstractInstruction *) value)) == (methodLabel))) {
-			value = ((((AbstractInstruction *) value))->address);
+			value = codeAddressForOffset(((((AbstractInstruction *) value))->addressOffset));
 		}
 		if (/* addressIsInCurrentCompilation: */
-			((((usqInt)value)) >= ((methodLabel->address)))
-		 && ((((usqInt)value)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))) {
-			offsetSqInt = value - (((self_in_CogX64Compiler->address)) + 7);
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, 0));
-			((self_in_CogX64Compiler->machineCode))[1] = 141;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, reg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			((((usqInt)value)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)value)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))) {
+			offsetSqInt = value - ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 7);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 141;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = (184 + (reg & 7));
-		((self_in_CogX64Compiler->machineCode))[2] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (184 + (reg & 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
 
 		/* Add a nop to disambiguate between MoveCwR/PushCw and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0) */
-		((self_in_CogX64Compiler->machineCode))[10] = 144;
+		(machineCodeBuffer(self_in_CogX64Compiler))[10] = 144;
 		return 11;
 
 	case MoveC32R:
 		/* begin concretizeMoveC32R */
 		value = ((self_in_CogX64Compiler->operands))[0];
 		reg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-		((self_in_CogX64Compiler->machineCode))[1] = 199;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
-		((self_in_CogX64Compiler->machineCode))[3] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 199;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, reg, 0));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 24) & 0xFF);
 		return 7;
 
 	case MoveRR:
@@ -25038,7 +25112,7 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		if (/* isAddressRelativeToVarBase: */
 			(addressOperand >= (varBaseAddress))
@@ -25053,52 +25127,52 @@ dispatchConcretize(AbstractInstruction *self_in_CogX64Compiler)
 			offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 			srcReg = ((self_in_CogX64Compiler->operands))[1];
 			destReg = ((self_in_CogX64Compiler->operands))[2];
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 139;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 139;
 			if ((srcReg != RSP)
 			 && (srcReg != R12)) {
 				if ((offsetSqInt == 0)
 				 && ((srcReg != RBP)
 				 && (srcReg != R13))) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 					savedSize = 3;
 					goto l1;
 				}
 				if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-					((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 					savedSize = 4;
 					goto l1;
 				}
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 				savedSize = 7;
 				goto l1;
 			}
 
 			/* RSP: */
 			if (!offsetSqInt) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 				savedSize = 4;
 				goto l1;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-				((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 				savedSize = 5;
 				goto l1;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			savedSize = 8;
 			/* end concretizeMoveMwrR */
 l1:
@@ -25122,20 +25196,20 @@ l1:
 			offset1 = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 			offset1 = 2;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offset1] = 72;
-		((self_in_CogX64Compiler->machineCode))[1 + offset1] = 161;
-		((self_in_CogX64Compiler->machineCode))[2 + offset1] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offset1] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offset1] = 161;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offset1] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 10;
 		}
@@ -25143,12 +25217,12 @@ l1:
 		/* Now effect the assignment via xchg, which saves a byte over a move */
 		if ((reg == RBP)
 		 || (reg == RSP)) {
-			((self_in_CogX64Compiler->machineCode))[10] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[11] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[10] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[11] = (144 + (reg % 8));
 			return 12;
 		}
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[13] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[13] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 14;
 
 	case MoveA32R:
@@ -25157,31 +25231,31 @@ l1:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		reg = ((self_in_CogX64Compiler->operands))[1];
 		if (reg) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 			offsetSqInt = 2;
 		}
 		else {
 			offsetSqInt = 0;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offsetSqInt] = 161;
-		((self_in_CogX64Compiler->machineCode))[1 + offsetSqInt] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offsetSqInt] = 161;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offsetSqInt] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 9;
 		}
-		((self_in_CogX64Compiler->machineCode))[11] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 13;
 
 	case MoveRAw:
@@ -25191,7 +25265,7 @@ l1:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		if (/* isAddressRelativeToVarBase: */
 			(addressOperand >= (varBaseAddress))
@@ -25204,52 +25278,52 @@ l1:
 			srcReg = ((self_in_CogX64Compiler->operands))[0];
 			offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 			destReg = ((self_in_CogX64Compiler->operands))[2];
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 137;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 137;
 			if ((destReg != RSP)
 			 && (destReg != R12)) {
 				if ((offsetSqInt == 0)
 				 && ((destReg != RBP)
 				 && (destReg != R13))) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
 					savedSize = 3;
 					goto l2;
 				}
 				if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-					((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 					savedSize = 4;
 					goto l2;
 				}
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 				savedSize = 7;
 				goto l2;
 			}
 
 			/* RSP: */
 			if (!offsetSqInt) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 				savedSize = 4;
 				goto l2;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-				((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 				savedSize = 5;
 				goto l2;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			savedSize = 8;
 			/* end concretizeMoveRMwr */
 l2:
@@ -25273,27 +25347,27 @@ l2:
 		else {
 			if ((reg == RBP)
 			 || (reg == RSP)) {
-				((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, RAX));
-				((self_in_CogX64Compiler->machineCode))[1] = 137;
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, reg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, reg, 0, RAX));
+				(machineCodeBuffer(self_in_CogX64Compiler))[1] = 137;
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, RAX, reg));
 				offset1 = 3;
 			}
 			else {
-				((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
-				((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+				(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, RAX, 0, reg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 				offset1 = 2;
 			}
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offset1] = 72;
-		((self_in_CogX64Compiler->machineCode))[1 + offset1] = 163;
-		((self_in_CogX64Compiler->machineCode))[2 + offset1] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offset1] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offset1] = 163;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offset1] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 10;
 		}
@@ -25303,8 +25377,8 @@ l2:
 		}
 
 		/* Now effect the assignment via xchg, which restores RAX */
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[13] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[13] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 14;
 
 	case MoveRA32:
@@ -25314,30 +25388,30 @@ l2:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		if (reg) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 			offsetSqInt = 2;
 		}
 		else {
 			offsetSqInt = 0;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offsetSqInt] = 163;
-		((self_in_CogX64Compiler->machineCode))[1 + offsetSqInt] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[2 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offsetSqInt] = 163;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offsetSqInt] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offsetSqInt] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 9;
 		}
-		((self_in_CogX64Compiler->machineCode))[11] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 13;
 
 	case MoveAbR:
@@ -25346,7 +25420,7 @@ l2:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		if (/* isAddressRelativeToVarBase: */
 			(addressOperand >= (varBaseAddress))
@@ -25361,52 +25435,52 @@ l2:
 			offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 			srcReg = ((self_in_CogX64Compiler->operands))[1];
 			destReg = ((self_in_CogX64Compiler->operands))[2];
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 138;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 138;
 			if ((srcReg != RSP)
 			 && (srcReg != R12)) {
 				if ((offsetSqInt == 0)
 				 && ((srcReg != RBP)
 				 && (srcReg != R13))) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 					savedSize = 3;
 					goto l3;
 				}
 				if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-					((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 					savedSize = 4;
 					goto l3;
 				}
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 				savedSize = 7;
 				goto l3;
 			}
 
 			/* RSP: */
 			if (!offsetSqInt) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 				savedSize = 4;
 				goto l3;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-				((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 				savedSize = 5;
 				goto l3;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			savedSize = 8;
 			/* end concretizeMoveMbrR */
 l3:
@@ -25417,28 +25491,28 @@ l3:
 		}
 		reg = ((self_in_CogX64Compiler->operands))[1];
 		if (reg) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 			offset1 = 2;
 		}
 		else {
 			offset1 = 0;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offset1] = 72;
-		((self_in_CogX64Compiler->machineCode))[1 + offset1] = 160;
-		((self_in_CogX64Compiler->machineCode))[2 + offset1] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offset1] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offset1] = 160;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offset1] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 10;
 		}
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[13] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[13] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 14;
 
 	case MoveRAb:
@@ -25448,7 +25522,7 @@ l3:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) addressOperand)))
 		 || ((((AbstractInstruction *) addressOperand)) == (methodLabel))) {
-			addressOperand = ((((AbstractInstruction *) addressOperand))->address);
+			addressOperand = codeAddressForOffset(((((AbstractInstruction *) addressOperand))->addressOffset));
 		}
 		if (/* isAddressRelativeToVarBase: */
 			(addressOperand >= (varBaseAddress))
@@ -25461,52 +25535,52 @@ l3:
 			srcReg = ((self_in_CogX64Compiler->operands))[0];
 			offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 			baseReg = ((self_in_CogX64Compiler->operands))[2];
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, baseReg));
-			((self_in_CogX64Compiler->machineCode))[1] = 136;
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, baseReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 136;
 			if ((baseReg != RSP)
 			 && (baseReg != R12)) {
 				if ((offsetSqInt == 0)
 				 && ((baseReg != RBP)
 				 && (baseReg != R13))) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
 					savedSize = 3;
 					goto l4;
 				}
 				if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-					((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
-					((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+					(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
+					(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 					savedSize = 4;
 					goto l4;
 				}
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-				((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 				savedSize = 7;
 				goto l4;
 			}
 
 			/* RSP: */
 			if (!offsetSqInt) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
 				savedSize = 4;
 				goto l4;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
-				((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 				savedSize = 5;
 				goto l4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			savedSize = 8;
 			/* end concretizeMoveRMbr */
 l4:
@@ -25515,28 +25589,28 @@ l4:
 			return savedSize;
 		}
 		if (reg) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
-			((self_in_CogX64Compiler->machineCode))[1] = (144 + (reg % 8));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, reg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (144 + (reg % 8));
 			offset1 = 2;
 		}
 		else {
 			offset1 = 0;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offset1] = 72;
-		((self_in_CogX64Compiler->machineCode))[1 + offset1] = 162;
-		((self_in_CogX64Compiler->machineCode))[2 + offset1] = (addressOperand & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offset1] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offset1] = 162;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offset1] = (addressOperand & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offset1] = ((((usqInt)(addressOperand)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4 + offset1] = ((((usqInt)(addressOperand)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5 + offset1] = ((((usqInt)(addressOperand)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6 + offset1] = ((((usqInt)(addressOperand)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7 + offset1] = ((((usqInt)(addressOperand)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8 + offset1] = ((((usqInt)(addressOperand)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9 + offset1] = ((((usqInt)(addressOperand)) >> 56) & 0xFF);
 		if (!reg) {
 			return 10;
 		}
-		((self_in_CogX64Compiler->machineCode))[12] = (((self_in_CogX64Compiler->machineCode))[0]);
-		((self_in_CogX64Compiler->machineCode))[13] = (((self_in_CogX64Compiler->machineCode))[1]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[12] = ((machineCodeBuffer(self_in_CogX64Compiler))[0]);
+		(machineCodeBuffer(self_in_CogX64Compiler))[13] = ((machineCodeBuffer(self_in_CogX64Compiler))[1]);
 		return 14;
 
 	case MoveMbrR:
@@ -25545,47 +25619,47 @@ l4:
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 138;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 138;
 		if ((srcReg != RSP)
 		 && (srcReg != R12)) {
 			if ((offsetSqInt == 0)
 			 && ((srcReg != RBP)
 			 && (srcReg != R13))) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return 3;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 				return 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
 
 		/* RSP: */
 		if (!offsetSqInt) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			return 4;
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 			return 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 8;
 
 	case MoveRMbr:
@@ -25594,47 +25668,47 @@ l4:
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 		baseReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, baseReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 136;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, baseReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 136;
 		if ((baseReg != RSP)
 		 && (baseReg != R12)) {
 			if ((offsetSqInt == 0)
 			 && ((baseReg != RBP)
 			 && (baseReg != R13))) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
 				return 3;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 				return 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
 
 		/* RSP: */
 		if (!offsetSqInt) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, baseReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
 			return 4;
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, baseReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 			return 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, baseReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, baseReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 8;
 
 	case MoveM16rR:
@@ -25642,27 +25716,27 @@ l4:
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 183;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 183;
 		if ((srcReg != RSP)
 		 && (srcReg != R12)) {
 			if ((offsetSqInt == 0)
 			 && ((srcReg != RBP)
 			 && (srcReg != R13))) {
-				((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return 4;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 				return 5;
 			}
-			((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 8;
 		}
 
@@ -25670,22 +25744,22 @@ l4:
 		if ((offsetSqInt == 0)
 		 && ((srcReg != RBP)
 		 && (srcReg != R13))) {
-			((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			return 5;
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[5] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = (offsetSqInt & 0xFF);
 			return 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-		((self_in_CogX64Compiler->machineCode))[5] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 9;
 
 	case MoveRM16r:
@@ -25693,10 +25767,10 @@ l4:
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((srcReg > 7)
 		 || (destReg > 7)) {
-			((self_in_CogX64Compiler->machineCode))[1] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 			skip = 1;
 		}
 		else {
@@ -25704,35 +25778,35 @@ l4:
 		}
 		if ((destReg & 7) != RSP) {
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = 137;
-				((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 137;
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (offsetSqInt & 0xFF);
 				return skip + 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 1] = 137;
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 137;
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return skip + 7;
 		}
 
 		/* RSP: */
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[skip + 1] = 137;
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 137;
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
 			return skip + 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 137;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 8;
 
 	case MoveM32rR:
@@ -25746,40 +25820,40 @@ l4:
 		}
 		else {
 			skip = 1;
-			((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip] = 139;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip] = 139;
 		if (!offsetSqInt) {
 			if ((srcReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return skip + 2;
 			}
 			if ((srcReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 				return skip + 3;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((srcReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 2] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (offsetSqInt & 0xFF);
 				return skip + 3;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (offsetSqInt & 0xFF);
 			return skip + 4;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
 		if ((srcReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 6;
 
 	case MoveM32rRs:
@@ -25787,47 +25861,47 @@ l4:
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 110;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 110;
 		if (!offsetSqInt) {
 			if ((srcReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return skip + 4;
 			}
 			if ((srcReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 				return skip + 5;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((srcReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
 				return skip + 5;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 5] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = (offsetSqInt & 0xFF);
 			return skip + 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
 		if ((srcReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 8;
 
 	case MoveM64rRd:
@@ -25835,47 +25909,47 @@ l4:
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 0x7E;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 0x7E;
 		if (!offsetSqInt) {
 			if ((srcReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return skip + 4;
 			}
 			if ((srcReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 				return skip + 5;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((srcReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
 				return skip + 5;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 5] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = (offsetSqInt & 0xFF);
 			return skip + 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
 		if ((srcReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 8;
 
 	case MoveMwrR:
@@ -25883,47 +25957,47 @@ l4:
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[0];
 		srcReg = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 139;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 139;
 		if ((srcReg != RSP)
 		 && (srcReg != R12)) {
 			if ((offsetSqInt == 0)
 			 && ((srcReg != RBP)
 			 && (srcReg != R13))) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
 				return 3;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 				return 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
 
 		/* RSP: */
 		if (!offsetSqInt) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
 			return 4;
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, srcReg, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 			return 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 8;
 
 	case MoveXbrRR:
@@ -25931,17 +26005,17 @@ l4:
 		index = ((self_in_CogX64Compiler->operands))[0];
 		base = ((self_in_CogX64Compiler->operands))[1];
 		dest = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, dest, index, base));
-		((self_in_CogX64Compiler->machineCode))[1] = 138;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, dest, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 138;
 		if ((base != RBP)
 		 && (base != R13)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, index, base));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, index, base));
 			return 4;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, index, base));
-		((self_in_CogX64Compiler->machineCode))[4] = 0;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = 0;
 		return 5;
 
 	case MoveRXbrR:
@@ -25953,20 +26027,20 @@ l4:
 		if ((src > 3)
 		 || ((base > 7)
 		 || (index > 7))) {
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, src, index, base));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, src, index, base));
 			offsetSqInt = 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[0 + offsetSqInt] = 136;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0 + offsetSqInt] = 136;
 		if ((base & 7) != RBP) {
-			((self_in_CogX64Compiler->machineCode))[1 + offsetSqInt] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
-			((self_in_CogX64Compiler->machineCode))[2 + offsetSqInt] = (sib(self_in_CogX64Compiler, SIB1, index, base));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1 + offsetSqInt] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2 + offsetSqInt] = (sib(self_in_CogX64Compiler, SIB1, index, base));
 			return 3 + offsetSqInt;
 		}
 
 		/* RBP,R13 */
-		((self_in_CogX64Compiler->machineCode))[1 + offsetSqInt] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
-		((self_in_CogX64Compiler->machineCode))[2 + offsetSqInt] = (sib(self_in_CogX64Compiler, SIB1, index, base));
-		((self_in_CogX64Compiler->machineCode))[3 + offsetSqInt] = 0;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1 + offsetSqInt] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2 + offsetSqInt] = (sib(self_in_CogX64Compiler, SIB1, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3 + offsetSqInt] = 0;
 		return 4 + offsetSqInt;
 
 	case MoveXwrRR:
@@ -25974,18 +26048,18 @@ l4:
 		index = ((self_in_CogX64Compiler->operands))[0];
 		base = ((self_in_CogX64Compiler->operands))[1];
 		dest = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, dest, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, dest, index, base));
 		if ((base != RBP)
 		 && (base != R13)) {
-			((self_in_CogX64Compiler->machineCode))[1] = 139;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 139;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, dest));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
 			return 4;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 139;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
-		((self_in_CogX64Compiler->machineCode))[4] = 0;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 139;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, dest));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = 0;
 		return 5;
 
 	case MoveRXwrR:
@@ -25993,18 +26067,18 @@ l4:
 		src = ((self_in_CogX64Compiler->operands))[0];
 		index = ((self_in_CogX64Compiler->operands))[1];
 		base = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, src, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, src, index, base));
 		if ((base != RBP)
 		 && (base != R13)) {
-			((self_in_CogX64Compiler->machineCode))[1] = 137;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 137;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 4, src));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
 			return 4;
 		}
-		((self_in_CogX64Compiler->machineCode))[1] = 137;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
-		((self_in_CogX64Compiler->machineCode))[4] = 0;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, 4, src));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB8, index, base));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = 0;
 		return 5;
 
 	case MoveX32rRR:
@@ -26018,47 +26092,47 @@ l4:
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 137;
 		if ((destReg != RSP)
 		 && (destReg != R12)) {
 			if ((offsetSqInt == 0)
 			 && ((destReg != RBP)
 			 && (destReg != R13))) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
 				return 3;
 			}
 			if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-				((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
 				return 4;
 			}
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 			return 7;
 		}
 
 		/* RSP: */
 		if (!offsetSqInt) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 			return 4;
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
 			return 5;
 		}
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
-		((self_in_CogX64Compiler->machineCode))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-		((self_in_CogX64Compiler->machineCode))[4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return 8;
 
 	case MoveRM32r:
@@ -26072,40 +26146,40 @@ l4:
 		}
 		else {
 			skip = 1;
-			((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip] = 137;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip] = 137;
 		if (!offsetSqInt) {
 			if ((destReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
 				return skip + 2;
 			}
 			if ((destReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 				return skip + 3;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((destReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 2] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (offsetSqInt & 0xFF);
 				return skip + 3;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (offsetSqInt & 0xFF);
 			return skip + 4;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
 		if ((destReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 6;
 
 	case MoveRsM32r:
@@ -26113,47 +26187,47 @@ l4:
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 0x7E;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 0x7E;
 		if (!offsetSqInt) {
 			if ((destReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
 				return skip + 4;
 			}
 			if ((destReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 				return skip + 5;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((destReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
 				return skip + 5;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 5] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = (offsetSqInt & 0xFF);
 			return skip + 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
 		if ((destReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 8;
 
 	case MoveRdM64r:
@@ -26161,141 +26235,141 @@ l4:
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		offsetSqInt = ((self_in_CogX64Compiler->operands))[1];
 		destReg = ((self_in_CogX64Compiler->operands))[2];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 214;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 214;
 		if (!offsetSqInt) {
 			if ((destReg & 6) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
 				return skip + 4;
 			}
 			if ((destReg & 7) == RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegInd, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 				return skip + 5;
 			}
 		}
 		if (isQuick(self_in_CogX64Compiler, offsetSqInt)) {
 			if ((destReg & 7) != RSP) {
-				((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-				((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+				(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
 				return skip + 5;
 			}
-			((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
-			((self_in_CogX64Compiler->machineCode))[skip + 5] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp8, destReg, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = (offsetSqInt & 0xFF);
 			return skip + 6;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModRegRegDisp32, destReg, srcReg));
 		if ((destReg & 7) == RSP) {
-			((self_in_CogX64Compiler->machineCode))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (sib(self_in_CogX64Compiler, SIB1, 4, destReg));
 			skip += 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 4] = (offsetSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 4] = (offsetSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 5] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 6] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 7] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
 		return skip + 8;
 
 	case MoveRdR:
 		/* begin concretizeMoveRdR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
-		((self_in_CogX64Compiler->machineCode))[1] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
-		((self_in_CogX64Compiler->machineCode))[2] = 15;
-		((self_in_CogX64Compiler->machineCode))[3] = 0x7E;
-		((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexRxb(self_in_CogX64Compiler, srcReg, 0, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = 0x7E;
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
 		return 5;
 
 	case MoveRRd:
 		/* begin concretizeMoveRRd */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 102;
-		((self_in_CogX64Compiler->machineCode))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[2] = 15;
-		((self_in_CogX64Compiler->machineCode))[3] = 110;
-		((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 102;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = 110;
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 5;
 
 	case MoveRdRd:
 		/* begin concretizeMoveRdRd */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 17;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 17;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
 		return skip + 4;
 
 	case MoveRsRs:
 		/* begin concretizeMoveRsRs */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, srcReg, 0, destReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 17;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 17;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, destReg, srcReg));
 		return skip + 4;
 
 	case PopR:
 		/* begin concretizePopR */
 		reg = ((self_in_CogX64Compiler->operands))[0];
 		if (reg < 8) {
-			((self_in_CogX64Compiler->machineCode))[0] = (88 + reg);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (88 + reg);
 			return 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = 65;
-		((self_in_CogX64Compiler->machineCode))[1] = (88 + (reg - 8));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 65;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (88 + (reg - 8));
 		return 2;
 
 	case PushR:
 		/* begin concretizePushR */
 		reg = ((self_in_CogX64Compiler->operands))[0];
 		if (reg < 8) {
-			((self_in_CogX64Compiler->machineCode))[0] = (80 + reg);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (80 + reg);
 			return 1;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = 65;
-		((self_in_CogX64Compiler->machineCode))[1] = (80 + (reg - 8));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 65;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (80 + (reg - 8));
 		return 2;
 
 	case PushCq:
 		/* begin concretizePushCq */
 		value = ((self_in_CogX64Compiler->operands))[0];
 		if (isQuick(self_in_CogX64Compiler, value)) {
-			((self_in_CogX64Compiler->machineCode))[0] = 106;
-			((self_in_CogX64Compiler->machineCode))[1] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 106;
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (value & 0xFF);
 			return 2;
 		}
 		if (is32BitSignedImmediate(self_in_CogX64Compiler, value)) {
-			((self_in_CogX64Compiler->machineCode))[0] = 104;
-			((self_in_CogX64Compiler->machineCode))[1] = (value & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[2] = ((((usqInt)(value)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = 104;
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = (value & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = ((((usqInt)(value)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 24) & 0xFF);
 			return 5;
 		}
 
@@ -26304,35 +26378,35 @@ l4:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) valueSqInt)))
 		 || ((((AbstractInstruction *) valueSqInt)) == (methodLabel))) {
-			valueSqInt = ((((AbstractInstruction *) valueSqInt))->address);
+			valueSqInt = codeAddressForOffset(((((AbstractInstruction *) valueSqInt))->addressOffset));
 		}
 		if (/* addressIsInCurrentCompilation: */
-			((((usqInt)valueSqInt)) >= ((methodLabel->address)))
-		 && ((((usqInt)valueSqInt)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))) {
-			offsetSqInt = valueSqInt - (((self_in_CogX64Compiler->address)) + 7);
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, 0));
-			((self_in_CogX64Compiler->machineCode))[1] = 141;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, RISCTempReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = 65;
-			((self_in_CogX64Compiler->machineCode))[8] = (72 + RISCTempReg);
+			((((usqInt)valueSqInt)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)valueSqInt)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))) {
+			offsetSqInt = valueSqInt - ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 7);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 141;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, RISCTempReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = 65;
+			(machineCodeBuffer(self_in_CogX64Compiler))[8] = (72 + RISCTempReg);
 			return 9;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, RISCTempReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 184;
-		((self_in_CogX64Compiler->machineCode))[2] = (valueSqInt & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(valueSqInt)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(valueSqInt)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(valueSqInt)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(valueSqInt)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(valueSqInt)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(valueSqInt)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(valueSqInt)) >> 56) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[10] = 65;
-		((self_in_CogX64Compiler->machineCode))[11] = (72 + RISCTempReg);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, RISCTempReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (184 + (RISCTempReg & 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (valueSqInt & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(valueSqInt)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(valueSqInt)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(valueSqInt)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(valueSqInt)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(valueSqInt)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(valueSqInt)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(valueSqInt)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[10] = 65;
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = (72 + RISCTempReg);
 		assert(((machineCodeBuffer(self_in_CogX64Compiler))[11]) < 144);
 		return 12;
 
@@ -26342,35 +26416,35 @@ l4:
 		if (/* isAnInstruction: */
 			(addressIsInInstructions(((AbstractInstruction *) value)))
 		 || ((((AbstractInstruction *) value)) == (methodLabel))) {
-			value = ((((AbstractInstruction *) value))->address);
+			value = codeAddressForOffset(((((AbstractInstruction *) value))->addressOffset));
 		}
 		if (/* addressIsInCurrentCompilation: */
-			((((usqInt)value)) >= ((methodLabel->address)))
-		 && ((((usqInt)value)) < ((((youngReferrers) < (((methodLabel->address)) + MaxMethodSize)) ? (youngReferrers) : (((methodLabel->address)) + MaxMethodSize))))) {
-			offsetSqInt = value - (((self_in_CogX64Compiler->address)) + 7);
-			((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, 0));
-			((self_in_CogX64Compiler->machineCode))[1] = 141;
-			((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, RISCTempReg));
-			((self_in_CogX64Compiler->machineCode))[3] = (offsetSqInt & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
-			((self_in_CogX64Compiler->machineCode))[7] = 65;
-			((self_in_CogX64Compiler->machineCode))[8] = (72 + RISCTempReg);
+			((((usqInt)value)) >= (codeAddressForOffset((methodLabel->addressOffset))))
+		 && ((((usqInt)value)) < ((((youngReferrers) < ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize)) ? (youngReferrers) : ((codeAddressForOffset((methodLabel->addressOffset))) + MaxMethodSize))))) {
+			offsetSqInt = value - ((codeAddressForOffset((self_in_CogX64Compiler->addressOffset))) + 7);
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, 0));
+			(machineCodeBuffer(self_in_CogX64Compiler))[1] = 141;
+			(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModRegInd, 5, RISCTempReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[3] = (offsetSqInt & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(offsetSqInt)) >> 8) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(offsetSqInt)) >> 16) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(offsetSqInt)) >> 24) & 0xFF);
+			(machineCodeBuffer(self_in_CogX64Compiler))[7] = 65;
+			(machineCodeBuffer(self_in_CogX64Compiler))[8] = (72 + RISCTempReg);
 			return 9;
 		}
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, RISCTempReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 184;
-		((self_in_CogX64Compiler->machineCode))[2] = (value & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
-		((self_in_CogX64Compiler->machineCode))[10] = 65;
-		((self_in_CogX64Compiler->machineCode))[11] = (72 + RISCTempReg);
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, RISCTempReg, 0, RISCTempReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (184 + (RISCTempReg & 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (value & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = ((((usqInt)(value)) >> 8) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = ((((usqInt)(value)) >> 16) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[5] = ((((usqInt)(value)) >> 24) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[6] = ((((usqInt)(value)) >> 32) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[7] = ((((usqInt)(value)) >> 40) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[8] = ((((usqInt)(value)) >> 48) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[9] = ((((usqInt)(value)) >> 56) & 0xFF);
+		(machineCodeBuffer(self_in_CogX64Compiler))[10] = 65;
+		(machineCodeBuffer(self_in_CogX64Compiler))[11] = (72 + RISCTempReg);
 		assert(((machineCodeBuffer(self_in_CogX64Compiler))[11]) < 144);
 		return 12;
 
@@ -26381,139 +26455,139 @@ l4:
 		/* begin concretizeConvertRRd */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
-		((self_in_CogX64Compiler->machineCode))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[2] = 15;
-		((self_in_CogX64Compiler->machineCode))[3] = 42;
-		((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = 42;
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 5;
 
 	case ConvertRdR:
 		/* begin concretizeConvertRdR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
-		((self_in_CogX64Compiler->machineCode))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[2] = 15;
-		((self_in_CogX64Compiler->machineCode))[3] = 45;
-		((self_in_CogX64Compiler->machineCode))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = (rexRxb(self_in_CogX64Compiler, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = 45;
+		(machineCodeBuffer(self_in_CogX64Compiler))[4] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 5;
 
 	case ConvertRRs:
 		/* begin concretizeConvertRRs */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 42;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 42;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return skip + 4;
 
 	case ConvertRsR:
 		/* begin concretizeConvertRsR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 45;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 45;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return skip + 4;
 
 	case ConvertRsRd:
 		/* begin concretizeConvertRsRd */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 90;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 90;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return skip + 4;
 
 	case ConvertRdRs:
 		/* begin concretizeConvertRdRs */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = 242;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 242;
 		if ((srcReg <= 7)
 		 && (destReg <= 7)) {
 			skip = 0;
 		}
 		else {
-			((self_in_CogX64Compiler->machineCode))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[(skip = 1)] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = 15;
-		((self_in_CogX64Compiler->machineCode))[skip + 2] = 90;
-		((self_in_CogX64Compiler->machineCode))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 2] = 90;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return skip + 4;
 
 	case SignExtend8RR:
 		/* begin concretizeSignExtend8RR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 190;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 190;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 4;
 
 	case SignExtend16RR:
 		/* begin concretizeSignExtend16RR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 191;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 191;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 4;
 
 	case SignExtend32RR:
 		/* begin concretizeSignExtend32RR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 99;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 99;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 3;
 
 	case ZeroExtend8RR:
 		/* begin concretizeZeroExtend8RR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 182;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 182;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 4;
 
 	case ZeroExtend16RR:
 		/* begin concretizeZeroExtend16RR */
 		srcReg = ((self_in_CogX64Compiler->operands))[0];
 		destReg = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 183;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, destReg, 0, srcReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 183;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return 4;
 
 	case ZeroExtend32RR:
@@ -26526,10 +26600,10 @@ l4:
 		}
 		else {
 			skip = 1;
-			((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
+			(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 0, destReg, 0, srcReg));
 		}
-		((self_in_CogX64Compiler->machineCode))[skip] = 139;
-		((self_in_CogX64Compiler->machineCode))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip] = 139;
+		(machineCodeBuffer(self_in_CogX64Compiler))[skip + 1] = (modRMRO(self_in_CogX64Compiler, ModReg, srcReg, destReg));
 		return skip + 2;
 
 	case MovePerfCnt64RL:
@@ -26569,32 +26643,32 @@ dispatchConcretizeProcessorSpecific(AbstractInstruction *self_in_CogX64Compiler)
 	switch ((self_in_CogX64Compiler->opcode)) {
 	case CPUID:
 		/* begin concretizeCPUID */
-		((self_in_CogX64Compiler->machineCode))[0] = 15;
-		((self_in_CogX64Compiler->machineCode))[1] = 162;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 162;
 		return 2;
 
 	case CDQ:
 		/* begin concretizeCDQ */
-		((self_in_CogX64Compiler->machineCode))[0] = 72;
-		((self_in_CogX64Compiler->machineCode))[1] = 153;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 72;
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 153;
 		return 2;
 
 	case IDIVR:
 		/* begin concretizeIDIVR */
 		regDivisor = ((self_in_CogX64Compiler->operands))[0];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, regDivisor));
-		((self_in_CogX64Compiler->machineCode))[1] = 247;
-		((self_in_CogX64Compiler->machineCode))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regDivisor, 7));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, 0, 0, regDivisor));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 247;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = (modRMRO(self_in_CogX64Compiler, ModReg, regDivisor, 7));
 		return 3;
 
 	case IMULRR:
 		/* begin concretizeMulRR */
 		reg1 = ((self_in_CogX64Compiler->operands))[0];
 		reg2 = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexRxb(self_in_CogX64Compiler, reg2, 0, reg1));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 175;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg1, reg2));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexRxb(self_in_CogX64Compiler, reg2, 0, reg1));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 175;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, reg1, reg2));
 		return 4;
 
 	case XCHGRR:
@@ -26602,33 +26676,33 @@ dispatchConcretizeProcessorSpecific(AbstractInstruction *self_in_CogX64Compiler)
 
 	case REP:
 		/* begin concretizeREP */
-		((self_in_CogX64Compiler->machineCode))[0] = 243;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 243;
 		return 1;
 
 	case CLD:
 		/* begin concretizeCLD */
-		((self_in_CogX64Compiler->machineCode))[0] = 0xFC;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 0xFC;
 		return 1;
 
 	case MOVSB:
 		/* begin concretizeMOVSB */
-		((self_in_CogX64Compiler->machineCode))[0] = 164;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = 164;
 		return 1;
 
 	case MOVSQ:
 		/* begin concretizeMOVSQ */
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, 0, 0, 0));
-		((self_in_CogX64Compiler->machineCode))[1] = 165;
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, 0, 0, 0));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 165;
 		return 2;
 
 	case BSR:
 		/* begin concretizeBSR */
 		maskReg = ((self_in_CogX64Compiler->operands))[0];
 		dest = ((self_in_CogX64Compiler->operands))[1];
-		((self_in_CogX64Compiler->machineCode))[0] = (rexwrxb(self_in_CogX64Compiler, 1, dest, 0, maskReg));
-		((self_in_CogX64Compiler->machineCode))[1] = 15;
-		((self_in_CogX64Compiler->machineCode))[2] = 189;
-		((self_in_CogX64Compiler->machineCode))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, maskReg, dest));
+		(machineCodeBuffer(self_in_CogX64Compiler))[0] = (rexwrxb(self_in_CogX64Compiler, 1, dest, 0, maskReg));
+		(machineCodeBuffer(self_in_CogX64Compiler))[1] = 15;
+		(machineCodeBuffer(self_in_CogX64Compiler))[2] = 189;
+		(machineCodeBuffer(self_in_CogX64Compiler))[3] = (modRMRO(self_in_CogX64Compiler, ModReg, maskReg, dest));
 		return 4;
 
 	default:
@@ -27414,10 +27488,10 @@ loadPICLiteralByteSize(AbstractInstruction *self_in_CogX64Compiler)
 }
 
 	/* CogX64Compiler>>#machineCodeAt: */
-static NoDbgRegParms unsigned char
+static NoDbgRegParms sqInt
 machineCodeAt(AbstractInstruction *self_in_CogX64Compiler, sqInt anOffset)
 {
-	return ((self_in_CogX64Compiler->machineCode))[anOffset];
+	return (machineCodeBuffer(self_in_CogX64Compiler))[anOffset];
 }
 
 
@@ -32699,8 +32773,8 @@ generateInstructionsAt(sqInt eventualAbsoluteAddress)
 		fixup = fixupAtIndex(j);
 		maybeBreakGeneratingInstructionWithIndex((fixup->instructionIndex));
 		abstractInstruction = abstractInstructionAt((fixup->instructionIndex));
-		maybeBreakGeneratingFromto((abstractInstruction->address), (((abstractInstruction->address)) + ((abstractInstruction->maxSize))) - 1);
-		concretizeAt(abstractInstruction, (abstractInstruction->address));
+		maybeBreakGeneratingFromto(codeAddressForOffset((abstractInstruction->addressOffset)), ((codeAddressForOffset((abstractInstruction->addressOffset))) + ((abstractInstruction->maxSize))) - 1);
+		concretizeAt(abstractInstruction, codeAddressForOffset((abstractInstruction->addressOffset)));
 	}
 	return absoluteAddress - eventualAbsoluteAddress;
 }
