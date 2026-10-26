@@ -1,5 +1,5 @@
 "Oil end-to-end test (native) of Milestone 8: scalar replacement of objects (Points and Associations dissolved into
- registers, materialized with OilNewObject only where they escape, sharing eden bump allocations, rematerialized when
+ registers, materialized with OilNewObject only where they escape, rematerialized when
  deoptimizing), bimorphic inlining (a class test with both methods inlined; a predicate answering true for one class and
  false for the other compiled to the class test itself, OilCmpClass), and the sends removed from Set and Dictionary probes
  (String>>hash inlined as OilStringHash, Behavior>>identityHash and the hash of a literal folded).
@@ -97,7 +97,7 @@ dump := [| words i op |
 				ifTrue: [3]
 				ifFalse: [op = 28 ifTrue: [4] ifFalse: [op = 53 ifTrue: [5] ifFalse: [(#(24 30 49) includes: op) ifTrue: [3 + (((words at: i) bitAnd: 255) + 3 // 4)] ifFalse: [1]]]])].
 	out flush].
-"stats: Pass 1 and 3 statistics of the last compilation: {scalar replaced objects. materialized. bimorphic sends. bimorphic predicates. eager allocation sites. allocations sharing a threshold check}"
+"stats: Pass 1 and 3 statistics of the last compilation: {scalar replaced objects. materialized. bimorphic sends. bimorphic predicates. eager allocation sites. (0: allocations no longer share threshold checks)}"
 statsOf := [((CompiledMethod oilLastCompilation) at: 11) copyFrom: 12 to: 18].
 "compile: warm up (baseline JIT), Oil-compile for OilM8Model, answer the result code"
 res := [:sel :warm | | cm |
@@ -160,7 +160,7 @@ check value: 'pointEscape: materialized' value: ((stats at: 2) = 1 and: [(countO
 r := model pointEscape: 300000.
 check value: 'pointEscape: 300000 Points (several scavenges)' value: (r size = 300000 and: [(r allSatisfy: [:p | p class == Point]) and: [(1 to: r size) allSatisfy: [:k | (r at: k) = (k @ k)]]]).
 check value: 'pairs: compiles' value: (res value: #pairs: value: [model pairs: 10]) = 0.
-check value: 'pairs: two materializations sharing one threshold check' value: ((countOps value: ir value: #(51)) = 2 and: [(stats at: 6) >= 1]).
+check value: 'pairs: two materializations' value: (countOps value: ir value: #(51)) = 2.
 r := model pairs: 300000.
 check value: 'pairs: 300000 Associations of Points' value: (r size = 300000 and: [(1 to: r size) allSatisfy: [:k | | as | as := r at: k. as class == Association and: [as key = k and: [as value class == Point and: [as value = (k @ k)]]]]]).
 Smalltalk garbageCollect.

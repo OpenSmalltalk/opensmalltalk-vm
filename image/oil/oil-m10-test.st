@@ -69,20 +69,18 @@ probes := {
 	{#escapes:. {{3}}. {{3}}. [:fl | fl isEmpty]}.
 	{#tempAfter:. {{3}}. {{0}. {3}}. [:fl | fl size = 1 and: [((fl first at: 3) collect: [:p | p last]) asSortedCollection asArray = #(1)]]}.
 	{#intLoop:. {{3}}. {{3}}. [:fl | fl isEmpty]}}.
-"(intLoop: has no float arithmetic: it is still partially unrolled)"
 probes do: [:spec | | sel comp fl |
 	sel := spec first.
 	comp := compile value: sel value: (spec at: 2).
 	fl := floatLoops value: comp.
-	out cr; nextPutAll: comp irString; nextPutAll: sel; nextPutAll: ': float loops '; print: fl; nextPutAll: '; partially unrolled '; print: (comp pass2Statistics: 24); cr.
+	out cr; nextPutAll: comp irString; nextPutAll: sel; nextPutAll: ': float loops '; print: fl; cr.
 	check value: sel, ' compiles' value: comp failed not.
 	check value: sel, ' float loop registers' value: ((spec at: 4) value: fl).
-	sel ~~ #intLoop: ifTrue: [check value: sel, ' not partially unrolled' value: (comp pass2Statistics: 24) = 0].
 	(spec at: 3) do: [:args | | r real |
 		r := run value: comp value: args.
 		real := [model perform: sel withArguments: args] on: Error do: [:e | #error].
 		check value: sel, ' IR = real for ', (args printString contractTo: 40) value: (r = real or: [(r isKindOf: Association) and: [r key == #deopt]])]].
-"Mode bit 16 disables them (and then a float loop is unrolled again)."
+"Mode bit 16 disables them."
 [| comp |
  comp := OilCompiler new.
  comp typeFeedback: (OilSimulatedTypeFeedback new record: [model floatSum: 10]; yourself).
@@ -90,6 +88,6 @@ probes do: [:spec | | sel comp fl |
  comp compileMethod: cls >> #floatSum: receiverClass: (comp handleFor: cls).
  comp pipe.
  comp prepareFloatLoops.
- check value: 'mode 16: no float loop registers, floatSum: unrolled' value: ((comp instVarNamed: 'oilNumFloatLoops') = 0 and: [(comp pass2Statistics: 24) = 1])] value.
+ check value: 'mode 16: no float loop registers' value: (comp instVarNamed: 'oilNumFloatLoops') = 0] value.
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!

@@ -1,7 +1,7 @@
 "Oil end-to-end test (native) of Milestone 9: loop unrolling.  Full unrolling of leaf loops counted by a constant (at most
- OilUnrollMaxTrips iterations, iterations * body <= OilUnrollFullBudget), partial unrolling (4 or 2 times, with the rotated
- loop as the remainder) of counted leaf loops, rotation of loops tested against an immediate or against a limit not known to
- be a SmallInteger (an argument), and stores into young objects without store check.  Each probe is compiled twice, with
+ OilUnrollMaxTrips iterations, iterations * body <= OilUnrollFullBudget), rotation of the other counted leaf loops (Oil no
+ longer unrolls them partially), of loops tested against an immediate or against a limit not known to be a SmallInteger (an
+ argument), and stores into young objects (with their store checks: Oil no longer elides them).  Each probe is compiled twice, with
  unrolling (the default) and without (a copy of the method compiled with parameter 12 = 3 of primitiveOilSetParameter), and both are
  checked against the baseline JIT, including deoptimizations inside the unrolled copies, and timed.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m9-result.txt next to the image."
@@ -99,7 +99,8 @@ opcodes := [| words i ops op |
 	ops].
 countOps := [:ops :wanted | ops count: [:op | wanted includes: op]].
 dump := [| ops | ops := opcodes value. out tab; print: ops asArray; cr; flush].
-"stats: {fully unrolled. partially unrolled. young stores. rotated} of the last compilation"
+"stats: {fully unrolled. partially unrolled. young stores without store check. rotated} of the last compilation (the
+ second and third are 0: Oil does neither any more)"
 statsOf := [| st | st := (CompiledMethod oilLastCompilation) at: 11. {st at: 24. st at: 25. st at: 26. st at: 1}].
 "compile: warm up (baseline JIT), Oil-compile (without unrolling if noUnroll), answer the result code"
 res := [:sel :warm :off | | cm |
@@ -124,19 +125,19 @@ probes := {
 	{#times4:. {5}. {{5}. {-3}. {SmallInteger maxVal}. {2.5}}. [:st | st first = 1]. [:sel | 3000000 timesRepeat: [model perform: sel with: 7]]}.
 	{#find3:. {#(1 0 3)}. {{#(1 0 3)}. {#(1 2 3)}. {#(0)}}. [:st | st first = 1]. nil}.
 	{#scores3:. {items}. {{items}. {items reverse}. {{items first. 3. items last}}}. [:st | st first = 1]. [:sel | 3000000 timesRepeat: [model perform: sel with: items]]}.
-	{#sumArr:. {arr1k}. {{arr}. {#()}. {#(1)}. {#(1 2)}. {#(1 2 3)}. {#(1 2 3 4 5)}. {#(1 2 nil 4 5 6 7 8 9)}. {{1. 2. 3. 4. 5. 6. SmallInteger maxVal. 8}}}. [:st | (st at: 2) = 1]. [:sel | 20 timesRepeat: [model perform: sel with: arr]]}.
-	{#sumN:. {100}. {{0}. {1}. {2}. {3}. {4}. {5}. {10000001}. {-3}. {2.5}. {nil}}. [:st | (st at: 2) = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 10000000]]}.
-	{#whileSum:. {100}. {{0}. {1}. {3}. {5}. {1000001}. {2.5}}. [:st | (st at: 2) = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 10000000]]}.
-	{#sum100. {}. {{}}. [:st | (st at: 2) = 1]. [:sel | 300000 timesRepeat: [model perform: sel]]}.
-	{#absSum:. {arr1k}. {{arr1k}. {#()}. {#(-1 2 -3)}. {#(1 2 3.5 4)}}. [:st | (st at: 2) = 1]. [:sel | 30000 timesRepeat: [model perform: sel with: arr1k]]. #(12 8)}.
+	{#sumArr:. {arr1k}. {{arr}. {#()}. {#(1)}. {#(1 2)}. {#(1 2 3)}. {#(1 2 3 4 5)}. {#(1 2 nil 4 5 6 7 8 9)}. {{1. 2. 3. 4. 5. 6. SmallInteger maxVal. 8}}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: arr]]}.
+	{#sumN:. {100}. {{0}. {1}. {2}. {3}. {4}. {5}. {10000001}. {-3}. {2.5}. {nil}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 10 timesRepeat: [model perform: sel with: 10000000]]}.
+	{#whileSum:. {100}. {{0}. {1}. {3}. {5}. {1000001}. {2.5}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 10 timesRepeat: [model perform: sel with: 10000000]]}.
+	{#sum100. {}. {{}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 300000 timesRepeat: [model perform: sel]]}.
+	{#absSum:. {arr1k}. {{arr1k}. {#()}. {#(-1 2 -3)}. {#(1 2 3.5 4)}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 30000 timesRepeat: [model perform: sel with: arr1k]]. #(12 8)}.
 	{#absSum2:. {arr1k}. {{arr1k}. {#(-1 2 -3)}}. [:st | (st at: 2) = 0]. nil}.
-	{#sumScores:. {items}. {{items}. {items first: 3}. {items copyWith: 3}}. [:st | (st at: 2) = 1]. [:sel | 30000 timesRepeat: [model perform: sel with: items]]}.
-	{#pointSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | (st at: 2) = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
-	{#countA:. {'banana'}. {{'banana'}. {''}. {'aaaaaaaaa'}. {(String new: 100000 withAll: $a)}}. [:st | (st at: 2) = 1]. [:sel | 20 timesRepeat: [model perform: sel with: (String new: 1000000 withAll: $a)]]. #(12 8)}.
-	{#fill:with:. {Array new: 10. 3}. {{Array new: 0. 3}. {Array new: 7. 'x'}. {Array new: 100000. 3 @ 4}. {#(1 2 3) beReadOnlyObject; yourself. 9}}. [:st | (st at: 2) = 1]. [:sel | 20 timesRepeat: [model perform: sel with: (Array new: 1000000) with: 'x']]}.
-	{#sizeSum:. {{(Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 2; yourself}}. {{(1 to: 1001) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilM9A) new] ifFalse: [(Smalltalk at: #OilM9B) new y: k; yourself]]}. {{(Smalltalk at: #OilM9A) new. 3. (Smalltalk at: #OilM9A) new}}}. [:st | (st at: 2) = 1]. nil. #(12 8)}.
-	{#young:. {3}. {{3}. {'x'}. {#foo}}. [:st | (st at: 3) >= 1]. nil}.
-	{#youngLoop:. {10}. {{0}. {1}. {10}. {300000}}. [:st | (st at: 3) >= 1]. [:sel | 10 timesRepeat: [model perform: sel with: 100000]]}}.
+	{#sumScores:. {items}. {{items}. {items first: 3}. {items copyWith: 3}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 30000 timesRepeat: [model perform: sel with: items]]}.
+	{#pointSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
+	{#countA:. {'banana'}. {{'banana'}. {''}. {'aaaaaaaaa'}. {(String new: 100000 withAll: $a)}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: (String new: 1000000 withAll: $a)]]. #(12 8)}.
+	{#fill:with:. {Array new: 10. 3}. {{Array new: 0. 3}. {Array new: 7. 'x'}. {Array new: 100000. 3 @ 4}. {#(1 2 3) beReadOnlyObject; yourself. 9}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: (Array new: 1000000) with: 'x']]}.
+	{#sizeSum:. {{(Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 2; yourself}}. {{(1 to: 1001) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilM9A) new] ifFalse: [(Smalltalk at: #OilM9B) new y: k; yourself]]}. {{(Smalltalk at: #OilM9A) new. 3. (Smalltalk at: #OilM9A) new}}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. nil. #(12 8)}.
+	{#young:. {3}. {{3}. {'x'}. {#foo}}. [:st | (st at: 3) = 0]. nil}.
+	{#youngLoop:. {10}. {{0}. {1}. {10}. {300000}}. [:st | (st at: 3) = 0]. [:sel | 10 timesRepeat: [model perform: sel with: 100000]]}}.
 probes do: [:spec | | sel refSel baseSel results codes st |
 	sel := spec first.
 	probeExtra := spec size >= 6 ifTrue: [spec at: 6] ifFalse: [#()].

@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilInliningCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes oilDefaultColdSelectorNames oilPollPending oilNumPolls oilPollJump oilPollResume oilPollSite oilOpInfo fusedBranchTag fusedBranchTarget fusedBranchNext oilUnrollParameters oilNumYoungStores'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes oilDefaultColdSelectorNames oilPollPending oilNumPolls oilPollJump oilPollResume oilPollSite oilOpInfo fusedBranchTag fusedBranchTarget fusedBranchNext oilUnrollParameters'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -33,10 +33,6 @@ setUpSimulationTables
 	slotValue := self newTable: OilNumRegs.
 	slotFlags := self newTable: OilNumRegs.
 	knownClass := self newTable: OilNumRegs.
-	affineBase := self newTable: OilNumRegs.
-	affineConst := self newTable: OilNumRegs.
-	affineVersion := self newTable: OilNumRegs.
-	regVersion := self newTable: OilNumRegs.
 	lastDefIR := self newTable: OilNumRegs.
 	frameMethod := self newTable: OilMaxFrames.
 	frameBase := self newTable: OilMaxFrames.
@@ -116,7 +112,7 @@ setUpSimulationTables
 	condSelValue := self newTable: OilMaxConds.
 	oilNumSelects := 0.
 	oilLiveMark := self newTable: OilPCMapSize.
-	oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := oilNumAllocsCombined := 0.
+	oilNumVirtualized := oilNumMaterialized := oilNumBimorphic := oilNumPredicates := 0.
 	oilIRMap := self newTable: OilBufferWords + 1.
 	oilIRFlag := self newTable: OilBufferWords.
 	oilIRAux := self newTable: OilBufferWords.
@@ -239,10 +235,6 @@ resetForCompilation
 		slotValue at: vreg put: vreg.
 		slotFlags at: vreg put: 0.
 		knownClass at: vreg put: 0.
-		affineBase at: vreg put: -1.
-		affineConst at: vreg put: 0.
-		affineVersion at: vreg put: 0.
-		regVersion at: vreg put: 0.
 		lastDefIR at: vreg put: -1].
 	simStackTop := -1.
 	highRegTop := OilMaxReg.
@@ -443,8 +435,7 @@ bindFrame: frameIndex base: baseReg numArgs: numArgs numCopied: numCopied
 		[:tempReg|
 		slotFlags at: tempReg put: 0.
 		self setSlot: tempReg kind: OilDescConst value: nilHandle.
-		knownClass at: tempReg put: 0.
-		affineBase at: tempReg put: -1].
+		knownClass at: tempReg put: 0].
 	frameTempStart at: frameIndex put: firstTemp.
 	frameStackStart at: frameIndex put: baseReg + numTemps + 1.
 	simStackTop := baseReg + numTemps! !
@@ -712,9 +703,7 @@ forgetKnowledgeAtLabel
 	lastLabelIR := irIndex.
 	oilFlowEpoch := oilFlowEpoch + 1.
 	0 to: OilMaxReg do:
-		[:regIndex|
-		affineBase at: regIndex put: -1.
-		knownClass at: regIndex put: 0].
+		[:regIndex| knownClass at: regIndex put: 0].
 	ancestorFrame := currentFrame.
 	[ancestorFrame >= 0] whileTrue:
 		[(frameSelfKind at: ancestorFrame) = OilDescReg ifTrue:
@@ -830,8 +819,6 @@ emitPackedArgs: firstReg count: n
 noteDef: virtualReg at: index
 	"Register r is (re)defined by the instruction at index."
 	lastDefIR at: virtualReg put: index.
-	regVersion at: virtualReg put: (regVersion at: virtualReg) + 1.
-	affineBase at: virtualReg put: -1.
 	knownClass at: virtualReg put: 0! !
 
 !OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
@@ -898,18 +885,6 @@ retractLastInstruction
 	lastInstIR := -1! !
 
 !OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
-retractIfDeadDefinitionOf: virtualReg
-	"r is a consumed expression stack register.  If the last instruction only computed r, delete it."
-	(lastInstIR >= 0
-	 and: [lastInstIR >= lastLabelIR
-	 and: [(lastDefIR at: virtualReg) = lastInstIR
-	 and: [(slotFlags at: virtualReg) = 0
-	 and: [(self instructionLengthAt: lastInstIR) = 1]]]]) ifFalse: [^false].
-	self retractLastInstruction.
-	lastDefIR at: virtualReg put: -1.
-	^true! !
-
-!OilInliningCompiler methodsFor: 'emitting' stamp: 'cb 10/24/2026 10:30'!
 retarget: src to: dst
 	"src is a dead expression stack register.  If the last instruction defined it, make it define dst instead.
 	 Answer whether this was done (otherwise the caller emits a move)."
@@ -925,10 +900,6 @@ retarget: src to: dst
 	oilIRBuffer at: idx put: ((word bitAnd: 16rFF00FFFF) bitOr: (dst bitShift: 16)).
 	lastDefIR at: dst put: idx.
 	lastDefIR at: src put: -1.
-	affineBase at: dst put: (affineBase at: src).
-	affineConst at: dst put: (affineConst at: src).
-	affineVersion at: dst put: (affineVersion at: src).
-	regVersion at: dst put: (regVersion at: dst) + 1.
 	knownClass at: dst put: (knownClass at: src).
 	^true! !
 
@@ -984,7 +955,6 @@ pushOwnSlot
 	| newSlot |
 	newSlot := self push: OilDescReg value: simStackTop + 1.
 	knownClass at: newSlot put: 0.
-	affineBase at: newSlot put: -1.
 	^newSlot! !
 
 !OilInliningCompiler methodsFor: 'descriptors' stamp: 'cb 10/24/2026 10:30'!
@@ -1142,8 +1112,6 @@ storeTopIntoReg: targetReg pop: popFlag
 			[(descKind = OilDescConst or: [descKind = OilDescObject])
 				ifTrue:
 					[self setSlot: targetReg kind: descKind value: slotVal.
-					 regVersion at: targetReg put: (regVersion at: targetReg) + 1.
-					 affineBase at: targetReg put: -1.
 					 knownClass at: targetReg put: 0]
 				ifFalse:
 					[(slotVal = topSlot and: [self retarget: topSlot to: targetReg]) ifFalse:
@@ -2336,12 +2304,10 @@ genBinaryTagged: opcode
 	simStackTop := rcvrSlot - 1.
 	^self pushSmallIntegerResultOf: opcode b: regA c: regB! !
 
-!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/26/2026 21:45'!
 genAddConstant: constantVal to: operandSlot result: resultSlot
-	"x + c with on-the-fly reduction: x + 0 => x; if x = y + c1 (an affine fact still valid) then
-	 x + c => y + (c1 + c), so (i - 1) + 1 => i and (i + 1) - 1 => i (no instruction) and (x + c1) - c2 => x + (c1 - c2).
-	 Tagged: Tagged(x) + 8c, emitted as OilAddImmTagged when c fits 8 signed bits."
-	| descKind slotVal operandReg baseReg totalOffset destReg instIndex scratchReg producerSite |
+	"x + c: x + 0 => x, else Tagged(x) + 8c, emitted as OilAddImmTagged when c fits 8 signed bits."
+	| descKind slotVal operandReg destReg instIndex scratchReg |
 	descKind := slotKind at: operandSlot.
 	slotVal := slotValue at: operandSlot.
 	constantVal = 0 ifTrue:
@@ -2349,45 +2315,18 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 		 self push: descKind value: slotVal.
 		 ^true].
 	operandReg := self regForSlot: operandSlot.
-	baseReg := operandReg.
-	totalOffset := constantVal.
-	producerSite := -1.
-	((affineBase at: operandReg) >= 0 and: [(affineVersion at: operandReg) = (regVersion at: (affineBase at: operandReg))]) ifTrue:
-		[baseReg := affineBase at: operandReg.
-		 totalOffset := (affineConst at: operandReg) + constantVal.
-		 "Its producer is now dead.  The add emitted below then takes over its deopt site: the deopt state of this bytecode
-		  refers to the producer's result, but the interpreter redoes both adds from the producer's bytecode."
-		 (operandReg >= resultSlot and: [operandReg <= simStackTop]) ifTrue:
-			[producerSite := self siteAtIR: lastInstIR.
-			 ((totalOffset = 0 or: [producerSite >= 0])
-			  and: [self retractIfDeadDefinitionOf: operandReg]) ifFalse:
-				[producerSite := -1]]].
 	simStackTop := resultSlot - 1.
-	totalOffset = 0 ifTrue:
-		["A register of the expression stack above the result (e.g. the stack of an inlined frame that answered y + 1,
-		  for (y + 1) - 1) is reused by the next push: copy it rather than refer to it."
-		 baseReg > resultSlot ifTrue:
-			[self emitMove: self pushOwnSlot from: baseReg.
-			 ^true].
-		 self push: OilDescReg value: baseReg.
-		 ^true].
 	destReg := self pushOwnSlot.
-	(totalOffset between: -128 and: 127)
+	(constantVal between: -128 and: 127)
 		ifTrue:
-			[self recordAddSite: producerSite.
-			 instIndex := self emitOp: OilAddImmTagged a: destReg b: baseReg c: (totalOffset bitAnd: 255)]
+			[self recordSite: OilSiteArith.
+			 instIndex := self emitOp: OilAddImmTagged a: destReg b: operandReg c: (constantVal bitAnd: 255)]
 		ifFalse:
 			[scratchReg := operandSlot + 1.
-			 self emitConst: (self handleForSmallInteger: totalOffset) into: scratchReg.
-			 self recordAddSite: producerSite.
-			 instIndex := self emitOp: OilAddTagged a: destReg b: baseReg c: scratchReg].
+			 self emitConst: (self handleForSmallInteger: constantVal) into: scratchReg.
+			 self recordSite: OilSiteArith.
+			 instIndex := self emitOp: OilAddTagged a: destReg b: operandReg c: scratchReg].
 	self noteDef: destReg at: instIndex.
-	"The affine fact destReg = baseReg + totalOffset, unless the add is in place (destReg = baseReg, e.g. self size + 1 on
-	 the expression stack): the base is gone, so (self size + 1) - 1 must not fold to the register now holding self size + 1."
-	destReg ~= baseReg ifTrue:
-		[affineBase at: destReg put: baseReg.
-		 affineConst at: destReg put: totalOffset.
-		 affineVersion at: destReg put: (regVersion at: baseReg)].
 	knownClass at: destReg put: smallIntegerClassHandle.
 	^true! !
 
@@ -2833,7 +2772,7 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilUndoJump declareC: 'static AbstractInstruction *oilUndoJump[OilMaxUndos]'.
 	#(oilUndoSite oilUndoReg oilUndoSrc) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxUndos]'].
-	#(slotKind slotValue knownClass affineBase affineConst affineVersion regVersion lastDefIR) do:
+	#(slotKind slotValue knownClass lastDefIR) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
 	aCCodeGenerator var: #slotFlags declareC: 'static unsigned char slotFlags[OilNumRegs]'.
 	#(frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth) do:
@@ -3384,22 +3323,6 @@ isFrame: frameIndex deadFrom: pc
 classIndexOfClass: classOop
 	"The class index of a class (its identity hash, primitive 175), or 0 if it has none yet."
 	^self cCode: [coInterpreter oilApiClassIndexOfClass: classOop] inSmalltalk: [(self objectFor: classOop) identityHash]! !
-
-!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
-siteAtIR: irOffset
-	"The (last) deopt site of the instruction at irOffset, or -1."
-	numSites - 1 to: 0 by: -1 do:
-		[:siteIndex| (siteIR at: siteIndex) = irOffset ifTrue: [^siteIndex]].
-	^-1! !
-
-!OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/25/2026 09:30'!
-recordAddSite: producerSite
-	"The deopt site of the add about to be emitted by genAddConstant:to:result:: a new one, or the site of the add it
-	 replaces (retracted, so marked dead: revive it at the new instruction)."
-	producerSite < 0 ifTrue: [^self recordSite: OilSiteArith].
-	self materializePendingCondIfAny.
-	siteIR at: producerSite put: irIndex.
-	^producerSite! !
 
 !OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
 isNonNilQuickPrimitive: prim class: classObj

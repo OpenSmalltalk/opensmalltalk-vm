@@ -370,7 +370,6 @@ generateNativeCode
 			[cogit MoveCq: (objectMemory integerObjectOf: 0) R: (oilVRegReg at: vreg)]].
 	self resetXmms.
 	oilXmmChain := -1.
-	oilPendingAllocBytes := oilNumAllocsCombined := 0.
 	oilFloatLoopCurrent := -1.
 	oilNumFloatExits := 0.
 	oilNumPolls := 0.
@@ -626,68 +625,18 @@ genModTagged: destReg b: leftReg c: rightReg site: siteIndex
 	cogit OrCq: objectMemory smallIntegerTag R: ClassReg.
 	self setDst: destReg from: ClassReg! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 21:45'!
 genAllocate: numBytes header: header site: siteIndex
 	"Bump allocate numBytes in eden into ClassReg (TempReg is clobbered) and store its header.  If the new freeStart
 	 would reach the scavenge threshold, deoptimize at the allocation's deopt site instead (an OilSiteAlloc, which does
-	 not count as a deoptimization): the interpreter then allocates and the scavenge runs.  (Oil code has no
-	 interrupt checks, so it must not allocate beyond the threshold like the baseline JIT does.)"
-	self genAllocate: numBytes header: header site: siteIndex combineAfter: -1! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
-genAllocate: numBytes header: header site: siteIndex combineAfter: irOffset
-	"Bump allocate numBytes in eden into ClassReg (see genAllocate:header:site:).  Eden bump sharing: if irOffset >= 0, the
-	 allocations that follow the one at irOffset in straight-line code, with only constants and moves in between (which
-	 cannot deoptimize), share its scavenge threshold check and freeStart bump: it reserves their bytes too
-	 (oilPendingAllocBytes), and they take their memory from the reserve (just below freeStart).  If the threshold would
-	 be reached, the first one deoptimizes: the interpreter then redoes them all."
-	| reserved |
-	oilPendingAllocBytes > 0 ifTrue: "reserved by a previous allocation of the run"
-		[oilPendingAllocBytes < numBytes ifTrue: [^self abortCompilation: OilFailInternal].
-		 cogit MoveAw: objectMemory freeStartAddress R: ClassReg.
-		 cogit SubCq: oilPendingAllocBytes R: ClassReg.
-		 oilPendingAllocBytes := oilPendingAllocBytes - numBytes.
-		 cogit oilGenStoreHeader: header into: ClassReg scratch: TempReg.
-		 ^self].
-	reserved := irOffset >= 0 ifTrue: [self allocationBytesAfter: irOffset] ifFalse: [0].
+	 not count as a deoptimization): the interpreter then allocates and the scavenge runs.  (Oil code checks for interrupts
+	 only in its loops, so it must not allocate beyond the threshold like the baseline JIT does.)"
 	cogit MoveAw: objectMemory freeStartAddress R: ClassReg.
-	cogit LoadEffectiveAddressMw: numBytes + reserved r: ClassReg R: TempReg.
+	cogit LoadEffectiveAddressMw: numBytes r: ClassReg R: TempReg.
 	cogit CmpCq: objectMemory getScavengeThreshold R: TempReg.
 	self deopt: (cogit JumpAboveOrEqual: 0) site: siteIndex.
 	cogit MoveR: TempReg Aw: objectMemory freeStartAddress.
-	oilPendingAllocBytes := reserved.
-	reserved > 0 ifTrue: [oilNumAllocsCombined := oilNumAllocsCombined + 1].
 	cogit oilGenStoreHeader: header into: ClassReg scratch: TempReg! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
-allocationBytesAt: irOffset
-	"The bytes allocated by the OilNewObject or OilNewArray at irOffset, or 0 if it does not take part in eden bump sharing."
-	| opcode |
-	opcode := self opcodeAt: irOffset.
-	(opcode = OilNewObject or: [opcode = OilNewArray]) ifFalse: [^0].
-	(self fieldCAt: irOffset) >= objectMemory numSlotsMask ifTrue: [^0].
-	(opcode = OilNewObject
-	 and: [(coInterpreter oilApiClassIndexOfClass: (self word64At: irOffset + 1)) <= 0]) ifTrue: [^0].
-	^objectMemory smallObjectBytesForSlots: (self fieldCAt: irOffset)! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
-allocationBytesAfter: irOffset
-	"The bytes of the allocations that share the scavenge threshold check of the one at irOffset (see
-	 genAllocate:header:site:combineAfter:): those that follow it in straight-line code with only constants and moves in
-	 between."
-	| offset total opcode bytes |
-	total := 0.
-	offset := irOffset + (self instructionLengthAt: irOffset).
-	[offset < irIndex and: [(oilIRTarget at: offset) = 0]] whileTrue:
-		[opcode := self opcodeAt: offset.
-		 (opcode = OilNewObject or: [opcode = OilNewArray])
-			ifTrue:
-				[(bytes := self allocationBytesAt: offset) = 0 ifTrue: [^total].
-				 total := total + bytes]
-			ifFalse:
-				[(opcode = OilConstTagged or: [opcode = OilConst64 or: [opcode = OilMove]]) ifFalse: [^total]].
-		 offset := offset + (self instructionLengthAt: offset)].
-	^total! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genNewArray: destReg first: firstReg size: numSlots site: siteIndex
@@ -697,8 +646,7 @@ genNewArray: destReg first: firstReg size: numSlots site: siteIndex
 		[^self abortCompilation: OilFailBackend].
 	self genAllocate: (objectMemory smallObjectBytesForSlots: numSlots)
 		header: (objectMemory headerForSlots: numSlots format: objectMemory arrayFormat classIndex: ClassArrayCompactIndex)
-		site: siteIndex
-		combineAfter: oilFailIndex.
+		site: siteIndex.
 	firstReg = OilFlagsReg ifTrue:
 		[numSlots > 0 ifTrue:
 			[cogit genMoveConstant: objectMemory nilObject R: TempReg.
@@ -1385,8 +1333,7 @@ genStoreField: valReg object: objReg slot: slotIndex site: siteIndex
 	objMach := self src: objReg scratch: ClassReg.
 	self genImmutabilityCheckOf: objMach scratch: SendNumArgsReg site: siteIndex.
 	cogit MoveR: valMach Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: objMach.
-	(self storeNeedsCheck: objReg) ifTrue:
-		[self genStoreCheckObject: objMach value: valMach scratch: SendNumArgsReg]! !
+	self genStoreCheckObject: objMach value: valMach scratch: SendNumArgsReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genLoadElement: destReg array: arrayReg index: indexReg
@@ -1411,8 +1358,7 @@ genStoreElement: valReg array: arrayReg index: indexReg site: siteIndex
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	valMach := self src: valReg scratch: TempReg.
 	cogit MoveR: valMach Xwr: SendNumArgsReg R: arrayMach.
-	(self storeNeedsCheck: arrayReg) ifTrue:
-		[self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg]! !
+	self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg! !
 
 !OilInliningCompiler methodsFor: 'interrupt checks' stamp: 'cb 10/26/2026 20:30'!
 genPollBefore: irOffset
@@ -1867,11 +1813,11 @@ isVariableCandidate: vreg in: candidates kinds: kinds count: numCandidates
 !OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
 oilUnrollParameter: kind value: value
 	"Set a loop unrolling parameter (parameters 12 to 18 of primitiveOilSetParameter, oilUnrollParameters at: kind - 12): 12 the
-	 mode, whose bits disable full unrolling (1), partial unrolling (2), the store check elimination of young objects (4) and
-	 the float loop registers (16), and allow partial unrolling of bodies with branches (8); 13 the
-	 largest body unrolled 4 times; 14 the largest body unrolled twice; 15 the budget of full unrolling (iterations * body
-	 size); 16 the most iterations fully unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift
-	 (see codeShift).  0 (or less) means the default."
+	 mode, whose bits disable full unrolling (1) and the float loop registers (16) (bits 2, 4 and 8, which controlled the
+	 partial unrolling and the store check elimination Oil no longer does, are ignored); 13 and 14 are unused (they were the
+	 body sizes of partial unrolling); 15 the budget of full unrolling (iterations * body size); 16 the most iterations fully
+	 unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift (see codeShift).  0 (or less) means
+	 the default."
 	oilUnrollParameters at: kind - 12 put: (kind = 18 ifTrue: [value min: 64] ifFalse: [value])! !
 
 !OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
@@ -1909,46 +1855,6 @@ loopAlignment
 	 boundaries changes its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes
 	 makes it faster on average and less erratic."
 	^(self unrollParameter: 17 default: OilLoopAlignment) min: 16 "(see genLoopAlignment)"! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
-storeNeedsCheck: objReg
-	"Does the store into the object in register objReg by the instruction being translated (at oilFailIndex) need the store
-	 check?  Not if the object is young: it was allocated in eden (OilNewArray, OilNewObject) in the straight-line code that
-	 leads to the store (no branch target between them), into objReg or into a register objReg is a move (or a move of a
-	 move...) of, and nothing between them may run the garbage collector.  Oil allocations deoptimize rather than scavenge and
-	 Oil code has no interrupt checks, so only calls may: sends, and intrinsics falling back to sends."
-	| storeOffset allocOffset irOffset opcode vreg defOffset useOffset hops |
-	(self unrollMode bitAnd: 4) = 0 ifFalse: [^true].
-	storeOffset := oilFailIndex.
-	vreg := objReg.
-	useOffset := storeOffset.
-	allocOffset := -1.
-	hops := 0.
-	[allocOffset < 0] whileTrue:
-		[defOffset := -1.
-		 irOffset := 0.
-		 [irOffset < useOffset] whileTrue:
-			[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue:
-				[defOffset := irOffset].
-			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-		 defOffset < 0 ifTrue: [^true].
-		 opcode := self opcodeAt: defOffset.
-		 (opcode = OilNewArray or: [opcode = OilNewObject])
-			ifTrue: [allocOffset := defOffset]
-			ifFalse:
-				[(opcode = OilMove and: [(hops := hops + 1) <= 4]) ifFalse: [^true].
-				 vreg := self fieldBAt: defOffset.
-				 useOffset := defOffset]].
-	irOffset := allocOffset + (self instructionLengthAt: allocOffset).
-	[irOffset <= storeOffset] whileTrue:
-		[opcode := self opcodeAt: irOffset.
-		 ((oilIRTarget at: irOffset) ~= 0
-		  or: [irOffset < storeOffset
-			  and: [(self isCall: opcode) or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut
-					or: [opcode = OilCompareBytes or: [opcode = OilIdentityHash]]]]]]) ifTrue: [^true].
-		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-	oilNumYoungStores := oilNumYoungStores + 1.
-	^false! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genCheckBounds: indexReg limit: limitReg site: siteIndex
@@ -2432,8 +2338,7 @@ genFloatCompareAt: irOffset site: siteIndex
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genNewObjectAt: irOffset site: siteIndex
 	"[OilNewObject|Dest|FirstSlot|NumSlots] class: a scalar replaced object that escapes.  Allocate an instance of the class
-	 in eden (sharing the threshold check of the allocations that follow, see genAllocate:header:site:combineAfter:), and
-	 store its slots from their registers: no nil filling first, and no store check (it is young)."
+	 in eden, and store its slots from their registers: no nil filling first, and no store check (it is young)."
 	| destReg firstReg numSlots classOop classIndex |
 	destReg := self fieldAAt: irOffset.
 	firstReg := self fieldBAt: irOffset.
@@ -2456,8 +2361,7 @@ genNewObjectAt: irOffset site: siteIndex
 					headerForSlots: numSlots
 					format: (coInterpreter oilApiInstSpecOfClass: classOop)
 					classIndex: classIndex)
-		site: siteIndex
-		combineAfter: irOffset.
+		site: siteIndex.
 	self genStoreSlots: numSlots from: firstReg at: 0.
 	self setDst: destReg from: ClassReg! !
 
