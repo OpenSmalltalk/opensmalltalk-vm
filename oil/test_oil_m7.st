@@ -137,6 +137,17 @@ check value: 'the subclass runs the baseline code' value: (model probeOf: sub) n
 check value: 'OrderedCollection, SortedCollection, subclass: results' value: ((model sumOf: oc) = 5000050000 and: [(model sumOf: sorted) = 5000050000 and: [(model sumOf: sub) = 5000050000]]).
 check value: 'OrderedCollection and SortedCollection run Oil code' value: ((model probeOf: oc) and: [model probeOf: sorted]).
 check value: 'OrderedCollection>>do: specializations: no deopt' value: (((ocDo oilSpecializations) at: 2) oilInfo at: 1) = 0.
+"closed PIC cases link directly to the specializations (Case 0 sub -> baseline, Case 1 oc -> Oil, Case 2 sorted -> Oil)"
+cls compile: 'probeCPIC: aCollection | oil | aCollection do: [:e | oil ifNil: [oil := thisContext sender oilContextChain notNil]]. ^oil == true' classified: 'tests'.
+check value: 'CPIC Case 0 (subclass -> baseline), Case 1 (OrderedCollection -> Oil), Case 2 (SortedCollection -> Oil)'
+	value: ((model probeCPIC: sub) not and: [(model probeCPIC: oc) and: [(model probeCPIC: sorted) and: [(model probeCPIC: oc) and: [model probeCPIC: sorted]]]]).
+((ocDo oilSpecializations) at: 4) voidCogVMState.
+check value: 'voiding one specialization unlinks the CPIC targeting it directly; the other specialization still runs Oil code'
+	value: ((model probeCPIC: oc) and: [(model probeCPIC: sorted) not and: [(model probeCPIC: sub) not]]).
+3 timesRepeat: [model sumOf: oc. model sumOf: sorted. model sumOf: sub].
+check value: 're-specialize OrderedCollection>>do: for SortedCollection' value: (ocDo oilSpecializeFor: SortedCollection) = 0.
+check value: 'CPIC links directly to both specializations again'
+	value: ((model probeCPIC: oc) and: [(model probeCPIC: sorted) and: [(model probeCPIC: sub) not]]).
 
 
 "--- 2. identityHash (primitive 75) intrinsic: IdentitySet / IdentityDictionary probes without sends ---"

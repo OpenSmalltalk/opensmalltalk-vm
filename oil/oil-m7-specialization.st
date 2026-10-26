@@ -9,7 +9,8 @@
    sends (after the inline cache check), super sends and the interpreter (activateNewCogMethod:inInterpreter:) enter: a
    receiver of class C jumps to the no-check entry of M_C's Oil code, read through M_C's header (the CogMethod's address
    while M_C has machine code), so freeing or moving the Oil code needs no patching.
- - Monomorphic sends of receivers of class C are linked directly to M_C's Oil code (ProfilingCogit>>linkSendAt:...).
+ - Monomorphic sends and closed PIC cases of receivers of class C are linked directly to M_C's Oil code
+   (ProfilingCogit>>linkSendAt:..., configureCPIC:..., cogExtendPIC:...).
  - Copies reached only through the dispatch get the usage count of M at code compactions (compactCogCompiledCode).
  - primitiveOilSpecialize compiles a specialization, primitiveOilSpecializations answers them.
  Author: cb."!
@@ -258,24 +259,38 @@ compileEntry
 			 self JumpR: ClassReg.
 			 jumpNext jmpTarget: (jumpNotCogged jmpTarget: self Label)]]! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 23:25'!
+oilTargetCogMethodOf: aMethodObj tag: classTag
+	"Answer the CogMethod of the cogged method aMethodObj to link a send or a closed PIC case of class tag classTag to:
+	 the Oil code of its specialization for classTag if it has one (bypassing the dispatch in its baseline code, see
+	 compileEntry), else its own CogMethod."
+	<returnTypeC: #'CogMethod *'>
+	| target spec |
+	<var: #target type: #'CogMethod *'>
+	<var: #spec type: #'CogMethod *'>
+	target := coInterpreter cogMethodOf: aMethodObj.
+	(target cmUnusedFlag and: [(self isOilMethod: target) not]) ifTrue:
+		[spec := self oilSpecializedCogMethodOf: aMethodObj tag: classTag.
+		 spec ~= nil ifTrue: [^spec]].
+	^target! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 23:25'!
 linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: theEntryOffset receiver: receiver
 	"Link a monomorphic send whose receiver's class has a specialization of the target method directly to its Oil code,
 	 bypassing the dispatch in the target's baseline code (see compileEntry).  Otherwise as in Cogit."
 	<api>
 	<var: #sendingMethod type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
-	| target specialized inlineCacheTag extent |
+	| target inlineCacheTag extent |
 	<var: #target type: #'CogMethod *'>
-	<var: #specialized type: #'CogMethod *'>
 	self assert: (theEntryOffset = cmEntryOffset or: [theEntryOffset = cmNoCheckEntryOffset]).
 	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone freeStart).
-	target := targetMethod.
-	(theEntryOffset = cmEntryOffset
-	 and: [targetMethod cmUnusedFlag
-	 and: [(self isOilMethod: targetMethod) not]]) ifTrue:
-		[specialized := self oilSpecializedCogMethodOf: targetMethod methodObject tag: (objectMemory fetchClassTagOf: receiver).
-		 specialized ~= nil ifTrue: [target := specialized]].
+	target := (theEntryOffset = cmEntryOffset
+			   and: [targetMethod cmType = CMMethod
+			   and: [targetMethod cmUnusedFlag
+			   and: [(self isOilMethod: targetMethod) not]]])
+				ifTrue: [self oilTargetCogMethodOf: targetMethod methodObject tag: (objectMemory fetchClassTagOf: receiver)]
+				ifFalse: [targetMethod].
 	self ensureWritableCodeZone.
 	theEntryOffset = cmNoCheckEntryOffset
 		ifTrue: "no need to change selector cache tag"
@@ -291,6 +306,64 @@ linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: the
 	backEnd
 		flushICacheFrom: callSiteReturnAddress asUnsignedInteger  - extent
 		to: callSiteReturnAddress asUnsignedInteger! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 23:20'!
+cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: isMNUCase
+	"Extend the cPIC with the supplied case.  If caseNMethod has an Oil specialization for caseNTag, jump directly to its
+	 no-check entry (bypassing the dispatch in caseNMethod's baseline code, see compileEntry); otherwise as in Cogit."
+	<var: #cPIC type: #'CogMethod *'>
+	| operand target address |
+	coInterpreter compilationBreakpoint: cPIC selector classTag: caseNTag isMNUCase: isMNUCase.
+	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
+	self assert: (caseNMethod notNil and: [(objectMemory isYoung: caseNMethod) not]).
+	(isMNUCase not and: [coInterpreter methodHasCogMethod: caseNMethod])
+		ifTrue:
+			[operand := 0.
+			 target := (self oilTargetCogMethodOf: caseNMethod tag: caseNTag) asInteger + cmNoCheckEntryOffset]
+		ifFalse:
+			[operand := caseNMethod.
+			 isMNUCase
+				ifTrue:
+					[(self writableMethodFor: cPIC) cpicHasMNUCase: true.
+					 target := cPIC asInteger + (self sizeof: CogMethod)]
+				ifFalse:
+					[target := cPIC asInteger + self picInterpretAbortOffset]].
+	address := self addressOfEndOfCase: cPIC cPICNumCases + 1 inCPIC: cPIC.
+	self rewriteCPICCaseAt: address tag: caseNTag objRef: operand target: target.
+	self rewriteCPIC: cPIC caseJumpTo: address - cPICCaseSize.
+	(self writableMethodFor: cPIC) cPICNumCases: cPIC cPICNumCases + 1.
+	backEnd flushICacheFrom: cPIC asUnsignedInteger to: cPIC asUnsignedInteger + closedPICSize.
+	self assertValidDualZoneFrom: cPIC asUnsignedInteger to: cPIC asUnsignedInteger + closedPICSize! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 23:20'!
+configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: case1Tag isMNUCase: isMNUCase numArgs: numArgs delta: addrDelta
+	"Configure a two-case closed PIC for case0CogMethod (already linked to its specialization by linkSendAt:... if it had one)
+	 and (case1Method, case1Tag), jumping directly to case1Method's Oil specialization for case1Tag if it has one."
+	<var: #cPIC type: #'CogMethod *'>
+	<var: #case0CogMethod type: #'CogMethod *'>
+	| operand targetEntry caseEndAddress |
+	self assert: case1Method notNil.
+	backEnd rewriteCallAt: cPIC asInteger + missOffset target: (self picAbortTrampolineFor: numArgs).
+	self assert: (objectRepresentation inlineCacheTagIsYoung: case1Tag) not.
+	(isMNUCase not and: [coInterpreter methodHasCogMethod: case1Method])
+		ifTrue:
+			[operand := 0.
+			 targetEntry := (self oilTargetCogMethodOf: case1Method tag: case1Tag) asInteger + cmNoCheckEntryOffset]
+		ifFalse:
+			[operand := (case1Method isNil or: [objectMemory isYoungObject: case1Method])
+							ifTrue: [0]
+							ifFalse: [case1Method].
+			 targetEntry := case1Method ifNil: [cPIC asInteger + (self sizeof: CogMethod)] ifNotNil: [cPIC asInteger + self picInterpretAbortOffset]].
+	backEnd rewriteJumpLongAt: cPIC asInteger + firstCPICCaseOffset target: case0CogMethod asInteger + cmNoCheckEntryOffset.
+	caseEndAddress := self addressOfEndOfCase: 2 inCPIC: cPIC.
+	self
+		rewriteCPICCaseAt: caseEndAddress
+		tag: case1Tag
+		objRef: operand
+		target: (isMNUCase ifTrue: [cPIC asInteger + (self sizeof: CogMethod)] ifFalse: [targetEntry]) asInteger.
+	backEnd relocateMethodReferenceBeforeAddress: cPIC asInteger + cPICEndOfCodeOffset - backEnd jumpLongByteSize by: addrDelta.
+	backEnd rewriteJumpLongAt: cPIC asInteger + cPICEndOfCodeOffset target: (self cPICMissTrampolineFor: numArgs).
+	^0! !
 
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/26/2026 20:40'!
