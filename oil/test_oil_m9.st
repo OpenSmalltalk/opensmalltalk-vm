@@ -66,6 +66,11 @@ cls class compile: 'oilSetSelectors: pairs
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.
+"Tenure the methods just compiled (primitive 138, someObject, flushes new space; a full GC does not tenure): the baseline
+ JIT links a send site whose new target method is young to an open PIC, which records no receiver classes, instead of a
+ closed PIC (see Cogit>>ceSICMiss:), so sizeSum: would not inline m9Size bimorphically."
+cls class compile: 'oilTenureAll <primitive: 138> ^nil' classified: 'oil'.
+cls oilTenureAll.
 sels := OrderedCollection new.
 #(value value: value:value: value:value:value: value:value:value:value:) doWithIndex: [:s :i | sels add: i - 1; add: s].
 sels add: 5; add: #bitXor:.

@@ -71,8 +71,9 @@ res := [:sel | | cm |
 #(sumScores: sumBonus: pointSum: blockSum: injectSum:) do: [:sel |
 	check value: sel, ' compiles' value: (res value: sel) = 0.
 	check value: sel, ' has Oil code' value: (info value: sel) notNil].
-check value: 'sumScores: metadata <= 400 bytes' value: ((sizes at: #sumScores:) first <= 400).
-check value: 'sumBonus: metadata <= 400 bytes' value: ((sizes at: #sumBonus:) first <= 400).
+"(the bounds include the sites of the interrupt checks of the loops, about 20 bytes each, see genPollBefore:)"
+check value: 'sumScores: metadata <= 480 bytes' value: ((sizes at: #sumScores:) first <= 480).
+check value: 'sumBonus: metadata <= 480 bytes' value: ((sizes at: #sumBonus:) first <= 480).
 check value: 'every metadata at least 75% smaller than the pointer Array' value: (sizes values allSatisfy: [:pair | pair first * 4 <= pair second]).
 out nextPutAll: 'total metadata '; print: (sizes values inject: 0 into: [:a :pair | a + pair first]); nextPutAll: ' bytes, as pointer Arrays ';
 	print: (sizes values inject: 0 into: [:a :pair | a + pair second]); nextPutAll: ' bytes'; cr.

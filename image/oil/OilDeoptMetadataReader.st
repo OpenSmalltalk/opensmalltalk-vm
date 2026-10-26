@@ -212,7 +212,8 @@ siteAt: siteIndex
 	(kindByte bitAnd: 64) ~= 0 ifTrue:
 		[site
 			at: #sendSize put: (self u8: record + 8);
-			at: #sendNumArgs put: (self u8: record + 9)].
+			at: #sendNumArgs put: (self u8: record + 9);
+			at: #isInterruptCheck put: (self u8: record + 9) = 255 "(OilMDSiteNoSend: the interrupt check of a loop)"].
 	^site! !
 
 !OilDeoptMetadataReader methodsFor: 'records' stamp: 'cb 10/26/2026 14:30'!
@@ -220,9 +221,15 @@ sites
 	"The used deopt sites."
 	^((0 to: self numSites - 1) collect: [:siteIndex | self siteAt: siteIndex]) select: [:site | site notNil]! !
 
-!OilDeoptMetadataReader methodsFor: 'records' stamp: 'cb 10/26/2026 14:30'!
+!OilDeoptMetadataReader methodsFor: 'records' stamp: 'cb 10/26/2026 19:45'!
 callSites
-	^self sites select: [:site | site at: #isCall]! !
+	^self sites select: [:site | (site at: #isCall) and: [(site at: #isInterruptCheck) not]]! !
+
+!OilDeoptMetadataReader methodsFor: 'records' stamp: 'cb 10/26/2026 19:45'!
+interruptChecks
+	"The sites of the interrupt checks of the loops: recorded like calls without a send, the frame being suspended in the
+	 call of the interrupt check before the site's bytecode."
+	^self sites select: [:site | (site at: #isCall) and: [site at: #isInterruptCheck]]! !
 
 !OilDeoptMetadataReader methodsFor: 'records' stamp: 'cb 10/26/2026 14:30'!
 contextsAtSite: site

@@ -365,6 +365,8 @@ generateNativeCode
 	oilPendingAllocBytes := oilNumAllocsCombined := 0.
 	oilFloatLoopCurrent := -1.
 	oilNumFloatExits := 0.
+	oilNumPolls := 0.
+	oilPollPending := false.
 	irOffset := 0.
 	[irOffset < irIndex and: [failed not]] whileTrue:
 		[self genFloatLoopEntryAt: irOffset.
@@ -372,12 +374,17 @@ generateNativeCode
 			[self genLoopAlignment].
 		 (oilIRTarget at: irOffset) ~= 0 ifTrue:
 			[oilIRLabel at: irOffset put: cogit Label].
+		 (oilIRTarget at: irOffset) = 2 ifTrue: "a loop header: check for interrupts in the loop (see genPollBefore:)"
+			[oilPollPending := true].
+		 oilPollPending ifTrue:
+			[self genPollBefore: irOffset].
 		 irOffset := self genInstructionAt: irOffset.
 		 (oilFloatLoopCurrent >= 0 and: [irOffset > (oilFloatLoopEnd at: oilFloatLoopCurrent)]) ifTrue:
 			[self genFloatLoopExits]].
 	failed ifTrue: [^failureCode].
 	oilFailIndex := -1.
 	self genDeoptStubs.
+	self genPollStubs.
 	failed ifTrue: [^failureCode].
 	0 to: oilNumFixups - 1 do:
 		[:fixupIndex| | target |
@@ -1396,6 +1403,55 @@ genStoreElement: valReg array: arrayReg index: indexReg site: siteIndex
 	cogit MoveR: valMach Xwr: SendNumArgsReg R: arrayMach.
 	(self storeNeedsCheck: arrayReg) ifTrue:
 		[self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg]! !
+
+!OilInliningCompiler methodsFor: 'interrupt checks' stamp: 'cb 10/26/2026 19:30'!
+genPollBefore: irOffset
+	"Oil code has no stack check at its back jumps, unlike the baseline JIT's (see SimpleStackBasedCogit>>genJumpBackTo:):
+	 a loop of Oil code whose body sends nothing that builds a frame would never poll for events (the timer, process
+	 switches, interrupts).  So each loop checks the stack limit once per iteration, before its first instruction from its
+	 header (in straight-line code) that has a deopt site with a state: if it was hit, an out-of-line stub (see
+	 genPollStubs) spills the registers and calls ceCheckForInterruptTrampoline, which may switch processes.  The frame is
+	 then suspended in that call: a clone of the site, recorded as a call site without a send (OilMDSiteNoSend, see
+	 noteCallSiteAt:), maps it to the activations it stands for at that bytecode (to marry, divorce or deoptimize it).  Not in
+	 the loops whose float variables are in XMM registers (which the call would clobber), nor in a float chain."
+	| siteIndex opcode |
+	opcode := self opcodeAt: irOffset.
+	siteIndex := oilIRSite at: irOffset.
+	(oilFloatLoopCurrent < 0
+	 and: [siteIndex >= 0
+	 and: [(siteSnapBase at: siteIndex) >= 0
+	 and: [((oilIRFlag at: irOffset) bitAnd: OilFloatChained) = 0
+	 and: [numSites < OilMaxSites
+	 and: [oilNumPolls < OilMaxPolls]]]]]) ifFalse:
+		[(oilFloatLoopCurrent >= 0 or: [(self isBranch: opcode) or: [opcode = OilReturn]]) ifTrue:
+			[oilPollPending := false].
+		 ^self].
+	oilPollPending := false.
+	self resetXmms. "(the call clobbers them)"
+	oilPollSite at: oilNumPolls put: (self cloneSite: siteIndex at: irOffset).
+	oilSiteUsed at: (oilPollSite at: oilNumPolls) put: 3.
+	cogit MoveAw: coInterpreter stackLimitAddress R: TempReg.
+	cogit CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
+	oilPollJump at: oilNumPolls put: (cogit JumpBelow: 0).
+	oilPollResume at: oilNumPolls put: cogit Label.
+	oilNumPolls := oilNumPolls + 1! !
+
+!OilInliningCompiler methodsFor: 'interrupt checks' stamp: 'cb 10/26/2026 19:30'!
+genPollStubs
+	"The out-of-line stubs of the interrupt checks of the loops (see genPollBefore:): spill everything (the garbage
+	 collector may run, and the frame may be married or deoptimized while suspended), call ceCheckForInterruptTrampoline,
+	 whose return address is the resume address of the check's site, reload and resume the loop."
+	| stub |
+	<var: #stub type: #'AbstractInstruction *'>
+	0 to: oilNumPolls - 1 do:
+		[:pollIndex|
+		stub := cogit Label.
+		(oilPollJump at: pollIndex) jmpTarget: stub.
+		self spillAll.
+		cogit oilGenInterruptCheckCall.
+		oilSiteResume at: (oilPollSite at: pollIndex) put: cogit Label.
+		self reloadAll.
+		(cogit Jump: 0) jmpTarget: (oilPollResume at: pollIndex)]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
 cloneSite: siteIndex at: irOffset

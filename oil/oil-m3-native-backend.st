@@ -93,6 +93,11 @@ oilGenDeoptCall
 	"See OilCompiler>>genDeoptStubs."
 	^self CallRT: ceOilDeoptTrampoline! !
 
+!ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/26/2026 19:30'!
+oilGenInterruptCheckCall
+	"See OilCompiler>>genPollStubs."
+	^self CallRT: ceCheckForInterruptTrampoline! !
+
 !ProfilingCogit methodsFor: 'oil code generation' stamp: 'cb 10/24/2026 15:00'!
 oilGenStoreCheckCall
 	^objectRepresentation oilGenStoreCheckTrampolineCall! !
@@ -771,6 +776,8 @@ estimateOpcodes
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
 		[estimatedCount := estimatedCount + (self estimateOpcodesOfInstructionAt: irOffset).
+		 (oilIRTarget at: irOffset) = 2 ifTrue: "a loop header: its interrupt check and stub (see genPollBefore:)"
+			[estimatedCount := estimatedCount + 8 + (2 * oilNumAllocRegs)].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
@@ -820,9 +827,9 @@ planMetadata
 	0 to: numSites - 1 do:
 		[:siteIndex| (oilSiteUsed at: siteIndex) ~= 0 ifTrue:
 			[numBytes := numBytes + OilMDSiteHeaderSize.
-			 (self opcodeAt: (siteIR at: siteIndex)) = OilGuardClass ifTrue:
+			 ((self opcodeAt: (siteIR at: siteIndex)) = OilGuardClass and: [(oilSiteUsed at: siteIndex) < 2]) ifTrue:
 				[numBytes := numBytes + OilMDSiteGuardSize].
-			 (oilSiteUsed at: siteIndex) = 2 ifTrue: "a call site (see noteCallSiteAt:)"
+			 (oilSiteUsed at: siteIndex) >= 2 ifTrue: "a call site (see noteCallSiteAt:) or an interrupt check (see genPollBefore:)"
 				[numBytes := numBytes + OilMDSiteCallSize].
 			 poolBase := siteSnapBase at: siteIndex.
 			 0 to: (self siteStateSize: siteIndex) - 1 do:
@@ -1068,20 +1075,26 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 			 self metadata: metadata u16At: index + OilMDSiteResumeOffset put: (oilSiteResume at: siteIndex) address - cogMethodAddress.
 			 self metadata: metadata byteAt: index + OilMDSiteTop put: (siteSnapTop at: siteIndex).
 			 self metadata: metadata byteAt: index + OilMDSiteHigh put: (siteSnapHigh at: siteIndex).
-			 (self opcodeAt: siteInstruction) = OilGuardClass
+			 ((self opcodeAt: siteInstruction) = OilGuardClass and: [(oilSiteUsed at: siteIndex) < 2])
 				ifTrue: "a class guard: the unforwarding fast path needs its register and class tag"
 					[self metadata: metadata byteAt: index + OilMDSiteKind put: (siteKind at: siteIndex) + OilMDSiteGuardFlag.
 					 self metadata: metadata byteAt: index + OilMDSiteGuardReg put: (self fieldAAt: siteInstruction).
 					 self metadata: metadata u32At: index + OilMDSiteClassTag put: (objectMemory classTagForClass: (self word64At: siteInstruction + 1)).
 					 index := index + OilMDSiteHeaderSize + OilMDSiteGuardSize]
 				ifFalse:
-					[(oilSiteUsed at: siteIndex) = 2
-						ifTrue: "a call site (see noteCallSiteAt:): the size of the send bytecode and its number of arguments"
+					[(oilSiteUsed at: siteIndex) >= 2
+						ifTrue: "a call site (see noteCallSiteAt:): the size of the send bytecode and its number of arguments;
+								 an interrupt check (see genPollBefore:): no send"
 							[self metadata: metadata byteAt: index + OilMDSiteKind put: (siteKind at: siteIndex) + OilMDSiteCallFlag.
-							 self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
-							 self decodeAt: (sitePC at: siteIndex).
-							 self metadata: metadata byteAt: index + OilMDSiteSendSize put: oilNextPC - (sitePC at: siteIndex).
-							 self metadata: metadata byteAt: index + OilMDSiteSendNumArgs put: (self numArgsOfCallAt: siteInstruction).
+							 (oilSiteUsed at: siteIndex) = 2
+								ifTrue:
+									[self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
+									 self decodeAt: (sitePC at: siteIndex).
+									 self metadata: metadata byteAt: index + OilMDSiteSendSize put: oilNextPC - (sitePC at: siteIndex).
+									 self metadata: metadata byteAt: index + OilMDSiteSendNumArgs put: (self numArgsOfCallAt: siteInstruction)]
+								ifFalse:
+									[self metadata: metadata byteAt: index + OilMDSiteSendSize put: 0.
+									 self metadata: metadata byteAt: index + OilMDSiteSendNumArgs put: OilMDSiteNoSend].
 							 index := index + OilMDSiteHeaderSize + OilMDSiteCallSize]
 						ifFalse:
 							[self metadata: metadata byteAt: index + OilMDSiteKind put: (siteKind at: siteIndex).
@@ -2543,7 +2556,11 @@ oilContextsOfFrame: theFP context: ctxt site: site
 	numVObjs := self oilMD: metadata header: OilMDNumVObjs.
 	self oilDecodeStateOf: site metadata: metadata into: state.
 	sendNumArgs := self oilMD: metadata byteAt: site + OilMDSiteSendNumArgs.
-	topRegs at: numFrames - 1 put: (self oilMD: metadata byteAt: site + OilMDSiteTop) - sendNumArgs - 1.
+	topRegs
+		at: numFrames - 1
+		put: (sendNumArgs = OilMDSiteNoSend "an interrupt check: the whole state, at the site's bytecode"
+				ifTrue: [self oilMD: metadata byteAt: site + OilMDSiteTop]
+				ifFalse: [(self oilMD: metadata byteAt: site + OilMDSiteTop) - sendNumArgs - 1]).
 	0 to: numFrames - 2 do:
 		[:i| topRegs at: i put: (self oilMD: metadata byteAt: framesBase + ((chain at: i + 1) * OilMDFrameSize) + OilMDFrameBase) - 1].
 	0 to: numFrames - 1 do:
