@@ -306,7 +306,6 @@ oilGenerateCode: aMethodObj
 	bytecodeSetOffset := (coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
 							ifTrue: [256]
 							ifFalse: [0].
-	counters := 0.
 	numCounters := 0.
 	oilNumMethodPICCases := 0. "(see compileEntry)"
 	blockCount := 0.
@@ -331,7 +330,7 @@ oilGenerateCode: aMethodObj
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/26/2026 05:20'!
 oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
-	 deoptimization metadata, a hidden pinned object of CompiledMethod format, through the method's counters field (tagged with 1).
+	 deoptimization metadata, a hidden old space object of CompiledMethod format, through the method's counters field (tagged with 1).
 	 Uses a single-pass annotation map generated into a 512-byte stack buffer to eliminate the
 	 preliminary generateMapAt: nil pass."
 	<inline: true>
@@ -394,8 +393,8 @@ oilGenerateCogMethod
 
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
 isOilMethod: cogMethod
-	"Oil methods hold their deoptimization metadata in their counters field, tagged with 1;
-	 baseline methods hold their (8-byte aligned) trip counters there, or 0."
+	"Oil methods hold their deoptimization metadata in their counters field, tagged with 1; baseline methods hold 0 there
+	 (their trip counters are in a ring buffer, see oilAllocateTripCounter)."
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
 	^cogMethod isCMMethodEtAl
@@ -688,7 +687,7 @@ oilUnhookCogMethod: cogMethod
 
 !ProfilingCogit methodsFor: 'compaction' stamp: 'cb 10/24/2026 15:00'!
 maybeFreeCountersOf: aCogMethod
-	"Free the pinned object holding the method's trip counters, or its Oil deoptimization metadata, if any."
+	"Free the Oil deoptimization metadata of the method, if any."
 	<var: #aCogMethod type: #'CogMethod *'>
 	<inline: true>
 	"An Oil method that set the large context bit of its header (see oilGenerateCogMethod): freeMethod: has just put
@@ -703,14 +702,13 @@ maybeFreeCountersOf: aCogMethod
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 15:00'!
 countersObjectOf: theCounters
-	"theCounters is the counters field of a method: 0, the address of the first counter (an 8-byte aligned slot
-	 of a pinned object), or the oop of an Oil method's metadata tagged with 1.  Answer the heap object, or 0."
+	"theCounters is the counters field of a method: 0 (a baseline method: its trip counters are in a ring buffer, see
+	 oilAllocateTripCounter), or the oop of an Oil method's metadata tagged with 1.  Answer the heap object, or 0."
 	<var: #theCounters type: #usqInt>
 	<inline: true>
-	theCounters = 0 ifTrue: [^0].
 	^(theCounters bitAnd: 1) ~= 0
 		ifTrue: [theCounters - 1]
-		ifFalse: [theCounters - objectMemory baseHeaderSize]! !
+		ifFalse: [0]! !
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 15:00'!
 freeOilCounters: theCounters
@@ -722,13 +720,36 @@ freeOilCounters: theCounters
 
 !ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/24/2026 15:00'!
 maybeMarkCountersIn: cogMethod
-	"The trip counters and the Oil deoptimization metadata are held in pinned objects on the heap which must be
-	 marked to avoid them being collected (and, for the metadata, to trace the objects it refers to)."
+	"The Oil deoptimization metadata is a heap object which must be marked to avoid it being collected (and to trace the
+	 objects it refers to).  It is not pinned: see mapObjectReferencesInMachineCodeForFullGC."
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
 	| obj |
 	obj := self countersObjectOf: cogMethod counters.
 	obj ~= 0 ifTrue: [objectMemory markAndTrace: obj]! !
+
+!ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/26/2026 10:40'!
+mapObjectReferencesInMachineCodeForFullGC
+	"Also update the references of the Oil methods to their deoptimization metadata, which a full GC may move."
+	super mapObjectReferencesInMachineCodeForFullGC.
+	self oilRemapMetadataReferences! !
+
+!ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/26/2026 10:40'!
+mapObjectReferencesInMachineCodeForBecome
+	super mapObjectReferencesInMachineCodeForBecome.
+	self oilRemapMetadataReferences! !
+
+!ProfilingCogit methodsFor: 'garbage collection & become' stamp: 'cb 10/26/2026 10:40'!
+oilRemapMetadataReferences
+	"Update the counters field of the Oil methods, their deoptimization metadata tagged with 1 (an unpinned old space
+	 object, see CoInterpreter>>oilAllocateMetadata:numBytes:)."
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[(self isOilMethod: cogMethod) ifTrue:
+			[(self writableMethodFor: cogMethod) counters: (objectRepresentation remapOop: cogMethod counters - 1) + 1].
+		 cogMethod := methodZone methodAfter: cogMethod]! !
 
 !ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/25/2026 01:50'!
 numTrampolines
@@ -1189,17 +1210,18 @@ oilApiFetchClassOf: oop
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 10:00'!
 oilAllocateMetadata: numLiterals numBytes: numBytes
-	"Answer a hidden (class index pun), pinned, old space object of CompiledMethod format for the deoptimization metadata
+	"Answer a hidden (class index pun), old space object of CompiledMethod format for the deoptimization metadata
 	 of an Oil method: a method header (the number of literals), numLiterals literals (nil), then numBytes bytes (0); or 0.
 	 It is referenced from the method (see ProfilingCogit>>maybeMarkCountersIn:): the garbage collectors trace its literal
-	 frame only, like a method's, and never look at its bytes."
+	 frame only, like a method's, and never look at its bytes.  It is not pinned: a full GC may move it, and then updates
+	 the method's reference (see ProfilingCogit>>mapObjectReferencesInMachineCodeForFullGC)."
 	<api>
 	<essential: #ProfilingCogit>
 	| numTrailingBytes numSlots obj |
 	numTrailingBytes := 0 - numBytes bitAnd: objectMemory wordSize - 1.
 	numSlots := numLiterals + 1 + (numBytes + numTrailingBytes // objectMemory wordSize).
 	obj := objectMemory
-			allocateSlotsForPinningInOldSpace: numSlots
+			allocateSlotsInOldSpace: numSlots
 			bytes: (objectMemory objectBytesForSlots: numSlots)
 			format: objectMemory firstCompiledMethodFormat + numTrailingBytes
 			classIndex: objectMemory arrayClassIndexPun.

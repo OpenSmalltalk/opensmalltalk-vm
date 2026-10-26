@@ -6,7 +6,7 @@
  deoptimization still works after scavenges and full GCs moved the objects its literals refer to (methods compiled by
  this test, so young when Oil compiles the root, and literal objects), with closures and scalar replaced objects.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-metadata-result.txt next to the image."
-| out failures check sels cls model item other res last info sizes garbage items r |
+| out failures check sels cls model item other res last info sizes garbage items r holes before |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-metadata-result.txt').
 failures := OrderedCollection new.
@@ -83,8 +83,24 @@ check value: 'pointSum: deopt after GCs' value: (model pointSum: items) = ((1 to
 check value: 'blockSum: deopt after GCs' value: (model blockSum: items) = (5050 - 50 + 1000).
 check value: 'injectSum: deopt after GCs' value: (model injectSum: items) = ((1 to: 100) inject: 0 into: [:a :k | a + (k = 50 ifTrue: [1002] ifFalse: [(2 * k) + 2])]).
 check value: 'deopts counted in the metadata' value: (#(sumScores: sumBonus: pointSum: blockSum: injectSum:) allSatisfy: [:sel | (info value: sel) isNil or: [((info value: sel) at: 1) >= 1]]).
-"recompile and redefine an inlined method: the inlined frames' methods (literals) invalidate the Oil code"
+"Milestone 12: the metadata is not pinned.  Allocate old objects, Oil-compile a method (its metadata lands after them),
+ free them and run a full GC: the compaction slides the metadata down, and the method's reference to it must follow."
+holes := (1 to: 3000) collect: [:k | Array new: 200].
+Smalltalk garbageCollect.
+cls compile: 'sumScores2: a | s | s := 0. 1 to: a size do: [:i | s := s + (a at: i) score]. ^s' classified: 'tests'.
 items at: 50 put: (item new score: 50; yourself).
+check value: 'sumScores2: compiles after old objects' value: (res value: #sumScores2:) = 0.
+before := (info value: #sumScores2:) at: 4.
+holes := nil.
+Smalltalk garbageCollect.
+Smalltalk garbageCollect.
+check value: 'sumScores2: still Oil code after the compaction' value: ((info value: #sumScores2:) ifNil: [false] ifNotNil: [:i | (i at: 4) = before and: [(i at: 1) = 0]]).
+check value: 'sumScores2: = 5050 after the compaction' value: (model sumScores2: items) = 5050.
+items at: 50 put: (other new).
+check value: 'sumScores2: deopt after the compaction (metadata moved)' value: (model sumScores2: items) = (5050 - 50 + 1000).
+check value: 'sumScores2: deopt counted in the moved metadata' value: ((info value: #sumScores2:) isNil or: [((info value: #sumScores2:) at: 1) = 1]).
+items at: 50 put: (item new score: 50; yourself).
+"recompile and redefine an inlined method: the inlined frames' methods (literals) invalidate the Oil code"
 check value: 'sumBonus: recompiles' value: (res value: #sumBonus:) = 0.
 item compile: 'bonus: k ^score * k + 3' classified: 'tests'.
 check value: 'sumBonus: after redefining bonus:' value: (model sumBonus: items) = ((1 to: 100) inject: 0 into: [:a :k | a + (k * k) + 3]).
