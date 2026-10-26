@@ -256,7 +256,7 @@ initialize
 	"loop unrolling (OilLoopOptimizer>>unrollLoops), per method: unrolled loops; a loop of at most OilUnrollMaxTrips iterations
 	 known at compile time is fully unrolled if iterations * body size (IR instructions) <= OilUnrollFullBudget; other counted
 	 leaf loops are unrolled 4 times if their body has at most OilUnrollTinyBody instructions, else twice if at most
-	 OilUnrollMaxBody (the image can override these, see OilLoopOptimizer>>oilUnrollParameter:value:).  Tuned (M9): 8
+	 OilUnrollMaxBody (the image can override these, see OilInliningCompiler>>oilUnrollParameter:value:).  Tuned (M9): 8
 	 iterations and a budget of 48 instructions (about 80 bytecodes) are faster than 5 and 25 (8 x 2 instructions: 1.35
 	 times faster when unrolled; 5 x 6: 1.15 times); the body sizes (4 and 16) make no measurable difference."
 	OilMaxUnrolls := 16.
@@ -264,7 +264,7 @@ initialize
 	OilUnrollFullBudget := 48.
 	OilUnrollTinyBody := 4.
 	OilUnrollMaxBody := 16.
-	"Pass 3: the alignment of loop headers (bytes, at most 16; 1: none), see OilLoopOptimizer>>loopAlignment"
+	"Pass 3: the alignment of loop headers (bytes, at most 16; 1: none), see OilInliningCompiler>>loopAlignment"
 	OilLoopAlignment := 16.
 	"Pass 3 float loop registers (M10, OilInliningCompiler>>prepareFloatLoops): loops per method whose float variables live in
 	 XMM registers, the XMM registers (DPFPReg8..) they get, and the exits of a loop"
