@@ -316,7 +316,7 @@ activateNewCogMethod: cogMethod inInterpreter: inInterpreter
 	rcvr := self stackValue: cogMethod cmNumArgs. "could new rcvr be set at point of send?"
 	self push: instructionPointer.
 	(cogMethod stackCheckOffset = 0
-	 or: [cogMethod cmUnusedFlag and: [(cogit isOilMethod: cogMethod) not]]) ifTrue:
+	 or: [self cppIf: #Oil ifTrue: [cogMethod cmUnusedFlag and: [(cogit isOilMethod: cogMethod) not]] ifFalse: [false]]) ifTrue:
 		["frameless method, or method with specializations; nothing to activate..."
 		 cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
 			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:

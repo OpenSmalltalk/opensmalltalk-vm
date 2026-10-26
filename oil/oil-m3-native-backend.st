@@ -1449,14 +1449,264 @@ oilDeoptimizeFrame: oilFP metadata: metadata site: site
 	instructionPointer := innermost + objectMemory baseHeaderSize + sitePC - 1.
 	self setMethod: innermost! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 19:15'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/26/2026 04:40'!
+oilSiteForIP: anIP inCogMethod: cogMethod metadata: metadata
+	"Find the deopt site record in metadata whose resume machine code offset matches anIP."
+	<essential: #ProfilingCogit>
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #anIP type: #usqInt>
+	| cogMethodAddress offset siteTable numSites siteRecord bestSite minDiff diff resumeOffset |
+	cogMethodAddress := cogMethod asUnsignedInteger.
+	offset := anIP - cogMethodAddress.
+	siteTable := self oilMD: metadata at: OilMDSiteTable.
+	numSites := self oilMD: metadata at: OilMDNumSites.
+	bestSite := 0.
+	minDiff := 16r7FFFFFFF.
+	0 to: numSites - 1 do:
+		[:siteIndex|
+		 siteRecord := self oilMD: metadata at: siteTable + siteIndex.
+		 siteRecord > 0 ifTrue:
+			[resumeOffset := self oilMD: metadata at: siteRecord + OilMDSiteResumeOffset.
+			 resumeOffset = offset ifTrue: [^siteRecord].
+			 diff := offset - resumeOffset.
+			 (diff >= 0 and: [diff < minDiff]) ifTrue:
+				[minDiff := diff.
+				 bestSite := siteRecord]]].
+	^bestSite > 0
+		ifTrue: [bestSite]
+		ifFalse: [numSites > 0 ifTrue: [self oilMD: metadata at: siteTable] ifFalse: [0]]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/26/2026 04:40'!
+oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP
+	"Deoptimize the Oil machine code frame at theFP on divorce into an interpreter frame
+	 with bytecode instruction pointer. This eliminates stale machine code pc offsets from
+	 divorced contexts, preventing invalid code offsets on resume if the Oil code is freed."
+	<essential: #ProfilingCogit>
+	<var: #theFP type: #'char *'>
+	<var: #theIP type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	<returnTypeC: #usqInt>
+	| metadata siteRecord framesBase vobjsBase homes numVObjs chain numFrames frameIndex chainIndex
+	  baseReg numArgs homeMethod frameRecord sp vobjOops regValues fixupAddrs fixupVObjs numFixups
+	  vobjRecord obj numCopied sitePC topRegs |
+	<var: #sp type: #'char *'>
+	<var: #chain declareC: 'sqInt chain[OilMaxFrames]'>
+	<var: #topRegs declareC: 'sqInt topRegs[OilMaxFrames]'>
+	<var: #regValues declareC: 'sqInt regValues[OilNumRegs]'>
+	<var: #vobjOops declareC: 'sqInt vobjOops[OilMaxVObjs]'>
+	<var: #fixupAddrs declareC: 'char *fixupAddrs[OilNumRegs]'>
+	<var: #fixupVObjs declareC: 'sqInt fixupVObjs[OilNumRegs]'>
+	metadata := cogit oilMetadataOf: cogMethod.
+	siteRecord := self oilSiteForIP: theIP inCogMethod: cogMethod metadata: metadata.
+	siteRecord = 0 ifTrue: [^theIP].
+	framesBase := self oilMD: metadata at: OilMDFrames.
+	vobjsBase := self oilMD: metadata at: OilMDVObjs.
+	homes := self oilMD: metadata at: OilMDHomes.
+	numVObjs := self oilMD: metadata at: OilMDNumVObjs.
+	sitePC := self oilMD: metadata at: siteRecord + OilMDSitePC.
+
+	"1. Inlined frames chain and top registers."
+	numFrames := 0.
+	frameIndex := self oilMD: metadata at: siteRecord + OilMDSiteFrame.
+	[frameIndex >= 0] whileTrue:
+		[numFrames := numFrames + 1.
+		 frameIndex := self oilMD: metadata at: framesBase + (frameIndex * OilMDFrameSize) + OilMDFrameParent].
+	frameIndex := self oilMD: metadata at: siteRecord + OilMDSiteFrame.
+	chainIndex := numFrames - 1.
+	[frameIndex >= 0] whileTrue:
+		[chain at: chainIndex put: frameIndex.
+		 chainIndex := chainIndex - 1.
+		 frameIndex := self oilMD: metadata at: framesBase + (frameIndex * OilMDFrameSize) + OilMDFrameParent].
+	topRegs at: numFrames - 1 put: (self oilMD: metadata at: siteRecord + OilMDSiteTop).
+	0 to: numFrames - 2 do:
+		[:i| topRegs at: i put: (self oilMD: metadata at: framesBase + ((chain at: i + 1) * OilMDFrameSize) + OilMDFrameBase) - 1].
+
+	"2. Read virtual registers from their homes before converting."
+	0 to: OilNumRegs - 1 do:
+		[:reg|
+		regValues at: reg put: ((self oilMD: metadata at: homes + reg) = 0
+							ifTrue: [objectMemory nilObject]
+							ifFalse: [stackPages longAt: theFP + (self oilMD: metadata at: homes + reg)])].
+	0 to: OilMaxVObjs - 1 do:
+		[:i| vobjOops at: i put: 0].
+	numFixups := 0.
+
+	"3. Virtual objects rematerialization."
+	0 to: numVObjs - 1 do:
+		[:i|
+		vobjRecord := vobjsBase + (i * OilMDVObjSize).
+		vobjOops at: i put: (self oilAllocateVObjAt: vobjRecord metadata: metadata)].
+	0 to: numVObjs - 1 do:
+		[:i|
+		vobjRecord := vobjsBase + (i * OilMDVObjSize).
+		obj := vobjOops at: i.
+		(self oilMD: metadata at: vobjRecord + OilMDVObjKind) = OilDescBlock
+			ifTrue:
+				[numCopied := self oilMD: metadata at: vobjRecord + OilMDVObjNumCopied.
+				 objectMemory
+					storePointer: ClosureOuterContextIndex ofObject: obj withValue: objectMemory nilObject;
+					storePointer: FullClosureCompiledBlockIndex ofObject: obj withValue: (objectMemory fetchPointer: vobjRecord + OilMDVObjLiteralOrSize ofObject: metadata);
+					storePointer: ClosureNumArgsIndex ofObject: obj withValue: (objectMemory integerObjectOf: (self argumentCountOf: (objectMemory fetchPointer: vobjRecord + OilMDVObjLiteralOrSize ofObject: metadata)));
+					storePointer: FullClosureReceiverIndex ofObject: obj withValue: (self oilValueAt: vobjRecord + OilMDVObjSelf metadata: metadata values: regValues vobjs: vobjOops).
+				 0 to: numCopied - 1 do:
+					[:j|
+					objectMemory
+						storePointer: FullClosureFirstCopiedValueIndex + j
+						ofObject: obj
+						withValue: (self oilValueAt: (self oilMD: metadata at: vobjRecord + OilMDVObjCopiedIndex) + (2 * j) metadata: metadata values: regValues vobjs: vobjOops)]]
+			ifFalse:
+				[0 to: ((self oilMD: metadata at: vobjRecord + OilMDVObjLiteralOrSize) min: (objectMemory numSlotsOf: obj)) - 1 do:
+					[:j|
+					objectMemory
+						storePointer: j
+						ofObject: obj
+						withValue: (self oilValueAt: (self oilDescriptorIndex: (self oilMD: metadata at: vobjRecord + OilMDVObjSlotBase) + j site: siteRecord metadata: metadata) metadata: metadata values: regValues vobjs: vobjOops)]]].
+
+	"4. Convert root frame in place to interpreter frame."
+	frameRecord := framesBase + ((chain at: 0) * OilMDFrameSize).
+	homeMethod := objectMemory fetchPointer: frameRecord + OilMDFrameMethod ofObject: metadata.
+	numArgs := self oilMD: metadata at: frameRecord + OilMDFrameNumArgs.
+	stackPages
+		longAt: theFP + FoxIFrameFlags
+			put: (self encodeFrameFieldHasContext: (self mframeHasContext: theFP) isBlock: false numArgs: numArgs);
+		longAt: theFP + FoxMethod put: homeMethod;
+		longAt: theFP + FoxIFSavedIP put: 0;
+		longAt: theFP + FoxIFReceiver put: (self oilValueAt: frameRecord + OilMDFrameSelf metadata: metadata values: regValues vobjs: vobjOops).
+
+	"5. Restore temps and expression stack of the root frame."
+	baseReg := self oilMD: metadata at: frameRecord + OilMDFrameBase.
+	sp := theFP + FoxIFReceiver.
+	baseReg + numArgs + 1 to: (topRegs at: 0) do:
+		[:reg|
+		sp := sp - objectMemory wordSize.
+		numFixups := self oilStore: (self oilDescriptorIndex: reg site: siteRecord metadata: metadata)
+						  at: sp metadata: metadata values: regValues vobjs: vobjOops
+						  needed: nil fixupAddrs: fixupAddrs fixupVObjs: fixupVObjs numFixups: numFixups].
+	0 to: numFixups - 1 do:
+		[:i| stackPages longAt: (fixupAddrs at: i) put: (vobjOops at: (fixupVObjs at: i))].
+
+	"6. Answer the bytecode instruction pointer in homeMethod."
+	^homeMethod + objectMemory baseHeaderSize + sitePC - 1! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/26/2026 05:00'!
+divorceFramesIn: aStackPage
+	"Divorce all frames in aStackPage into MethodContexts. Under #Oil, any Oil machine code
+	 frame is deoptimized in place to an interpreter frame with a bytecode instruction pointer
+	 before divorce, preventing stale machine code offsets from persisting into contexts."
+	<var: #aStackPage type: #'StackPage *'>
+	| theFP calleeFP theSP theIP calleeContext theContext cogMethod |
+	<inline: false>
+	statStackPageDivorce := statStackPageDivorce + 1.
+
+	theFP := aStackPage headFP.
+	theSP := aStackPage headSP.
+	theIP := stackPages longAt: theSP.
+	theSP := theSP + objectMemory wordSize. "theSP points at hottest item on frame's stack"
+	calleeContext := nil.
+
+	[self cppIf: #Oil ifTrue:
+		[((self isMachineCodeFrame: theFP)
+		  and: [cogit isOilMethod: (cogMethod := self mframeCogMethod: theFP)]) ifTrue:
+			[theIP := self oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP]].
+	 theContext := self ensureFrameIsMarried: theFP SP: theSP.
+	 self updateStateOfSpouseContextForFrame: theFP WithSP: theSP.
+	 objectMemory storePointerUnchecked: InstructionPointerIndex
+		ofObject: theContext
+		withValue: (self contextInstructionPointer: theIP frame: theFP).
+	 self assert: (self frameReceiver: theFP)
+				= (objectMemory followField: ReceiverIndex ofObject: theContext).
+	 calleeContext ifNotNil:
+		[objectMemory storePointer: SenderIndex
+			ofObject: calleeContext
+			withValue: theContext].
+	 calleeContext := theContext.
+	 calleeFP := theFP.
+	 theIP := self frameCallerSavedIP: theFP.
+	 theFP := self frameCallerFP: theFP.
+	 theFP ~= 0] whileTrue:
+		["theSP points at stacked hottest item on frame's stack"
+		 theSP := self frameCallerSP: calleeFP].
+
+	objectMemory storePointer: SenderIndex
+		ofObject: theContext
+		withValue: (self frameCallerContext: calleeFP).
+
+	"The page is now free; mark it so."
+	aStackPage baseFP: 0! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/26/2026 05:00'!
+externalDivorceFrame: theFP andContext: ctxt
+	"Divorce a single frame and its context.  If it is not the top frame of a stack this means splitting its stack.
+	 Under #Oil, any Oil machine code frame is deoptimized in place to an interpreter frame with a bytecode
+	 instruction pointer before divorce."
+	<var: 'theFP' type: #'char *'>
+	<inline: false>
+	| thePage onCurrent theSP callerCtx newPage frameAbove callerFP callerSP callerIP theIP cogMethod |
+	"stackPage needs to have current head pointers to avoid confusion."
+	self assert: (stackPage isNil or: [stackPage = stackPages mostRecentlyUsedPage]).
+	thePage := stackPages stackPageFor: theFP.
+	(onCurrent := thePage = stackPage) ifFalse:
+		[stackPages markStackPageNextMostRecentlyUsed: thePage].
+	theSP := self findSPOf: theFP on: thePage.
+	self updateStateOfSpouseContextForFrame: theFP WithSP: theSP.
+	callerCtx := self ensureCallerContext: theFP.
+	(frameAbove := self findFrameAbove: theFP inPage: thePage) = 0
+		ifTrue: "If we're divorcing the top frame we can simply peel it off."
+			[theIP := stackPages longAt: thePage headSP]
+		ifFalse: "othewise move all frames above to a new stack and then peel the frame off."
+			[newPage := stackPages newStackPage.
+			 theIP := self frameCallerSavedIP: frameAbove.
+			 frameAbove := self moveFramesIn: thePage through: frameAbove toPage: newPage.
+			 onCurrent
+				ifTrue:
+					[self setStackPageAndLimit: newPage.
+					 self setStackPointersFromPage: newPage]
+				ifFalse:
+					[stackPages markStackPageMostRecentlyUsed: newPage].
+			 self assert: (self frameCallerContext: frameAbove) = ctxt].
+	self cppIf: #Oil ifTrue:
+		[((self isMachineCodeFrame: theFP)
+		  and: [cogit isOilMethod: (cogMethod := self mframeCogMethod: theFP)]) ifTrue:
+			[theIP := self oilDeoptimizeFrameOnDivorce: theFP cogMethod: cogMethod theIP: theIP]].
+	objectMemory storePointerUnchecked: InstructionPointerIndex
+		ofObject: ctxt
+		withValue: (self contextInstructionPointer: theIP frame: theFP).
+	objectMemory storePointer: SenderIndex
+		ofObject: ctxt
+		withValue: callerCtx.
+	callerFP := self frameCallerFP: theFP.
+	callerFP = 0 "theFP is a base frame; it is now alone; free the entire page"
+		ifTrue: [stackPages freeStackPage: thePage]
+		ifFalse:
+			[callerIP := self frameCallerSavedIP: theFP.
+			 callerSP := (self frameCallerSP: theFP) - objectMemory wordSize.
+			 stackPages longAt: callerSP put: callerIP.
+			 self setHeadFP: callerFP andSP: callerSP inPage: thePage]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/26/2026 05:00'!
+defaultNumStackPages
+	<inline: false>
+	self cppIf: #Oil
+		ifTrue: [^128]
+		ifFalse: [^50]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/26/2026 05:00'!
 checkImageHeaderLoad
-	"Oil's minimum: a 4 MB code zone."
+	"Oil's minimum: a 4 MB code zone, and at least 128 stack pages.
+	 Stack page eviction of an Oil frame requires deoptimizing it into interpreter
+	 contexts, because an Oil frame inlines callees, holds spilled virtual registers,
+	 and cannot be represented as a machine-code-offset context. To avoid premature
+	 deoptimization of suspended processes (e.g. Delay>>wait, Semaphores, UI loop),
+	 ensure the VM has at least 128 stack pages so eviction is an exceptional event."
 	<inline: #always>
 	cogCodeSize < (4 * 1024 * 1024) ifTrue:
-		[cogCodeSize := 4 * 1024 * 1024]! !
+		[cogCodeSize := 4 * 1024 * 1024].
+	self cppIf: #Oil ifTrue:
+		["Stack page eviction requires deoptimization"
+		 numStackPages < 128 ifTrue:
+			[numStackPages := 128]]! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/24/2026 15:00'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-initialization' stamp: 'cb 10/26/2026 05:00'!
 attemptToSwitchToMachineCode: bcpc
 	"Attempt to convert the current interpreted activation into a machine code
 	 activation, and if this is popssible, jump into machine code.  bcpc is the
@@ -1465,9 +1715,10 @@ attemptToSwitchToMachineCode: bcpc
 	| cogMethod pc cls |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
-	((self methodHasCogMethod: method)
-	 and: [cogit isOilMethod: (self cogMethodOf: method)]) ifTrue:
-		[^nil].
+	self cppIf: #Oil ifTrue:
+		[((self methodHasCogMethod: method)
+		  and: [cogit isOilMethod: (self cogMethodOf: method)]) ifTrue:
+			[^nil]].
 	(self methodHasCogMethod: method)
 		ifFalse: 
 			[SistaV1BytecodeSet

@@ -389,13 +389,34 @@ primitiveOilTripLog
 	self pop: 2 thenPush: previous! !
 
 
+!CoInterpreter class methodsFor: '*VMMaker-JIT-Oil-translation' stamp: 'cb 10/26/2026 05:00'!
+writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator.
+	aCCodeGenerator
+		putDefineOf: #COGVM as: 1 on: aStream;
+		putConditionalDefineOf: #COGMTVM as: 0 comment: nil on: aStream.
+	(aCCodeGenerator options at: #Oil ifAbsent: [aCCodeGenerator options at: #oilVM ifAbsent: [false]]) ifTrue:
+		[aCCodeGenerator
+			putConditionalDefineOf: #Oil
+			as: 1
+			comment: nil
+			on: aStream.
+		 aCCodeGenerator
+			putConditionalDefineOf: #oilVM
+			as: 1
+			comment: nil
+			on: aStream].
+	aStream cr! !
+
 !VMMaker class methodsFor: '*VMMaker-JIT-Oil-configurations' stamp: 'cb 10/24/2026 10:00'!
 generateSqueakSpurCogOil64VM
 	"The 64-bit Cog Spur VM with the ProfilingCogit, the profiling tier of the Oil optimizing JIT."
 	^VMMaker
 		generate: CoInterpreter
 		and: ProfilingCogit
-		with: #(ProfilingCogit true
+		with: #(Oil true
+				oilVM true
+				ProfilingCogit true
 				ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
