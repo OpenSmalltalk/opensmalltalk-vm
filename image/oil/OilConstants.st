@@ -1,6 +1,6 @@
 SharedPool subclass: #OilConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilCondLt OilCondGt OilCondLe OilCondGe OilCondEq OilCondNe OilCondIdentical OilCondNotIdentical OilTagUnknown OilTagPushRcvrVar OilTagPushLitVar OilTagPushLitConst OilTagPushTemp OilTagPushSelf OilTagPushTrue OilTagPushFalse OilTagPushNil OilTagPushInteger OilTagPushCharacter OilTagDup OilTagPop OilTagReturnSelf OilTagReturnTrue OilTagReturnFalse OilTagReturnNil OilTagReturnTop OilTagBlockReturnNil OilTagBlockReturnTop OilTagNop OilTagSendSpecial OilTagSend OilTagSendSuper OilTagJump OilTagJumpTrue OilTagJumpFalse OilTagStoreRcvrVar OilTagPopIntoRcvrVar OilTagStoreTemp OilTagPopIntoTemp OilTagStoreLitVar OilTagPopIntoLitVar OilTagPushNewArray OilTagPushRemoteTemp OilTagStoreRemoteTemp OilTagPopIntoRemoteTemp OilTagPushFullClosure OilTagExtension OilModeNone OilModeLow OilModeByte1 OilModeByte1ExtB OilModeSend OilModeLowSend OilModeNewArray OilModeRemoteTemp OilModeFullClosure OilModeByte1Temp OilDescReg OilDescConst OilDescBlock OilDescTempVector OilDescCond OilDescObject OilDescSelect OilFlagImmutable OilFlagTVSlot OilBufferWords OilIRBudget OilMaxInlineDepth OilLargeMethodDepth OilMediumMethodDepth OilAccessorBytes OilMediumMethodBytes OilMaxCalleeBytes OilNumRegs OilFlagsReg OilMaxReg OilMaxFrames OilPCMapSize OilMaxVObjs OilMaxCaptured OilMaxSites OilMaxConds OilMaxColdSelectors OilNoLink OilSiteGuard OilSiteArith OilSiteBounds OilSiteCall OilSiteBranch OilSiteStore OilSiteAlloc OilSitePoolSize OilOK OilFailUnsupportedBytecode OilFailThisContext OilFailPrimitiveMethod OilFailBufferFull OilFailOutOfRegisters OilFailTooManyFrames OilFailPCMapFull OilFailTooManyVirtualObjects OilFailTooManySites OilFailEagerClosuresFailed OilFailInternal OilFailBackend OilFailCodeSpace OilFailUnsafeSite OilFailNotSistaV1 OilMDVersion OilMDRootMethod OilMDNumSites OilMDSiteTable OilMDNumFrames OilMDFrames OilMDNumVObjs OilMDVObjs OilMDSpillOffsets OilMDDeopts OilMDFastPaths OilMDNumArgs OilMDCaptured OilMDHeaderSize OilMDFrameSize OilMDVObjSize OilMDSiteHeaderSize OilMDFrameMethod OilMDFrameIsBlock OilMDFrameBase OilMDFrameParent OilMDFrameReturnPC OilMDFrameSelf OilMDFrameNumArgs OilMDVObjKind OilMDVObjLiteralOrSize OilMDVObjOuterFrame OilMDVObjSelf OilMDVObjClass OilMDVObjNumCopied OilMDVObjCopiedIndex OilMDVObjSlotBase OilMDSiteKind OilMDSiteGuardReg OilMDSiteClassTag OilMDSiteResumeOffset OilMDSiteFrame OilMDSitePC OilMDSiteTop OilMDSiteHigh OilMDMagic OilP2Delete OilP2NoCheck OilP2RotBack OilP2ToMove OilFloatChained OilFloatUnboxed OilNumXmms OilMaxFacts OilMaxUndos OilFailDisqualified OilDisqualifyDeopts OilMaxDisqualified OilExtraSelectorBase OilMaxExtraSelectors OilFailSpecialization OilMaxSpecializations OilMaxPICCases OilSpecializationSize OilSpecMethod OilSpecClassTag OilSpecCopy OilSpecClass OilMaxEagerSites OilMaxVObjSlots OilP2Unroll OilP2UnrollPartial OilMaxUnrolls OilUnrollMaxTrips OilUnrollFullBudget OilUnrollTinyBody OilUnrollMaxBody OilLoopAlignment OilMaxFloatLoops OilMaxPinnedXmms OilMaxFloatExits OilMDInlinedSelectors OilMaxInlinedSelectors'
+	classVariableNames: 'OilCondLt OilCondGt OilCondLe OilCondGe OilCondEq OilCondNe OilCondIdentical OilCondNotIdentical OilTagUnknown OilTagPushRcvrVar OilTagPushLitVar OilTagPushLitConst OilTagPushTemp OilTagPushSelf OilTagPushTrue OilTagPushFalse OilTagPushNil OilTagPushInteger OilTagPushCharacter OilTagDup OilTagPop OilTagReturnSelf OilTagReturnTrue OilTagReturnFalse OilTagReturnNil OilTagReturnTop OilTagBlockReturnNil OilTagBlockReturnTop OilTagNop OilTagSendSpecial OilTagSend OilTagSendSuper OilTagJump OilTagJumpTrue OilTagJumpFalse OilTagStoreRcvrVar OilTagPopIntoRcvrVar OilTagStoreTemp OilTagPopIntoTemp OilTagStoreLitVar OilTagPopIntoLitVar OilTagPushNewArray OilTagPushRemoteTemp OilTagStoreRemoteTemp OilTagPopIntoRemoteTemp OilTagPushFullClosure OilTagExtension OilModeNone OilModeLow OilModeByte1 OilModeByte1ExtB OilModeSend OilModeLowSend OilModeNewArray OilModeRemoteTemp OilModeFullClosure OilModeByte1Temp OilDescReg OilDescConst OilDescBlock OilDescTempVector OilDescCond OilDescObject OilDescSelect OilFlagImmutable OilFlagTVSlot OilBufferWords OilIRBudget OilMaxInlineDepth OilLargeMethodDepth OilMediumMethodDepth OilAccessorBytes OilMediumMethodBytes OilMaxCalleeBytes OilNumRegs OilFlagsReg OilMaxReg OilMaxFrames OilPCMapSize OilMaxVObjs OilMaxCaptured OilMaxSites OilMaxConds OilMaxColdSelectors OilNoLink OilSiteGuard OilSiteArith OilSiteBounds OilSiteCall OilSiteBranch OilSiteStore OilSiteAlloc OilSitePoolSize OilOK OilFailUnsupportedBytecode OilFailThisContext OilFailPrimitiveMethod OilFailBufferFull OilFailOutOfRegisters OilFailTooManyFrames OilFailPCMapFull OilFailTooManyVirtualObjects OilFailTooManySites OilFailEagerClosuresFailed OilFailInternal OilFailBackend OilFailCodeSpace OilFailUnsafeSite OilFailNotSistaV1 OilMDVersion OilMDRootMethod OilMDNumSites OilMDSiteTable OilMDNumFrames OilMDFrames OilMDNumVObjs OilMDVObjs OilMDSpillOffsets OilMDDeopts OilMDFastPaths OilMDNumArgs OilMDCaptured OilMDHeaderSize OilMDFrameSize OilMDVObjSize OilMDSiteHeaderSize OilMDFrameMethod OilMDFrameIsBlock OilMDFrameBase OilMDFrameParent OilMDFrameReturnPC OilMDFrameSelf OilMDFrameNumArgs OilMDVObjKind OilMDVObjLiteralOrSize OilMDVObjOuterFrame OilMDVObjSelf OilMDVObjNumCopied OilMDVObjCopiedIndex OilMDVObjSlotBase OilMDSiteKind OilMDSiteGuardReg OilMDSiteClassTag OilMDSiteResumeOffset OilMDSiteFrame OilMDSitePC OilMDSiteTop OilMDSiteHigh OilMDMagic OilMDSiteGuardSize OilMDSiteGuardFlag OilMDStateOwn OilMDStateNil OilMDNoDescriptor OilMDFirstSelectorLiteral OilMDNumSpills OilMDSpillEntrySize OilMDDescriptorSize OilMDDescriptorValueBits OilMaxMDLiterals OilMDLiteralHashSize OilP2Delete OilP2NoCheck OilP2RotBack OilP2ToMove OilFloatChained OilFloatUnboxed OilNumXmms OilMaxFacts OilMaxUndos OilFailDisqualified OilDisqualifyDeopts OilMaxDisqualified OilExtraSelectorBase OilMaxExtraSelectors OilFailSpecialization OilMaxSpecializations OilMaxPICCases OilSpecializationSize OilSpecMethod OilSpecClassTag OilSpecCopy OilSpecClass OilMaxEagerSites OilMaxVObjSlots OilP2Unroll OilP2UnrollPartial OilMaxUnrolls OilUnrollMaxTrips OilUnrollFullBudget OilUnrollTinyBody OilUnrollMaxBody OilLoopAlignment OilMaxFloatLoops OilMaxPinnedXmms OilMaxFloatExits OilMDInlinedSelectors OilMaxInlinedSelectors'
 	poolDictionaries: 'OilInstructionConstants'
 	category: 'VMMaker-JIT-Oil'!
 
@@ -134,52 +134,74 @@ initialize
 	OilFailDisqualified := 16.
 	"(primitiveOilSpecialize) the method has OilMaxPICCases specializations already, or Oil code of its own (primitiveOilCompile)"
 	OilFailSpecialization := 17.
-	"deoptimization metadata (a hidden pinned Array referenced from the Oil CogMethod): header slots"
-	OilMDVersion := 0.
+	"deoptimization metadata (a hidden pinned object of CompiledMethod format referenced from the Oil CogMethod, see
+	 OilInliningCompiler>>fillMetadata:cogMethod:).  Literal frame: slot 0 a method header (the number of literals), slot
+	 OilMDRootMethod the root method, from slot OilMDFirstSelectorLiteral the inlined selectors, then the other objects
+	 the records refer to by literal index (frame methods, CompiledBlocks, classes, constants).  Then bytes, little endian:
+	 a header (the byte offsets of its fields below, from the end of the literal frame), and records whose offsets are
+	 byte indices in the body of the object (as in fetchByte:ofObject:, so below 65536)."
 	OilMDRootMethod := 1.
-	OilMDNumSites := 2.
-	OilMDSiteTable := 3.
-	OilMDNumFrames := 4.
-	OilMDFrames := 5.
-	OilMDNumVObjs := 6.
-	OilMDVObjs := 7.
-	OilMDSpillOffsets := 8.
-	OilMDDeopts := 9.
-	OilMDFastPaths := 10.
-	OilMDNumArgs := 11.
-	OilMDCaptured := 12.
-	OilMDInlinedSelectors := 13. "the index of the inlined selectors: their count (-1: too many to record), then the selectors"
-	OilMDHeaderSize := 14.
-	"frame records: method isBlock base parent returnPC selfKind selfValue numArgs"
-	OilMDFrameSize := 8.
+	OilMDFirstSelectorLiteral := 2.
+	OilMDVersion := 0. "u32: OilMDMagic"
+	OilMDNumSites := 4. "u16"
+	OilMDSiteTable := 6. "u16: the offset of the table of the u16 offsets of the site records (0: unused site)"
+	OilMDNumFrames := 8. "u16"
+	OilMDFrames := 10. "u16: the offset of the frame records"
+	OilMDNumVObjs := 12. "u16"
+	OilMDVObjs := 14. "u16: the offset of the virtual object records"
+	OilMDNumSpills := 16. "u16"
+	OilMDSpillOffsets := 18. "u16: the offset of the spill entries: virtual register (u8), spill offset (s16), for the spilled registers only"
+	OilMDDeopts := 20. "u32"
+	OilMDFastPaths := 24. "u32"
+	OilMDNumArgs := 28. "u16"
+	OilMDCaptured := 30. "u16: the offset of the descriptors of the captured values"
+	OilMDInlinedSelectors := 32. "s16: the number of inlined selectors (-1: too many to record), literals from OilMDFirstSelectorLiteral"
+	OilMDHeaderSize := 34.
+	OilMDSpillEntrySize := 3.
+	"a descriptor: u16, its kind in the top 3 bits, its value in the low 13 bits: a register, a literal index (a constant; 0,
+	 the header slot, stands for nil) or a virtual object index"
+	OilMDDescriptorSize := 2.
+	OilMDDescriptorValueBits := 13.
+	OilMaxMDLiterals := 1024.
+	OilMDLiteralHashSize := 2048.
+	"frame records: method (u16 literal index) isBlock (u8) base (u8) parent (s8) returnPC (u16) self (descriptor) numArgs (u8)"
+	OilMDFrameSize := 10.
 	OilMDFrameMethod := 0.
-	OilMDFrameIsBlock := 1.
-	OilMDFrameBase := 2.
-	OilMDFrameParent := 3.
-	OilMDFrameReturnPC := 4.
-	OilMDFrameSelf := 5. "a descriptor pair: kind, value"
-	OilMDFrameNumArgs := 7.
-	"virtual object records: kind literalOrSize outerFrame selfKind selfValue numCopied copiedIndex slotBase"
-	OilMDVObjSize := 8.
+	OilMDFrameIsBlock := 2.
+	OilMDFrameBase := 3.
+	OilMDFrameParent := 4.
+	OilMDFrameReturnPC := 5.
+	OilMDFrameSelf := 7.
+	OilMDFrameNumArgs := 9.
+	"virtual object records: kind (u8) literalOrSize (u16: a closure's CompiledBlock as a literal index, or the number of slots
+	 of a temp vector or object) outerFrame (s8) self (descriptor; the class of a scalar replaced object) numCopied (u8)
+	 copiedIndex (u16 offset of the descriptors of the copied values) slotBase (u8)"
+	OilMDVObjSize := 10.
 	OilMDVObjKind := 0.
-	OilMDVObjLiteralOrSize := 1. "a closure's CompiledBlock, or the number of slots of a temp vector or object"
-	OilMDVObjOuterFrame := 2.
-	OilMDVObjSelf := 3. "a descriptor pair: kind, value"
-	OilMDVObjClass := 4. "the value of the self descriptor of a scalar replaced object: its class"
-	OilMDVObjNumCopied := 5.
-	OilMDVObjCopiedIndex := 6.
-	OilMDVObjSlotBase := 7.
-	"site records: kind guardVReg expectedTag resumeOffset frame pc top high, then the state's descriptor pairs"
+	OilMDVObjLiteralOrSize := 1.
+	OilMDVObjOuterFrame := 3.
+	OilMDVObjSelf := 4.
+	OilMDVObjNumCopied := 6.
+	OilMDVObjCopiedIndex := 7.
+	OilMDVObjSlotBase := 9.
+	"site records: kind (u8, plus OilMDSiteGuardFlag for a class guard) frame (u8) pc (u16) resumeOffset (u16) top (u8)
+	 high (u8), then, for a class guard, guardVReg (u8) expectedTag (u32), then the state's descriptors, of 1 or 2 bytes (see
+	 CoInterpreter>>oilDecodeStateOf:metadata:into:)"
 	OilMDSiteHeaderSize := 8.
 	OilMDSiteKind := 0.
-	OilMDSiteGuardReg := 1.
-	OilMDSiteClassTag := 2.
-	OilMDSiteResumeOffset := 3.
-	OilMDSiteFrame := 4.
-	OilMDSitePC := 5.
+	OilMDSiteFrame := 1.
+	OilMDSitePC := 2.
+	OilMDSiteResumeOffset := 4.
 	OilMDSiteTop := 6.
 	OilMDSiteHigh := 7.
-	OilMDMagic := 16r4F494C33.
+	OilMDSiteGuardReg := 8.
+	OilMDSiteClassTag := 9.
+	OilMDSiteGuardSize := 5.
+	OilMDSiteGuardFlag := 128.
+	OilMDStateOwn := 0. "a register holding its own value"
+	OilMDStateNil := 1. "the constant nil"
+	OilMDNoDescriptor := 16rFFFF. "a register a state does not describe"
+	OilMDMagic := 16r4F494C34.
 	"Pass 2 per-instruction flags (oilIRFlag)"
 	OilP2Delete := 1.
 	OilP2NoCheck := 2.
