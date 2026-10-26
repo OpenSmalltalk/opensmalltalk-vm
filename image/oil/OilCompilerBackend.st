@@ -107,10 +107,10 @@ prepareNativeCode
 	self prepareFloatLoops.
 	^OilOK! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 isBranch: opcode
 	<inline: true>
-	^opcode = OilJump or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]! !
+	^self opcode: opcode has: OilOpBranch! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 computeIRSites
@@ -133,55 +133,27 @@ recordUse: virtualReg
 			[virtualReg < OilFlagsReg ifTrue:
 				[oilVRegUses at: virtualReg put: (oilVRegUses at: virtualReg) + oilUseWeight]]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 countUsesAt: irOffset
-	"Count the registers the instruction at irOffset reads."
+	"Count the registers the instruction at irOffset reads (see the OilOpReads* properties)."
 	<inline: false>
-	| opcode regA regB regC |
+	| opcode regB regC |
 	opcode := self opcodeAt: irOffset.
-	regA := self fieldAAt: irOffset.
 	regB := self fieldBAt: irOffset.
 	regC := self fieldCAt: irOffset.
-	(opcode = OilMove or: [opcode = OilShiftTagged or: [opcode = OilOddTagged or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC
-	 or: [opcode = OilLoadField or: [opcode = OilLoadSize or: [opcode = OilLoadByteSize or: [opcode = OilCmpImmTagged or: [opcode = OilCall0 or: [opcode = OilCharValue]]]]]]]]]]) ifTrue:
-		[^self recordUse: regB].
-	((opcode between: OilAddTagged and: OilXorTagged)
-	 or: [opcode = OilModTagged or: [opcode = OilLoadElement or: [opcode = OilCmpTagged or: [opcode = OilCall1
-	 or: [opcode = OilLoadByte or: [opcode = OilLoadChar or: [opcode = OilCompareBytes or: [opcode between: OilAddFloat and: OilCmpFloat]]]]]]]]) ifTrue:
-		[self recordUse: regB.
-		 ^self recordUse: regC].
-	(opcode = OilStoreByte or: [opcode = OilStoreChar or: [opcode = OilStoreElement]]) ifTrue:
-		[self recordUse: regA.
-		 self recordUse: regB.
-		 ^self recordUse: regC].
-	(opcode = OilStreamNext or: [opcode = OilIdentityHash or: [opcode = OilSkipSeparators]]) ifTrue:
-		[^self recordUse: regB].
-	opcode = OilStreamNextPut ifTrue:
-		[self recordUse: regB.
-		 ^self recordUse: regC].
-	(opcode = OilStoreField or: [opcode = OilCheckBounds]) ifTrue:
-		[self recordUse: regA.
-		 ^self recordUse: regB].
-	(opcode = OilReturn or: [opcode = OilGuardClass or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]]) ifTrue:
-		[^self recordUse: regA].
-	(opcode = OilCallN or: [opcode = OilCallSuper or: [opcode = OilCallDirectedSuper or: [opcode = OilIndexOfByte]]]) ifTrue:
-		[self recordUse: regB.
-		 1 to: regC do: [:argIndex| self recordUse: (self packedArg: argIndex - 1 at: irOffset)]].
-	opcode = OilNewArray ifTrue:
-		[regB ~= OilFlagsReg ifTrue:
-			[0 to: regC - 1 do: [:slotIndex| self recordUse: regB + slotIndex]]].
-	opcode = OilMakeClosure ifTrue:
-		[self recordUse: ((oilIRBuffer at: irOffset + 3) bitAnd: 255).
-		 0 to: regC - 1 do: [:copiedIndex| self recordUse: regB + copiedIndex]].
-	opcode = OilNewObject ifTrue:
+	(self opcode: opcode has: OilOpReadsA) ifTrue:
+		[self recordUse: (self fieldAAt: irOffset)].
+	(self opcode: opcode has: OilOpReadsB) ifTrue:
+		[self recordUse: regB].
+	(self opcode: opcode has: OilOpReadsC) ifTrue:
+		[self recordUse: regC].
+	(self opcode: opcode has: OilOpPackedArgs) ifTrue:
+		[1 to: regC do: [:argIndex| self recordUse: (self packedArg: argIndex - 1 at: irOffset)]].
+	((self opcode: opcode has: OilOpReadsRange)
+	 and: [opcode ~= OilNewArray or: [regB ~= OilFlagsReg]]) ifTrue:
 		[0 to: regC - 1 do: [:slotIndex| self recordUse: regB + slotIndex]].
-	opcode = OilCmpClass ifTrue:
-		[^self recordUse: regB].
-	opcode = OilGuardClass2 ifTrue:
-		[^self recordUse: regA].
-	opcode = OilStringHash ifTrue:
-		[self recordUse: regB.
-		 ^self recordUse: regC]! !
+	opcode = OilMakeClosure ifTrue: "(and its receiver)"
+		[self recordUse: ((oilIRBuffer at: irOffset + 3) bitAnd: 255)]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 weighInstructionAt: irOffset
@@ -2170,13 +2142,9 @@ definitionIsTaggedAt: irOffset
 	"Does the instruction at irOffset (which has a destination) always produce a SmallInteger?"
 	| opcode |
 	opcode := self opcodeAt: irOffset.
-	opcode = OilConstTagged ifTrue: [^true].
 	opcode = OilConst64 ifTrue: [^self isSmallIntegerHandle: (self word64At: irOffset + 1)].
 	opcode = OilMove ifTrue: [^(oilTagged at: (self fieldBAt: irOffset)) ~= 0].
-	((opcode between: OilAddTagged and: OilOddTagged)
-	 or: [opcode = OilAddImmTagged or: [opcode = OilAddImmTaggedNC or: [opcode = OilLoadSize or: [opcode = OilModTagged
-	 or: [opcode = OilLoadByteSize or: [opcode = OilLoadByte or: [opcode = OilCompareBytes or: [opcode = OilCharValue or: [opcode = OilIdentityHash]]]]]]]]]) ifTrue: [^true].
-	^false! !
+	^self opcode: opcode has: OilOpTagged! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 isTagged: virtualReg
@@ -2189,14 +2157,12 @@ resetXmms
 	"Forget the values of the XMM registers (at a label, or before a call that clobbers them)."
 	0 to: OilNumXmms - 1 do: [:xmmIndex| oilXmmVReg at: xmmIndex put: -1]! !
 
-!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 03:00'!
+!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/26/2026 20:30'!
 mayClobberXmms: opcode
-	"May the instruction call out (C calls clobber the XMM registers), or resume after a deopt (a guard)?"
-	(self isSendOpcode: opcode) ifTrue: [^true].
-	(opcode = OilStoreField or: [opcode = OilStoreElement or: [opcode = OilMakeClosure]]) ifTrue: [^true].
-	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilGuardClass or: [opcode = OilGuardClass2]]]) ifTrue: [^true].
-	opcode = OilModTagged ifTrue: [^true]. "(its division may use DPFPReg0 and DPFPReg1)"
-	^(opcode between: OilIdentityHash and: OilSkipSeparators) or: [opcode = OilStringHash]! !
+	"May the instruction call out (C calls clobber the XMM registers), or resume after a deopt (a guard)?  (OilModTagged:
+	 its division may use DPFPReg0 and DPFPReg1.)"
+	<inline: true>
+	^self opcode: opcode has: OilOpClobbersXmms! !
 
 !OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
 forgetXmmsOf: virtualReg

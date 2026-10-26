@@ -280,13 +280,9 @@ opcodeNames
 	"Answer the opcode names (delegated to OilInstructionConstants)."
 	^OilInstructionConstants opcodeNames! !
 
-!OilConstants class methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
-conditionNames
-	^#(Lt Gt Le Ge Eq Ne Identical NotIdentical)! !
-
-!OilConstants class methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
+!OilConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:50'!
 failureNames
 	"Indexed by failure code + 1."
-	^#(OK FailUnsupportedBytecode FailThisContext FailPrimitiveMethod FailBufferFull FailOutOfRegisters FailTooManyFrames FailPCMapFull FailTooManyVirtualObjects FailTooManySites FailEagerClosuresFailed FailInternal FailBackend FailCodeSpace FailUnsafeSite FailNotSistaV1 FailDisqualified)! !
+	^#(OK FailUnsupportedBytecode FailThisContext FailPrimitiveMethod FailBufferFull FailOutOfRegisters FailTooManyFrames FailPCMapFull FailTooManyVirtualObjects FailTooManySites FailEagerClosuresFailed FailInternal FailBackend FailCodeSpace FailUnsafeSite FailNotSistaV1 FailDisqualified FailSpecialization)! !
 
 OilConstants initialize!

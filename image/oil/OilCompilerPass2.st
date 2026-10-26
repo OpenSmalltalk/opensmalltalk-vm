@@ -160,12 +160,11 @@ valueNumber
 	<inline: true>
 	^self! !
 
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!
 isCall: opcode
 	"(The byte scans fall back to sends, which may run any code.)"
 	<inline: true>
-	^(self isSendOpcode: opcode)
-	  or: [opcode = OilIndexOfByte or: [opcode = OilSkipSeparators or: [opcode = OilStringHash]]]! !
+	^self opcode: opcode has: OilOpCall! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 flag: irOffset has: mask
@@ -177,13 +176,13 @@ mark: irOffset with: mask
 	<inline: true>
 	oilIRFlag at: irOffset put: ((oilIRFlag at: irOffset) bitOr: mask)! !
 
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!
 isPureAt: irOffset
 	"Does the instruction at irOffset only compute its destination (no side effect, no deopt, no control flow)?"
 	| opcode |
 	opcode := self opcodeAt: irOffset.
-	^opcode = OilConstTagged or: [opcode = OilConst64 or: [opcode = OilMove or: [opcode = OilLoadSize or: [opcode = OilLoadByteSize or: [opcode = OilLoadField
-		or: [opcode = OilAddImmTagged and: [self flag: irOffset has: OilP2NoCheck]]]]]]]! !
+	^(self opcode: opcode has: OilOpPure)
+	  or: [opcode = OilAddImmTagged and: [self flag: irOffset has: OilP2NoCheck]]! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 regionStartBefore: loopHead

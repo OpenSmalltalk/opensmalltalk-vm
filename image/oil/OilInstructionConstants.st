@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilLastOpcode'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -91,11 +91,102 @@ initialize
 	 (the lookup starts in its superclass) and the packed argument registers (like OilCallN): OilCallSuper binds to the
 	 method class of the root method, the directed super send trampolines take the class"
 	OilCallDirectedSuper := 55.
-	OilLastOpcode := 55.! !
+	OilLastOpcode := 55.
+	"The properties of the opcodes (see opInfoSpec and OilInliningCompiler>>opcode:has:): the length in words of an
+	 instruction (plus, if OilOpPackedArgs, one word per 4 argument registers packed after its fixed words, C of them), and
+	 property bits"
+	OilOpLengthMask := 7.
+	OilOpPackedArgs := 8.
+	OilOpDest := 16.			"defines register A"
+	OilOpSend := 32.			"a send"
+	OilOpCall := 64.			"a send, or a byte scan that falls back to one, which may run any code (Pass 2)"
+	OilOpClobbersXmms := 128.	"may call out (C calls clobber the XMM registers) or resume after a deopt (a guard)"
+	OilOpTagged := 256.		"always defines a SmallInteger (OilConst64 and OilMove depend on their operand)"
+	OilOpPure := 512.			"only computes its destination: no side effect, no deopt, no control flow (OilAddImmTagged only if it
+	 cannot overflow, see OilLoopOptimizer>>isPureAt:)"
+	OilOpBranch := 1024.		"a jump or a conditional branch"
+	OilOpReadsA := 2048.		"reads register A"
+	OilOpReadsB := 4096.		"reads register B"
+	OilOpReadsC := 8192.		"reads register C"
+	OilOpReadsRange := 16384.	"reads the C registers from B (OilNewArray: unless B is OilFlagsReg; OilMakeClosure: also the
+	 register of its receiver)"! !
 
-!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/25/2026 00:10'!
+!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
+opInfoSpec
+	"The opcodes in order, with the length of their fixed part in words and their properties (OilOp* without the prefix)."
+	^#(	(ConstTagged		1 Dest Tagged Pure)
+		(Const64			3 Dest Pure)
+		(Move				1 Dest ReadsB Pure)
+		(AddTagged		1 Dest ReadsB ReadsC Tagged)
+		(SubTagged		1 Dest ReadsB ReadsC Tagged)
+		(AndTagged		1 Dest ReadsB ReadsC Tagged)
+		(OrTagged			1 Dest ReadsB ReadsC Tagged)
+		(XorTagged		1 Dest ReadsB ReadsC Tagged)
+		(ShiftTagged		1 Dest ReadsB Tagged)
+		(OddTagged		1 Dest ReadsB Tagged)
+		(LoadField			1 Dest ReadsB Pure)
+		(StoreField		1 ReadsA ReadsB ClobbersXmms)
+		(LoadElement		1 Dest ReadsB ReadsC)
+		(StoreElement		1 ReadsA ReadsB ReadsC ClobbersXmms)
+		(CmpTagged		1 ReadsB ReadsC)
+		(BranchTrue		1 ReadsA Branch)
+		(BranchFalse		1 ReadsA Branch)
+		(Jump				1 Branch)
+		(Return			1 ReadsA)
+		(GuardClass		3 ReadsA ClobbersXmms)
+		(CheckBounds		1 ReadsA ReadsB)
+		(Call0				3 Dest ReadsB Send Call ClobbersXmms)
+		(Call1				3 Dest ReadsB ReadsC Send Call ClobbersXmms)
+		(CallN				3 PackedArgs Dest ReadsB Send Call ClobbersXmms)
+		(AddImmTagged		1 Dest ReadsB Tagged)
+		(CmpImmTagged	1 ReadsB)
+		(LoadSize			1 Dest ReadsB Tagged Pure)
+		(MakeClosure		4 Dest ReadsRange ClobbersXmms)
+		(NewArray			1 Dest ReadsRange)
+		(CallSuper			3 PackedArgs Dest ReadsB Send Call ClobbersXmms)
+		(AddImmTaggedNC	1 Dest ReadsB Tagged)
+		(ModTagged		1 Dest ReadsB ReadsC Tagged ClobbersXmms)
+		(LoadByteSize		1 Dest ReadsB Tagged Pure)
+		(LoadByte			1 Dest ReadsB ReadsC Tagged)
+		(LoadChar			1 Dest ReadsB ReadsC)
+		(StoreByte			1 ReadsA ReadsB ReadsC)
+		(StoreChar			1 ReadsA ReadsB ReadsC)
+		(CompareBytes		1 Dest ReadsB ReadsC Tagged)
+		(Trap				1)
+		(CharValue			1 Dest ReadsB Tagged)
+		(StreamNext		3 Dest ReadsB ClobbersXmms)
+		(StreamNextPut	3 Dest ReadsB ReadsC ClobbersXmms)
+		(AddFloat			1 Dest ReadsB ReadsC)
+		(SubFloat			1 Dest ReadsB ReadsC)
+		(MulFloat			1 Dest ReadsB ReadsC)
+		(DivFloat			1 Dest ReadsB ReadsC)
+		(CmpFloat			1 ReadsB ReadsC)
+		(IdentityHash		3 Dest ReadsB Tagged ClobbersXmms)
+		(IndexOfByte		3 PackedArgs Dest ReadsB Call ClobbersXmms)
+		(SkipSeparators	3 Dest ReadsB Call ClobbersXmms)
+		(NewObject		3 Dest ReadsRange)
+		(CmpClass			3 ReadsB)
+		(GuardClass2		5 ReadsA ClobbersXmms)
+		(StringHash		3 Dest ReadsB ReadsC Call ClobbersXmms)
+		(CallDirectedSuper	5 PackedArgs Dest ReadsB Send Call ClobbersXmms))! !
+
+!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
+opInfoTable
+	"The properties of each opcode (see opInfoSpec), indexed by opcode from 0 (no opcode 0: 0), for the static oilOpInfo of
+	 OilInliningCompiler."
+	| table |
+	table := Array new: OilLastOpcode + 1 withAll: 0.
+	self opInfoSpec doWithIndex:
+		[:tuple :opcode|
+		(self classPool at: ('Oil', tuple first) asSymbol) = opcode ifFalse: [self error: 'opInfoSpec out of order at ', tuple first].
+		table
+			at: opcode + 1
+			put: ((tuple allButFirst: 2) inject: (tuple at: 2) into: [:info :property| info bitOr: (self classPool at: ('OilOp', property) asSymbol)])].
+	^table! !
+
+!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
 opcodeNames
 	"Answer the opcode names indexed by opcode (1-based, as opcodes start at 1)."
-	^#(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators NewObject CmpClass GuardClass2 StringHash CallDirectedSuper)! !
+	^self opInfoSpec collect: [:tuple| tuple first]! !
 
 OilInstructionConstants initialize!
