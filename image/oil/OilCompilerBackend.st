@@ -786,8 +786,7 @@ genStreamNextAt: i
 	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
 	cogit TstCq: objectMemory tagMask R: Extra1Reg.
 	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
-	cogit MoveM32: 0 r: Extra1Reg R: TempReg.
-	cogit AndCq: objectMemory classIndexMask R: TempReg.
+	cogit MoveM16: 0 r: Extra1Reg R: TempReg.
 	cogit CmpCq: ClassByteStringCompactIndex R: TempReg.
 	jumpPtr := cogit JumpNonZero: 0.
 	"ByteString: index = position + 1 <= numBytes; byte at collection + 8 + index - 1, as a Character"
@@ -1058,8 +1057,7 @@ genSkipSeparatorsAt: i
 	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
 	cogit TstCq: objectMemory tagMask R: Extra1Reg.
 	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
-	cogit MoveM32: 0 r: Extra1Reg R: TempReg.
-	cogit AndCq: objectMemory classIndexMask R: TempReg.
+	cogit MoveM16: 0 r: Extra1Reg R: TempReg.
 	cogit CmpCq: ClassByteStringCompactIndex R: TempReg.
 	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
 	cogit oilGenGetNumBytesOf: Extra1Reg into: ClassReg.
@@ -1855,10 +1853,23 @@ genGuard: objReg class: classOop site: siteIndex
 		 cogit AndCq: objectMemory tagMask R: SendNumArgsReg.
 		 cogit CmpCq: tag R: SendNumArgsReg.
 		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
+	tag = (objectMemory fetchClassTagOf: objectMemory nilObject) ifTrue:
+		[cogit CmpCq: objectMemory nilObject R: objMach.
+		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
+	tag = (objectMemory fetchClassTagOf: objectMemory trueObject) ifTrue:
+		[cogit CmpCq: objectMemory trueObject R: objMach.
+		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
+	tag = (objectMemory fetchClassTagOf: objectMemory falseObject) ifTrue:
+		[cogit CmpCq: objectMemory falseObject R: objMach.
+		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
 	cogit TstCq: objectMemory tagMask R: objMach.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
-	cogit MoveM32: 0 r: objMach R: SendNumArgsReg.
-	cogit AndCq: objectMemory classIndexMask R: SendNumArgsReg.
+	tag <= 16rFFFF
+		ifTrue:
+			[cogit MoveM16: 0 r: objMach R: SendNumArgsReg]
+		ifFalse:
+			[cogit MoveM32: 0 r: objMach R: SendNumArgsReg.
+			 cogit AndCq: objectMemory classIndexMask R: SendNumArgsReg].
 	cogit CmpCq: tag R: SendNumArgsReg.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex! !
 
@@ -2179,8 +2190,7 @@ genLoadDouble: virtualReg into: dpReg ints: intMode site: siteIndex
 	"a BoxedFloat64"
 	cogit TstCq: objectMemory tagMask R: reg.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
-	cogit MoveM32: 0 r: reg R: ClassReg.
-	cogit AndCq: objectMemory classIndexMask R: ClassReg.
+	cogit MoveM16: 0 r: reg R: ClassReg.
 	cogit CmpCq: ClassFloatCompactIndex R: ClassReg.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
 	cogit MoveM64: objectMemory baseHeaderSize r: reg Rd: dpReg.
@@ -2317,8 +2327,7 @@ genClassTagOf: objReg into: destReg
 	cogit MoveR: objReg R: destReg.
 	cogit AndCq: objectMemory tagMask R: destReg.
 	jumpImmediate := cogit JumpNonZero: 0.
-	cogit MoveM32: 0 r: objReg R: destReg.
-	cogit AndCq: objectMemory classIndexMask R: destReg.
+	cogit MoveM16: 0 r: objReg R: destReg.
 	jumpImmediate jmpTarget: cogit Label! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
@@ -2326,7 +2335,7 @@ genCmpClassAt: irOffset
 	"[OilCmpClass|Cond|Reg|0] class, always followed by the branch on the flags that consumes it (like genCompareAt:site:):
 	 compare the class tag of Reg with the class's, and branch.  Answer the index of the instruction after the branch."
 	<inline: false>
-	| cond branchOffset target onTrue tag jump |
+	| cond branchOffset target onTrue tag jump objMach tagNil tagTrue tagFalse singleton |
 	<var: #jump type: #'AbstractInstruction *'>
 	cond := self fieldAAt: irOffset.
 	branchOffset := irOffset + (self instructionLengthAt: irOffset).
@@ -2341,8 +2350,19 @@ genCmpClassAt: irOffset
 		 ^branchOffset].
 	onTrue := (self opcodeAt: branchOffset) = OilBranchTrue.
 	target := self imm16At: branchOffset.
-	self genClassTagOf: (self src: (self fieldBAt: irOffset) scratch: TempReg) into: SendNumArgsReg.
-	cogit CmpCq: tag R: SendNumArgsReg.
+	objMach := self src: (self fieldBAt: irOffset) scratch: TempReg.
+	tagNil := objectMemory fetchClassTagOf: objectMemory nilObject.
+	tagTrue := objectMemory fetchClassTagOf: objectMemory trueObject.
+	tagFalse := objectMemory fetchClassTagOf: objectMemory falseObject.
+	(tag = tagNil or: [tag = tagTrue or: [tag = tagFalse]])
+		ifTrue:
+			[singleton := tag = tagNil
+				ifTrue: [objectMemory nilObject]
+				ifFalse: [tag = tagTrue ifTrue: [objectMemory trueObject] ifFalse: [objectMemory falseObject]].
+			 cogit CmpCq: singleton R: objMach]
+		ifFalse:
+			[self genClassTagOf: objMach into: SendNumArgsReg.
+			 cogit CmpCq: tag R: SendNumArgsReg].
 	jump := self genJumpOn: cond ifTrue: onTrue.
 	self branch: jump to: target.
 	^branchOffset + 1! !
@@ -2350,11 +2370,42 @@ genCmpClassAt: irOffset
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
 genGuard2At: irOffset site: siteIndex
 	"[OilGuardClass2|Reg|Site16] class1 class2: deoptimize unless Reg is an instance of one of the two classes."
-	| tag1 tag2 jumpOK |
+	| tag1 tag2 tagNil tagTrue tagFalse tagSmi jumpOK |
 	<var: #jumpOK type: #'AbstractInstruction *'>
 	tag1 := objectMemory classTagForClass: (self word64At: irOffset + 1).
 	tag2 := objectMemory classTagForClass: (self word64At: irOffset + 3).
 	(tag1 = 0 or: [tag2 = 0]) ifTrue: [^self abortCompilation: OilFailBackend].
+	tagSmi := objectMemory smallIntegerTag.
+	(tag1 = tagSmi or: [tag2 = tagSmi]) ifTrue:
+		[| otherClass objMach |
+		 otherClass := tag1 = tagSmi ifTrue: [self word64At: irOffset + 3] ifFalse: [self word64At: irOffset + 1].
+		 objMach := self src: (self fieldAAt: irOffset) scratch: TempReg.
+		 cogit TstCq: objectMemory smallIntegerTag R: objMach.
+		 jumpOK := cogit JumpNonZero: 0.
+		 self genGuard: (self fieldAAt: irOffset) class: otherClass site: siteIndex.
+		 jumpOK jmpTarget: cogit Label.
+		 ^self].
+	tagNil := objectMemory fetchClassTagOf: objectMemory nilObject.
+	(tag1 = tagNil or: [tag2 = tagNil]) ifTrue:
+		[| otherClass objMach |
+		 otherClass := tag1 = tagNil ifTrue: [self word64At: irOffset + 3] ifFalse: [self word64At: irOffset + 1].
+		 objMach := self src: (self fieldAAt: irOffset) scratch: TempReg.
+		 cogit CmpCq: objectMemory nilObject R: objMach.
+		 jumpOK := cogit JumpZero: 0.
+		 self genGuard: (self fieldAAt: irOffset) class: otherClass site: siteIndex.
+		 jumpOK jmpTarget: cogit Label.
+		 ^self].
+	tagTrue := objectMemory fetchClassTagOf: objectMemory trueObject.
+	tagFalse := objectMemory fetchClassTagOf: objectMemory falseObject.
+	((tag1 = tagTrue and: [tag2 = tagFalse]) or: [tag1 = tagFalse and: [tag2 = tagTrue]]) ifTrue:
+		[| objMach |
+		 objMach := self src: (self fieldAAt: irOffset) scratch: TempReg.
+		 cogit CmpCq: objectMemory trueObject R: objMach.
+		 jumpOK := cogit JumpZero: 0.
+		 cogit CmpCq: objectMemory falseObject R: objMach.
+		 self deopt: (cogit JumpNonZero: 0) site: siteIndex.
+		 jumpOK jmpTarget: cogit Label.
+		 ^self].
 	self genClassTagOf: (self src: (self fieldAAt: irOffset) scratch: TempReg) into: SendNumArgsReg.
 	cogit CmpCq: tag1 R: SendNumArgsReg.
 	jumpOK := cogit JumpZero: 0.
