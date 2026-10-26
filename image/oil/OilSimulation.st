@@ -10,11 +10,11 @@ printIROn: aStream
 	aStream nextPutAll: 'Inlined frames:'; cr.
 	0 to: numFrames - 1 do:
 		[:f|
-		aStream tab; nextPut: $#; print: f; nextPutAll: ' depth '; print: (frameDepth at: f);
-			nextPutAll: (String new: (frameDepth at: f) * 2 withAll: $ ); space;
-			print: (frameMethod at: f); nextPutAll: '  base r'; print: (frameBase at: f).
-		(frameParent at: f) >= 0 ifTrue:
-			[aStream nextPutAll: '  (from #'; print: (frameParent at: f); nextPutAll: ' pc '; print: (frameCallPC at: f); nextPut: $)].
+		aStream tab; nextPut: $#; print: f; nextPutAll: ' depth '; print: (self frameAt: f) depth;
+			nextPutAll: (String new: (self frameAt: f) depth * 2 withAll: $ ); space;
+			print: (self frameAt: f) method; nextPutAll: '  base r'; print: (self frameAt: f) base.
+		(self frameAt: f) parent >= 0 ifTrue:
+			[aStream nextPutAll: '  (from #'; print: (self frameAt: f) parent; nextPutAll: ' pc '; print: (self frameAt: f) callPC; nextPut: $)].
 		aStream cr].
 	labels := Set new.
 	i := 0.
@@ -33,7 +33,7 @@ printIROn: aStream
 		[:s|
 		aStream tab; nextPutAll: 'deopt#'; print: s; nextPutAll: ' IR '; nextPutAll: ((siteIR at: s) printPaddedWith: $0 to: 4);
 			nextPutAll: ' '; nextPutAll: (#('guard' 'arith' 'bounds' 'call' 'branch' 'store' 'alloc') at: (siteKind at: s));
-			nextPutAll: ' -> frame #'; print: (siteFrame at: s); nextPutAll: ' '; print: (frameMethod at: (siteFrame at: s));
+			nextPutAll: ' -> frame #'; print: (siteFrame at: s); nextPutAll: ' '; print: (self frameAt: (siteFrame at: s)) method;
 			nextPutAll: ' pc '; print: (sitePC at: s); cr].
 	aStream nextPutAll: 'Stats: virtual objects '; print: numVObjs;
 		nextPutAll: ', high registers '; print: OilMaxReg - highRegTop; cr! !

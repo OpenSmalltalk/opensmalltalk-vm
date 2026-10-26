@@ -226,15 +226,15 @@ metadataRegistersDo: aBlock sites: withSites
 					[:slotIndex| (sitePoolKind at: snapBase + slotIndex) = OilDescReg ifTrue:
 						[aBlock value: (sitePoolValue at: snapBase + slotIndex)]]]]].
 	0 to: numFrames - 1 do:
-		[:frameIndex| (frameSelfKind at: frameIndex) = OilDescReg ifTrue:
-			[aBlock value: (frameSelfValue at: frameIndex)]].
+		[:frameIndex| (self frameAt: frameIndex) selfKind = OilDescReg ifTrue:
+			[aBlock value: (self frameAt: frameIndex) selfValue]].
 	0 to: numVObjs - 1 do:
 		[:vobjIndex|
-		(vobjSelfKind at: vobjIndex) = OilDescReg ifTrue:
-			[aBlock value: (vobjSelfValue at: vobjIndex)].
-		0 to: (vobjNumCopied at: vobjIndex) - 1 do:
-			[:slotIndex| (capturedKind at: (vobjCopiedBase at: vobjIndex) + slotIndex) = OilDescReg ifTrue:
-				[aBlock value: (capturedValue at: (vobjCopiedBase at: vobjIndex) + slotIndex)]]]! !
+		(self vobjAt: vobjIndex) rcvrKind = OilDescReg ifTrue:
+			[aBlock value: (self vobjAt: vobjIndex) rcvrValue].
+		0 to: (self vobjAt: vobjIndex) copiedCount - 1 do:
+			[:slotIndex| (capturedKind at: (self vobjAt: vobjIndex) copiedBase + slotIndex) = OilDescReg ifTrue:
+				[aBlock value: (capturedValue at: (self vobjAt: vobjIndex) copiedBase + slotIndex)]]]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 src: virtualReg scratch: scratchReg
@@ -2005,7 +2005,7 @@ noteCallSiteAt: irOffset
 	(self isSendOpcode: (self opcodeAt: irOffset)) ifFalse: [^self].
 	siteIndex := oilIRSite at: irOffset.
 	(siteIndex >= 0 and: [self siteHasState: siteIndex]) ifFalse: [^self].
-	self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
+	self setScanMethod: (self frameAt: (siteFrame at: siteIndex)) method.
 	self decodeAt: (sitePC at: siteIndex).
 	(opcodeTag = OilTagSend or: [opcodeTag = OilTagSendSuper or: [opcodeTag = OilTagSendSpecial]]) ifFalse: [^self].
 	oilSiteResume at: siteIndex put: cogit Label.

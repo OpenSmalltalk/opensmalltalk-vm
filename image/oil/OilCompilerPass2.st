@@ -31,10 +31,9 @@ setUpSimulationTables
 	oilUnrollWord2 := self newTable: OilMaxUnrolls.
 	oilNumUnrolls := oilUnrollGrowth := oilUnrollClones := oilNumFullyUnrolled := 0! !
 
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 23:20'!
 pipe
 	<inline: true>
-	super pipe.
 	^self loopOptimize! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!

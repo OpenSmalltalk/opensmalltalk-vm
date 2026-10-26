@@ -753,7 +753,7 @@ numTrampolines
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
 	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
-	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
+	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilFrame. OilVObj. OilCond. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
 
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
@@ -798,14 +798,14 @@ planMetadata
 		[:selIndex| self mdLiteralIndexOf: (oilInlinedSelectors at: selIndex)].
 	0 to: numFrames - 1 do:
 		[:frameIndex|
-		self mdLiteralIndexOf: (frameMethod at: frameIndex).
-		self mdNoteDescriptorKind: (frameSelfKind at: frameIndex) value: (frameSelfValue at: frameIndex)].
+		self mdLiteralIndexOf: (self frameAt: frameIndex) method.
+		self mdNoteDescriptorKind: (self frameAt: frameIndex) selfKind value: (self frameAt: frameIndex) selfValue].
 	0 to: numVObjs - 1 do:
 		[:vobjIndex|
-		(vobjKind at: vobjIndex) = OilDescBlock
+		(self vobjAt: vobjIndex) kind = OilDescBlock
 			ifTrue:
-				[self mdLiteralIndexOf: (vobjLiteral at: vobjIndex).
-				 self mdNoteDescriptorKind: (vobjSelfKind at: vobjIndex) value: (vobjSelfValue at: vobjIndex)]
+				[self mdLiteralIndexOf: (self vobjAt: vobjIndex) literal.
+				 self mdNoteDescriptorKind: (self vobjAt: vobjIndex) rcvrKind value: (self vobjAt: vobjIndex) rcvrValue]
 			ifFalse:
 				[self mdLiteralIndexOf: (self vobjSelfConstant: vobjIndex)]].
 	0 to: capturedTop - 1 do:
@@ -916,8 +916,8 @@ metadata: metadata stateDescriptorAt: index kind: kind value: value reg: reg
 vobjSelfConstant: vobjIndex
 	"The self of a temp vector (nil) or of a scalar replaced object (its class) in the metadata."
 	<inline: true>
-	^(vobjKind at: vobjIndex) = OilDescObject
-		ifTrue: [vobjSelfClass at: vobjIndex]
+	^(self vobjAt: vobjIndex) kind = OilDescObject
+		ifTrue: [(self vobjAt: vobjIndex) vobjClass]
 		ifFalse: [objectMemory nilObject]! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/26/2026 10:00'!
@@ -1002,36 +1002,36 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	0 to: numFrames - 1 do:
 		[:frameIndex|
 		frameRecord := frames + (frameIndex * OilMDFrameSize).
-		parentFrame := frameParent at: frameIndex.
-		self metadata: metadata u16At: frameRecord + OilMDFrameMethod put: (self mdLiteralIndexOf: (frameMethod at: frameIndex)).
-		self metadata: metadata byteAt: frameRecord + OilMDFrameIsBlock put: ((frameIsBlock at: frameIndex) ifTrue: [1] ifFalse: [0]).
-		self metadata: metadata byteAt: frameRecord + OilMDFrameBase put: (frameBase at: frameIndex).
+		parentFrame := (self frameAt: frameIndex) parent.
+		self metadata: metadata u16At: frameRecord + OilMDFrameMethod put: (self mdLiteralIndexOf: (self frameAt: frameIndex) method).
+		self metadata: metadata byteAt: frameRecord + OilMDFrameIsBlock put: ((self frameAt: frameIndex) isBlockFrame ifTrue: [1] ifFalse: [0]).
+		self metadata: metadata byteAt: frameRecord + OilMDFrameBase put: (self frameAt: frameIndex) base.
 		self metadata: metadata byteAt: frameRecord + OilMDFrameParent put: parentFrame.
 		parentFrame < 0
 			ifTrue: [self metadata: metadata u16At: frameRecord + OilMDFrameReturnPC put: -1]
 			ifFalse: "the pc after the send that the frame was inlined at"
-				[self setScanMethod: (frameMethod at: parentFrame).
-				 self decodeAt: (frameCallPC at: frameIndex).
+				[self setScanMethod: (self frameAt: parentFrame) method.
+				 self decodeAt: (self frameAt: frameIndex) callPC.
 				 self metadata: metadata u16At: frameRecord + OilMDFrameReturnPC put: oilNextPC].
-		self metadata: metadata descriptorAt: frameRecord + OilMDFrameSelf kind: (frameSelfKind at: frameIndex) value: (frameSelfValue at: frameIndex).
-		self metadata: metadata byteAt: frameRecord + OilMDFrameNumArgs put: (self numArgsOf: (frameMethod at: frameIndex))].
+		self metadata: metadata descriptorAt: frameRecord + OilMDFrameSelf kind: (self frameAt: frameIndex) selfKind value: (self frameAt: frameIndex) selfValue.
+		self metadata: metadata byteAt: frameRecord + OilMDFrameNumArgs put: (self numArgsOf: (self frameAt: frameIndex) method)].
 	0 to: numVObjs - 1 do:
 		[:vobjIndex|
 		vobjRecord := vobjs + (vobjIndex * OilMDVObjSize).
-		self metadata: metadata byteAt: vobjRecord + OilMDVObjKind put: (vobjKind at: vobjIndex).
-		(vobjKind at: vobjIndex) = OilDescBlock
+		self metadata: metadata byteAt: vobjRecord + OilMDVObjKind put: (self vobjAt: vobjIndex) kind.
+		(self vobjAt: vobjIndex) kind = OilDescBlock
 			ifTrue:
-				[self metadata: metadata u16At: vobjRecord + OilMDVObjLiteralOrSize put: (self mdLiteralIndexOf: (vobjLiteral at: vobjIndex)).
-				 self metadata: metadata byteAt: vobjRecord + OilMDVObjOuterFrame put: (vobjOuter at: vobjIndex).
-				 self metadata: metadata descriptorAt: vobjRecord + OilMDVObjSelf kind: (vobjSelfKind at: vobjIndex) value: (vobjSelfValue at: vobjIndex).
-				 self metadata: metadata byteAt: vobjRecord + OilMDVObjNumCopied put: (vobjNumCopied at: vobjIndex).
-				 self metadata: metadata u16At: vobjRecord + OilMDVObjCopiedIndex put: captured + (OilMDDescriptorSize * (vobjCopiedBase at: vobjIndex))]
+				[self metadata: metadata u16At: vobjRecord + OilMDVObjLiteralOrSize put: (self mdLiteralIndexOf: (self vobjAt: vobjIndex) literal).
+				 self metadata: metadata byteAt: vobjRecord + OilMDVObjOuterFrame put: (self vobjAt: vobjIndex) outer.
+				 self metadata: metadata descriptorAt: vobjRecord + OilMDVObjSelf kind: (self vobjAt: vobjIndex) rcvrKind value: (self vobjAt: vobjIndex) rcvrValue.
+				 self metadata: metadata byteAt: vobjRecord + OilMDVObjNumCopied put: (self vobjAt: vobjIndex) copiedCount.
+				 self metadata: metadata u16At: vobjRecord + OilMDVObjCopiedIndex put: captured + (OilMDDescriptorSize * (self vobjAt: vobjIndex) copiedBase)]
 			ifFalse:
 				["a temp vector, or a scalar replaced object (OilDescObject; its self is its class): slots in high registers"
-				 self metadata: metadata u16At: vobjRecord + OilMDVObjLiteralOrSize put: (vobjSize at: vobjIndex).
+				 self metadata: metadata u16At: vobjRecord + OilMDVObjLiteralOrSize put: (self vobjAt: vobjIndex) numSlots.
 				 self metadata: metadata byteAt: vobjRecord + OilMDVObjOuterFrame put: -1.
 				 self metadata: metadata descriptorAt: vobjRecord + OilMDVObjSelf kind: OilDescConst value: (self vobjSelfConstant: vobjIndex).
-				 self metadata: metadata byteAt: vobjRecord + OilMDVObjSlotBase put: (vobjSlotBase at: vobjIndex)]].
+				 self metadata: metadata byteAt: vobjRecord + OilMDVObjSlotBase put: (self vobjAt: vobjIndex) slotBase]].
 	0 to: capturedTop - 1 do:
 		[:capturedIndex| self metadata: metadata descriptorAt: captured + (OilMDDescriptorSize * capturedIndex) kind: (capturedKind at: capturedIndex) value: (capturedValue at: capturedIndex)].
 	index := spills.
@@ -1064,7 +1064,7 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 							[self metadata: metadata byteAt: index + OilMDSiteKind put: (siteKind at: siteIndex) + OilMDSiteCallFlag.
 							 (oilSiteUsed at: siteIndex) = 2
 								ifTrue:
-									[self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
+									[self setScanMethod: (self frameAt: (siteFrame at: siteIndex)) method.
 									 self decodeAt: (sitePC at: siteIndex).
 									 self metadata: metadata byteAt: index + OilMDSiteSendSize put: oilNextPC - (sitePC at: siteIndex).
 									 self metadata: metadata byteAt: index + OilMDSiteSendNumArgs put: (self numArgsOfCallAt: siteInstruction)]
