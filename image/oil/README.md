@@ -27,6 +27,7 @@ OilBytecodeScanner
 | `oil-m8-test.st` | M8 acceptance test: scalar replacement (dissolved and materialized Points and Associations), bimorphic inlining (diamonds, predicates, nil-or-object sends), folded hashes and `OilStringHash`, and equivalence of the IR with real execution. |
 | `oil-m10-test.st` | M10 acceptance test: the analysis of the float loop registers (which loops, which float variables and invariants, of which kind), no partial unrolling of float loops, and equivalence of the IR with real execution (the code generation is tested natively, `oil/test_oil_m10.st`). |
 | `oil-m9-test.st` | M9 acceptance test: loop unrolling (full and partial), the cloned deopt sites, the rotation of loops tested against an immediate or an argument, young stores without store check, and equivalence of the IR with real execution and with the IR compiled without unrolling. |
+| `oil-directed-super-test.st` | `OilCallDirectedSuper`: a super send of an inlined method in the Pass 1 IR (with its method class), its printing, and `OilIRInterpreter` against real execution. |
 
 ## Running the In-Image Tests
 
@@ -39,6 +40,7 @@ run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m6-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m8-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m9-test.st
 run-st.sh --answer true Spur64VMMaker.image image/oil/oil-m10-test.st
+run-st.sh --answer true Spur64VMMaker.image image/oil/oil-directed-super-test.st
 ```
 
 The scripts look for sources in `Smalltalk at: #OilSourceDir` (defaulting to the current working directory).
