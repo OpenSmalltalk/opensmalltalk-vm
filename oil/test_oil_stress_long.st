@@ -66,6 +66,13 @@ round := 0.
 	oilInstalled := allMethods size.
 	"3. SUnit on the Oil code; rerun the new failures (flaky or not)"
 	failures := (collectFailures value: subset) reject: [:f | baselineFailures includes: f].
+	"the Oil methods installed when they failed; and a full GC first, as tests that inspect all instances (e.g.
+	 DictionaryTest>>testIntegrityOfDictionaries) see the garbage left by others (FloatTest>>testNaN4's NaN key)"
+	failures isEmpty ifFalse:
+		[out tab; nextPutAll: 'Oil methods installed at the failures: '.
+		 (allMethods select: [:m | m oilInfo notNil]) do: [:m | out print: m; space].
+		 out cr; flush.
+		 Smalltalk garbageCollect].
 	failures do: [:f | | cls sel r |
 		newFailures add: f.
 		cls := Smalltalk at: (f copyUpTo: $>) asSymbol.
@@ -77,10 +84,8 @@ round := 0.
 			[persistent add: f.
 			 "what failed, and the Oil code installed then"
 			 out tab; nextPutAll: f; nextPutAll: ': '; nextPutAll: ([(cls selector: sel) runCase. 'passed when run alone']
-				on: Exception do: [:e | e class name, ': ', (e messageText ifNil: ['']) asString]); cr.
-			 out tab; nextPutAll: 'Oil methods installed: '.
-			 (allMethods select: [:m | m oilInfo notNil]) do: [:m | out print: m; space].
-			 out cr; flush]].
+				on: TestResult failure, TestResult error do: [:e | e class name, ': ', (e messageText ifNil: ['']) asString]); cr.
+			 out flush]].
 	"4. a perturbation"
 	action := rng nextInt: 10.
 	detail := ''.
