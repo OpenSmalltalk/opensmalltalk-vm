@@ -9,7 +9,7 @@ OilInliningCompiler subclass: #OilLoopOptimizer
 	category: 'VMMaker-JIT-Oil'!
 
 !OilLoopOptimizer commentStamp: 'cb 10/24/2026 19:35' prior: 0!
-I add Pass 2, the streaming loop optimizer, to OilInliningCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via loopOptimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, removes dead pure instructions, fully unrolls innermost leaf loops whose trip count is a small constant, and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
+I add Pass 2, the streaming loop optimizer, to OilInliningCompiler.  Given the linear IR Pass 1 produced in Buffer 1 (oilIRBuffer1), pipe (via loopOptimize) analyzes tagged SmallInteger registers, rotates innermost call-free loops, eliminates redundant bounds checks, class guards and overflow checks on induction variables, fully unrolls innermost leaf loops whose trip count is a small constant, and streams the optimized IR into Buffer 2 (oilIRBuffer2) for Pass 3.!
 
 !OilLoopOptimizer class methodsFor: 'translation' stamp: 'cb 10/25/2026 21:00'!
 declareCVarsIn: aCCodeGenerator
@@ -49,16 +49,15 @@ loopOptimize
 	      the increments cannot overflow (OilAddImmTaggedNC), the size of the object is the one loaded before
 	      the loop, and the bounds checks of the index right after the loop test are redundant.
 	 3. Redundant loads and checks (valueNumber: none here, see OilFullCompiler).
-	 4. Dead code: pure instructions defining a register nothing reads (no instruction, no deopt state).
-	 5. Unrolling of innermost leaf loops (unrollLoops).
-	 6. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
+	 4. Unrolling of innermost leaf loops (unrollLoops).
+	 5. Emission (streaming, one pass to lay out, one to emit), remapping branch targets and deopt sites.
 	 If loops were fully unrolled, their copies are straight-line code: Buffer 2 is copied back into Buffer 1 and optimized
 	 again (once), e.g. the checks a copy repeats are redundant (value numbering), and loops around them may now be innermost.
 	 Answer OilOK or a failure code."
 	| result |
 	oilIRBuffer := oilIRBuffer1.
 	oilPass1Words := irIndex.
-	oilNumRotated := oilNumBoundsRemoved := oilNumDeadRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := 0.
+	oilNumRotated := oilNumBoundsRemoved := oilNumSizesShared := oilNumNoCheck := oilNumGuardsRemoved := 0.
 	oilUseProbe := -1.
 	oilNumFullyUnrolled := 0.
 	result := self optimizeIR.
@@ -104,7 +103,6 @@ optimizeIR
 				[self optimizeLoop: (self imm16At: irOffset) backJump: irOffset].
 			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 		 self valueNumber.
-		 self eliminateDeadCode.
 		 self unrollLoops].
 	^self emitOptimizedIR! !
 
@@ -332,58 +330,6 @@ liveStateAt: irOffset refersTo: vreg
 	siteIndex := oilIRSite at: irOffset.
 	^siteIndex >= 0 and: [(self isLiveSite: siteIndex) and: [self state: siteIndex refersTo: vreg]]! !
 
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!
-countMetadataUses
-	"Count the registers the deoptimization metadata refers to (see metadataRegistersDo:sites:)."
-	self metadataRegistersDo: [:vreg| self recordUse: vreg] sites: true! !
-
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
-eliminateDeadCode
-	"Delete the pure instructions whose destination nothing reads (anywhere, or before it is assigned again in the
-	 straight-line code that follows), until there are none."
-	| changed irOffset |
-	oilUseWeight := 1.
-	changed := true.
-	[changed] whileTrue:
-		[changed := false.
-		 0 to: OilNumRegs - 1 do:
-			[:vreg| oilVRegUses at: vreg put: 0].
-		 irOffset := 0.
-		 [irOffset < irIndex] whileTrue:
-			[(self flag: irOffset has: OilP2Delete) ifFalse:
-				[(self flag: irOffset has: OilP2ToMove)
-					ifTrue: [self recordUse: (oilIRAux at: irOffset)]
-					ifFalse: [self countUsesAt: irOffset]].
-			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-		 self countMetadataUses.
-		 irOffset := 0.
-		 [irOffset < irIndex] whileTrue:
-			[((self flag: irOffset has: OilP2Delete) not
-			  and: [(self isPureAt: irOffset)
-			  and: [(self fieldAAt: irOffset) < OilFlagsReg
-			  and: [(oilVRegUses at: (self fieldAAt: irOffset)) = 0
-					or: [self isOverwrittenBeforeUse: (self fieldAAt: irOffset) after: irOffset]]]]) ifTrue:
-				[self mark: irOffset with: OilP2Delete.
-				 oilNumDeadRemoved := oilNumDeadRemoved + 1.
-				 changed := true].
-			 irOffset := irOffset + (self instructionLengthAt: irOffset)]]! !
-
-!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/26/2026 20:30'!
-isOverwrittenBeforeUse: vreg after: defOffset
-	"Is register vreg, assigned by the instruction at defOffset, assigned again before anything reads it?  Only the straight-line
-	 code after defOffset is examined (up to a branch target, a branch, a return or a call, where vreg is assumed live).
-	 Reads are instruction operands and the deopt states of the instructions' live sites."
-	<inline: false>
-	| startOffset endOffset opcode |
-	startOffset := endOffset := defOffset + (self instructionLengthAt: defOffset).
-	[endOffset < irIndex
-	 and: [opcode := self opcodeAt: endOffset.
-		   (oilIRTarget at: endOffset) = 0
-		   and: [(self isBranch: opcode) not and: [opcode ~= OilReturn and: [(self isCall: opcode) not]]]]] whileTrue:
-		[endOffset := endOffset + (self instructionLengthAt: endOffset)].
-	^(self isRead: vreg from: startOffset to: endOffset) not
-	  and: [self isAssigned: vreg from: startOffset to: endOffset - 1]! !
-
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 00:45'!
 state: siteIndex refersTo: vreg
 	"Does the deopt state of site siteIndex refer to register vreg?"
@@ -561,7 +507,7 @@ emitOptimizedIR
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/26/2026 21:40'!
 unrollLoops
 	"Fully unroll the innermost leaf loops (no sends) whose number of iterations is a small constant (see
-	 fullyUnrollLoop:backJump:).  Run after dead code elimination: the loops' instructions are final, the copies are made by
+	 fullyUnrollLoop:backJump:).  Run after value numbering: the loops' instructions are final, the copies are made by
 	 the emission (emitOptimizedIR), with clones of their deopt sites."
 	| irOffset |
 	irOffset := 0.
@@ -902,13 +848,12 @@ emitFullyUnrolledLoop: unrollIndex at: startOffset
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/24/2026 16:00'!
 pass2Statistics: index
-	"0 loops rotated, 1 bounds checks removed, 2 dead instructions removed, 3 sizes shared, 4 unchecked increments,
+	"0 loops rotated, 1 bounds checks removed, (2 0: dead code is no longer eliminated), 3 sizes shared, 4 unchecked increments,
 	 5 Pass 1 IR words, 6 class guards removed, 7 in-place tagged add undos; 23 loops fully unrolled, 26 loops with float
 	 registers (Pass 3).  (24 and 25, the loops partially unrolled and the stores into young objects without store check,
 	 are 0: Oil does neither any more.)"
 	index = 0 ifTrue: [^oilNumRotated].
 	index = 1 ifTrue: [^oilNumBoundsRemoved].
-	index = 2 ifTrue: [^oilNumDeadRemoved].
 	index = 3 ifTrue: [^oilNumSizesShared].
 	index = 4 ifTrue: [^oilNumNoCheck].
 	index = 5 ifTrue: [^oilPass1Words].
@@ -926,7 +871,7 @@ OilLoopOptimizer subclass: #OilFullCompiler
 
 !OilFullCompiler commentStamp: 'cb 10/25/2026 02:00' prior: 0!
 I am the full optimizing compiler of Oil (OilBytecodeScanner -> OilInliningCompiler -> OilLoopOptimizer -> OilFullCompiler), for the 64-bit Spur Cog VM.  To Pass 1 (translation and inlining into the linear IR), Pass 2 (the streaming loop optimizer) and Pass 3 (native code generation) I add:
-- dominator-scoped local value numbering (valueNumber, run by Pass 2 before dead code elimination): loads of fields and sizes already loaded, and bounds and class checks already done, on every path, are eliminated, without SSA or phis;
+- dominator-scoped local value numbering (valueNumber, run by Pass 2 before unrolling): loads of fields and sizes already loaded, and bounds and class checks already done, on every path, are eliminated, without SSA or phis;
 - float fusion (fuseFloats, on Pass 2's IR): the intermediate results of a chain of Float arithmetic stay unboxed in XMM registers.
 All my tables are static too.!
 
