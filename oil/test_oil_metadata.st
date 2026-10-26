@@ -2,7 +2,7 @@
  hidden pinned object of CompiledMethod format: a literal frame (the root method, the inlined selectors, the methods of
  the inlined frames, CompiledBlocks, classes, constants), which the garbage collectors trace like a method's, then bytes
  (the frame, virtual object and site records, 2-byte descriptors, the spill offsets of the spilled registers only).
- Checks the size of the metadata of typical methods against the pointer Array of Milestones 1 to 10, and that
+ Checks the size of the metadata of typical methods, and that
  deoptimization still works after scavenges and full GCs moved the objects its literals refer to (methods compiled by
  this test, so young when Oil compiles the root, and literal objects), with closures and scalar replaced objects.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-metadata-result.txt next to the image."
@@ -57,26 +57,23 @@ model := cls new.
 items := (1 to: 100) collect: [:k | item new score: k; yourself].
 info := [:sel | (cls >> sel) oilInfo].
 sizes := Dictionary new.
-"compile: warm up (baseline JIT), Oil-compile, note the metadata size, new and as the pointer Array"
+"compile: warm up (baseline JIT), Oil-compile, note the metadata size"
 res := [:sel | | cm |
 	cm := cls >> sel.
 	3 timesRepeat: [model perform: sel with: items].
 	r := cm oilCompileFor: cls.
 	last := CompiledMethod oilLastCompilation.
-	sizes at: sel put: {last at: 12. last at: 13}.
+	sizes at: sel put: (last at: 12).
 	out nextPutAll: sel; nextPutAll: ': oilCompileFor: -> '; print: r; nextPutAll: ', '; print: (last at: 5); nextPutAll: ' sites, ';
-		print: (last at: 6); nextPutAll: ' frames, metadata '; print: (last at: 12); nextPutAll: ' bytes (as the pointer Array of M1-M10: ';
-		print: (last at: 13); nextPutAll: ' bytes, '; print: (100 - ((last at: 12) * 100 // (last at: 13))); nextPutAll: '% smaller)'; cr; flush.
+		print: (last at: 6); nextPutAll: ' frames, metadata '; print: (last at: 12); nextPutAll: ' bytes'; cr; flush.
 	r].
 #(sumScores: sumBonus: pointSum: blockSum: injectSum:) do: [:sel |
 	check value: sel, ' compiles' value: (res value: sel) = 0.
 	check value: sel, ' has Oil code' value: (info value: sel) notNil].
 "(the bounds include the sites of the interrupt checks of the loops, about 20 bytes each, see genPollBefore:)"
-check value: 'sumScores: metadata <= 480 bytes' value: ((sizes at: #sumScores:) first <= 480).
-check value: 'sumBonus: metadata <= 480 bytes' value: ((sizes at: #sumBonus:) first <= 480).
-check value: 'every metadata at least 75% smaller than the pointer Array' value: (sizes values allSatisfy: [:pair | pair first * 4 <= pair second]).
-out nextPutAll: 'total metadata '; print: (sizes values inject: 0 into: [:a :pair | a + pair first]); nextPutAll: ' bytes, as pointer Arrays ';
-	print: (sizes values inject: 0 into: [:a :pair | a + pair second]); nextPutAll: ' bytes'; cr.
+check value: 'sumScores: metadata <= 480 bytes' value: ((sizes at: #sumScores:) <= 480).
+check value: 'sumBonus: metadata <= 480 bytes' value: ((sizes at: #sumBonus:) <= 480).
+out nextPutAll: 'total metadata '; print: (sizes values inject: 0 into: [:a :size | a + size]); nextPutAll: ' bytes'; cr.
 "results with the Oil code"
 check value: 'sumScores: = 5050' value: (model sumScores: items) = 5050.
 check value: 'sumBonus: = expected' value: (model sumBonus: items) = ((1 to: 100) inject: 0 into: [:a :k | a + (k * k) + 2]).

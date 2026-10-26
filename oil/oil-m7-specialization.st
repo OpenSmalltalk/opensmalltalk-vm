@@ -31,14 +31,25 @@ oilSpecializationsAddress
 	<returnTypeC: #'sqInt *'>
 	^self addressOf: oilSpecializations put: [:value| oilSpecializations := value]! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
+oilHasSpecializationTable
+	"(The table is 0 until primitiveOilSpecialize allocates it, see CoInterpreter>>oilEnsureSpecializationTable.)"
+	<inline: true>
+	^oilSpecializations ~= 0! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
+oilClearSpecializationEntry: entryIndex
+	0 to: OilSpecializationSize - 1 do:
+		[:fieldIndex| objectMemory storePointerUnchecked: entryIndex * OilSpecializationSize + fieldIndex ofObject: oilSpecializations withValue: objectMemory nilObject]! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilSpecializationAt: entryIndex field: fieldIndex
 	"Field fieldIndex of entry entryIndex of the specialization table: OilSpecMethod the method, OilSpecClassTag the class tag
 	 of the receivers (a SmallInteger), OilSpecCopy the copy of the method whose machine code is the specialized Oil code,
 	 OilSpecClass the class (which keeps the tag from being reused).  Answer nil if there is no table."
 	<api>
 	| oop |
-	(oilSpecializations = 0 or: [oilSpecializations = objectMemory nilObject]) ifTrue:
+	self oilHasSpecializationTable ifFalse:
 		[^objectMemory nilObject].
 	oop := objectMemory fetchPointer: entryIndex * OilSpecializationSize + fieldIndex ofObject: oilSpecializations.
 	((objectMemory isNonImmediate: oop) and: [objectMemory isForwarded: oop]) ifTrue:
@@ -56,12 +67,12 @@ oilSpecializationOf: aMethodObj tag: classTag
 			[^entryIndex]].
 	^-1! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilNumSpecializationsOf: aMethodObj
 	"Answer the number of specializations of aMethodObj whose copy has Oil code."
 	<api>
 	| count |
-	(oilSpecializations = 0 or: [oilSpecializations = objectMemory nilObject]) ifTrue:
+	self oilHasSpecializationTable ifFalse:
 		[^0].
 	count := 0.
 	0 to: OilMaxSpecializations - 1 do:
@@ -70,7 +81,7 @@ oilNumSpecializationsOf: aMethodObj
 			[count := count + 1]].
 	^count! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:30'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilIsLiveSpecialization: entryIndex of: aMethodObj
 	"Is entry entryIndex a specialization of aMethodObj whose copy has Oil code?  Also check that its class still has its
 	 tag (a reshaped class is becomed into a class with another tag) and that the copy is still a copy of aMethodObj (the
@@ -81,7 +92,7 @@ oilIsLiveSpecialization: entryIndex of: aMethodObj
 		[^false].
 	copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
 	class := self oilSpecializationAt: entryIndex field: OilSpecClass.
-	^(self oilHasOilCode: copy)
+	^(self oilMethodHasOilCode: copy)
 	  and: [(objectMemory isNonImmediate: class)
 	  and: [(objectMemory classTagForClass: class) = (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: OilSpecClassTag))
 	  and: [self oilCopy: copy isCopyOf: aMethodObj]]]! !
@@ -105,21 +116,21 @@ oilCopy: copy isCopyOf: aMethodObj
 			[^false]].
 	^true! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:30'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilDropSpecializationsOf: aMethodObj freeing: freeCode
 	"Forget the specializations of aMethodObj, whose machine code is voided (see unlinkSendsTo:andFreeIf:) or which is
 	 becomed (see flagCogMethodForBecome:), and, if freeCode, free their Oil code (unless it has activations, like
 	 unlinkSendsOf:isMNUSelector:), which unlinks the sends linked directly to it."
 	| copy |
-	(oilSpecializations = 0 or: [oilSpecializations = objectMemory nilObject]) ifTrue:
+	self oilHasSpecializationTable ifFalse:
 		[^self].
 	0 to: OilMaxSpecializations - 1 do:
 		[:entryIndex|
 		(self oilSpecializationAt: entryIndex field: OilSpecMethod) = aMethodObj ifTrue:
 			[copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
-			 0 to: OilSpecializationSize - 1 do: [:fieldIndex| objectMemory storePointerUnchecked: entryIndex * OilSpecializationSize + fieldIndex ofObject: oilSpecializations withValue: objectMemory nilObject].
+			 self oilClearSpecializationEntry: entryIndex.
 			 (freeCode
-			  and: [(self oilHasOilCode: copy)
+			  and: [(self oilMethodHasOilCode: copy)
 			  and: [(coInterpreter oilHasFramesOf: (coInterpreter cogMethodOf: copy)) not]]) ifTrue:
 				[self unlinkSendsTo: copy andFreeIf: true]]]! !
 
@@ -150,19 +161,19 @@ flagCogMethodForBecome: cogMethod
 	super flagCogMethodForBecome: cogMethod.
 	self oilDropSpecializationsOf: cogMethod methodObject freeing: false! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 05:30'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 compactCogCompiledCode
 	"Cog increments the usage count of the targets of linked sends only: the copies reached through their method's
 	 dispatch (from PICs, super sends, the interpreter) would be freed by the compaction.  Give them their method's count.
 	 Free the Oil code of the copies of dead entries (see oilIsLiveSpecialization:of:), which only sends linked to it reach."
 	<api>
 	| method copy |
-	(oilSpecializations ~= 0 and: [oilSpecializations ~= objectMemory nilObject]) ifTrue:
+	self oilHasSpecializationTable ifTrue:
 		[0 to: OilMaxSpecializations - 1 do:
 			[:entryIndex|
 			method := self oilSpecializationAt: entryIndex field: OilSpecMethod.
 			copy := self oilSpecializationAt: entryIndex field: OilSpecCopy.
-			(self oilHasOilCode: copy) ifTrue:
+			(self oilMethodHasOilCode: copy) ifTrue:
 				[(self oilIsLiveSpecialization: entryIndex of: method)
 					ifTrue:
 						[(coInterpreter methodHasCogMethod: method) ifTrue:
@@ -171,11 +182,11 @@ compactCogCompiledCode
 								cmUsageCount: ((coInterpreter cogMethodOf: copy) cmUsageCount max: (coInterpreter cogMethodOf: method) cmUsageCount)]]
 					ifFalse:
 						[(coInterpreter oilHasFramesOf: (coInterpreter cogMethodOf: copy)) ifFalse:
-							[0 to: OilSpecializationSize - 1 do: [:fieldIndex| objectMemory storePointerUnchecked: entryIndex * OilSpecializationSize + fieldIndex ofObject: oilSpecializations withValue: objectMemory nilObject].
+							[self oilClearSpecializationEntry: entryIndex.
 							 self unlinkSendsTo: copy andFreeIf: true]]]]].
 	super compactCogCompiledCode! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 	"Record a new specialization in a free entry, else in the entry of one whose copy has lost its Oil code, else in an
 	 entry chosen round robin.  (An evicted specialization keeps working until its method's baseline code is compiled again.)"
@@ -193,7 +204,7 @@ oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 			[:index|
 			copy := self oilSpecializationAt: index field: OilSpecCopy.
 			(entryIndex < 0
-			 and: [(self oilHasOilCode: copy) not]) ifTrue:
+			 and: [(self oilMethodHasOilCode: copy) not]) ifTrue:
 				[entryIndex := index]]].
 	entryIndex < 0 ifTrue:
 		[entryIndex := oilNumSpecializations \\ OilMaxSpecializations].
@@ -204,25 +215,15 @@ oilAddSpecialization: aMethodObj class: classObj copy: copyObj
 		storePointer: entryIndex * OilSpecializationSize + OilSpecCopy ofObject: oilSpecializations withValue: copyObj;
 		storePointer: entryIndex * OilSpecializationSize + OilSpecClass ofObject: oilSpecializations withValue: classObj! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
-oilHasOilCode: aMethodObj
-	"Is aMethodObj (or nil) a method whose machine code is Oil code?"
-	<api>
-	^(objectMemory isOopCompiledMethod: aMethodObj)
-	  and: [self oilMethodHasOilCode: aMethodObj]! !
-
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/26/2026 20:40'!
 oilSpecializedCogMethodOf: aMethodObj tag: classTag
 	"Answer the Oil code of the specialization of aMethodObj for receivers of class tag classTag, or nil."
 	<returnTypeC: #'CogMethod *'>
-	(oilSpecializations = 0 or: [oilSpecializations = objectMemory nilObject]) ifTrue:
+	| entryIndex |
+	entryIndex := self oilSpecializationOf: aMethodObj tag: classTag.
+	(entryIndex >= 0 and: [self oilIsLiveSpecialization: entryIndex of: aMethodObj]) ifFalse:
 		[^nil].
-	0 to: OilMaxSpecializations - 1 do:
-		[:entryIndex|
-		((self oilIsLiveSpecialization: entryIndex of: aMethodObj)
-		 and: [(self oilSpecializationAt: entryIndex field: OilSpecClassTag) = (objectMemory integerObjectOf: classTag)]) ifTrue:
-			[^coInterpreter cogMethodOf: (self oilSpecializationAt: entryIndex field: OilSpecCopy)]].
-	^nil! !
+	^coInterpreter cogMethodOf: (self oilSpecializationAt: entryIndex field: OilSpecCopy)! !
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:00'!
 compileEntry
@@ -292,10 +293,10 @@ linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod offset: the
 		to: callSiteReturnAddress asUnsignedInteger! !
 
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/25/2026 04:00'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/26/2026 20:40'!
 oilFreeMachineCodeOf: methodObj
 	"Free the machine code of methodObj, if any (c.f. primitiveVoidVMStateForMethod): its frames are divorced and its
-	 contexts get bytecode pcs.  The caller has married the current frame (see primitiveOilCompile)."
+	 contexts get bytecode pcs.  The caller has married the current frame (see oilMarryActiveFrame)."
 	<api>
 	<essential: #ProfilingCogit>
 	self flushMethodCacheForMethod: methodObj.
@@ -352,7 +353,7 @@ activateNewCogMethod: cogMethod inInterpreter: inInterpreter
 	self returnToExecutive: inInterpreter postContextSwitch: switched! !
 
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/25/2026 04:00'!
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 20:40'!
 primitiveOilSpecialize
 	"Receiver: a CompiledMethod; argument: a class.  Compile an Oil version of the method specialized for receivers of the
 	 class, in addition to its other specializations (at most OilMaxPICCases) and to its baseline machine code, which keeps
@@ -363,7 +364,7 @@ primitiveOilSpecialize
 	 the method first.  Answer a SmallInteger, OilOK (0) on success, else an Oil failure code (see OilConstants)."
 	<export: true>
 	<essential: #ProfilingCogit>
-	| methodObj classObj classTag entryIndex copy result table activeContext theFrame thePage |
+	| methodObj classObj classTag entryIndex copy result activeContext |
 	argumentCount ~= 1 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 	methodObj := self stackValue: 1.
@@ -377,21 +378,14 @@ primitiveOilSpecialize
 	((self methodHasCogMethod: methodObj)
 	 and: [cogit isOilMethod: (self cogMethodOf: methodObj)]) ifTrue:
 		[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilFailSpecialization)].
-	"The specialization table (a GC root), allocated once."
-	cogit getOilSpecializations = 0 ifTrue:
-		[table := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: OilMaxSpecializations * OilSpecializationSize.
-		 table isNil ifTrue:
-			[^self primitiveFailFor: PrimErrNoMemory].
-		 cogit setOilSpecializations: table.
-		 (objectMemory addGCRoot: cogit oilSpecializationsAddress) ifFalse:
-			[cogit setOilSpecializations: 0.
-			 ^self primitiveFailFor: PrimErrNoMemory]].
+	self oilEnsureSpecializationTable ifFalse:
+		[^self primitiveFailFor: PrimErrNoMemory].
 	classTag := objectMemory classTagForClass: classObj.
 	entryIndex := cogit oilSpecializationOf: methodObj tag: classTag.
 	entryIndex >= 0
 		ifTrue:
 			[copy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
-			 (cogit oilHasOilCode: copy) ifTrue:
+			 (cogit oilMethodHasOilCode: copy) ifTrue:
 				[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilOK)]]
 		ifFalse:
 			[(cogit oilNumSpecializationsOf: methodObj) >= OilMaxPICCases ifTrue:
@@ -406,30 +400,28 @@ primitiveOilSpecialize
 	result ~= OilOK ifTrue:
 		[^self pop: 2 thenPush: (objectMemory integerObjectOf: result)].
 	"Free the machine code of the method (and of the copy, if any), then run Pass 3 into the copy and install."
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
-	self ensurePushedInstructionPointer.
-	self externalWriteBackHeadFramePointers.
+	activeContext := self oilMarryActiveFrame.
 	cogit oilFreeMachineCodeKeepingSpecializationsOf: methodObj.
 	self oilFreeMachineCodeOf: copy.
 	result := cogit oilGenerate: copy.
 	(result = OilOK and: [entryIndex < 0]) ifTrue:
 		[cogit oilAddSpecialization: methodObj class: classObj copy: copy].
-	"If flushing led to divorce continue in the interpreter."
-	(self isStillMarriedContext: activeContext) ifFalse:
-		[self nilStackPage. "to avoid assert in marryContextInNewStackPageAndInitializeInterpreterRegisters:"
-		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
-		 self popStack. "pop bogus machine-code instructionPointer"
-		 self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: result).
-		 cogit ceInvokeInterpret
-		 "NOTREACHED"].
-	"If not, work out where we are and continue"
-	theFrame := self frameOfMarriedContext: activeContext.
-	thePage := stackPages stackPageFor: theFrame.
-	self assert: thePage headFP = theFrame.
-	self setStackPageAndLimit: thePage.
-	self setStackPointersFromPage: thePage.
-	instructionPointer := self popStack.
-	self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: result)! !
+	self oilReturnToContext: activeContext pushing: (objectMemory integerObjectOf: result)! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/26/2026 20:40'!
+oilEnsureSpecializationTable
+	"Allocate the specialization table (a GC root, see ProfilingCogit>>oilSpecializationAt:field:) if not yet done.
+	 Answer whether there is one.  (Allocation cannot run the garbage collector.)"
+	<essential: #ProfilingCogit>
+	| table |
+	cogit getOilSpecializations ~= 0 ifTrue: [^true].
+	table := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: OilMaxSpecializations * OilSpecializationSize.
+	table isNil ifTrue: [^false].
+	cogit setOilSpecializations: table.
+	(objectMemory addGCRoot: cogit oilSpecializationsAddress) ifFalse:
+		[cogit setOilSpecializations: 0.
+		 ^false].
+	^true! !
 
 !CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/25/2026 04:00'!
 primitiveOilSpecializations
