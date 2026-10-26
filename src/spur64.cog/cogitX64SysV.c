@@ -628,7 +628,7 @@ static NoDbgRegParms NeverInline void generateCaptureCStackPointers(sqInt captur
 static void generateClosedPICPrototype(void);
 static CogMethod * generateCogFullBlock(void);
 static NoDbgRegParms CogMethod * generateCogMethod(sqInt selector);
-static NoDbgRegParms sqInt generateMapAtstart(usqInt addressOrNull, usqInt startAddress);
+static NoDbgRegParms sqInt generateMapAtlimitstart(usqInt addressOrNull, sqInt limit, usqInt startAddress);
 static void generateOpenPICPrototype(void);
 static void generateRunTimeTrampolines(void);
 static void generateStackPointerCapture(void);
@@ -5023,7 +5023,7 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 	codeSize = generateInstructionsAt(startAddress + (sizeof(CogMethod)));
 
 	/* begin ensureWritableCodeZone */
-	mapSize = generateMapAtstart((startAddress + openPICSize) - 1, startAddress + cmNoCheckEntryOffset);
+	mapSize = generateMapAtlimitstart((startAddress + openPICSize) - 1, MaxMethodSize, startAddress + cmNoCheckEntryOffset);
 	assert(((address(entry)) - startAddress) == cmEntryOffset);
 	assert(((roundUpLength((sizeof(CogMethod)) + codeSize)) + (roundUpLength(mapSize))) <= openPICSize);
 	end = outputInstructionsAt(startAddress + (sizeof(CogMethod)));
@@ -7911,7 +7911,7 @@ generateCogFullBlock(void)
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
 	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cbNoSwitchEntryOffset);
+	mapSize = generateMapAtlimitstart((usqInt)(mapBuffer + 511 - codeToDataDelta), 0x200, (codeAddressForOffset((methodLabel->addressOffset))) + cbNoSwitchEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -7929,7 +7929,8 @@ generateCogFullBlock(void)
 		codeMemmove((startAddress + totalSize) - mapSize, mapBuffer + 512 - mapSize, mapSize);
 	}
 	else {
-		generateMapAtstart((startAddress + totalSize) - 1, startAddress + cbNoSwitchEntryOffset);
+		/* generateMapAt:start: */
+		generateMapAtlimitstart((startAddress + totalSize) - 1, MaxMethodSize, startAddress + cbNoSwitchEntryOffset);
 	}
 	method = ((CogMethod *) ((((usqInt)startAddress)) + codeToDataDelta));
 	fillInMethodHeadersizeselector(method, totalSize, nilObject());
@@ -7969,7 +7970,7 @@ generateCogMethod(sqInt selector)
 	computeMaximumSizes();
 	concretizeAt(methodLabel, freeStart());
 	codeSize = generateInstructionsAt((codeAddressForOffset((methodLabel->addressOffset))) + headerSize);
-	mapSize = generateMapAtstart((usqInt)(mapBuffer + 511 - codeToDataDelta), (codeAddressForOffset((methodLabel->addressOffset))) + cmNoCheckEntryOffset);
+	mapSize = generateMapAtlimitstart((usqInt)(mapBuffer + 511 - codeToDataDelta), 0x200, (codeAddressForOffset((methodLabel->addressOffset))) + cmNoCheckEntryOffset);
 	totalSize = roundUpToMethodAlignment(backEnd, (headerSize + codeSize) + mapSize);
 	if (totalSize > MaxMethodSize) {
 		return ((CogMethod *) MethodTooBig);
@@ -7987,7 +7988,8 @@ generateCogMethod(sqInt selector)
 		codeMemmove((startAddress + totalSize) - mapSize, mapBuffer + 512 - mapSize, mapSize);
 	}
 	else {
-		generateMapAtstart((startAddress + totalSize) - 1, startAddress + cmNoCheckEntryOffset);
+		/* generateMapAt:start: */
+		generateMapAtlimitstart((startAddress + totalSize) - 1, MaxMethodSize, startAddress + cmNoCheckEntryOffset);
 	}
 	fillInBlockHeadersAt(startAddress);
 	fillInMethodHeadersizeselector(((CogMethod *) ((((usqInt)startAddress)) + codeToDataDelta)), totalSize, selector);
@@ -7998,20 +8000,21 @@ generateCogMethod(sqInt selector)
 }
 
 
-/*	Generate the method map at addressrNull (or compute it if addressOrNull is
-	null). Answer the length of the map in byes. Each entry in the map is in
-	two parts. In the
-	least signficant bits are a displacement of how far from the start or
-	previous entry,
-	unless it is an IsAnnotationExtension byte, in which case those bits are
-	the extension.
-	In the most signficant bits are the type of annotation at the point
-	reached. A null
-	byte ends the map. */
+/*	Generate the method map at addressOrNull (or compute it if addressOrNull
+	is null),
+	writing at most limit bytes. Answer the length of the map in bytes. Each
+	entry in
+	the map is in two parts. In the least signficant bits are a displacement
+	of how far
+	from the start or previous entry, unless it is an IsAnnotationExtension
+	byte, in
+	which case those bits are the extension. In the most signficant bits are
+	the type
+	of annotation at the point reached. A null byte ends the map. */
 
-	/* Cogit>>#generateMapAt:start: */
+	/* Cogit>>#generateMapAt:limit:start: */
 static NoDbgRegParms sqInt
-generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
+generateMapAtlimitstart(usqInt addressOrNull, sqInt limit, usqInt startAddress)
 {
     unsigned char annotation;
     sqInt delta;
@@ -8033,14 +8036,16 @@ generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
 			while (((delta = (mcpc - location) / 1 /* codeGranularity */)) > DisplacementMask) {
 				maxDelta = (((((delta < MaxX2NDisplacement) ? delta : MaxX2NDisplacement)) | DisplacementMask) - DisplacementMask);
 				assert((((usqInt)(maxDelta)) >> AnnotationShift) <= DisplacementMask);
-				if (addressOrNull) {
+				if ((addressOrNull)
+				 && (length < limit)) {
 					/* begin addToMap:instruction:byte:at:for: */
 					codeByteAtput((void *)(addressOrNull - length),(((usqInt)(maxDelta)) >> AnnotationShift) + DisplacementX2N);
 				}
 				location += maxDelta;
 				length += 1;
 			}
-			if (addressOrNull) {
+			if ((addressOrNull)
+			 && (length < limit)) {
 				mapEntry = delta + ((((usqInt)((((annotation < IsSendCall) ? annotation : IsSendCall))) << AnnotationShift)));
 
 				/* begin addToMap:instruction:byte:at:for: */
@@ -8049,7 +8054,8 @@ generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
 			location += delta;
 			length += 1;
 			if (annotation > IsSendCall) {
-				if (addressOrNull) {
+				if ((addressOrNull)
+				 && (length < limit)) {
 					mapEntry = ((((usqInt)(IsAnnotationExtension) << AnnotationShift))) + (annotation - IsSendCall);
 
 					/* begin addToMap:instruction:byte:at:for: */
@@ -8059,7 +8065,8 @@ generateMapAtstart(usqInt addressOrNull, usqInt startAddress)
 			}
 		}
 	}
-	if (addressOrNull) {
+	if ((addressOrNull)
+	 && (length < limit)) {
 		/* begin addToMap:instruction:byte:at:for: */
 		codeByteAtput((void *)(addressOrNull - length),MapEnd);
 	}
@@ -8106,7 +8113,7 @@ generateOpenPICPrototype(void)
 	computeMaximumSizes();
 	concretizeAt(methodLabel, methodZoneBase);
 	codeSize = generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	mapSize = generateMapAtstart(null, methodZoneBase + cmNoCheckEntryOffset);
+	mapSize = generateMapAtlimitstart(null, MaxMethodSize, methodZoneBase + cmNoCheckEntryOffset);
 
 	/* self cCode: ''
 	   inSmalltalk:
