@@ -2,7 +2,7 @@
  into the Cogit's abstract instructions (CogAbstractInstruction), which the Cogit then assembles into a CogMethod.
  See ProfilingCogit>>oilMethod:receiverClass: for the driver.  Author: cb."!
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 prepareNativeCode
 	"Pass 3, step 1.  Analyse the IR: branch targets, loop nesting, the deopt site of each instruction.
 	 Weigh every virtual register by its uses, ten times more per loop nesting level, give the heaviest ones
@@ -22,25 +22,10 @@ prepareNativeCode
 	oilAllocRegs at: 7 put: Arg1Reg.
 	oilAllocRegs at: 8 put: ReceiverResultReg.
 	oilNumAllocRegs := 9.
-	"The XMM registers of float chains (see genFloatArith:at:site:)."
-	oilXmmRegs at: 0 put: DPFPReg0.
-	oilXmmRegs at: 1 put: DPFPReg1.
-	oilXmmRegs at: 2 put: DPFPReg2.
-	oilXmmRegs at: 3 put: DPFPReg3.
-	oilXmmRegs at: 4 put: DPFPReg4.
-	oilXmmRegs at: 5 put: DPFPReg5.
-	oilXmmRegs at: 6 put: DPFPReg6.
-	oilXmmRegs at: 7 put: DPFPReg7.
-	"The XMM registers pinned to the float variables of a loop (see prepareFloatLoops)."
-	oilXmmRegs at: 8 put: DPFPReg8.
-	oilXmmRegs at: 9 put: DPFPReg9.
-	oilXmmRegs at: 10 put: DPFPReg10.
-	oilXmmRegs at: 11 put: DPFPReg11.
-	oilXmmRegs at: 12 put: DPFPReg12.
-	oilXmmRegs at: 13 put: DPFPReg13.
-	oilXmmRegs at: 14 put: DPFPReg14.
-	oilXmmRegs at: 15 put: DPFPReg15.
-	oilUseProbe := -1.
+	"The XMM registers (DPFPReg0 to DPFPReg15 are consecutive): the first OilNumXmms for float chains (see
+	 genFloatArith:at:site:), the others pinned to the float variables of a loop (see prepareFloatLoops)."
+	0 to: OilNumXmms + OilMaxPinnedXmms - 1 do:
+		[:xmmIndex| oilXmmRegs at: xmmIndex put: DPFPReg0 + xmmIndex].
 	0 to: OilNumRegs - 1 do:
 		[:vreg|
 		oilVRegUses at: vreg put: 0.
@@ -112,6 +97,41 @@ isBranch: opcode
 	<inline: true>
 	^opcode = OilJump or: [opcode = OilBranchTrue or: [opcode = OilBranchFalse]]! !
 
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+isFloatOpcode: opcode
+	"A float instruction: an arithmetic (see isFloatArith:) or OilCmpFloat."
+	<inline: true>
+	^opcode between: OilAddFloat and: OilCmpFloat! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+isFloatArith: opcode
+	"OilAddFloat, OilSubFloat, OilMulFloat or OilDivFloat."
+	<inline: true>
+	^opcode between: OilAddFloat and: OilDivFloat! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+flag: irOffset has: mask
+	"Is one of the bits of mask set in the flags of the instruction at irOffset (Pass 2's OilP2..., then fuseFloats' OilFloat...)?"
+	<inline: true>
+	^((oilIRFlag at: irOffset) bitAnd: mask) ~= 0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+mark: irOffset with: mask
+	<inline: true>
+	oilIRFlag at: irOffset put: ((oilIRFlag at: irOffset) bitOr: mask)! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+siteHasState: siteIndex
+	"Does deopt site siteIndex have a recorded state (to deoptimize to)?"
+	<inline: true>
+	^(siteSnapBase at: siteIndex) >= 0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+keepsSiteAt: irOffset
+	"Does the instruction at irOffset keep its deopt site, if any: Pass 2 neither deleted it nor proved that it cannot deoptimize?"
+	<inline: true>
+	^(self flag: irOffset has: OilP2Delete + OilP2NoCheck) not! !
+
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 computeIRSites
 	0 to: irIndex - 1 do: [:targetOffset| oilIRSite at: targetOffset put: -1].
@@ -132,6 +152,18 @@ recordUse: virtualReg
 		ifFalse:
 			[virtualReg < OilFlagsReg ifTrue:
 				[oilVRegUses at: virtualReg put: (oilVRegUses at: virtualReg) + oilUseWeight]]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+instruction: irOffset reads: vreg
+	"Does the instruction at irOffset read register vreg?  (As Pass 2 emits it: an OilP2ToMove load reads its oilIRAux register.)"
+	<inline: false>
+	oilUseProbe := vreg.
+	oilUseProbeHit := false.
+	(self flag: irOffset has: OilP2ToMove)
+		ifTrue: [self recordUse: (oilIRAux at: irOffset)]
+		ifFalse: [self countUsesAt: irOffset].
+	oilUseProbe := -1.
+	^oilUseProbeHit! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
 countUsesAt: irOffset
@@ -201,35 +233,36 @@ packedArg: argIndex at: irOffset
 	word := oilIRBuffer at: irOffset + ((self opcodeAt: irOffset) = OilCallDirectedSuper ifTrue: [5] ifFalse: [3]) + (argIndex // 4).
 	^(word bitShift: (3 - (argIndex \\ 4)) * -8) bitAnd: 255! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 markMetadataRegisters
 	"Every register a deopt state refers to (directly, or through the virtual objects it refers to) needs a spill slot."
-	| snapBase stateSize vreg |
-	0 to: numSites - 1 do:
-		[:siteIndex|
-		((siteIR at: siteIndex) >= 0 and: [(siteSnapBase at: siteIndex) >= 0]) ifTrue:
-			[snapBase := siteSnapBase at: siteIndex.
-			 stateSize := self siteStateSize: siteIndex.
-			 0 to: stateSize - 1 do:
-				[:slotIndex|
-				(sitePoolKind at: snapBase + slotIndex) = OilDescReg ifTrue:
-					[vreg := sitePoolValue at: snapBase + slotIndex.
-					 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]]]].
+	self metadataRegistersDo: [:vreg| oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)] sites: true! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+metadataRegistersDo: aBlock sites: withSites
+	"Evaluate aBlock with each register the deoptimization metadata refers to: (if withSites) in the states of the live deopt
+	 sites, the receivers of the inlined frames and of the virtual objects, and the values the virtual objects captured.
+	 (In Pass 3 a site is live if it has a state and an instruction: fuseFloats cleared Pass 2's flags.)"
+	<inline: true>
+	| snapBase |
+	withSites ifTrue:
+		[0 to: numSites - 1 do:
+			[:siteIndex|
+			(self isLiveSite: siteIndex) ifTrue:
+				[snapBase := siteSnapBase at: siteIndex.
+				 0 to: (self siteStateSize: siteIndex) - 1 do:
+					[:slotIndex| (sitePoolKind at: snapBase + slotIndex) = OilDescReg ifTrue:
+						[aBlock value: (sitePoolValue at: snapBase + slotIndex)]]]]].
 	0 to: numFrames - 1 do:
-		[:frameIndex|
-		(frameSelfKind at: frameIndex) = OilDescReg ifTrue:
-			[vreg := frameSelfValue at: frameIndex.
-			 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]].
+		[:frameIndex| (frameSelfKind at: frameIndex) = OilDescReg ifTrue:
+			[aBlock value: (frameSelfValue at: frameIndex)]].
 	0 to: numVObjs - 1 do:
 		[:vobjIndex|
 		(vobjSelfKind at: vobjIndex) = OilDescReg ifTrue:
-			[vreg := vobjSelfValue at: vobjIndex.
-			 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)].
+			[aBlock value: (vobjSelfValue at: vobjIndex)].
 		0 to: (vobjNumCopied at: vobjIndex) - 1 do:
-			[:slotIndex|
-			(capturedKind at: (vobjCopiedBase at: vobjIndex) + slotIndex) = OilDescReg ifTrue:
-				[vreg := capturedValue at: (vobjCopiedBase at: vobjIndex) + slotIndex.
-				 oilVRegUses at: vreg put: ((oilVRegUses at: vreg) max: 1)]]]! !
+			[:slotIndex| (capturedKind at: (vobjCopiedBase at: vobjIndex) + slotIndex) = OilDescReg ifTrue:
+				[aBlock value: (capturedValue at: (vobjCopiedBase at: vobjIndex) + slotIndex)]]]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 src: virtualReg scratch: scratchReg
@@ -276,20 +309,28 @@ reloadAll
 		[:vreg| (oilVRegReg at: vreg) ~= NoReg ifTrue:
 			[cogit MoveMw: (oilVRegSpillTemp at: vreg) r: FPReg R: (oilVRegReg at: vreg)]]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 deopt: jump site: siteIndex
 	"jump branches to the deopt stub of deopt site siteIndex (stubs are emitted after the method body)."
 	<var: #jump type: #'AbstractInstruction *'>
-	(siteIndex < 0 or: [siteIndex >= numSites or: [(siteSnapBase at: siteIndex) < 0]]) ifTrue:
-		[^self abortCompilation: OilFailUnsafeSite].
+	(self useSite: siteIndex) ifFalse: [^self].
 	oilNumStubJumps >= OilBufferWords ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	oilStubJump at: oilNumStubJumps put: jump.
 	oilStubSite at: oilNumStubJumps put: siteIndex.
-	oilNumStubJumps := oilNumStubJumps + 1.
+	oilNumStubJumps := oilNumStubJumps + 1! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+useSite: siteIndex
+	"A stub branches to deopt site siteIndex: note that the site needs a deopt stub.  Answer false (and abort) if it cannot
+	 deoptimize (no state)."
+	(siteIndex < 0 or: [siteIndex >= numSites or: [(self siteHasState: siteIndex) not]]) ifTrue:
+		[self abortCompilation: OilFailUnsafeSite.
+		 ^false].
 	oilSiteUsed at: siteIndex put: 1.
 	oilFloatLoopCurrent >= 0 ifTrue: "its stub boxes the loop's float variables first (see genDeoptStubs)"
-		[oilSiteFloatLoop at: siteIndex put: oilFloatLoopCurrent + 1]! !
+		[oilSiteFloatLoop at: siteIndex put: oilFloatLoopCurrent + 1].
+	^true! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
 branch: jump to: target
@@ -330,12 +371,7 @@ genTagCheckOf: virtualRegA in: machineRegA and: virtualRegB in: machineRegB site
 	cogit AndR: machineRegB R: SendNumArgsReg.
 	self genTagCheck: SendNumArgsReg site: siteIndex! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 13:30'!
-runCodeGenerationPhase
-	<inline: true>
-	^self generateNativeCode! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 generateNativeCode
 	"Pass 3, step 2.  Emit the method body: copy the receiver and arguments into their locations, initialize the
 	 other allocated registers (they are spilled at calls and deopts, so they must always hold objects), then
@@ -346,7 +382,7 @@ generateNativeCode
 	"The spill slots follow the method's temps.  They are pushed here, after the stack check, and not in the
 	 frame build: the CoInterpreter also builds machine code frames itself (with the method's temps only, see
 	 activateNewCogMethod:inInterpreter:) and enters them at the stack check."
-	1 to: self codeShift do: "(a measurement aid, see OilLoopOptimizer>>codeShift)"
+	1 to: self codeShift do: "(a measurement aid, see codeShift)"
 		[:nopIndex| cogit Nop].
 	1 to: oilNumSpillTemps do:
 		[:spillIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
@@ -393,7 +429,7 @@ generateNativeCode
 		(oilFixupJump at: fixupIndex) jmpTarget: target].
 	^OilOK! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 09:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genInstructionAt: irOffset
 	"Translate the IR instruction at irOffset.  Answer the index of the next instruction to translate."
 	<inline: false>
@@ -412,7 +448,7 @@ genInstructionAt: irOffset
 	"XMM registers cache the double values of registers in straight-line code (see xmmFor:ints:except:site:) and hold
 	 the unboxed results of a float chain (OilFullCompiler>>fuseFloats), every deopt of which goes to the chain's site."
 	((oilIRTarget at: irOffset) ~= 0 or: [self mayClobberXmms: opcode]) ifTrue: [self resetXmms].
-	chainSite := ((oilIRFlag at: irOffset) bitAnd: OilFloatChained) ~= 0 ifTrue: [oilIRAux at: irOffset] ifFalse: [-1].
+	chainSite := (self flag: irOffset has: OilFloatChained) ifTrue: [oilIRAux at: irOffset] ifFalse: [-1].
 	chainSite ~= oilXmmChain ifTrue: "a chain ends: its unboxed results are dead"
 		[0 to: OilNumXmms - 1 do: [:xmmIndex| (oilXmmKind at: xmmIndex) < 0 ifTrue: [oilXmmVReg at: xmmIndex put: -1]].
 		 oilXmmChain := chainSite].
@@ -432,7 +468,7 @@ genInstructionAt: irOffset
 		[OilAddImmTaggedNC]	-> [self genAddImmTaggedNoCheck: regA b: regB imm: (self signed8: regC)].
 		[OilModTagged]		-> [self genModTagged: regA b: regB c: regC site: siteIndex].
 		[OilNewArray]		-> [self genNewArray: regA first: regB size: regC site: siteIndex].
-		[OilLoadByteSize]	-> [self genLoadByteSize: regA object: regB].
+		[OilLoadByteSize]	-> [self genLoadSize: regA object: regB bytes: true].
 		[OilLoadByte]		-> [self genLoadByte: regA array: regB index: regC tag: objectMemory smallIntegerTag].
 		[OilLoadChar]		-> [self genLoadByte: regA array: regB index: regC tag: objectMemory characterTag].
 		[OilStoreByte]		-> [self genStoreByte: regA array: regB index: regC character: false site: siteIndex].
@@ -450,7 +486,7 @@ genInstructionAt: irOffset
 		[OilStoreField]		-> [self genStoreField: regA object: regB slot: regC site: siteIndex].
 		[OilLoadElement]	-> [self genLoadElement: regA array: regB index: regC].
 		[OilStoreElement]	-> [self genStoreElement: regA array: regB index: regC site: siteIndex].
-		[OilLoadSize]		-> [self genLoadSize: regA object: regB].
+		[OilLoadSize]		-> [self genLoadSize: regA object: regB bytes: false].
 		[OilCheckBounds]	-> [self genCheckBounds: regA limit: regB site: siteIndex].
 		[OilGuardClass]		-> [self genGuard: regA class: (self word64At: irOffset + 1) site: siteIndex].
 		[OilCmpTagged]		-> [^self genCompareAt: irOffset site: siteIndex].
@@ -541,21 +577,17 @@ genAddTagged: destReg b: leftReg c: rightReg site: siteIndex
 	self deopt: (cogit JumpOverflow: 0) site: siteIndex.
 	self setDst: destReg from: SendNumArgsReg! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 undoDeopt: jump site: siteIndex reg: destMachReg src: srcMachReg
 	"jump (an overflow of reg := reg + src) branches to an undo stub, which restores reg (reg - src) and branches to the
 	 deopt stub of deopt site siteIndex.  The stubs are emitted after the method body."
 	<var: #jump type: #'AbstractInstruction *'>
-	(siteIndex < 0 or: [siteIndex >= numSites or: [(siteSnapBase at: siteIndex) < 0]]) ifTrue:
-		[^self abortCompilation: OilFailUnsafeSite].
+	(self useSite: siteIndex) ifFalse: [^self].
 	oilUndoJump at: oilNumUndos put: jump.
 	oilUndoSite at: oilNumUndos put: siteIndex.
 	oilUndoReg at: oilNumUndos put: destMachReg.
 	oilUndoSrc at: oilNumUndos put: srcMachReg.
-	oilNumUndos := oilNumUndos + 1.
-	oilSiteUsed at: siteIndex put: 1.
-	oilFloatLoopCurrent >= 0 ifTrue:
-		[oilSiteFloatLoop at: siteIndex put: oilFloatLoopCurrent + 1]! !
+	oilNumUndos := oilNumUndos + 1! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genSubTagged: destReg b: leftReg c: rightReg site: siteIndex
@@ -685,11 +717,10 @@ allocationBytesAfter: irOffset
 		 offset := offset + (self instructionLengthAt: offset)].
 	^total! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genNewArray: destReg first: firstReg size: numSlots site: siteIndex
 	"A brace array of the numSlots values in registers firstReg..firstReg+numSlots-1, or (firstReg = OilFlagsReg) an Array of numSlots nils (a temp vector in
 	 eager mode).  Young, so its stores need no store check."
-	| reg |
 	numSlots >= objectMemory numSlotsMask ifTrue:
 		[^self abortCompilation: OilFailBackend].
 	self genAllocate: (objectMemory smallObjectBytesForSlots: numSlots)
@@ -701,14 +732,20 @@ genNewArray: destReg first: firstReg size: numSlots site: siteIndex
 			[cogit genMoveConstant: objectMemory nilObject R: TempReg.
 			 0 to: numSlots - 1 do:
 				[:slotIndex| cogit MoveR: TempReg Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]]]
-		ifFalse:
-			[0 to: numSlots - 1 do:
-				[:slotIndex|
-				reg := self src: firstReg + slotIndex scratch: TempReg.
-				cogit MoveR: reg Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]].
+		ifFalse: [self genStoreSlots: numSlots from: firstReg at: 0].
 	self setDst: destReg from: ClassReg! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/24/2026 17:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+genStoreSlots: numSlots from: firstReg at: firstSlot
+	"Store the registers firstReg to firstReg + numSlots - 1 into the slots from firstSlot of the new object in ClassReg
+	 (TempReg is the scratch)."
+	| reg |
+	0 to: numSlots - 1 do:
+		[:index|
+		reg := self src: firstReg + index scratch: TempReg.
+		cogit MoveR: reg Mw: firstSlot + index * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genMakeClosureAt: irOffset site: siteIndex
 	"An escaping FullBlockClosure (eager mode): [OilMakeClosure|Dest|FirstCopied|NumCopied] block (64 bits)
 	 [frame:16|ignoreOuterContext:8|selfReg:8].  Its outerContext is the root frame's context (the frame is married
@@ -747,10 +784,7 @@ genMakeClosureAt: irOffset site: siteIndex
 	cogit MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory wordSize + slotOffset r: ClassReg.
 	valueReg := self src: selfReg scratch: TempReg.
 	cogit MoveR: valueReg Mw: FullClosureReceiverIndex * objectMemory wordSize + slotOffset r: ClassReg.
-	0 to: numCopied - 1 do:
-		[:copiedIndex|
-		valueReg := self src: baseReg + copiedIndex scratch: TempReg.
-		cogit MoveR: valueReg Mw: FullClosureFirstCopiedValueIndex + copiedIndex * objectMemory wordSize + slotOffset r: ClassReg].
+	self genStoreSlots: numCopied from: baseReg at: FullClosureFirstCopiedValueIndex.
 	self setDst: destReg from: ClassReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
@@ -766,35 +800,69 @@ reloadMachineReg: reg
 		[:vreg| (oilVRegReg at: vreg) = reg ifTrue:
 			[cogit MoveMw: (oilVRegSpillTemp at: vreg) r: FPReg R: reg]]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+spillExtraRegs
+	"Spill the virtual registers allocated to Extra0Reg and Extra1Reg (the scratch registers of the stream and string intrinsics)."
+	self spillMachineReg: Extra0Reg.
+	self spillMachineReg: Extra1Reg! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+reloadExtraRegs
+	self reloadMachineReg: Extra0Reg.
+	self reloadMachineReg: Extra1Reg! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+genStreamChecks: limitIndex jumps: jumps count: numJumps
+	"Of the stream in Extra0Reg, load the position (field 1) into ClassReg, the limit (field limitIndex) into SendNumArgsReg and the
+	 collection (field 0) into Extra1Reg, adding to jumps the jumps taken unless the position and the limit are SmallIntegers,
+	 position < limit and the collection is not an immediate.  Answer the number of jumps."
+	| count |
+	<var: #jumps type: #'AbstractInstruction **'>
+	count := numJumps.
+	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
+	cogit MoveMw: limitIndex * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
+	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
+	jumps at: count put: (cogit JumpZero: 0). count := count + 1.
+	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	jumps at: count put: (cogit JumpZero: 0). count := count + 1.
+	cogit CmpR: SendNumArgsReg R: ClassReg.
+	jumps at: count put: (cogit JumpGreaterOrEqual: 0). count := count + 1.
+	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
+	cogit TstCq: objectMemory tagMask R: Extra1Reg.
+	jumps at: count put: (cogit JumpNonZero: 0).
+	^count + 1! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+genSlowSendAt: i numArgs: numArgs jumps: jumps count: numJumps reloadAll: allRegs
+	"The end of an intrinsic whose fast path has stored its result: jump over its slow path, which the jumps branch to: reload
+	 the virtual registers (all of them, else those of Extra0Reg and Extra1Reg) and send the message."
+	| jumpDone slowPath |
+	<var: #jumps type: #'AbstractInstruction **'>
+	<var: #jumpDone type: #'AbstractInstruction *'>
+	<var: #slowPath type: #'AbstractInstruction *'>
+	jumpDone := cogit Jump: 0.
+	slowPath := cogit Label.
+	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
+	allRegs ifTrue: [self reloadAll] ifFalse: [self reloadExtraRegs].
+	self genSendAt: i numArgs: numArgs super: false.
+	jumpDone jmpTarget: cogit Label! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genStreamNextAt: i
 	"a := b next (ReadStream>>next, primitive 65): collection (field 0) a ByteString (answer a Character) or an Array,
 	 position (1) < readLimit (2) and the next index within the collection: answer the element and increment the
 	 position.  Otherwise send next.  Scratch: Extra0Reg (the stream) and Extra1Reg (the collection), whose virtual
 	 registers are spilled around, TempReg, ClassReg (the position) and SendNumArgsReg."
-	| destReg streamReg streamRegMach jumps numJumps jumpPtr jumpDone slowPath |
+	| destReg streamReg streamRegMach jumps numJumps jumpPtr jumpDone |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
 	<var: #jumpPtr type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #slowPath type: #'AbstractInstruction *'>
 	destReg := self fieldAAt: i.
 	streamReg := self fieldBAt: i.
-	numJumps := 0.
 	streamRegMach := self src: streamReg scratch: TempReg.
-	self spillMachineReg: Extra0Reg.
-	self spillMachineReg: Extra1Reg.
+	self spillExtraRegs.
 	streamRegMach ~= Extra0Reg ifTrue: [cogit MoveR: streamRegMach R: Extra0Reg].
-	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
-	cogit MoveMw: 2 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
-	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
-	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
-	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
-	cogit CmpR: SendNumArgsReg R: ClassReg.
-	jumps at: numJumps put: (cogit JumpGreaterOrEqual: 0). numJumps := numJumps + 1.
-	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
-	cogit TstCq: objectMemory tagMask R: Extra1Reg.
-	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
+	numJumps := self genStreamChecks: 2 jumps: jumps count: 0.
 	cogit MoveM16: 0 r: Extra1Reg R: TempReg.
 	cogit CmpCq: ClassByteStringCompactIndex R: TempReg.
 	jumpPtr := cogit JumpNonZero: 0.
@@ -823,32 +891,22 @@ genStreamNextAt: i
 	cogit MoveXwr: TempReg R: Extra1Reg R: SendNumArgsReg.
 	jumpDone jmpTarget: (cogit AddCq: 1 << objectMemory numTagBits R: ClassReg).
 	cogit MoveR: ClassReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
-	self reloadMachineReg: Extra0Reg.
-	self reloadMachineReg: Extra1Reg.
+	self reloadExtraRegs.
 	self setDst: destReg from: SendNumArgsReg.
-	jumpDone := cogit Jump: 0.
-	slowPath := cogit Label.
-	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
-	self reloadMachineReg: Extra0Reg.
-	self reloadMachineReg: Extra1Reg.
-	self genSendAt: i numArgs: 0 super: false.
-	jumpDone jmpTarget: cogit Label! !
+	self genSlowSendAt: i numArgs: 0 jumps: jumps count: numJumps reloadAll: false! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genStreamNextPutAt: i
 	"a := b nextPut: c (WriteStream>>nextPut:, primitive 66): collection (field 0) a mutable ByteString, c a Character of
 	 code 0..255, position (1) < writeLimit (3) and position + 1 within the collection: store the byte, increment the
 	 position and answer c.  Otherwise send nextPut:.  Scratch registers as in genStreamNextAt:."
-	| destReg streamReg valReg streamRegMach valRegMach jumps numJumps jumpDone slowPath |
+	| destReg streamReg valReg streamRegMach valRegMach jumps numJumps |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[12]'>
-	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #slowPath type: #'AbstractInstruction *'>
 	destReg := self fieldAAt: i.
 	streamReg := self fieldBAt: i.
 	valReg := self fieldCAt: i.
 	numJumps := 0.
-	self spillMachineReg: Extra0Reg.
-	self spillMachineReg: Extra1Reg.
+	self spillExtraRegs.
 	valRegMach := self src: valReg scratch: ClassReg.
 	valRegMach ~= ClassReg ifTrue: [cogit MoveR: valRegMach R: ClassReg]. "the value, then the position"
 	"a Character (tag 2r010) of code 0..255"
@@ -862,17 +920,7 @@ genStreamNextPutAt: i
 	streamRegMach ~= Extra0Reg ifTrue: [cogit MoveR: streamRegMach R: Extra0Reg].
 	cogit MoveR: ClassReg R: TempReg.
 	cogit LogicalShiftRightCq: objectMemory numTagBits R: TempReg.
-	cogit MoveMw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: ClassReg.
-	cogit MoveMw: 3 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg R: SendNumArgsReg.
-	cogit TstCq: objectMemory smallIntegerTag R: ClassReg.
-	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
-	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
-	cogit CmpR: SendNumArgsReg R: ClassReg.
-	jumps at: numJumps put: (cogit JumpGreaterOrEqual: 0). numJumps := numJumps + 1.
-	cogit MoveMw: objectMemory baseHeaderSize r: Extra0Reg R: Extra1Reg.
-	cogit TstCq: objectMemory tagMask R: Extra1Reg.
-	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
+	numJumps := self genStreamChecks: 3 jumps: jumps count: numJumps.
 	cogit MoveM32: 0 r: Extra1Reg R: SendNumArgsReg.
 	cogit TstCq: objectMemory immutableBitMask R: SendNumArgsReg.
 	jumps at: numJumps put: (cogit JumpNonZero: 0). numJumps := numJumps + 1.
@@ -892,17 +940,10 @@ genStreamNextPutAt: i
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: ClassReg.
 	cogit MoveR: TempReg Xbr: ClassReg R: Extra1Reg.
 	cogit MoveR: SendNumArgsReg Mw: 1 * objectMemory wordSize + objectMemory baseHeaderSize r: Extra0Reg.
-	self reloadMachineReg: Extra0Reg.
-	self reloadMachineReg: Extra1Reg.
+	self reloadExtraRegs.
 	valRegMach := self src: valReg scratch: ClassReg.
 	self setDst: destReg from: valRegMach.
-	jumpDone := cogit Jump: 0.
-	slowPath := cogit Label.
-	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
-	self reloadMachineReg: Extra0Reg.
-	self reloadMachineReg: Extra1Reg.
-	self genSendAt: i numArgs: 1 super: false.
-	jumpDone jmpTarget: cogit Label! !
+	self genSlowSendAt: i numArgs: 1 jumps: jumps count: numJumps reloadAll: false! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 03:00'!
 genIdentityHashAt: i
@@ -1014,22 +1055,14 @@ genIndexOfByteAt: i
 	jumpDone jmpTarget: cogit Label.
 	self genByteScanEpilogueAt: i jumps: jumps count: numJumps numArgs: 3! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 03:00'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genByteScanEpilogueAt: i jumps: jumps count: numJumps numArgs: numArgs
 	"The result of a byte scan is in SendNumArgsReg: reload the virtual registers, store the result, and emit the slow
 	 path, the send, that the jumps branch to."
-	| jumpDone slowPath |
 	<var: #jumps type: #'AbstractInstruction **'>
-	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #slowPath type: #'AbstractInstruction *'>
 	self reloadAll.
 	self setDst: (self fieldAAt: i) from: SendNumArgsReg.
-	jumpDone := cogit Jump: 0.
-	slowPath := cogit Label.
-	0 to: numJumps - 1 do: [:jumpIndex| (jumps at: jumpIndex) jmpTarget: slowPath].
-	self reloadAll.
-	self genSendAt: i numArgs: numArgs super: false.
-	jumpDone jmpTarget: cogit Label! !
+	self genSlowSendAt: i numArgs: numArgs jumps: jumps count: numJumps reloadAll: true! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 03:00'!
 genSkipSeparatorsAt: i
@@ -1131,12 +1164,17 @@ genCharValue: destReg of: srcReg
 	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: dstMach.
 	self setDst: destReg from: dstMach! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
-genLoadByteSize: destReg object: objReg
-	"The number of bytes of a byte object, tagged."
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+genLoadSize: destReg object: objReg bytes: isBytes
+	"The number of slots of an Array (no fixed fields), or (isBytes) of bytes of a byte object, tagged."
 	| objMach |
-	objMach := self src: objReg scratch: ClassReg. "(not TempReg: genGetNumBytesOf:into: uses it)"
-	cogit oilGenGetNumBytesOf: objMach into: SendNumArgsReg.
+	isBytes
+		ifTrue:
+			[objMach := self src: objReg scratch: ClassReg. "(not TempReg: genGetNumBytesOf:into: uses it)"
+			 cogit oilGenGetNumBytesOf: objMach into: SendNumArgsReg]
+		ifFalse:
+			[objMach := self src: objReg scratch: TempReg.
+			 cogit oilGenGetNumSlotsOf: objMach into: SendNumArgsReg].
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self setDst: destReg from: SendNumArgsReg! !
@@ -1404,7 +1442,7 @@ genStoreElement: valReg array: arrayReg index: indexReg site: siteIndex
 	(self storeNeedsCheck: arrayReg) ifTrue:
 		[self genStoreCheckObject: arrayMach value: valMach scratch: SendNumArgsReg]! !
 
-!OilInliningCompiler methodsFor: 'interrupt checks' stamp: 'cb 10/26/2026 19:30'!
+!OilInliningCompiler methodsFor: 'interrupt checks' stamp: 'cb 10/26/2026 20:30'!
 genPollBefore: irOffset
 	"Oil code has no stack check at its back jumps, unlike the baseline JIT's (see SimpleStackBasedCogit>>genJumpBackTo:):
 	 a loop of Oil code whose body sends nothing that builds a frame would never poll for events (the timer, process
@@ -1419,8 +1457,8 @@ genPollBefore: irOffset
 	siteIndex := oilIRSite at: irOffset.
 	(oilFloatLoopCurrent < 0
 	 and: [siteIndex >= 0
-	 and: [(siteSnapBase at: siteIndex) >= 0
-	 and: [((oilIRFlag at: irOffset) bitAnd: OilFloatChained) = 0
+	 and: [(self siteHasState: siteIndex)
+	 and: [(self flag: irOffset has: OilFloatChained) not
 	 and: [numSites < OilMaxSites
 	 and: [oilNumPolls < OilMaxPolls]]]]]) ifFalse:
 		[(oilFloatLoopCurrent >= 0 or: [(self isBranch: opcode) or: [opcode = OilReturn]]) ifTrue:
@@ -1472,10 +1510,10 @@ cloneSite: siteIndex at: irOffset
 	numSites := newSiteIndex + 1.
 	^newSiteIndex! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 floatLoopsEnabled
-	"See OilLoopOptimizer>>floatLoopsEnabled."
-	^true! !
+	"Mode bit 16 (parameter 12 of primitiveOilSetParameter) disables the float loop registers (M10, see prepareFloatLoops)."
+	^(self unrollMode bitAnd: 16) = 0! !
 
 !OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
 prepareFloatLoops
@@ -1496,7 +1534,7 @@ prepareFloatLoops
 			[self analyzeFloatLoop: (self imm16At: irOffset) end: irOffset].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 analyzeFloatLoop: loopHead end: backJump
 	"The loop from loopHead to the Jump at backJump gets XMM registers for its float variables if it is innermost, entered only
 	 by falling into loopHead, whose instruction has a deopt site (its state is the one entering the loop; for a rotated loop,
@@ -1523,10 +1561,10 @@ analyzeFloatLoop: loopHead end: backJump
 	 and: [(self opcodeAt: loopHead - 2) = OilCmpTagged or: [(self opcodeAt: loopHead - 2) = OilCmpImmTagged]]]]]]) ifTrue:
 		["a rotated loop: entered after its header's test"
 		 entryOffset := loopHead - 2.
-		 ((oilIRSite at: entryOffset) >= 0 and: [(siteSnapBase at: (oilIRSite at: entryOffset)) >= 0]) ifTrue:
+		 ((oilIRSite at: entryOffset) >= 0 and: [self siteHasState: (oilIRSite at: entryOffset)]) ifTrue:
 			[site := oilIRSite at: entryOffset]].
 	site < 0 ifTrue: [site := self entrySiteAfter: loopHead].
-	(site >= 0 and: [(siteSnapBase at: site) >= 0 and: [numSites < OilMaxSites]]) ifFalse: [^self].
+	(site >= 0 and: [(self siteHasState: site) and: [numSites < OilMaxSites]]) ifFalse: [^self].
 	"The loop's shape, and its float operands."
 	numCandidates := 0.
 	irOffset := 0.
@@ -1538,7 +1576,7 @@ analyzeFloatLoop: loopHead end: backJump
 			 (irOffset > loopHead and: [irOffset < backJump and: [target <= irOffset]]) ifTrue: [^self]].
 		 (irOffset >= loopHead and: [irOffset < backJump]) ifTrue:
 			[((self mayClobberXmms: opcode) or: [opcode = OilReturn]) ifTrue: [^self].
-			 (opcode between: OilAddFloat and: OilCmpFloat) ifTrue:
+			 (self isFloatOpcode: opcode) ifTrue:
 				[numCandidates := self addCandidate: (self fieldBAt: irOffset) to: candidates count: numCandidates.
 				 numCandidates := self addCandidate: (self fieldCAt: irOffset) to: candidates count: numCandidates.
 				 opcode ~= OilCmpFloat ifTrue:
@@ -1588,7 +1626,7 @@ analyzeFloatLoop: loopHead end: backJump
 	oilFloatLoopSite at: oilNumFloatLoops put: (self cloneSite: site at: loopHead).
 	oilNumFloatLoops := oilNumFloatLoops + 1! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 entrySiteAfter: loopHead
 	"The deopt site of the first instruction with one in the straight-line code starting at loopHead, if the instructions
 	 before it only compute registers (constants, moves, loads) its state does not refer to: then its state is the one entering
@@ -1599,7 +1637,7 @@ entrySiteAfter: loopHead
 		[opcode := self opcodeAt: irOffset.
 		 (irOffset > loopHead and: [(oilIRTarget at: irOffset) ~= 0]) ifTrue: [^-1].
 		 siteIndex := oilIRSite at: irOffset.
-		 (siteIndex >= 0 and: [(siteSnapBase at: siteIndex) >= 0]) ifTrue:
+		 (siteIndex >= 0 and: [self siteHasState: siteIndex]) ifTrue:
 			[irOffset := loopHead.
 			 [(oilIRSite at: irOffset) ~= siteIndex] whileTrue:
 				[(self state: siteIndex refersTo: (self fieldAAt: irOffset)) ifTrue: [^-1].
@@ -1610,7 +1648,7 @@ entrySiteAfter: loopHead
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^-1! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 isFloatReceiver: vreg atStartOf: loopHead
 	"Is register vreg the receiver of a float instruction in the straight-line code the loop starts with (which deoptimizes if
 	 it is not a Float, as unboxing it when entering does)?"
@@ -1620,12 +1658,12 @@ isFloatReceiver: vreg atStartOf: loopHead
 		[opcode := self opcodeAt: irOffset.
 		 ((irOffset > loopHead and: [(oilIRTarget at: irOffset) ~= 0])
 		  or: [(self isBranch: opcode) or: [opcode = OilReturn]]) ifTrue: [^false].
-		 ((opcode between: OilAddFloat and: OilCmpFloat) and: [(self fieldBAt: irOffset) = vreg]) ifTrue: [^true].
+		 ((self isFloatOpcode: opcode) and: [(self fieldBAt: irOffset) = vreg]) ifTrue: [^true].
 		 ((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [^false].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^false! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 floatIntModeOf: vreg from: loopHead to: backJump
 	"How a float invariant is loaded (see genLoadDouble:into:ints:site:): 0 (a Float) if a float instruction of the loop uses
 	 it as its receiver, else 2 (or a SmallInteger exactly representable) if a comparison uses it, else 1 (or a SmallInteger)."
@@ -1634,13 +1672,13 @@ floatIntModeOf: vreg from: loopHead to: backJump
 	irOffset := loopHead.
 	[irOffset < backJump] whileTrue:
 		[opcode := self opcodeAt: irOffset.
-		 (opcode between: OilAddFloat and: OilCmpFloat) ifTrue:
+		 (self isFloatOpcode: opcode) ifTrue:
 			[(self fieldBAt: irOffset) = vreg ifTrue: [intMode := 0].
 			 ((self fieldCAt: irOffset) = vreg and: [opcode = OilCmpFloat and: [intMode = 1]]) ifTrue: [intMode := 2]].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^intMode! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 isTempFloat: vreg from: loopHead to: backJump
 	"Is every read of register vreg in the loop from loopHead to backJump preceded by an assignment of it in the same
 	 straight-line code (no branch target in between)?"
@@ -1649,16 +1687,12 @@ isTempFloat: vreg from: loopHead to: backJump
 	irOffset := loopHead.
 	[irOffset < backJump] whileTrue:
 		[(oilIRTarget at: irOffset) ~= 0 ifTrue: [assigned := false].
-		 oilUseProbe := vreg.
-		 oilUseProbeHit := false.
-		 self countUsesAt: irOffset.
-		 oilUseProbe := -1.
-		 (oilUseProbeHit and: [assigned not]) ifTrue: [^false].
+		 (assigned not and: [self instruction: irOffset reads: vreg]) ifTrue: [^false].
 		 ((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [assigned := true].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^true! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 isFloatEntering: vreg loop: loopHead entry: entryOffset
 	"Does the straight-line code falling into loopHead (or into entryOffset, the test of a rotated loop before it) last assign
 	 register vreg a Float literal or a (boxed) float result?"
@@ -1671,15 +1705,15 @@ isFloatEntering: vreg loop: loopHead entry: entryOffset
 	defOffset < 0 ifTrue: [^false].
 	opcode := self opcodeAt: defOffset.
 	opcode = OilConst64 ifTrue: [^self isFloatHandle: (self word64At: defOffset + 1)].
-	^(opcode between: OilAddFloat and: OilDivFloat) and: [((oilIRFlag at: defOffset) bitAnd: OilFloatUnboxed) = 0]! !
+	^(self isFloatArith: opcode) and: [(self flag: defOffset has: OilFloatUnboxed) not]! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 isFloat: vreg readAfterLoop: loopHead end: backJump
 	"May register vreg be read by an instruction (deopt states do not count: a dead temporary) after the loop from loopHead to
-	 backJump exits, before being assigned?  Follows the control flow from the exits (each branch target once: oilIRMap, free
-	 in Pass 3, marks them) for at most 512 instructions, answering true beyond."
+	 backJump exits, before being assigned (see mayRead:paths:count:states:)?  oilIRMap, free in Pass 3, marks the branch targets
+	 followed."
 	<inline: false>
-	| stack sp irOffset opcode budget target |
+	| stack sp irOffset opcode target |
 	<var: #stack declareC: 'sqInt stack[16]'>
 	self cCode: [] inSmalltalk: [stack := CArrayAccessor on: (Array new: 16)].
 	0 to: irIndex - 1 do: [:offset| oilIRMap at: offset put: 0].
@@ -1695,20 +1729,29 @@ isFloat: vreg readAfterLoop: loopHead end: backJump
 			 stack at: sp put: target.
 			 sp := sp + 1].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
-	budget := 512.
+	^self mayRead: vreg paths: stack count: sp states: false! !
+
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
+mayRead: vreg paths: stack count: numPaths states: withStates
+	"May register vreg be read before being assigned on a path from the numPaths offsets on stack (16 at most)?  Follows the
+	 control flow, both ways at conditional branches, answering true beyond 16 pending paths or a budget of instructions.
+	 Reads are the operands of the instructions, and, if withStates, the deopt states of their live sites (Pass 2, see
+	 isLive:from:, budget 256).  Else (Pass 3, see isFloat:readAfterLoop:end:, budget 512) each branch target is followed
+	 once: oilIRMap, cleared by the caller, marks them."
+	<inline: false>
+	<var: #stack type: #'sqInt *'>
+	| sp irOffset opcode budget |
+	sp := numPaths.
+	budget := withStates ifTrue: [256] ifFalse: [512].
 	[sp > 0] whileTrue:
 		[sp := sp - 1.
 		 irOffset := stack at: sp.
-		 (oilIRMap at: irOffset) ~= 0 ifTrue: [irOffset := irIndex]. "(visited)"
-		 irOffset < irIndex ifTrue: [oilIRMap at: irOffset put: 1].
+		 withStates ifFalse: [irOffset := self firstVisitOf: irOffset].
 		 [irOffset < irIndex] whileTrue:
 			[(budget := budget - 1) < 0 ifTrue: [^true].
 			 opcode := self opcodeAt: irOffset.
-			 oilUseProbe := vreg.
-			 oilUseProbeHit := false.
-			 self countUsesAt: irOffset.
-			 oilUseProbe := -1.
-			 oilUseProbeHit ifTrue: [^true].
+			 (self instruction: irOffset reads: vreg) ifTrue: [^true].
+			 (withStates and: [self liveStateAt: irOffset refersTo: vreg]) ifTrue: [^true].
 			 ((opcode = OilReturn or: [opcode = OilTrap])
 			  or: [(self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]])
 				ifTrue: [irOffset := irIndex] "the path ends"
@@ -1720,11 +1763,17 @@ isFloat: vreg readAfterLoop: loopHead end: backJump
 					 irOffset := opcode = OilJump
 									ifTrue: [self imm16At: irOffset]
 									ifFalse: [irOffset + (self instructionLengthAt: irOffset)].
-					 (irOffset < irIndex and: [(oilIRTarget at: irOffset) ~= 0]) ifTrue: "a label: once"
-						[(oilIRMap at: irOffset) ~= 0
-							ifTrue: [irOffset := irIndex]
-							ifFalse: [oilIRMap at: irOffset put: 1]]]]].
+					 (withStates not and: [irOffset < irIndex and: [(oilIRTarget at: irOffset) ~= 0]]) ifTrue: "a label: once"
+						[irOffset := self firstVisitOf: irOffset]]]].
 	^false! !
+
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
+firstVisitOf: irOffset
+	"Mark irOffset visited (oilIRMap, see mayRead:paths:count:states:) and answer it, or irIndex (the path ends) if it was."
+	irOffset >= irIndex ifTrue: [^irIndex].
+	(oilIRMap at: irOffset) ~= 0 ifTrue: [^irIndex].
+	oilIRMap at: irOffset put: 1.
+	^irOffset! !
 
 !OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
 genFloatLoopEntryAt: irOffset
@@ -1805,7 +1854,7 @@ addCandidate: vreg to: candidates count: numCandidates
 	candidates at: numCandidates put: vreg.
 	^numCandidates + 1! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
+!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
 isFloatVariable: vreg from: loopHead to: backJump candidates: candidates kinds: kinds count: numCandidates
 	"Does the loop from loopHead to backJump assign register vreg only float results (not unboxed in a float chain) or moves
 	 of float variables (candidates of kind 1 or 2), and read it only as an operand of float instructions or into float
@@ -1823,18 +1872,14 @@ isFloatVariable: vreg from: loopHead to: backJump candidates: candidates kinds: 
 				 ((self fieldBAt: irOffset) = vreg
 				  and: [(self isVariableCandidate: (self fieldAAt: irOffset) in: candidates kinds: kinds count: numCandidates) not]) ifTrue: [^false]]
 			ifFalse:
-				[(opcode between: OilAddFloat and: OilCmpFloat)
+				[(self isFloatOpcode: opcode)
 					ifTrue:
 						[((self fieldAAt: irOffset) = vreg
 						  and: [opcode ~= OilCmpFloat
-						  and: [((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0]]) ifTrue: [^false]]
+						  and: [self flag: irOffset has: OilFloatUnboxed]]) ifTrue: [^false]]
 					ifFalse:
 						[((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]) ifTrue: [^false].
-						 oilUseProbe := vreg.
-						 oilUseProbeHit := false.
-						 self countUsesAt: irOffset.
-						 oilUseProbe := -1.
-						 oilUseProbeHit ifTrue: [^false]]].
+						 (self instruction: irOffset reads: vreg) ifTrue: [^false]]].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^true! !
 
@@ -1847,10 +1892,33 @@ isVariableCandidate: vreg in: candidates kinds: kinds count: numCandidates
 		[:index| ((candidates at: index) = vreg and: [(kinds at: index) = 1 or: [(kinds at: index) = 2]]) ifTrue: [^true]].
 	^false! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
+oilUnrollParameter: kind value: value
+	"Set a loop unrolling parameter (parameters 12 to 18 of primitiveOilSetParameter, oilUnrollParameters at: kind - 12): 12 the
+	 mode, whose bits disable full unrolling (1), partial unrolling (2), the store check elimination of young objects (4) and
+	 the float loop registers (16), and allow partial unrolling of bodies with branches (8); 13 the
+	 largest body unrolled 4 times; 14 the largest body unrolled twice; 15 the budget of full unrolling (iterations * body
+	 size); 16 the most iterations fully unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift
+	 (see codeShift).  0 (or less) means the default."
+	oilUnrollParameters at: kind - 12 put: (kind = 18 ifTrue: [value min: 64] ifFalse: [value])! !
+
+!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
+unrollMode
+	"Parameter 12 (see oilUnrollParameter:value:)."
+	<inline: true>
+	^oilUnrollParameters at: 0! !
+
+!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
+unrollParameter: kind default: defaultValue
+	"Parameter kind (13 to 17, see oilUnrollParameter:value:), or defaultValue if it is not set (0 or less)."
+	<inline: true>
+	^(oilUnrollParameters at: kind - 12) > 0 ifTrue: [oilUnrollParameters at: kind - 12] ifFalse: [defaultValue]! !
+
+!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
 codeShift
-	"The number of nops before the method body (see OilLoopOptimizer>>codeShift)."
-	^0! !
+	"A measurement aid (parameter 18 of primitiveOilSetParameter, default 0): the number of one byte nops before the method body,
+	 which moves its code by that many bytes, so that benchmarks can average over the placements of its loops."
+	^(oilUnrollParameters at: 18 - 12) max: 0! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
 genLoopAlignment
@@ -1862,26 +1930,53 @@ genLoopAlignment
 		[cogit AlignmentNops: alignment.
 		 alignment := alignment * 2]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
 loopAlignment
-	"The alignment (in bytes, a power of two) of the loop headers, or 0.  (See OilLoopOptimizer>>loopAlignment.)"
-	^0! !
+	"The alignment (in bytes, at most 16) of the loop headers (OilLoopAlignment, or parameter 17 of primitiveOilSetParameter; 1 for
+	 none): the fall-through into the loop runs the padding (nops).  How the instructions of a loop fall on 16 and 32 byte
+	 boundaries changes its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes
+	 makes it faster on average and less erratic."
+	^(self unrollParameter: 17 default: OilLoopAlignment) min: 16 "(see genLoopAlignment)"! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 storeNeedsCheck: objReg
-	"Does the store into the object in register objReg by the instruction being translated need the store check?  (See
-	 OilLoopOptimizer>>storeNeedsCheck:.)"
-	^true! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
-genLoadSize: destReg object: objReg
-	"The number of slots of an Array (no fixed fields), tagged."
-	| objMach |
-	objMach := self src: objReg scratch: TempReg.
-	cogit oilGenGetNumSlotsOf: objMach into: SendNumArgsReg.
-	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
-	cogit AddCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self setDst: destReg from: SendNumArgsReg! !
+	"Does the store into the object in register objReg by the instruction being translated (at oilFailIndex) need the store
+	 check?  Not if the object is young: it was allocated in eden (OilNewArray, OilNewObject) in the straight-line code that
+	 leads to the store (no branch target between them), into objReg or into a register objReg is a move (or a move of a
+	 move...) of, and nothing between them may run the garbage collector.  Oil allocations deoptimize rather than scavenge and
+	 Oil code has no interrupt checks, so only calls may: sends, and intrinsics falling back to sends."
+	| storeOffset allocOffset irOffset opcode vreg defOffset useOffset hops |
+	(self unrollMode bitAnd: 4) = 0 ifFalse: [^true].
+	storeOffset := oilFailIndex.
+	vreg := objReg.
+	useOffset := storeOffset.
+	allocOffset := -1.
+	hops := 0.
+	[allocOffset < 0] whileTrue:
+		[defOffset := -1.
+		 irOffset := 0.
+		 [irOffset < useOffset] whileTrue:
+			[((self opcodeHasDest: (self opcodeAt: irOffset)) and: [(self fieldAAt: irOffset) = vreg]) ifTrue:
+				[defOffset := irOffset].
+			 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+		 defOffset < 0 ifTrue: [^true].
+		 opcode := self opcodeAt: defOffset.
+		 (opcode = OilNewArray or: [opcode = OilNewObject])
+			ifTrue: [allocOffset := defOffset]
+			ifFalse:
+				[(opcode = OilMove and: [(hops := hops + 1) <= 4]) ifFalse: [^true].
+				 vreg := self fieldBAt: defOffset.
+				 useOffset := defOffset]].
+	irOffset := allocOffset + (self instructionLengthAt: allocOffset).
+	[irOffset <= storeOffset] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 ((oilIRTarget at: irOffset) ~= 0
+		  or: [irOffset < storeOffset
+			  and: [(self isCall: opcode) or: [opcode = OilStreamNext or: [opcode = OilStreamNextPut
+					or: [opcode = OilCompareBytes or: [opcode = OilIdentityHash]]]]]]) ifTrue: [^true].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	oilNumYoungStores := oilNumYoungStores + 1.
+	^false! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genCheckBounds: indexReg limit: limitReg site: siteIndex
@@ -1895,12 +1990,20 @@ genCheckBounds: indexReg limit: limitReg site: siteIndex
 	cogit CmpR: limitMach R: indexMach.
 	self deopt: (cogit JumpGreater: 0) site: siteIndex! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+singletonForClassTag: tag
+	"The only instance of the class of class tag tag if it is UndefinedObject, True or False, else 0."
+	tag = (objectMemory fetchClassTagOf: objectMemory nilObject) ifTrue: [^objectMemory nilObject].
+	tag = (objectMemory fetchClassTagOf: objectMemory trueObject) ifTrue: [^objectMemory trueObject].
+	tag = (objectMemory fetchClassTagOf: objectMemory falseObject) ifTrue: [^objectMemory falseObject].
+	^0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genGuard: objReg class: classOop site: siteIndex
 	"Deoptimize unless the object in objReg is an instance of classOop: a tag test for immediate classes, else a
 	 compare of the class index in the header.  A forwarder (class index isForwardedObjectClassIndexPun) fails
 	 the guard; the deopt fast path then follows it and resumes here."
-	| objMach tag |
+	| objMach tag singleton |
 	tag := objectMemory classTagForClass: classOop.
 	tag = 0 ifTrue: [^self abortCompilation: OilFailBackend].
 	objMach := self src: objReg scratch: TempReg.
@@ -1911,14 +2014,9 @@ genGuard: objReg class: classOop site: siteIndex
 		 cogit AndCq: objectMemory tagMask R: SendNumArgsReg.
 		 cogit CmpCq: tag R: SendNumArgsReg.
 		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
-	tag = (objectMemory fetchClassTagOf: objectMemory nilObject) ifTrue:
-		[cogit CmpCq: objectMemory nilObject R: objMach.
-		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
-	tag = (objectMemory fetchClassTagOf: objectMemory trueObject) ifTrue:
-		[cogit CmpCq: objectMemory trueObject R: objMach.
-		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
-	tag = (objectMemory fetchClassTagOf: objectMemory falseObject) ifTrue:
-		[cogit CmpCq: objectMemory falseObject R: objMach.
+	singleton := self singletonForClassTag: tag.
+	singleton ~= 0 ifTrue:
+		[cogit CmpCq: singleton R: objMach.
 		 ^self deopt: (cogit JumpNonZero: 0) site: siteIndex].
 	cogit TstCq: objectMemory tagMask R: objMach.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
@@ -1931,7 +2029,17 @@ genGuard: objReg class: classOop site: siteIndex
 	cogit CmpCq: tag R: SendNumArgsReg.
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+checkFlagsBranchAt: branchOffset
+	"Is the instruction at branchOffset, after a comparison, the branch on the flags that consumes it, and nothing jumps to it
+	 (between them)?  Else abort the compilation and answer false."
+	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
+	 and: [(self fieldAAt: branchOffset) = OilFlagsReg
+	 and: [(oilIRTarget at: branchOffset) = 0]]) ifTrue: [^true].
+	self abortCompilation: OilFailBackend.
+	^false! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genCompareAt: irOffset site: siteIndex
 	"A comparison (OilCmpTagged/OilCmpImmTagged, condition in field A) always immediately followed by the branch on
 	 the flags that consumes it: fuse them into one compare and one conditional jump.  Tagged values compare like
@@ -1942,11 +2050,7 @@ genCompareAt: irOffset site: siteIndex
 	opcode := self opcodeAt: irOffset.
 	cond := self fieldAAt: irOffset.
 	branchOffset := irOffset + 1.
-	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
-	 and: [(self fieldAAt: branchOffset) = OilFlagsReg
-	 and: [(oilIRTarget at: branchOffset) = 0]]) ifFalse: "nothing may jump between the compare and the branch"
-		[self abortCompilation: OilFailBackend.
-		 ^branchOffset].
+	(self checkFlagsBranchAt: branchOffset) ifFalse: [^branchOffset].
 	onTrue := (self opcodeAt: branchOffset) = OilBranchTrue.
 	target := self imm16At: branchOffset.
 	leftMach := self src: (self fieldBAt: irOffset) scratch: TempReg.
@@ -2054,7 +2158,7 @@ genSendAt: irOffset numArgs: numArgs super: isSuper
 	cogit MoveR: ReceiverResultReg Mw: (oilVRegSpillTemp at: destReg) r: FPReg.
 	self reloadAll! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 14:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 noteCallSiteAt: irOffset
 	"The call at irOffset was just emitted.  If its send has a deopt site with a state, record the site in the metadata
 	 (oilSiteUsed 2: no deopt stub) with the return address of the call as its resume address, so that a frame suspended in
@@ -2063,7 +2167,7 @@ noteCallSiteAt: irOffset
 	| siteIndex |
 	(self isSendOpcode: (self opcodeAt: irOffset)) ifFalse: [^self].
 	siteIndex := oilIRSite at: irOffset.
-	(siteIndex >= 0 and: [(siteSnapBase at: siteIndex) >= 0]) ifFalse: [^self].
+	(siteIndex >= 0 and: [self siteHasState: siteIndex]) ifFalse: [^self].
 	self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
 	self decodeAt: (sitePC at: siteIndex).
 	(opcodeTag = OilTagSend or: [opcodeTag = OilTagSendSuper or: [opcodeTag = OilTagSendSpecial]]) ifFalse: [^self].
@@ -2299,7 +2403,7 @@ genBoxDouble: dpReg into: destReg site: siteIndex
 	jumpDone jmpTarget: cogit Label.
 	self setDst: destReg from: ClassReg! !
 
-!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/26/2026 20:30'!
 genFloatArith: opcode at: irOffset site: siteIndex
 	"[OilAddFloat..OilDivFloat | Dest | Rcvr | Arg]: compute in an XMM register (a zero divisor deoptimizes, like the
 	 primitive fails), then box the result into Dest (the XMM register caches it), or, in a float chain, leave it there
@@ -2328,13 +2432,13 @@ genFloatArith: opcode at: irOffset site: siteIndex
 		 self deopt: (cogit oilGenJumpNotSmallFloatValueBits: ClassReg scratch: TempReg) site: siteIndex.
 		 cogit MoveRd: resultReg Rd: (oilXmmRegs at: (oilXmmPinned at: destReg)).
 		 ^self forgetXmmsOf: destReg].
-	((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0
+	(self flag: irOffset has: OilFloatUnboxed)
 		ifTrue: [self forgetXmmsOf: destReg]
 		ifFalse: [self genBoxDouble: resultReg into: destReg site: siteIndex].
 	oilXmmVReg at: resultXmm put: destReg.
-	oilXmmKind at: resultXmm put: (((oilIRFlag at: irOffset) bitAnd: OilFloatUnboxed) ~= 0 ifTrue: [-1] ifFalse: [0])! !
+	oilXmmKind at: resultXmm put: ((self flag: irOffset has: OilFloatUnboxed) ifTrue: [-1] ifFalse: [0])! !
 
-!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/26/2026 20:30'!
 genFloatCompareAt: irOffset site: siteIndex
 	"[OilCmpFloat | Cond | Rcvr | Arg] and the branch on the flags that follows it (see genCompareAt:site:).  The
 	 Cogit's floating point jumps are false on unordered operands (NaNs), so a branch on false jumps over a jump."
@@ -2343,11 +2447,7 @@ genFloatCompareAt: irOffset site: siteIndex
 	<var: #jump type: #'AbstractInstruction *'>
 	cond := self fieldAAt: irOffset.
 	branchOffset := irOffset + 1.
-	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
-	 and: [(self fieldAAt: branchOffset) = OilFlagsReg
-	 and: [(oilIRTarget at: branchOffset) = 0]]) ifFalse:
-		[self abortCompilation: OilFailBackend.
-		 ^branchOffset].
+	(self checkFlagsBranchAt: branchOffset) ifFalse: [^branchOffset].
 	target := self imm16At: branchOffset.
 	rcvrXmm := self xmmFor: (self fieldBAt: irOffset) ints: 0 except: -1 site: siteIndex.
 	argXmm := self xmmFor: (self fieldCAt: irOffset) ints: 2 except: rcvrXmm site: siteIndex.
@@ -2365,12 +2465,12 @@ genFloatCompareAt: irOffset site: siteIndex
 			 jump jmpTarget: cogit Label].
 	^branchOffset + 1! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genNewObjectAt: irOffset site: siteIndex
 	"[OilNewObject|Dest|FirstSlot|NumSlots] class: a scalar replaced object that escapes.  Allocate an instance of the class
 	 in eden (sharing the threshold check of the allocations that follow, see genAllocate:header:site:combineAfter:), and
 	 store its slots from their registers: no nil filling first, and no store check (it is young)."
-	| destReg firstReg numSlots classOop classIndex reg |
+	| destReg firstReg numSlots classOop classIndex |
 	destReg := self fieldAAt: irOffset.
 	firstReg := self fieldBAt: irOffset.
 	numSlots := self fieldCAt: irOffset.
@@ -2394,10 +2494,7 @@ genNewObjectAt: irOffset site: siteIndex
 					classIndex: classIndex)
 		site: siteIndex
 		combineAfter: irOffset.
-	0 to: numSlots - 1 do:
-		[:slotIndex|
-		reg := self src: firstReg + slotIndex scratch: TempReg.
-		cogit MoveR: reg Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize r: ClassReg].
+	self genStoreSlots: numSlots from: firstReg at: 0.
 	self setDst: destReg from: ClassReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
@@ -2412,20 +2509,16 @@ genClassTagOf: objReg into: destReg
 	cogit MoveM16: 0 r: objReg R: destReg.
 	jumpImmediate jmpTarget: cogit Label! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genCmpClassAt: irOffset
 	"[OilCmpClass|Cond|Reg|0] class, always followed by the branch on the flags that consumes it (like genCompareAt:site:):
 	 compare the class tag of Reg with the class's, and branch.  Answer the index of the instruction after the branch."
 	<inline: false>
-	| cond branchOffset target onTrue tag jump objMach tagNil tagTrue tagFalse singleton |
+	| cond branchOffset target onTrue tag jump objMach singleton |
 	<var: #jump type: #'AbstractInstruction *'>
 	cond := self fieldAAt: irOffset.
 	branchOffset := irOffset + (self instructionLengthAt: irOffset).
-	(((self opcodeAt: branchOffset) = OilBranchTrue or: [(self opcodeAt: branchOffset) = OilBranchFalse])
-	 and: [(self fieldAAt: branchOffset) = OilFlagsReg
-	 and: [(oilIRTarget at: branchOffset) = 0]]) ifFalse:
-		[self abortCompilation: OilFailBackend.
-		 ^branchOffset].
+	(self checkFlagsBranchAt: branchOffset) ifFalse: [^branchOffset].
 	tag := objectMemory classTagForClass: (self word64At: irOffset + 1).
 	tag = 0 ifTrue:
 		[self abortCompilation: OilFailBackend.
@@ -2433,15 +2526,9 @@ genCmpClassAt: irOffset
 	onTrue := (self opcodeAt: branchOffset) = OilBranchTrue.
 	target := self imm16At: branchOffset.
 	objMach := self src: (self fieldBAt: irOffset) scratch: TempReg.
-	tagNil := objectMemory fetchClassTagOf: objectMemory nilObject.
-	tagTrue := objectMemory fetchClassTagOf: objectMemory trueObject.
-	tagFalse := objectMemory fetchClassTagOf: objectMemory falseObject.
-	(tag = tagNil or: [tag = tagTrue or: [tag = tagFalse]])
-		ifTrue:
-			[singleton := tag = tagNil
-				ifTrue: [objectMemory nilObject]
-				ifFalse: [tag = tagTrue ifTrue: [objectMemory trueObject] ifFalse: [objectMemory falseObject]].
-			 cogit CmpCq: singleton R: objMach]
+	singleton := self singletonForClassTag: tag.
+	singleton ~= 0
+		ifTrue: [cogit CmpCq: singleton R: objMach]
 		ifFalse:
 			[self genClassTagOf: objMach into: SendNumArgsReg.
 			 cogit CmpCq: tag R: SendNumArgsReg].
@@ -2495,7 +2582,7 @@ genGuard2At: irOffset site: siteIndex
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
 	jumpOK jmpTarget: cogit Label! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 genStringHashAt: i
 	"[OilStringHash|Dest|Rcvr|InitialHash] selector: primitiveStringHash (String>>hashWithInitialHash:) of Rcvr, a byte object
 	 (its class is known): if InitialHash is a SmallInteger h, h := (h + byte) * 16r19660D for each byte, answer
@@ -2513,8 +2600,7 @@ genStringHashAt: i
 	cogit MoveR: initMach R: SendNumArgsReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	rcvrMach := self src: (self fieldBAt: i) scratch: TempReg.
-	self spillMachineReg: Extra0Reg.
-	self spillMachineReg: Extra1Reg.
+	self spillExtraRegs.
 	rcvrMach ~= Extra0Reg ifTrue: [cogit MoveR: rcvrMach R: Extra0Reg].
 	cogit oilGenGetNumBytesOf: Extra0Reg into: Extra1Reg.
 	cogit AddR: Extra0Reg R: Extra1Reg.
@@ -2532,8 +2618,7 @@ genStringHashAt: i
 	jumpEnd jmpTarget: (cogit AndCq: 16r0FFFFFFF R: SendNumArgsReg).
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
-	self reloadMachineReg: Extra0Reg.
-	self reloadMachineReg: Extra1Reg.
+	self reloadExtraRegs.
 	self setDst: (self fieldAAt: i) from: SendNumArgsReg.
 	jumpDone := cogit Jump: 0.
 	jumpNotInt jmpTarget: cogit Label.
