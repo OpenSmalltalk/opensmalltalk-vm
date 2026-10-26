@@ -173,6 +173,9 @@ extern sqInt fixedFieldsOfClassFormat(sqInt classFormat);
 extern sqInt followForwarded(sqInt objOop);
 extern sqInt formatOfClass(sqInt classPointer);
 extern sqInt freeObject(sqInt objOop);
+extern sqInt futureSurvivorSpaceBytes(void);
+extern int futureSurvivorSpaceIsEmpty(void);
+extern usqInt futureSurvivorSpaceStart(void);
 extern usqLong headerForSlotsformatclassIndex(sqInt numSlots, sqInt formatField, sqInt classIndex);
 #if IMMUTABILITY
 extern sqInt immutableBitMask(void);

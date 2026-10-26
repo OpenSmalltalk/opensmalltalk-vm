@@ -34203,10 +34203,12 @@ compileCogFullBlockMethod(sqInt numCopied)
 	/* Document the fact that the MaxStackAllocSize ensures that the number of abstract
 	   opcodes fits in a 16 bit integer (e.g. CogBytecodeFixup's instructionIndex). */
 	assert((((sizeof(CogAbstractInstruction)) + (sizeof(CogBytecodeFixup))) * 0xC000) > MaxStackAllocSize);
-	if (allocBytes > MaxStackAllocSize) {
+	if ((allocBytes > MaxStackAllocSize)
+	 || (allocBytes > (futureSurvivorSpaceBytes()))) {
 		return ((CogMethod *) MethodTooBig);
 	}
-	abstractOpcodes = alloca(allocBytes);
+	assert(futureSurvivorSpaceIsEmpty());
+	abstractOpcodes = ((AbstractInstruction *) (futureSurvivorSpaceStart()));
 	bzero(abstractOpcodes, allocBytes);
 	fixups = ((void *)((((usqInt)abstractOpcodes)) + opcodeBytes));
 
@@ -34280,10 +34282,12 @@ compileCogMethod(sqInt selector)
 	/* Document the fact that the MaxStackAllocSize ensures that the number of abstract
 	   opcodes fits in a 16 bit integer (e.g. CogBytecodeFixup's instructionIndex). */
 	assert((((sizeof(CogAbstractInstruction)) + (sizeof(CogBytecodeFixup))) * 0xC000) > MaxStackAllocSize);
-	if (allocBytes > MaxStackAllocSize) {
+	if ((allocBytes > MaxStackAllocSize)
+	 || (allocBytes > (futureSurvivorSpaceBytes()))) {
 		return ((CogMethod *) MethodTooBig);
 	}
-	abstractOpcodes = alloca(allocBytes);
+	assert(futureSurvivorSpaceIsEmpty());
+	abstractOpcodes = ((AbstractInstruction *) (futureSurvivorSpaceStart()));
 	bzero(abstractOpcodes, allocBytes);
 	fixups = ((void *)((((usqInt)abstractOpcodes)) + opcodeBytes));
 

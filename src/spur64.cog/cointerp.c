@@ -1140,6 +1140,9 @@ static sqInt freeChunkPrevIndex(void);
 static NoDbgRegParms sqInt freeChunkWithBytesat(sqInt bytes, sqInt address);
 extern sqInt freeObject(sqInt objOop);
 extern NeverInline usqLong fullGC(void);
+extern sqInt futureSurvivorSpaceBytes(void);
+extern int futureSurvivorSpaceIsEmpty(void);
+extern usqInt futureSurvivorSpaceStart(void);
 static float getHeapGrowthToSizeGCRatio(void);
 static NoDbgRegParms sqInt goodContextSize(sqInt oop);
 static NoDbgRegParms usqInt growOldSpaceByAtLeast(sqInt minAmmount);
@@ -50624,6 +50627,44 @@ GIV(totalHeapSizeIncludingBridges) - (GIV(numSegments) * (2 * BaseHeaderSize))))
 	return (GIV(freeLists)[0]
 			? bytesInBody(findLargestFreeChunk())
 			: 0);
+}
+
+
+/*	Answer the size of the future survivor space; see
+	futureSurvivorSpaceStart. 
+ */
+
+	/* SpurMemoryManager>>#futureSurvivorSpaceBytes */
+sqInt
+futureSurvivorSpaceBytes(void)
+{
+	return (((GIV(futureSpace)).limit)) - (((GIV(futureSpace)).start));
+}
+
+
+/*	Answer if nothing has been copied into the future survivor space, i.e. if
+	no scavenge is in progress.
+ */
+
+	/* SpurMemoryManager>>#futureSurvivorSpaceIsEmpty */
+int
+futureSurvivorSpaceIsEmpty(void)
+{   DECL_MAYBE_SQ_GLOBAL_STRUCT
+	return GIV(futureSurvivorStart) == (((GIV(futureSpace)).start));
+}
+
+
+/*	Answer the start of the future survivor space. It is empty except during a
+	scavenge, so the
+	Cogit uses it as scratch memory while compiling; see
+	Cogit>>allocateOpcodes:bytecodes:ifFail:. 
+ */
+
+	/* SpurMemoryManager>>#futureSurvivorSpaceStart */
+usqInt
+futureSurvivorSpaceStart(void)
+{
+	return ((GIV(futureSpace)).start);
 }
 
 	/* SpurMemoryManager>>#getHeapGrowthToSizeGCRatio */
