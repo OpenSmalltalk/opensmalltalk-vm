@@ -7,15 +7,14 @@
  against a limit not known to be a SmallInteger that the loop does not assign (the bottom test gets a clone of the header's
  deopt site).
  Files in the Oil sources, compiles probes (Pass 1 with simulated type feedback, then pipe), checks the statistics, the IR
- and the deopt sites, and validates the IR by executing it (OilIRInterpreter) against the real execution of each method and
- against the IR compiled without unrolling."
+ and the deopt sites, and validates the IR by executing it (OilIRInterpreter) against the real execution of each method."
 | dir |
 Utilities authorInitials: 'cb'.
 dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExists: 'OilConstants.st') ifTrue: [FileDirectory default] ifFalse: [FileDirectory default directoryNamed: 'oil']) pathName, '/'].
 #('OilInstructionConstants.st' 'OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
-| out pass fail check model compile run cls probes stats sitesOK same arrays items abs sweep sweepStats |
+| out pass fail check model compile run cls probes stats sitesOK arrays items abs sweep sweepStats |
 out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'm9-test-result.txt']).
 pass := 0. fail := 0.
 check := [:name :bool |
@@ -72,12 +71,11 @@ cls := Smalltalk at: #OilM9Model.
 model := cls new.
 items := (1 to: 9) collect: [:i | (Smalltalk at: #OilM9Item) new score: i; yourself].
 abs := {{(Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 5; yourself. (Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 1; yourself. (Smalltalk at: #OilM9A) new}}.
-compile := [:sel :argLists :mode | | fbk comp |
+compile := [:sel :argLists | | fbk comp |
 	fbk := OilSimulatedTypeFeedback new.
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
-	comp oilUnrollParameter: 12 value: mode.
 	comp compileMethod: cls >> sel receiverClass: (comp handleFor: cls).
 	comp failed ifFalse: [comp pipe].
 	comp].
@@ -108,11 +106,6 @@ sitesOK := [:comp | | ok starts siteOf numSites i opcode |
 		opcode = #CheckBounds ifTrue:
 			[(siteOf at: at ifAbsent: [-1]) = (comp fieldCAt: at) ifFalse: [ok := false]]].
 	ok].
-"Unrolled IR must behave like the IR without unrolling: the same result, or a deopt where it deopts."
-same := [:r1 :r2 |
-	(r1 isKindOf: Association)
-		ifTrue: [(r2 isKindOf: Association) and: [r2 key == r1 key]]
-		ifFalse: [(r2 isKindOf: Association) not and: [r1 = r2]]].
 arrays := {#(). #(5). #(5 -3). #(5 -3 7). #(1 2 3 4). #(1 -2 3 -4 5). #(9 8 7 6 5 4). #(1 2 3 4 5 6 7). #(1 2 0 4 5 6 7 8). (1 to: 9) asArray. (1 to: 33) asArray}.
 "{selector. sample arguments (type feedback). arguments to check. check on {fully unrolled. partially unrolled. rotated} and the opcode histogram}"
 probes := {
@@ -135,60 +128,38 @@ probes := {
 	{#whileSum:. {{10}}. {{0}. {1}. {3}. {4}. {5}. {9}. {nil}}. [:st :h | st = #(0 0 1)]}.
 	{#sum100. {{}}. {{}}. [:st :h | st = #(0 0 1) and: [(h occurrencesOf: #AddImmTagged) = 0]]}.
 	{#sum1000. {{}}. {{}}. [:st :h | st = #(0 0 1) and: [(h occurrencesOf: #AddImmTagged) = 0]]}.
-	{#absSum:. {{#(1 -2 3)}}. arrays. [:st :h | st = #(0 0 1)]. 8}.
-	{#firstNeg:. {{#(1 -2 3)}}. arrays. [:st :h | (st at: 2) = 0]. 8}.
+	{#absSum:. {{#(1 -2 3)}}. arrays. [:st :h | st = #(0 0 1)]}.
+	{#firstNeg:. {{#(1 -2 3)}}. arrays. [:st :h | (st at: 2) = 0]}.
 	{#sumScores:. {{items}}. {{items}. {items first: 3}. {items first: 5}. {#()}. {items copyWith: 3}}. [:st :h | st = #(0 0 1) and: [(h occurrencesOf: #Call0) = 0]]}.
 	{#pointSum:. {{3}}. {{0}. {1}. {3}. {10}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #NewObject) = 0]]}.
-	{#countA:. {{'banana'}}. {{'banana'}. {''}. {'a'}. {'aaaaaaa'}. {'xyz'}}. [:st :h | (st at: 2) = 0]. 8}.
+	{#countA:. {{'banana'}}. {{'banana'}. {''}. {'a'}. {'aaaaaaa'}. {'xyz'}}. [:st :h | (st at: 2) = 0]}.
 	{#fill:with:. {{Array new: 3. 7}}. {{Array new: 0. 7}. {Array new: 3. 7}. {Array new: 9. 'x'}. {#(1 2) beReadOnlyObject; yourself. 3}}. [:st :h | (st at: 2) = 0]}.
 	{#step3:. {{10}}. {{0}. {1}. {10}. {11}. {12}. {13}. {100}}. [:st :h | st = #(0 0 1)]}.
-	{#isSymCount:. {{#(#a 'b' #c 'd')}}. {{#(#a 'b' #c 'd')}. {#(#a #b)}. {#()}. {#(#a #b #c #d #e 'f' #g)}. {#(#a 3)}}. [:st :h | (st at: 2) = 0]. 8}.
-	{#sizeSum:. {abs}. {abs. {abs first, abs first}. {abs first first: 1}. {{}}. {{(Smalltalk at: #OilM9A) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]. 8}.
-	{#nilCount:. {abs}. {abs. {abs first, abs first}. {{}}. {{(Smalltalk at: #OilM9B) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]. 8}.
+	{#isSymCount:. {{#(#a 'b' #c 'd')}}. {{#(#a 'b' #c 'd')}. {#(#a #b)}. {#()}. {#(#a #b #c #d #e 'f' #g)}. {#(#a 3)}}. [:st :h | (st at: 2) = 0]}.
+	{#sizeSum:. {abs}. {abs. {abs first, abs first}. {abs first first: 1}. {{}}. {{(Smalltalk at: #OilM9A) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
+	{#nilCount:. {abs}. {abs. {abs first, abs first}. {{}}. {{(Smalltalk at: #OilM9B) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
 	{#absSum2:. {{#(1 -2 3)}}. arrays. [:st :h | st = #(0 0 1)]}.
 	{#printSizes:. {{3}}. {{3}}. [:st :h | st first + (st at: 2) = 0]}.
 	{#halve:. {{100}}. {{100}. {1}}. [:st :h | st first + (st at: 2) = 0]}}.
-probes do: [:spec | | sel comp ref st h |
+probes do: [:spec | | sel comp st h |
 	sel := spec first.
-	comp := compile value: sel value: (spec at: 2) value: (spec size >= 5 ifTrue: [spec at: 5] ifFalse: [0]).
-	ref := compile value: sel value: (spec at: 2) value: 3.
+	comp := compile value: sel value: (spec at: 2).
 	st := stats value: comp.
 	h := comp opcodeHistogram.
-	out cr; nextPutAll: comp irString; nextPutAll: sel; nextPutAll: ': fully unrolled, partially unrolled, rotated: '; print: st; nextPutAll: '; IR words '; print: comp irIndex; nextPutAll: ' (without unrolling '; print: ref irIndex; nextPutAll: ')'; cr.
-	check value: sel, ' compiles' value: (comp failed not and: [ref failed not]).
+	out cr; nextPutAll: comp irString; nextPutAll: sel; nextPutAll: ': fully unrolled, partially unrolled, rotated: '; print: st; nextPutAll: '; IR words '; print: comp irIndex; cr.
+	check value: sel, ' compiles' value: comp failed not.
 	check value: sel, ' unrolling statistics and IR' value: ((spec at: 4) value: st value: h).
 	check value: sel, ' deopt sites' value: (sitesOK value: comp).
-	(spec at: 3) do: [:args | | r r0 real |
+	(spec at: 3) do: [:args | | r real |
 		r := run value: comp value: args.
-		r0 := run value: ref value: args.
 		real := [model perform: sel withArguments: (args collect: [:e | e copy])] on: Error do: [:e | #error].
 		((r isKindOf: Association) and: [r key == #deopt or: [r key == #error]])
 			ifFalse: [check value: sel, ' IR = real for ', (args printString contractTo: 50) value: r = real]
 			ifTrue:
 				[out nextPutAll: '   '; print: args; nextPutAll: ' -> '; print: r; cr.
-				 check value: sel, ' deoptimizes for ', (args printString contractTo: 50) value: r key == #deopt].
-		check value: sel, ' IR = IR without unrolling for ', (args printString contractTo: 50) value: (same value: r0 value: r)]].
+				 check value: sel, ' deoptimizes for ', (args printString contractTo: 50) value: r key == #deopt]]].
 
-"Mode 1: no full unrolling."
-[| c2 |
- c2 := compile value: #sum3: value: {{#(1 2 3 4)}} value: 1.
- check value: 'mode 1 (no full unrolling): sum3: not fully unrolled' value: (stats value: c2) first = 0] value.
-
-"Thresholds: the full budget (parameter 15) and the most iterations fully unrolled (16)."
-[| cf ct |
- cf := OilCompiler new.
- cf oilUnrollParameter: 15 value: 9.
- cf compileMethod: cls >> #tri5 receiverClass: (cf handleFor: cls).
- cf pipe.
- check value: 'tri5 not fully unrolled with a budget of 9' value: (cf pass2Statistics: 23) = 0.
- ct := OilCompiler new.
- ct oilUnrollParameter: 16 value: 9.
- ct compileMethod: cls >> #sum9 receiverClass: (ct handleFor: cls).
- ct pipe.
- check value: 'sum9 fully unrolled with at most 9 iterations' value: (ct pass2Statistics: 23) = 1.
- check value: 'sum9 fully unrolled = real' value: (run value: ct value: #()) = model sum9] value.
-
-"Robustness: Pass 1 + Pass 2 on every method of a few classes, with and without unrolling."
+"Robustness: Pass 1 + Pass 2 on every method of a few classes."
 sweep := Bag new.
 sweepStats := Array new: 3 withAll: 0.
 {OrderedCollection. Set. Dictionary. Interval. String. Array. Point. Rectangle. Integer. SmallInteger. Float. Collection. SequenceableCollection. ArrayedCollection. Bag. Symbol. ByteArray. LargePositiveInteger. Bitmap. WordArray. Matrix} do: [:c |
@@ -208,7 +179,7 @@ out cr; nextPutAll: 'Sweep totals: fully unrolled '; print: (sweepStats at: 1); 
 check value: 'robustness: no Smalltalk error' value: (sweep occurrencesOf: #ERROR) = 0.
 check value: 'robustness: consistent deopt sites' value: (sweep occurrencesOf: #BADSITES) = 0.
 check value: 'robustness: no compilation fails for lack of room' value: (sweep occurrencesOf: #FailBufferFull) + (sweep occurrencesOf: #FailTooManySites) = 0.
-check value: 'robustness: some loops unrolled' value: (sweepStats at: 1) + (sweepStats at: 2) > 0.
+check value: 'robustness: some loops unrolled or rotated' value: (sweepStats at: 1) + (sweepStats at: 3) > 0.
 
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!

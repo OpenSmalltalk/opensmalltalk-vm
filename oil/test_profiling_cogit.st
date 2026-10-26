@@ -29,8 +29,15 @@ cls compile: 'polySum: aCollection | total | total := 0. aCollection do: [:each 
 cls compile: 'offSum: n | total | total := 0. 1 to: n do: [:i | total := total + i]. ^total' classified: 'tests'.
 cls compile: 'myDo: aBlock 1 to: items size do: [:i | aBlock value: (items at: i)]' classified: 'tests'.
 cls compile: 'mySumScores | total | total := 0. self myDo: [:each | total := total + each score]. ^total' classified: 'tests'.
-cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value
+	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
+	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
+	index = 8 ifTrue: [^self disqualifyLimit: value].
+	^self' classified: 'oil'.
 cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilColdSelectors <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 
 mCountTo := cls >> #countTo:.
@@ -41,7 +48,7 @@ mMySum := cls >> #mySumScores.
 mMyDo := cls >> #myDo:.
 ocDo := OrderedCollection >> #do:.
 hasOil := [:aMethod | aMethod oilInfo notNil].
-check value: 'primitiveOilSetParameter available (VM has ProfilingCogit)' value: (cls oilSetParameter: 19 to: 1) ~~ #failed.
+check value: 'primitiveOilSetAutonomousCompilation available (VM has ProfilingCogit)' value: (cls autonomousCompilation: true) ~~ #failed.
 check value: 'primitiveOilMethodInfo available' value: mCountTo oilInfo ~~ #failed.
 
 m := cls new.
@@ -103,11 +110,16 @@ check value: 'voidCogVMState frees the Oil code' value: (hasOil value: mSumScore
 check value: 'sumScores: correct after voidCogVMState' value: (m sumScores: oc) = 70000.
 
 "--- T6: the cold selectors (built in, or the image's) and the parameters ---"
+check value: 'oilColdSelectors: none set (the built-in list)' value: cls oilColdSelectors isNil.
 check value: 'oilSetColdSelectors: answers the previous list (none)' value: (cls oilSetColdSelectors: #(foo: bar)) isNil.
+check value: 'oilColdSelectors: answers the list set' value: cls oilColdSelectors = #(foo: bar).
 check value: 'oilSetColdSelectors: nil (the built-in list) answers the previous list' value: (cls oilSetColdSelectors: nil) = #(foo: bar).
+check value: 'oilColdSelectors: nil again' value: cls oilColdSelectors isNil.
 check value: 'oilSetColdSelectors: rejects a non-Array' value: (cls oilSetColdSelectors: 3) == #failed.
-check value: 'oilSetParameter:to: rejects an unknown parameter' value: (cls oilSetParameter: 99 to: 1) == #failed.
-check value: 'oilSetParameter:to: accepts the disqualify limit and the unrolling parameters' value: ((#(8 12 13 14 15 16 17 18) collect: [:index | cls oilSetParameter: index to: 0]) allSatisfy: [:r | r ~~ #failed]).
+check value: 'oilSetColdSelectors: rejects an Array of non-Symbols' value: ((cls oilSetColdSelectors: #(1 2)) == #failed and: [cls oilColdSelectors isNil]).
+check value: 'autonomousCompilation: accepts true, false, 1 and 0' value: ({true. false. 1. 0} allSatisfy: [:flag | (cls autonomousCompilation: flag) ~~ #failed]).
+check value: 'autonomousCompilation: rejects anything else' value: ((cls autonomousCompilation: 2) == #failed and: [(cls autonomousCompilation: nil) == #failed]).
+check value: 'disqualifyLimit: accepts an integer, rejects anything else' value: ((cls disqualifyLimit: 0) ~~ #failed and: [(cls disqualifyLimit: nil) == #failed]).
 
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASSED'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 (FileStream forceNewFileNamed: resultPath) nextPutAll: out contents; close.

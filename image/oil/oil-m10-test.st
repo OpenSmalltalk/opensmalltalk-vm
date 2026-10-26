@@ -80,14 +80,5 @@ probes do: [:spec | | sel comp fl |
 		r := run value: comp value: args.
 		real := [model perform: sel withArguments: args] on: Error do: [:e | #error].
 		check value: sel, ' IR = real for ', (args printString contractTo: 40) value: (r = real or: [(r isKindOf: Association) and: [r key == #deopt]])]].
-"Mode bit 16 disables them."
-[| comp |
- comp := OilCompiler new.
- comp typeFeedback: (OilSimulatedTypeFeedback new record: [model floatSum: 10]; yourself).
- comp oilUnrollParameter: 12 value: 16.
- comp compileMethod: cls >> #floatSum: receiverClass: (comp handleFor: cls).
- comp pipe.
- comp prepareFloatLoops.
- check value: 'mode 16: no float loop registers' value: (comp instVarNamed: 'oilNumFloatLoops') = 0] value.
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!

@@ -354,8 +354,6 @@ generateNativeCode
 	"The spill slots follow the method's temps.  They are pushed here, after the stack check, and not in the
 	 frame build: the CoInterpreter also builds machine code frames itself (with the method's temps only, see
 	 activateNewCogMethod:inInterpreter:) and enters them at the stack check."
-	1 to: self codeShift do: "(a measurement aid, see codeShift)"
-		[:nopIndex| cogit Nop].
 	1 to: oilNumSpillTemps do:
 		[:spillIndex| cogit PushCq: (objectMemory integerObjectOf: 0)].
 	0 to: numArgs do:
@@ -377,7 +375,7 @@ generateNativeCode
 	irOffset := 0.
 	[irOffset < irIndex and: [failed not]] whileTrue:
 		[self genFloatLoopEntryAt: irOffset.
-		 ((oilIRTarget at: irOffset) = 2 and: [self loopAlignment > 1]) ifTrue: "a loop header"
+		 (oilIRTarget at: irOffset) = 2 ifTrue: "a loop header"
 			[self genLoopAlignment].
 		 (oilIRTarget at: irOffset) ~= 0 ifTrue:
 			[oilIRLabel at: irOffset put: cogit Label].
@@ -1428,11 +1426,6 @@ cloneSite: siteIndex at: irOffset
 	numSites := newSiteIndex + 1.
 	^newSiteIndex! !
 
-!OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/26/2026 20:30'!
-floatLoopsEnabled
-	"Mode bit 16 (parameter 12 of primitiveOilSetParameter) disables the float loop registers (M10, see prepareFloatLoops)."
-	^(self unrollMode bitAnd: 16) = 0! !
-
 !OilInliningCompiler methodsFor: 'float loop registers' stamp: 'cb 10/25/2026 22:30'!
 prepareFloatLoops
 	"Pass 3 (M10): find the innermost loops whose float variables can live in XMM registers across iterations (see
@@ -1443,7 +1436,6 @@ prepareFloatLoops
 	oilFloatLoopCurrent := -1.
 	0 to: OilNumRegs - 1 do: [:vreg| oilXmmPinned at: vreg put: -1].
 	0 to: OilMaxSites - 1 do: [:siteIndex| oilSiteFloatLoop at: siteIndex put: 0].
-	self floatLoopsEnabled ifFalse: [^self].
 	irOffset := 0.
 	[irOffset < irIndex] whileTrue:
 		[(((self opcodeAt: irOffset) = OilJump
@@ -1810,51 +1802,18 @@ isVariableCandidate: vreg in: candidates kinds: kinds count: numCandidates
 		[:index| ((candidates at: index) = vreg and: [(kinds at: index) = 1 or: [(kinds at: index) = 2]]) ifTrue: [^true]].
 	^false! !
 
-!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
-oilUnrollParameter: kind value: value
-	"Set a loop unrolling parameter (parameters 12 to 18 of primitiveOilSetParameter, oilUnrollParameters at: kind - 12): 12 the
-	 mode, whose bits disable full unrolling (1) and the float loop registers (16) (bits 2, 4 and 8, which controlled the
-	 partial unrolling and the store check elimination Oil no longer does, are ignored); 13 and 14 are unused (they were the
-	 body sizes of partial unrolling); 15 the budget of full unrolling (iterations * body size); 16 the most iterations fully
-	 unrolled; 17 the alignment of loop headers (see loopAlignment); 18 the code shift (see codeShift).  0 (or less) means
-	 the default."
-	oilUnrollParameters at: kind - 12 put: (kind = 18 ifTrue: [value min: 64] ifFalse: [value])! !
-
-!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
-unrollMode
-	"Parameter 12 (see oilUnrollParameter:value:)."
-	<inline: true>
-	^oilUnrollParameters at: 0! !
-
-!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
-unrollParameter: kind default: defaultValue
-	"Parameter kind (13 to 17, see oilUnrollParameter:value:), or defaultValue if it is not set (0 or less)."
-	<inline: true>
-	^(oilUnrollParameters at: kind - 12) > 0 ifTrue: [oilUnrollParameters at: kind - 12] ifFalse: [defaultValue]! !
-
-!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
-codeShift
-	"A measurement aid (parameter 18 of primitiveOilSetParameter, default 0): the number of one byte nops before the method body,
-	 which moves its code by that many bytes, so that benchmarks can average over the placements of its loops."
-	^(oilUnrollParameters at: 18 - 12) max: 0! !
-
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 21:00'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 22:20'!
 genLoopAlignment
-	"Pad with nops to the next multiple of loopAlignment (at most 16), by steps of at most 8 bytes: an AlignmentNops pads with
-	 up to alignment - 1 bytes, and an abstract instruction has room for 14 (CogX64Compiler>>machineCodeBytes)."
+	"Pad with nops to the next multiple of OilLoopAlignment (16 bytes), by steps of at most 8 bytes: an AlignmentNops pads
+	 with up to alignment - 1 bytes, and an abstract instruction has room for 14 (CogX64Compiler>>machineCodeBytes).  The
+	 fall-through into the loop runs the padding.  How the instructions of a loop fall on 16 and 32 byte boundaries changes
+	 its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes makes it faster on
+	 average and less erratic."
 	| alignment |
 	alignment := 8.
-	[alignment <= self loopAlignment] whileTrue:
+	[alignment <= OilLoopAlignment] whileTrue:
 		[cogit AlignmentNops: alignment.
 		 alignment := alignment * 2]! !
-
-!OilInliningCompiler methodsFor: 'tuning parameters' stamp: 'cb 10/26/2026 20:30'!
-loopAlignment
-	"The alignment (in bytes, at most 16) of the loop headers (OilLoopAlignment, or parameter 17 of primitiveOilSetParameter; 1 for
-	 none): the fall-through into the loop runs the padding (nops).  How the instructions of a loop fall on 16 and 32 byte
-	 boundaries changes its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes
-	 makes it faster on average and less erratic."
-	^(self unrollParameter: 17 default: OilLoopAlignment) min: 16 "(see genLoopAlignment)"! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 genCheckBounds: indexReg limit: limitReg site: siteIndex

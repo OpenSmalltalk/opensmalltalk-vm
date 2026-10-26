@@ -30,11 +30,17 @@ estimateOfAbstractOpcodesPerBytecodes
 	<inline: true>
 	^oilNumMethodPICCases > 0 ifTrue: [16] ifFalse: [11]! !
 
-!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 15:00'!
+!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:20'!
 oilAutoCompileEnabled
-	"Does a trip compile the hot method with Oil (the default; see primitiveOilSetParameter, parameter 19)?"
+	"Does a trip compile the hot method with Oil (the default; see primitiveOilSetAutonomousCompilation)?"
 	<api>
 	^oilNoAutoCompile not! !
+
+!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:20'!
+oilSetAutoCompileEnabled: aBoolean
+	"See primitiveOilSetAutonomousCompilation."
+	<api>
+	oilNoAutoCompile := aBoolean not! !
 
 !ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 01:50'!
 genJumpBackTo: targetBytecodePC

@@ -1,35 +1,34 @@
 Object subclass: #OilDeoptMetadataReader
-	instanceVariableNames: 'receiverClass literals bytes base'
+	instanceVariableNames: 'receiverClass metadata base'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'OilJIT-debugging'!
 
 !OilDeoptMetadataReader commentStamp: 'cb 10/26/2026 14:30' prior: 0!
-I decode a copy of the deoptimization metadata of an Oil method, for VM engineers and benchmarkers (the debugger needs only Context>>contexts and Context>>deoptimize).  CompiledMethod>>oilMetadata (primitiveOilMetadata) answers the copies: nil, or an Array of triples { class or nil. literals. bytes }, one for the method's own Oil code, else one per specialization.  The metadata object itself is hidden in the VM; see the OilMD* constants of OilConstants for its layout.
+I decode a copy of the deoptimization metadata of an Oil method, for VM engineers and benchmarkers (the debugger needs only Context>>contexts and Context>>deoptimize).  CompiledMethod>>oilMetadata (primitiveOilMetadata) answers the copies: nil, or an Array of pairs { class or nil. metadata }, one for the method's own Oil code, else one per specialization.  The metadata object itself is hidden in the VM; its copy is a CompiledMethod (never run): its literal frame, then its bytes (see the OilMD* constants of OilConstants for their layout).
 
 	reader := OilDeoptMetadataReader on: (aMethod oilMetadata).
 	reader frames. reader sites. reader printString
 
 receiverClass	<Class|nil>	the class of a specialization, nil for the method's own Oil code
-literals		<Array>		the literal frame: the root method, the inlined selectors, then the objects the records refer to (literal index 0 stands for nil)
-bytes		<ByteArray>	the bytes after the literal frame: the header, then the records
+metadata	<CompiledMethod>	the copy of the metadata: its literal frame (the root method, the inlined selectors, then the objects the records refer to; literal index 0 stands for nil), then its bytes (the header, then the records)
 base		<Integer>	the byte offset of the header in the metadata object (offsets in the header and records are offsets in the object)!
 
-!OilDeoptMetadataReader class methodsFor: 'instance creation' stamp: 'cb 10/26/2026 14:30'!
-on: metadata
-	"metadata: a triple { class or nil. literals. bytes } or an Array of them (answer a reader on the first)."
-	| triple |
-	metadata isNil ifTrue: [^self error: 'no Oil metadata'].
-	triple := (metadata size = 3 and: [(metadata at: 3) isKindOf: ByteArray])
-				ifTrue: [metadata]
-				ifFalse: [metadata first].
-	^self new setClass: (triple at: 1) literals: (triple at: 2) bytes: (triple at: 3)! !
+!OilDeoptMetadataReader class methodsFor: 'instance creation' stamp: 'cb 10/26/2026 22:15'!
+on: metadataOrPairs
+	"metadataOrPairs: a pair { class or nil. metadata } or an Array of them (answer a reader on the first)."
+	| pair |
+	metadataOrPairs isNil ifTrue: [^self error: 'no Oil metadata'].
+	pair := (metadataOrPairs size = 2 and: [(metadataOrPairs at: 2) isCompiledMethod])
+				ifTrue: [metadataOrPairs]
+				ifFalse: [metadataOrPairs first].
+	^self new setClass: (pair at: 1) metadata: (pair at: 2)! !
 
 !OilDeoptMetadataReader class methodsFor: 'instance creation' stamp: 'cb 10/26/2026 14:30'!
 allOn: metadata
-	"A reader per triple of metadata (see on:), or none if nil."
+	"A reader per pair of metadata (see on:), or none if nil."
 	metadata isNil ifTrue: [^#()].
-	^metadata collect: [:triple | self on: triple]! !
+	^metadata collect: [:pair | self on: pair]! !
 
 !OilDeoptMetadataReader class methodsFor: 'primitives' stamp: 'cb 10/26/2026 14:30'!
 metadataOf: aCompiledMethod
@@ -50,29 +49,30 @@ deoptimize: aContext
 	<primitive: 'primitiveOilDeoptimize'>
 	^aContext! !
 
-!OilDeoptMetadataReader methodsFor: 'initialization' stamp: 'cb 10/26/2026 14:30'!
-setClass: aClassOrNil literals: anArray bytes: aByteArray
+!OilDeoptMetadataReader methodsFor: 'initialization' stamp: 'cb 10/26/2026 22:15'!
+setClass: aClassOrNil metadata: aCompiledMethod
 	receiverClass := aClassOrNil.
-	literals := anArray.
-	bytes := aByteArray.
-	base := literals size + 1 * 8! !
+	metadata := aCompiledMethod.
+	base := metadata initialPC - 1! !
 
 !OilDeoptMetadataReader methodsFor: 'accessing' stamp: 'cb 10/26/2026 14:30'!
 receiverClass
 	^receiverClass! !
 
-!OilDeoptMetadataReader methodsFor: 'accessing' stamp: 'cb 10/26/2026 14:30'!
+!OilDeoptMetadataReader methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:15'!
 literals
-	^literals! !
+	"The literal frame of the metadata."
+	^(1 to: metadata numLiterals) collect: [:index | metadata literalAt: index]! !
 
-!OilDeoptMetadataReader methodsFor: 'accessing' stamp: 'cb 10/26/2026 14:30'!
+!OilDeoptMetadataReader methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:15'!
 bytes
-	^bytes! !
+	"The bytes of the metadata after its literal frame: the header, then the records."
+	^(base + 1 to: metadata size) collect: [:index | metadata at: index] as: ByteArray! !
 
-!OilDeoptMetadataReader methodsFor: 'decoding' stamp: 'cb 10/26/2026 14:30'!
+!OilDeoptMetadataReader methodsFor: 'decoding' stamp: 'cb 10/26/2026 22:15'!
 u8: offset
 	"The byte at offset in the metadata object (little endian, like all its fields)."
-	^bytes at: offset - base + 1! !
+	^metadata at: offset + 1! !
 
 !OilDeoptMetadataReader methodsFor: 'decoding' stamp: 'cb 10/26/2026 14:30'!
 s8: offset
@@ -102,7 +102,7 @@ header: field
 !OilDeoptMetadataReader methodsFor: 'decoding' stamp: 'cb 10/26/2026 14:30'!
 literal: index
 	"Literal index 0 stands for nil."
-	^index = 0 ifTrue: [nil] ifFalse: [literals at: index]! !
+	^index = 0 ifTrue: [nil] ifFalse: [metadata literalAt: index]! !
 
 !OilDeoptMetadataReader methodsFor: 'decoding' stamp: 'cb 10/26/2026 14:30'!
 pcFrom: offset
@@ -111,11 +111,11 @@ pcFrom: offset
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 isValid
-	^bytes size >= 34 and: [(self u32: base) = 16r4F494C34]! !
+	^metadata size - base >= 34 and: [(self u32: base) = 16r4F494C34]! !
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 rootMethod
-	^literals at: 1! !
+	^metadata literalAt: 1! !
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 numSites
@@ -153,7 +153,7 @@ inlinedSelectors
 	| count |
 	count := self s16: base + 32.
 	count < 0 ifTrue: [^nil].
-	^(2 to: count + 1) collect: [:index | literals at: index]! !
+	^(2 to: count + 1) collect: [:index | metadata literalAt: index]! !
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 header
@@ -260,14 +260,14 @@ printOn: aStream
 
 !CompiledMethod methodsFor: '*OilJIT-debugging' stamp: 'cb 10/26/2026 14:30'!
 oilMetadata
-	"Copies of the deoptimization metadata of my Oil code: nil, or an Array of triples { class or nil. literals. bytes }
+	"Copies of the deoptimization metadata of my Oil code: nil, or an Array of pairs { class or nil. metadata (a CompiledMethod) }
 	 (see OilDeoptMetadataReader)."
 	<primitive: 'primitiveOilMetadata'>
 	^nil! !
 
 !CompiledMethod methodsFor: '*OilJIT-debugging' stamp: 'cb 10/26/2026 14:30'!
 oilMetadataFor: aClass
-	"The triple { class or nil. literals. bytes } of my Oil code specialized for aClass (or of my own Oil code), or nil."
+	"The pair { class or nil. metadata } of my Oil code specialized for aClass (or of my own Oil code), or nil."
 	<primitive: 'primitiveOilMetadata'>
 	^nil! !
 

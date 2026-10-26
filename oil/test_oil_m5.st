@@ -50,7 +50,13 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
     ^ [10 to: 1000000 do: [:i | self hashProbe: array key: (4000 * 17)]] timeToRun')
 	do: [:s | (Smalltalk at: #OilTestModel) compile: (s copyReplaceAll: 'BS' with: (String with: $\ with: $\)) classified: 'tests'].
 (Smalltalk at: #OilTestModel) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilTestModel) class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilTestModel) class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilTestModel) class compile: 'oilSetParameter: index to: value
+	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
+	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
+	index = 8 ifTrue: [^self disqualifyLimit: value].
+	^self' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 (Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: pairs

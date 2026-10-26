@@ -67,7 +67,7 @@ check value: 'sumArray: IR result = real result' value: (run value: c value: #su
 "--- 4. 1-based indexing: (i - 1) + 1 and + 0 fold away ---"
 c := compile value: #sumIndexed: value: {{arr}} value: nil.
 hist := c opcodeHistogram.
-check value: 'sumIndexed: (i - 1) + 1 folded (only the loop increment remains as OilAddImmTagged)' value: (hist occurrencesOf: 'AddImmTagged') = 1.
+check value: 'sumIndexed: (i - 1) + 1 not combined (Oil no longer folds affine chains): two OilAddImmTagged, plus the loop increment' value: (hist occurrencesOf: 'AddImmTagged') = 3.
 check value: 'sumIndexed: + 0 folded (single accumulator OilAddTagged)' value: (hist occurrencesOf: 'AddTagged') = 1.
 check value: 'sumIndexed: IR result = real result' value: (run value: c value: #sumIndexed: value: {arr}) = (model sumIndexed: arr).
 
@@ -75,12 +75,12 @@ check value: 'sumIndexed: IR result = real result' value: (run value: c value: #
 c := compile value: #peepholes:with: value: {{37. 12}. {-5. 7}} value: nil.
 hist := c opcodeHistogram.
 check value: 'peepholes: no sends at all' value: ((hist occurrencesOf: 'Call1') + (hist occurrencesOf: 'Call0') + (hist occurrencesOf: 'CallN')) = 0.
-check value: 'peepholes: (i-1)+1, (i+1)-1, i+0, 0+i, i-0, (i-1)+1+0, i*1, i//1, bitAnd: -1, bitOr: 0 emit nothing (12 Moves into the brace only)' value: (hist occurrencesOf: 'Move') = 10.
+check value: 'peepholes: i+0, 0+i, i-0, +0, i*1, i//1, bitAnd: -1, bitOr: 0 emit nothing (7 Moves into the brace only)' value: (hist occurrencesOf: 'Move') = 7.
 check value: 'peepholes: 3 + 4 constant folded' value: (hist occurrencesOf: 'ConstTagged') = 2.
 check value: 'peepholes: bitAnd:/bitOr:/bitXor: as single tagged ops' value: ((hist occurrencesOf: 'AndTagged') >= 1 and: [(hist occurrencesOf: 'OrTagged') = 1 and: [(hist occurrencesOf: 'XorTagged') = 1]]).
 check value: 'peepholes: // 4 and bitShift: as OilShiftTagged, * 31 / * 9 / * 8 via shifts' value: (hist occurrencesOf: 'ShiftTagged') = 6.
 check value: 'peepholes: \\ 2 as OilOddTagged' value: (hist occurrencesOf: 'OddTagged') = 1.
-check value: 'peepholes: (i+5)-2 and (i-3)+1 combined into one OilAddImmTagged each' value: (hist occurrencesOf: 'AddImmTagged') = 2.
+check value: 'peepholes: (i-1)+1, (i+1)-1, (i+5)-2, (i-3)+1 and (i-1)+1+0 not combined (Oil no longer folds affine chains): two OilAddImmTagged each' value: (hist occurrencesOf: 'AddImmTagged') = 10.
 #((37 12) (-5 7) (0 0) (1000000 -3) (-1 -1)) do: [:pair |
 	check value: 'peepholes: IR result = real result for ', pair printString value: (run value: c value: #peepholes:with: value: pair) = (model peepholes: pair first with: pair last)].
 check value: 'peepholes: SmallInteger overflow deopts (no wrong result)' value: ((run value: c value: #peepholes:with: value: {SmallInteger maxVal. 1}) isKindOf: Association).

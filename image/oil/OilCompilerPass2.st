@@ -649,8 +649,7 @@ fullyUnrollLoop: loopHead backJump: backJump
 	 a constant before the loop or by the header).  The copies assign the induction variable its values (OilConstTagged)
 	 instead of stepping it, and the tests, known to hold, go."
 	| irOffset opcode cmpOffset bfOffset tailOffset cond ivReg limitValue ivValue ivStart headerStep tailStep stepMagnitude trips bodySize copyWords headerWords numCopySites |
-	((self unrollMode bitAnd: 1) = 0
-	 and: [self isUnrollableLoop: loopHead backJump: backJump]) ifFalse: [^false].
+	(self isUnrollableLoop: loopHead backJump: backJump) ifFalse: [^false].
 	"The header, then the test."
 	irOffset := loopHead.
 	[opcode := self opcodeAt: irOffset.
@@ -709,7 +708,7 @@ fullyUnrollLoop: loopHead backJump: backJump
 	[ivValue := ivValue + headerStep.
 	 self condition: cond holdsFor: ivValue and: limitValue] whileTrue:
 		[trips := trips + 1.
-		 trips > (self unrollParameter: 16 default: OilUnrollMaxTrips) ifTrue: [^false].
+		 trips > OilUnrollMaxTrips ifTrue: [^false].
 		 ivValue := ivValue + tailStep].
 	trips = 0 ifTrue: [^false].
 	"The budget, the room."
@@ -727,7 +726,7 @@ fullyUnrollLoop: loopHead backJump: backJump
 		 irOffset = cmpOffset ifTrue: [headerWords := copyWords].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	numCopySites := self copySitesFrom: bfOffset + 1 to: backJump.
-	(trips * bodySize <= (self unrollParameter: 15 default: OilUnrollFullBudget)
+	(trips * bodySize <= OilUnrollFullBudget
 	 and: [self canGrowBy: (trips * copyWords) + headerWords + 1 sites: (trips - 1) * numCopySites]) ifFalse: [^false].
 	"Record it.  The test and the steps go, with their deopt sites."
 	self recordUnroll: loopHead backJump: backJump test: cmpOffset count: trips iv: ivReg value: ivStart word1: headerWords word2: copyWords.

@@ -29,7 +29,13 @@ cls compile: 'spin: flag max: m | n | n := 0. [(flag at: 1) == true or: [n >= m]
 cls compile: 'spinItem: it flag: flag max: m | n | n := 0. [(flag at: 1) == true or: [n >= m]] whileFalse: [n := n + it score]. ^n' classified: 'tests'.
 cls compile: 'spinTo: flag max: m | n | n := 0. 1 to: m do: [:i | (flag at: 1) == true ifTrue: [^n]. n := n + 1]. ^n' classified: 'tests'.
 cls compile: 'spinFloat: flag max: m | n f | n := 0. f := 0.0. [(flag at: 1) == true or: [n >= m]] whileFalse: [n := n + 1. f := f + 1.5]. ^n' classified: 'tests'.
-cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value
+	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
+	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
+	index = 8 ifTrue: [^self disqualifyLimit: value].
+	^self' classified: 'oil'.
 cls class compile: 'oilTenureAll <primitive: 138> ^nil' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.

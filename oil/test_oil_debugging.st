@@ -9,7 +9,7 @@
  activation has its own context.  Also checks the one-argument forms of the primitives (on OilDeoptMetadataReader class).
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-debugging-result.txt next to the image."
 | out failures check sels cls item model items readerFile dir runAndCapture expected chainOf stackOf reference oilChain
-  oilChain1 info res expectedSum meta reader reader1 callSites site gcReader triple spec r |
+  oilChain1 info res expectedSum meta reader reader1 callSites site gcReader pair spec r |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-debugging-result.txt').
 failures := OrderedCollection new.
@@ -35,7 +35,13 @@ cls compile: 'run: a | s | s := 0. 1 to: a size do: [:i | s := s + ((a at: i) bo
 cls compile: 'blockRun: a | s | s := 0. a do: [:e | s := s + (e bonus: e score)]. ^s' classified: 'tests'.
 cls compile: 'specRun: a | s | s := 0. 1 to: a size do: [:i | s := s + ((a at: i) bonus: i)]. ^s' classified: 'tests'.
 cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value
+	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
+	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
+	index = 8 ifTrue: [^self disqualifyLimit: value].
+	^self' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 cls class compile: 'oilSetSelectors: pairs
@@ -132,7 +138,7 @@ check value: 'deoptimize of a baseline context' value: thisContext deoptimize ==
 check value: 'deoptimize: of a non-context fails (fallback answers it)' value: (OilDeoptMetadataReader deoptimize: 3) == 3.
 "6. CompiledMethod>>oilMetadata: copies, decoded by OilDeoptMetadataReader."
 meta := (cls >> #run:) oilMetadata.
-check value: 'oilMetadata: one triple, for the own Oil code' value: (meta isArray and: [meta size = 1 and: [meta first first isNil]]).
+check value: 'oilMetadata: one pair, for the own Oil code' value: (meta isArray and: [meta size = 1 and: [meta first first isNil and: [meta first last isCompiledMethod]]]).
 reader := OilDeoptMetadataReader on: meta.
 out nextPutAll: 'run: '; print: reader; cr; nextPutAll: 'frames: '; print: (reader frames collect: [:f | (f at: #method) selector]); cr; flush.
 check value: 'reader: valid' value: reader isValid.
@@ -146,8 +152,8 @@ check value: 'reader: contextsAtSite: = contexts' value: (site notNil and: [(rea
 check value: 'reader: deopts counted' value: reader deopts = 0.
 reader1 := OilDeoptMetadataReader on: (OilDeoptMetadataReader metadataOf: cls >> #run:).
 check value: 'metadataOf: (1 arg) = oilMetadata' value: (reader1 bytes = reader bytes and: [reader1 literals = reader literals]).
-triple := (cls >> #run:) oilMetadataFor: cls.
-check value: 'oilMetadataFor: a class (own Oil code)' value: (triple notNil and: [(triple at: 3) = reader bytes]).
+pair := (cls >> #run:) oilMetadataFor: cls.
+check value: 'oilMetadataFor: a class (own Oil code)' value: (pair notNil and: [(OilDeoptMetadataReader on: pair) bytes = reader bytes]).
 check value: 'oilMetadata of a method without Oil code' value: (item >> #bonus:) oilMetadata isNil.
 "the copies survive GCs that move the objects they refer to (and the Oil code's metadata keeps working)"
 1 to: 100000 do: [:k | Array new: 20].
@@ -155,7 +161,7 @@ Smalltalk garbageCollect.
 gcReader := OilDeoptMetadataReader on: (cls >> #run:) oilMetadata.
 check value: 'reader after GC: valid, same bytes' value: (reader isValid and: [gcReader bytes = reader bytes and: [reader rootMethod == (cls >> #run:)]]).
 check value: 'run: deoptimize after GC' value: (runAndCapture value: #run: value: [:ctx :me | ctx deoptimize]) = expectedSum.
-"7. A specialization: one triple, with its class."
+"7. A specialization: one pair, with its class."
 3 timesRepeat: [runAndCapture value: #specRun: value: [:ctx :me | ]].
 r := (cls >> #specRun:) oilSpecializeFor: cls.
 check value: 'specRun: specializes' value: r = 0.

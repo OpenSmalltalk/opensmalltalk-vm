@@ -1,11 +1,10 @@
 "Oil end-to-end test (native) of Milestone 10: float loop registers.  In an innermost loop without calls, the float
  variables live in XMM registers across iterations (unboxed once when the loop is entered, boxed as SmallFloat64s only at
  its exits and before deoptimizing; their values are checked to fit a SmallFloat64), and the float invariants are unboxed
- once.  Each probe is compiled twice, with float loop registers (the default) and without (a copy compiled with
- parameter 12 = 16 of primitiveOilSetParameter), checked against the baseline JIT (deopts included: a variable that stops fitting a
- SmallFloat64, a non-Float entering the loop) and timed.
+ once.  Each probe is compiled, checked against the baseline JIT (a copy of the method left to it; deopts included: a
+ variable that stops fitting a SmallFloat64, a non-Float entering the loop) and timed.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m10-result.txt next to the image."
-| out failures check sels setSelectors probeExtra model cls res last ir opcodes statsOf info times probes irNames |
+| out failures check sels setSelectors model cls res last ir opcodes statsOf info times probes irNames |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m10-result.txt').
 failures := OrderedCollection new.
@@ -37,12 +36,18 @@ cls := Smalltalk at: #OilM10Model.
 	do: [:src | | sel |
 		cls compile: src classified: 'tests'.
 		sel := (Parser new parseSelector: src) asString.
-		#('Ref' 'Base') do: [:suffix |
+		#('Base') do: [:suffix |
 			cls compile: (sel last = $:
 					ifTrue: [(src copyFrom: 1 to: (src indexOf: $:) - 1), suffix, (src copyFrom: (src indexOf: $:) to: src size)]
 					ifFalse: [sel, suffix, (src allButFirst: sel size)]) classified: 'tests']].
 cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value
+	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
+	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
+	index = 8 ifTrue: [^self disqualifyLimit: value].
+	^self' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 cls class compile: 'oilSetSelectors: pairs
@@ -65,25 +70,22 @@ sels add: 5; add: #bitXor:.
 	do: [:s | sels add: 6; add: s].
 #(error: errorNoFreeSpace errorSubscriptBounds: errorNotIndexable subclassResponsibility halt doesNotUnderstand: primitiveFailed makeRoomAtLast makeRoomAtFirst)
 	do: [:s | sels add: 7; add: s].
-probeExtra := #().
-setSelectors := [:off | cls oilSetSelectors: sels asArray, probeExtra, (off ifTrue: [#(12 16)] ifFalse: [#()])].
-check value: 'primitiveOilSetSelectors' value: (setSelectors value: false) ~~ #failed.
+setSelectors := [cls oilSetSelectors: sels asArray].
+check value: 'primitiveOilSetSelectors' value: setSelectors value ~~ #failed.
 model := cls new.
 irNames := #(ConstTagged Const64 Move AddTagged SubTagged AndTagged OrTagged XorTagged ShiftTagged OddTagged LoadField StoreField LoadElement StoreElement CmpTagged BranchTrue BranchFalse Jump Return GuardClass CheckBounds Call0 Call1 CallN AddImmTagged CmpImmTagged LoadSize MakeClosure NewArray CallSuper AddImmTaggedNC ModTagged LoadByteSize LoadByte LoadChar StoreByte StoreChar CompareBytes Trap CharValue StreamNext StreamNextPut AddFloat SubFloat MulFloat DivFloat CmpFloat IdentityHash IndexOfByte SkipSeparators NewObject CmpClass GuardClass2 StringHash).
-"stats: {loops with float registers. fully unrolled. partially unrolled} of the last compilation"
-statsOf := [| st | st := (CompiledMethod oilLastCompilation) at: 11. {st at: 27. st at: 24. st at: 25}].
-res := [:sel :warm :off | | cm r |
+"stats: {loops with float registers. fully unrolled} of the last compilation"
+statsOf := [| st | st := (CompiledMethod oilLastCompilation) at: 11. {st at: 27. st at: 24}].
+res := [:sel :warm | | cm r |
 	cm := cls >> sel.
 	3 timesRepeat: warm.
-	setSelectors value: off.
 	r := cm oilCompileFor: cls.
-	setSelectors value: false.
 	last := CompiledMethod oilLastCompilation.
-	out nextPutAll: sel; nextPutAll: ': oilCompileFor: -> '; print: r; nextPutAll: ' in '; print: (last at: 9); nextPutAll: ' us; float loops, fully, partially unrolled: '; print: statsOf value; cr; flush.
+	out nextPutAll: sel; nextPutAll: ': oilCompileFor: -> '; print: r; nextPutAll: ' in '; print: (last at: 9); nextPutAll: ' us; float loops, fully unrolled: '; print: statsOf value; cr; flush.
 	r].
 times := [:block | | best | best := SmallInteger maxVal. 5 timesRepeat: [best := best min: (Time millisecondsToRun: block)]. best].
 info := [:sel | (cls >> sel) oilInfo].
-"{selector. warm-up arguments. argument lists checked. check of {float loops. full. partial}. benchmark block or nil}"
+"{selector. warm-up arguments. argument lists checked. check of {float loops. full}. benchmark block or nil}"
 probes := {
 	{#mandelbrot:. {20}. {{0}. {1}. {20}. {100}}. [:st | st first >= 1]. [:sel | model perform: sel with: 400]}.
 	{#floatSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | st first = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
@@ -91,27 +93,22 @@ probes := {
 	{#poly:n:. {1.0001. 100}. {{1.0001. 10}. {0.5. 1000}. {3. 10}. {2.0. 2000}. {nil. 3}. {2.5. 0}}. [:st | st first = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 0.999 with: 1000000]]}.
 	{#whileHalve:. {1000.0}. {{1000.0}. {0.5}. {1.0e300}. {7}. {1.0e10}}. [:st | st first = 1]. nil}.
 	{#leaky:. {1.5}. {{1.5}. {1.0e30}. {2}. {1.0e-30}}. [:st | true]. nil}}.
-probes do: [:spec | | sel refSel baseSel results codes st |
+probes do: [:spec | | sel baseSel results code st |
 	sel := spec first.
-	refSel := ((sel copyFrom: 1 to: (sel indexOf: $:) - 1), 'Ref', (sel copyFrom: (sel indexOf: $:) to: sel size)) asSymbol.
 	baseSel := ((sel copyFrom: 1 to: (sel indexOf: $:) - 1), 'Base', (sel copyFrom: (sel indexOf: $:) to: sel size)) asSymbol.
 	results := (spec at: 3) collect: [:args | [model perform: baseSel withArguments: args] on: Error do: [:e | #error]].
-	codes := OrderedCollection new.
-	codes add: (res value: sel value: [model perform: sel withArguments: (spec at: 2)] value: false).
+	code := res value: sel value: [model perform: sel withArguments: (spec at: 2)].
 	st := statsOf value.
-	codes add: (res value: refSel value: [model perform: refSel withArguments: (spec at: 2)] value: true).
-	check value: sel, ' compiles, with and without float loop registers' value: codes asArray = #(0 0).
+	check value: sel, ' compiles' value: code = 0.
 	check value: sel, ' float loop registers as expected' value: ((spec at: 4) value: st).
-	(spec at: 5) ifNotNil: [:block | | tf tr tb |
+	(spec at: 5) ifNotNil: [:block | | tf tb |
 		Smalltalk garbageCollect.
 		tb := times value: [block value: baseSel].
-		tr := times value: [block value: refSel].
 		tf := times value: [block value: sel].
-		out nextPutAll: 'BENCH '; nextPutAll: sel; nextPutAll: ' float registers '; print: tf; nextPutAll: ' ms, without '; print: tr; nextPutAll: ' ms, baseline JIT '; print: tb; nextPutAll: ' ms'; cr; flush.
+		out nextPutAll: 'BENCH '; nextPutAll: sel; nextPutAll: ' float registers '; print: tf; nextPutAll: ' ms, baseline JIT '; print: tb; nextPutAll: ' ms'; cr; flush.
 		check value: sel, ' no deopt while benchmarked' value: ((info value: sel) ifNil: [false] ifNotNil: [:i | (i at: 1) = 0])].
 	(spec at: 3) with: results do: [:args :expectedResult |
-		check value: sel, ' = baseline for ', (args printString contractTo: 40) value: ([model perform: sel withArguments: args] on: Error do: [:e | #error]) = expectedResult.
-		check value: refSel, ' = baseline for ', (args printString contractTo: 40) value: ([model perform: refSel withArguments: args] on: Error do: [:e | #error]) = expectedResult]].
+		check value: sel, ' = baseline for ', (args printString contractTo: 40) value: ([model perform: sel withArguments: args] on: Error do: [:e | #error]) = expectedResult]].
 Smalltalk garbageCollect.
 check value: 'after a full GC' value: ((model mandelbrot: 50) = (model mandelbrotBase: 50) and: [(model floatSum: 1000) = 1500.0]).
 Smalltalk voidCogVMState.
