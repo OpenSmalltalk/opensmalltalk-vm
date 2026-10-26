@@ -1,9 +1,9 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counterIndex oilTripCounters oilNextCounterIndex ceOilTripTrampoline ceOilDeoptTrampoline oilColdSelectors oilExtraSelectors oilSpecializations oilNumSpecializations oilNumMethodPICCases oilCompileMicroseconds oilKeepSpecializations oilNoAutoCompile'
+	instanceVariableNames: 'oilTripCounters oilNextCounterIndex ceOilTripTrampoline ceOilDeoptTrampoline oilColdSelectors oilExtraSelectors oilSpecializations oilNumSpecializations oilNumMethodPICCases oilCompileMicroseconds oilKeepSpecializations oilNoAutoCompile'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilNumTripCounters OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
-!ProfilingCogit commentStamp: 'cb 10/25/2026 01:50' prior: 0!
+!ProfilingCogit commentStamp: 'cb 10/26/2026 20:20' prior: 0!
 A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
 
 Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful full block entries (compileFullBlockMethodFrameBuild:).  Straight-line code, conditional branches and legacy vanilla blocks carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to indicate the kind of site (OilTripBackJump or OilTripBlockEntry).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), compiles it with Oil and installs the Oil code for its next activations (see CoInterpreter>>oilAutoCompile:receiver:), and returns directly to machine code.  Nothing on the trip path collects garbage or changes the stack: the running activations keep running the baseline code.  A counter trips once (it then goes negative).
@@ -11,10 +11,8 @@ Trip counters are placed only at two kinds of site: loop back jumps (genJumpBack
 Instance Variables
 	ceOilDeoptTrampoline:	<Integer>
 	ceOilTripTrampoline:	<Integer>
-	counterIndex:			<Integer>
 	oilNextCounterIndex:	<Integer>
 	oilTripCounters:		<CArray of unsigned int>
-	numCounters:			<Integer>
 	oilCompileMicroseconds:	<Integer>
 	oilExtraSelectors:		<Integer oop>
 	oilKeepSpecializations:	<Boolean>
@@ -45,7 +43,7 @@ genJumpBackTo: targetBytecodePC
 	self genOilTripCounter: OilTripBackJump.
 	^super genJumpBackTo: targetBytecodePC! !
 
-!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 01:50'!
+!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/26/2026 20:20'!
 genOilTripCounter: kind
 	"Generate the code for a trip counter site of the given kind:
 		counter := counter - 1. counter = 0 ifTrue: [ceOilTripTrampoline(kind)]
@@ -57,10 +55,7 @@ genOilTripCounter: kind
 	 the frame's pc (it neither allocates, collects garbage nor changes the stack)."
 	| counterAddress notTripped |
 	<var: #notTripped type: #'AbstractInstruction *'>
-	counterIndex >= numCounters ifTrue:
-		[^0].
 	counterAddress := self oilAllocateTripCounter.
-	counterIndex := counterIndex + 1.
 	self MoveA32: counterAddress R: TempReg.
 	self SubCq: 1 R: TempReg.
 	self MoveR: TempReg A32: counterAddress.
@@ -91,13 +86,6 @@ compileFullBlockMethodFrameBuild: numCopied
 	needsFrame ifTrue:
 		[self genOilTripCounter: OilTripBlockEntry].! !
 
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-maybeAllocAndInitCounters
-	"The counters are allocated at their sites, from the ring buffer (see oilAllocateTripCounter)."
-	<inline: true>
-	counterIndex := 0.
-	^true! !
-
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/26/2026 10:40'!
 oilAllocateTripCounter
 	"Answer the address of a trip counter for a site being compiled, initialized to OilInitialCounterValue: the next one of
@@ -109,57 +97,6 @@ oilAllocateTripCounter
 	^self
 		cCode: [(self addressOf: (oilTripCounters at: oilNextCounterIndex)) asUnsignedInteger]
 		inSmalltalk: [oilNextCounterIndex * OilCounterBytes]! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-maybeCounterIndex
-	<inline: true>
-	^counterIndex! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-maybeFreeCounters
-	"(no heap object holds the trip counters, see oilAllocateTripCounter)"
-	<inline: true>! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-maybeInitNumCounters
-	<inline: true>
-	numCounters := 0! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-maybeSetCounterIndex: value
-	<inline: true>
-	counterIndex := value! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/24/2026 10:00'!
-numberOfBackwardBranches
-	"Answer the number of backward branches between initialPC and endPC, which
-	 includes those of any embedded (vanilla) blocks.  Mirrors the scan in scanMethod."
-	| pc nExts descriptor count |
-	<var: #descriptor type: #'BytecodeDescriptor *'>
-	pc := initialPC.
-	count := nExts := extA := numExtB := extB := 0.
-	[pc <= endPC] whileTrue:
-		[descriptor := self loadBytesAndGetDescriptor: pc.
-		 descriptor isExtension ifTrue:
-			[self perform: descriptor generator].
-		 (descriptor isBranch
-		  and: [self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj]) ifTrue:
-			[count := count + 1].
-		 pc := pc + descriptor numBytes.
-		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [extA := numExtB := extB := 0]].
-	^count! !
-
-!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/25/2026 00:30'!
-scanMethod
-	"Override to compute the number of trip counters: one per back jump, plus one for
-	 the entry of a frameful full block method."
-	| numBlocks |
-	numBlocks := super scanMethod.
-	numBlocks >= 0 ifTrue:
-		[numCounters := self numberOfBackwardBranches.
-		 (inBlock = InFullBlock and: [needsFrame]) ifTrue:
-			[numCounters := numCounters + 1]].
-	^numBlocks! !
 
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
@@ -306,33 +243,27 @@ oilIsClosure: oop
 	  and: [(objectMemory classIndexOf: oop) = ClassFullBlockClosureCompactIndex
 			or: [(objectMemory classIndexOf: oop) = ClassBlockClosureCompactIndex]]! !
 
-!CoInterpreter class methodsFor: '*VMMaker-JIT-Oil-translation' stamp: 'cb 10/26/2026 05:00'!
+!CoInterpreter class methodsFor: '*VMMaker-JIT-Oil-translation' stamp: 'cb 10/26/2026 20:20'!
 writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator
 	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator.
 	aCCodeGenerator
 		putDefineOf: #COGVM as: 1 on: aStream;
 		putConditionalDefineOf: #COGMTVM as: 0 comment: nil on: aStream.
-	(aCCodeGenerator options at: #Oil ifAbsent: [aCCodeGenerator options at: #oilVM ifAbsent: [false]]) ifTrue:
+	(aCCodeGenerator options at: #Oil ifAbsent: [false]) ifTrue:
 		[aCCodeGenerator
 			putConditionalDefineOf: #Oil
-			as: 1
-			comment: nil
-			on: aStream.
-		 aCCodeGenerator
-			putConditionalDefineOf: #oilVM
 			as: 1
 			comment: nil
 			on: aStream].
 	aStream cr! !
 
-!VMMaker class methodsFor: '*VMMaker-JIT-Oil-configurations' stamp: 'cb 10/24/2026 10:00'!
+!VMMaker class methodsFor: '*VMMaker-JIT-Oil-configurations' stamp: 'cb 10/26/2026 20:20'!
 generateSqueakSpurCogOil64VM
 	"The 64-bit Cog Spur VM with the ProfilingCogit, the profiling tier of the Oil optimizing JIT."
 	^VMMaker
 		generate: CoInterpreter
 		and: ProfilingCogit
 		with: #(Oil true
-				oilVM true
 				ProfilingCogit true
 				ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
