@@ -1994,8 +1994,26 @@ genSendAt: irOffset numArgs: numArgs super: isSuper
 	cogit MoveMw: (oilVRegSpillTemp at: receiverReg) r: FPReg R: ReceiverResultReg.
 	methodClass := (self opcodeAt: irOffset) = OilCallDirectedSuper ifTrue: [self word64At: irOffset + 3] ifFalse: [0].
 	cogit oilGenSend: selIndex numArgs: numArgs super: isSuper above: methodClass.
+	self noteCallSiteAt: irOffset.
 	cogit MoveR: ReceiverResultReg Mw: (oilVRegSpillTemp at: destReg) r: FPReg.
 	self reloadAll! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 14:30'!
+noteCallSiteAt: irOffset
+	"The call at irOffset was just emitted.  If its send has a deopt site with a state, record the site in the metadata
+	 (oilSiteUsed 2: no deopt stub) with the return address of the call as its resume address, so that a frame suspended in
+	 the call maps to the activations it stands for at the send (see CoInterpreter>>oilDeoptimizeFrame:context: and
+	 primitiveOilContexts).  All the registers are in their spill slots during the call (see genSendAt:numArgs:super:)."
+	| siteIndex |
+	(self isSendOpcode: (self opcodeAt: irOffset)) ifFalse: [^self].
+	siteIndex := oilIRSite at: irOffset.
+	(siteIndex >= 0 and: [(siteSnapBase at: siteIndex) >= 0]) ifFalse: [^self].
+	self setScanMethod: (frameMethod at: (siteFrame at: siteIndex)).
+	self decodeAt: (sitePC at: siteIndex).
+	(opcodeTag = OilTagSend or: [opcodeTag = OilTagSendSuper or: [opcodeTag = OilTagSendSpecial]]) ifFalse: [^self].
+	oilSiteResume at: siteIndex put: cogit Label.
+	(oilSiteUsed at: siteIndex) = 0 ifTrue:
+		[oilSiteUsed at: siteIndex put: 2]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
 callArg: argIndex at: irOffset
@@ -2023,7 +2041,7 @@ genDeoptStubs
 	cogit JumpR: TempReg.
 	0 to: numSites - 1 do:
 		[:siteIndex|
-		(oilSiteUsed at: siteIndex) ~= 0 ifTrue:
+		(oilSiteUsed at: siteIndex) = 1 ifTrue: "(not the call sites, see noteCallSiteAt:)"
 			[stub := cogit Label.
 			 (oilSiteFloatLoop at: siteIndex) > 0 ifTrue: "in a loop with float registers: box its float variables first"
 				[self genBoxFloatLoopVariables: (oilSiteFloatLoop at: siteIndex) - 1].

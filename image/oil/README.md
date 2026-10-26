@@ -20,6 +20,7 @@ OilBytecodeScanner
 | `OilCompilerPass2.st` | `OilLoopOptimizer` (Pass 2): `loopOptimize` streams Buffer 1 (`oilIRBuffer1`) into Buffer 2 (`oilIRBuffer2`). `OilFullCompiler`: `valueNumber` (run by Pass 2) and `fuseFloats` (on Pass 2's IR). |
 | `OilCompilerBackend.st` | `OilInliningCompiler` (Pass 3): register allocation, `generateNativeCode` (IR to Cogit abstract instructions), bailout stubs, tagged-register analysis. |
 | `OilSimulation.st` | IR printer (`printIROn:`), `OilSimulatedTypeFeedback` (receiver classes recorded per send site by simulated execution), `OilIRInterpreter` (executes the IR on host objects), test classes. |
+| `OilDeoptMetadataReader.st` | Package `OilJIT-debugging`: `OilDeoptMetadataReader`, which decodes the copies of the deoptimization metadata `CompiledMethod>>oilMetadata` answers (`primitiveOilMetadata`), and the debugger support `Context>>contexts` (`primitiveOilContexts`) and `Context>>deoptimize` (`primitiveOilDeoptimize`), which belong in Kernel. |
 | `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on all SistaV1 methods and blocks. |
 | `oil-m2-test.st` | Pass 1 acceptance test: compiles probes (`sumScores:` and others), checks the IR shape, and compares `OilIRInterpreter` against real execution. |
 | `oil-m4-test.st` | Pass 2 acceptance test: checks loop rotation, bounds-check elimination, shared sizes, unchecked increments, dead code elimination, and equivalence with Pass 1 and real execution. |
