@@ -653,13 +653,13 @@ oilResetUnrollParameters
 
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
 codeShift
-	"A measurement aid (kind 18 of primitiveOilSetSelectors, default 0): the number of one byte nops before the method body,
+	"A measurement aid (parameter 18 of primitiveOilSetParameter, default 0): the number of one byte nops before the method body,
 	 which moves its code by that many bytes, so that benchmarks can average over the placements of its loops."
 	^oilCodeShift max: 0! !
 
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
 loopAlignment
-	"The alignment (in bytes, at most 16) of the loop headers (OilLoopAlignment, or kind 17 of primitiveOilSetSelectors; 1 for
+	"The alignment (in bytes, at most 16) of the loop headers (OilLoopAlignment, or parameter 17 of primitiveOilSetParameter; 1 for
 	 none): the fall-through into the loop runs the padding (nops).  How the instructions of a loop fall on 16 and 32 byte
 	 boundaries changes its speed a lot (up to 1.5 times) from one compilation to another; aligning the headers to 16 bytes
 	 makes it faster on average and less erratic."
@@ -667,7 +667,7 @@ loopAlignment
 
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 21:00'!
 oilUnrollParameter: kind value: value
-	"Set a loop unrolling parameter (kinds 12 to 18 of primitiveOilSetSelectors, with a SmallInteger): 12 the mode, whose
+	"Set a loop unrolling parameter (parameters 12 to 18 of primitiveOilSetParameter): 12 the mode, whose
 	 bits disable full unrolling (1), partial unrolling (2), the store check elimination of young objects (4) and the float
 	 loop registers (16), and allow partial unrolling of bodies with branches (8); 13 the
 	 largest body unrolled 4 times; 14 the largest body unrolled twice; 15 the budget of full unrolling (iterations * body
@@ -1235,7 +1235,7 @@ pass2Statistics: index
 
 !OilLoopOptimizer methodsFor: 'loop unrolling' stamp: 'cb 10/25/2026 22:30'!
 floatLoopsEnabled
-	"Mode bit 16 (kind 12 of primitiveOilSetSelectors) disables the float loop registers (M10, see prepareFloatLoops)."
+	"Mode bit 16 (parameter 12 of primitiveOilSetParameter) disables the float loop registers (M10, see prepareFloatLoops)."
 	^(oilUnrollMode bitAnd: 16) = 0! !
 
 (Smalltalk hasClassNamed: #OilNumericCompiler) ifTrue: [(Smalltalk at: #OilNumericCompiler) removeFromSystem].!

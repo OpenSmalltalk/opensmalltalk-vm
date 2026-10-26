@@ -2,7 +2,7 @@
  OilUnrollMaxTrips iterations, iterations * body <= OilUnrollFullBudget), partial unrolling (4 or 2 times, with the rotated
  loop as the remainder) of counted leaf loops, rotation of loops tested against an immediate or against a limit not known to
  be a SmallInteger (an argument), and stores into young objects without store check.  Each probe is compiled twice, with
- unrolling (the default) and without (a copy of the method compiled with primitiveOilSetSelectors kind 12 = 3), and both are
+ unrolling (the default) and without (a copy of the method compiled with parameter 12 = 3 of primitiveOilSetParameter), and both are
  checked against the baseline JIT, including deoptimizations inside the unrolled copies, and timed.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m9-result.txt next to the image."
 | out failures check sels setSelectors model cls res last ir opcodes countOps r t times statsOf info irNames dump
@@ -49,7 +49,20 @@ cls := Smalltalk at: #OilM9Model.
 			cls compile: (sel last = $:
 					ifTrue: [(src copyFrom: 1 to: (src indexOf: $:) - 1), suffix, (src copyFrom: (src indexOf: $:) to: src size)]
 					ifFalse: [sel, suffix, (src allButFirst: sel size)]) classified: 'tests']].
-cls class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+cls class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.

@@ -49,7 +49,20 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
     1 to: 4000 do: [:i | array at: (i * 17 BS 8191) + 1 put: i * 17].
     ^ [10 to: 1000000 do: [:i | self hashProbe: array key: (4000 * 17)]] timeToRun')
 	do: [:s | (Smalltalk at: #OilTestModel) compile: (s copyReplaceAll: 'BS' with: (String with: $\ with: $\)) classified: 'tests'].
-(Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilTestModel) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilTestModel) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+(Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.

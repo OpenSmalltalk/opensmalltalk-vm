@@ -1,5 +1,5 @@
 OilBytecodeScanner subclass: #OilInliningCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass affineBase affineConst affineVersion regVersion lastDefIR simStackTop highRegTop frameMethod frameBase frameParent frameHome frameCallPC frameIsBlock frameSelfKind frameSelfValue frameSelfClass frameTempStart frameStackStart frameMaxReg framePCBase frameStartPC frameEndPC frameExitChain frameHasLazy frameLazyKind frameLazyValue frameDepth numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop vobjKind vobjLiteral vobjSelfKind vobjSelfValue vobjSelfClass vobjNumCopied vobjCopiedBase vobjHome vobjSize vobjSlotBase numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors condCond condRA condRB condImm condUseImm condIdentity condFrame condPC numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh condSite emittingCond vobjOuter oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumDeadRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass vobjEpoch vobjPC vobjMaterialized oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager condClass oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilPendingAllocBytes oilNumAllocsCombined oilLiveMark condSelKind condSelValue oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes oilDefaultColdSelectorNames'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -202,10 +202,16 @@ registerSelector: selector kind: kind
 		[coldSelectors at: numColdSelectors put: selector.
 		 numColdSelectors := numColdSelectors + 1]! !
 
+!OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/26/2026 15:00'!
+useDefaultColdSelectors
+	"In the VM, recognize the default cold selectors by name (see isColdSelector:)."
+	numColdSelectors := -1! !
+
 !OilInliningCompiler methodsFor: 'initialization' stamp: 'cb 10/25/2026 00:45'!
 resetSelectorRegistry
 	"Forget the registered special selectors (the VM re-registers them before each compilation, since
-	 selector oops move when the garbage collector compacts the heap)."
+	 selector oops move when the garbage collector compacts the heap).  In the VM those not registered are recognized by
+	 name (see isValueSelector:numArgs:, isColdSelector:)."
 	0 to: 4 do: [:selIndex| valueSelectors at: selIndex put: 0].
 	bitXorSelector := oilIndexOfAsciiMethod := oilSkipSeparatorsMethod := oilByteStreamClass := 0.
 	numColdSelectors := 0! !
@@ -371,6 +377,7 @@ includes: anItem in: table count: count
 
 !OilInliningCompiler methodsFor: 'disqualification' stamp: 'cb 10/25/2026 00:45'!
 oilIsDisqualified: aMethod
+	<api>
 	^self includes: aMethod in: oilDisqualified count: (oilNumDisqualified min: OilMaxDisqualified)! !
 
 !OilInliningCompiler methodsFor: 'compilation' stamp: 'cb 10/25/2026 00:45'!
@@ -1579,7 +1586,7 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 		 ((self isValueSelector: selector numArgs: numArgs) not
 		  and: [self inlineSendToVirtualBlock: selector numArgs: numArgs receiver: rcvrSlot]) ifTrue: [^self].
 		 ^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: false].
-	(isSuper not and: [selector = bitXorSelector and: [numArgs = 1
+	(isSuper not and: [(self isBitXorSelector: selector) and: [numArgs = 1
 	 and: [self canInlineSmallIntegerOpOn: rcvrSlot arg: rcvrSlot + 1]]]) ifTrue:
 		[(self genBitOp: OilXorTagged) ifTrue: [^self]].
 	guard := false.
@@ -1628,6 +1635,32 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			[^self]].
 	self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper! !
 
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+isIndexOfAsciiMethod: method
+	"ByteString class>>indexOfAscii:inString:startingAt: (registered, or in the VM, by its selector and class)."
+	oilIndexOfAsciiMethod ~= 0 ifTrue: [^method = oilIndexOfAsciiMethod].
+	^self cCode:
+			[method ~= 0
+			 and: [(self oilSelector: (coInterpreter maybeSelectorOfMethod: method) isNamed: 'indexOfAscii:inString:startingAt:')
+			 and: [(coInterpreter oilApiMethodClassOf: method) = coInterpreter oilApiByteStringMetaclass]]]
+		inSmalltalk: [false]! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+isSkipSeparatorsMethod: method
+	"PositionableStream>>skipSeparators (registered, or in the VM, by its selector and class)."
+	oilSkipSeparatorsMethod ~= 0 ifTrue: [^method = oilSkipSeparatorsMethod].
+	^self cCode:
+			[method ~= 0
+			 and: [(self oilSelector: (coInterpreter maybeSelectorOfMethod: method) isNamed: 'skipSeparators')
+			 and: [coInterpreter oilApiClass: (coInterpreter oilApiMethodClassOf: method) isNamed: 'PositionableStream']]]
+		inSmalltalk: [false]! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+isByteStreamClass: aClass
+	"ReadStream (registered, or in the VM, by name)."
+	oilByteStreamClass ~= 0 ifTrue: [^aClass = oilByteStreamClass].
+	^self cCode: [aClass ~= 0 and: [coInterpreter oilApiClass: aClass isNamed: 'ReadStream']] inSmalltalk: [false]! !
+
 !OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
 isContextClass: classOop
 	"Is classOop Context?  The sender, pc and stackp of a context married to a stack frame are not in its slots (the
@@ -1648,11 +1681,65 @@ staticClassOfSlot: slotIndex
 
 !OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isValueSelector: selector numArgs: numArgs
-	^numArgs <= 4 and: [(valueSelectors at: numArgs) = selector]! !
+	"value, value:, value:value:, value:value:value: or value:value:value:value: (registered, or in the VM, by name)."
+	numArgs > 4 ifTrue: [^false].
+	(valueSelectors at: numArgs) ~= 0 ifTrue: [^(valueSelectors at: numArgs) = selector].
+	^self cCode: [self oilIsValueSelectorNamed: selector numArgs: numArgs] inSmalltalk: [false]! !
+
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/26/2026 15:00'!
+isBitXorSelector: selector
+	"bitXor: (registered, or in the VM, by name)."
+	bitXorSelector ~= 0 ifTrue: [^selector = bitXorSelector].
+	^self cCode: [self oilSelector: selector isNamed: 'bitXor:'] inSmalltalk: [false]! !
 
 !OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 isColdSelector: selector
+	"Is selector never inlined (error paths, slow paths)?  The cold selectors are registered (the image's list, see
+	 CoInterpreterPrimitives>>primitiveOilSetColdSelectors), or numColdSelectors is -1 and, in the VM, the default ones
+	 (defaultColdSelectors) are recognized by name."
+	numColdSelectors < 0 ifTrue:
+		[^self cCode: [self oilIsDefaultColdSelector: selector] inSmalltalk: [false]].
 	^self includes: selector in: coldSelectors count: numColdSelectors! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+oilSelector: selector isNamed: aCString
+	"Is selector the Symbol whose characters are aCString (VM only)?"
+	<var: #aCString type: #'const char *'>
+	<inline: false>
+	| length |
+	length := self strlen: aCString.
+	^selector ~= 0 "(maybeSelectorOfMethod: answers 0 for none)"
+	  and: [(objectMemory isBytes: selector)
+	  and: [(objectMemory numBytesOf: selector) = length
+	  and: [(self strncmp: (self cCoerceSimple: (objectMemory firstIndexableField: selector) to: #'char *') _: aCString _: length) = 0]]]! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+oilIsValueSelectorNamed: selector numArgs: numArgs
+	"Is selector value (numArgs 0) or value: repeated numArgs times (VM only)?"
+	<inline: false>
+	| chars |
+	<var: #chars type: #'char *'>
+	numArgs = 0 ifTrue: [^self oilSelector: selector isNamed: 'value'].
+	((objectMemory isBytes: selector)
+	 and: [(objectMemory numBytesOf: selector) = (6 * numArgs)]) ifFalse: [^false].
+	chars := self cCoerceSimple: (objectMemory firstIndexableField: selector) to: #'char *'.
+	0 to: numArgs - 1 do:
+		[:keywordIndex| (self strncmp: chars + (6 * keywordIndex) _: 'value:' _: 6) = 0 ifFalse: [^false]].
+	^true! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+oilIsDefaultColdSelector: selector
+	"Is selector one of defaultColdSelectors (VM only)?"
+	<inline: false>
+	0 to: (self cCode: '(sqInt)(sizeof(oilDefaultColdSelectorNames) / sizeof(oilDefaultColdSelectorNames[0]))' inSmalltalk: [0]) - 1 do:
+		[:index| (self oilSelector: selector isNamed: (oilDefaultColdSelectorNames at: index)) ifTrue: [^true]].
+	^false! !
+
+!OilInliningCompiler class methodsFor: 'translation' stamp: 'cb 10/26/2026 15:00'!
+defaultColdSelectors
+	"The selectors of the error paths and slow paths, never inlined (they would bloat the IR of the hot loop for nothing),
+	 unless the image supplies its own list (see CoInterpreterPrimitives>>primitiveOilSetColdSelectors)."
+	^#(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed: makeRoomAtLast makeRoomAtFirst)! !
 
 !OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/24/2026 10:30'!
 shouldInline: method selector: selector numArgs: numArgs receiver: rcvrSlot
@@ -1914,10 +2001,10 @@ genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs 
 	 PositionableStream>>skipSeparators of a ReadStream (OilSkipSeparators, laid out like OilCall0).  The image registers the
 	 two methods and the stream class (kinds 9 to 11, see registerSelector:kind:).  Answer whether the send was compiled so."
 	| opcode instIndex |
-	opcode := (method = oilIndexOfAsciiMethod and: [numArgs = 3])
+	opcode := ((self isIndexOfAsciiMethod: method) and: [numArgs = 3])
 				ifTrue: [OilIndexOfByte]
 				ifFalse:
-					[(method = oilSkipSeparatorsMethod and: [numArgs = 0 and: [rcvrClass = oilByteStreamClass]])
+					[((self isSkipSeparatorsMethod: method) and: [numArgs = 0 and: [self isByteStreamClass: rcvrClass]])
 						ifTrue: [OilSkipSeparators]
 						ifFalse: [^false]].
 	(method = 0 or: [(self isEncodableCall: selector super: false) not]) ifTrue: [^false].
@@ -2247,9 +2334,12 @@ genAddConstant: constantVal to: operandSlot result: resultSlot
 			 self recordAddSite: producerSite.
 			 instIndex := self emitOp: OilAddTagged a: destReg b: baseReg c: scratchReg].
 	self noteDef: destReg at: instIndex.
-	affineBase at: destReg put: baseReg.
-	affineConst at: destReg put: totalOffset.
-	affineVersion at: destReg put: (regVersion at: baseReg).
+	"The affine fact destReg = baseReg + totalOffset, unless the add is in place (destReg = baseReg, e.g. self size + 1 on
+	 the expression stack): the base is gone, so (self size + 1) - 1 must not fold to the register now holding self size + 1."
+	destReg ~= baseReg ifTrue:
+		[affineBase at: destReg put: baseReg.
+		 affineConst at: destReg put: totalOffset.
+		 affineVersion at: destReg put: (regVersion at: baseReg)].
 	knownClass at: destReg put: smallIntegerClassHandle.
 	^true! !
 
@@ -2767,6 +2857,11 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilFloatExitTarget declareC: 'static sqInt oilFloatExitTarget[OilMaxFloatExits]'.
 	aCCodeGenerator var: #valueSelectors declareC: 'static sqInt valueSelectors[5]'.
 	aCCodeGenerator var: #coldSelectors declareC: 'static sqInt coldSelectors[32] /* OilMaxColdSelectors */'.
+	aCCodeGenerator
+		var: #oilDefaultColdSelectorNames
+		declareC: 'static const char *oilDefaultColdSelectorNames[] = {',
+					(String streamContents: [:stream | self defaultColdSelectors do: [:selector | stream nextPut: $"; nextPutAll: selector; nextPut: $"] separatedBy: [stream nextPutAll: ', ']]),
+					'}'.
 	#(typeFeedback simHandles simHandleIndex) do:
 		[:var| aCCodeGenerator removeVariable: var]! !
 

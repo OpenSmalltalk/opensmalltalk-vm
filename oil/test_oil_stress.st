@@ -1,12 +1,25 @@
-"Oil full-system stress (native): run SUnit with the trip log on, Oil-compile every hot (tripped) home method, run SUnit
- again on the Oil code, then Compiler recompileAll (which flushes every selector: the Oil code that inlined them is
+"Oil full-system stress (native): run SUnit on the baseline code, then with autonomous compilation on (the trip counters
+ compile every hot home method with Oil and install its code, see CoInterpreter>>oilAutoCompile:receiver:), again on the
+ Oil code, then Compiler recompileAll (which flushes every selector: the Oil code that inlined them is
  discarded, see ProfilingCogit>>unlinkSendsOf:isMNUSelector:) and SUnit once more.  Writes oil-stress-result.txt."
 | out sels classes runSuites log methods results compiled failedCompiles t |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-stress-result.txt').
 Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilStress) class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilStress) class compile: 'oilTripLog: anArray <primitive: ''primitiveOilTripLog''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+(Smalltalk at: #OilStress) class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 sels := OrderedCollection new.
@@ -28,23 +41,14 @@ runSuites := [:label | | total failed |
 			(r failures, r errors) do: [:tc | out tab; nextPutAll: label; space; print: tc; cr; flush]]].
 	out nextPutAll: label; nextPutAll: ': SUnit run '; print: total; nextPutAll: ' failed+errors '; print: failed; cr; flush.
 	failed].
-"1. SUnit with the trip log on"
-log := Array new: 65535. log at: 1 put: 0.
-(Smalltalk at: #OilStress) oilTripLog: log.
+"1. SUnit on the baseline code"
 results := OrderedCollection new.
 results add: (runSuites value: 'baseline').
-(Smalltalk at: #OilStress) oilTripLog: nil.
-"2. Oil-compile the tripped home methods"
-methods := IdentitySet new.
-0 to: (log at: 1) - 1 do: [:k | | m |
-	m := log at: (k \\ 256) * 6 + 2 + 2.
-	(m isCompiledMethod and: [m methodClass notNil]) ifTrue: [methods add: m]].
-compiled := 0. failedCompiles := Bag new.
-t := Time millisecondsToRun: [methods do: [:m | | r |
-	r := m oilCompileFor: m methodClass.
-	r = 0 ifTrue: [compiled := compiled + 1] ifFalse: [failedCompiles add: r]]].
-out nextPutAll: 'trips '; print: (log at: 1); nextPutAll: ', hot methods '; print: methods size; nextPutAll: ', Oil-compiled '; print: compiled;
-	nextPutAll: ' in '; print: t; nextPutAll: ' ms, failure codes '; print: failedCompiles sortedCounts; cr; flush.
+"2. SUnit with autonomous compilation on: the trips compile the hot home methods"
+(Smalltalk at: #OilStress) oilSetParameter: 19 to: 1.
+t := Time millisecondsToRun: [results add: (runSuites value: 'compiling')].
+methods := CompiledMethod allInstances select: [:m | m oilInfo notNil].
+out nextPutAll: 'autonomous compilation: Oil methods installed '; print: methods size; nextPutAll: ' (SUnit '; print: t; nextPutAll: ' ms)'; cr; flush.
 "3. SUnit on the Oil code"
 results add: (runSuites value: 'oil').
 out nextPutAll: 'Oil methods still installed: '; print: (methods count: [:m | m oilInfo notNil]); cr; flush.

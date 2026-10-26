@@ -24,11 +24,26 @@ cls := Smalltalk at: #OilM7Model.
   'skipStream: aStream aStream skipSeparators. ^aStream position'
   'indexOf: c in: aString from: k ^aString indexOf: c startingAt: k'
   'countOf: aCollection | n | n := 0. aCollection do: [:e | n := n + 1]. ^n'
+  'probeOf: aCollection | oil | aCollection do: [:e | oil ifNil: [oil := thisContext sender oilContextChain notNil]]. ^oil == true'
   'sumOf: aCollection | s | s := 0. aCollection do: [:e | s := s + e]. ^s'
   'total: n total := n')
 	do: [:s | cls compile: s classified: 'tests'].
-cls class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'oilTripLog: anArray <primitive: ''primitiveOilTripLog''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+cls class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
+"probeOf: aCollection: does do: run Oil code for aCollection, i.e. is the sender of its block's activation the frame of an Oil method?"
+Context compile: 'oilContextChain <primitive: ''primitiveOilContexts''> ^nil' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilSpecializeFor: aClass <primitive: ''primitiveOilSpecialize''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilSpecializations <primitive: ''primitiveOilSpecializations''> ^#failed' classified: 'oil'.
@@ -70,15 +85,6 @@ res := [:sel :warm | | cm |
 	out nextPutAll: sel; nextPutAll: ': oilCompileFor: -> '; print: r; nextPutAll: ' in '; print: (last at: 9); nextPutAll: ' us (primitive '; print: t; nextPutAll: ' us)'; nextPutAll: ' ('; print: ir size; nextPutAll: ' IR instructions, calls '; print: (countOps value: ir value: #(22 23 24 30)); nextPutAll: ')'; cr; flush.
 	r].
 times := [:block | | best | best := SmallInteger maxVal. 3 timesRepeat: [best := best min: (Time millisecondsToRun: block)]. best].
-"trips: how many trip counters of the baseline code of aMethod trip while running aBlock (Oil code has none)"
-trips := [:aMethod :block | | log count |
-	log := Array new: 6 * 1000 + 1. log at: 1 put: 0.
-	cls oilTripLog: log.
-	block value.
-	cls oilTripLog: nil.
-	count := 0.
-	0 to: ((log at: 1) min: 1000) - 1 do: [:k | (log at: k * 6 + 3) == aMethod ifTrue: [count := count + 1]].
-	count].
 latencies := OrderedCollection new.
 
 "--- 1. Method-level multi-specialization: one method, several Oil versions (one per receiver class), the baseline code for
@@ -100,14 +106,11 @@ base := times value: [model countOf: colls first].
 out nextPutAll: 'oilSpecializeFor: latencies (us: compilation, whole primitive including freeing the baseline code): '; print: latencies asArray; cr; flush.
 specs := seqDo oilSpecializations.
 check value: 'oilSpecializations: 5 classes, each with Oil code' value: (specs size = 10 and: [(1 to: 10 by: 2) allSatisfy: [:k | (classes includes: (specs at: k)) and: [(specs at: k + 1) oilInfo notNil]]]).
-"(a trip counter trips once per compilation of the baseline code, which the last specialization freed)"
-n := trips value: seqDo value: [model countOf: colls last].
-check value: 'the sixth class runs the baseline code (its trip counter trips)' value: n >= 1.
+check value: 'the sixth class runs the baseline code' value: (model probeOf: colls last) not.
 check value: 'specialize do: for a sixth class: the PIC is full (OilFailSpecialization)' value: (seqDo oilSpecializeFor: classes last) = 17.
 check value: 'specialize do: again for Array: already done' value: (seqDo oilSpecializeFor: Array) = 0.
 check value: 'mixed receivers: results' value: ((colls collect: [:c | model countOf: c]) = counts).
-n := trips value: seqDo value: [3 timesRepeat: [(colls first: 5) do: [:c | model countOf: c]]].
-check value: 'mixed receivers of the 5 specialized classes run Oil code (no baseline trip counter trips)' value: n = 0.
+check value: 'mixed receivers of the 5 specialized classes run Oil code' value: ((colls first: 5) allSatisfy: [:c | model probeOf: c]).
 check value: 'the sixth class: result' value: (model countOf: colls last) = 300000.
 check value: 'no deopt in any specialization' value: ((1 to: 10 by: 2) allSatisfy: [:k | ((specs at: k + 1) oilInfo at: 1) = 0]).
 oil := times value: [model countOf: colls first].
@@ -124,9 +127,9 @@ sub := (Smalltalk at: #OilM7OrderedCollection) withAll: (1 to: 100000).
 check value: 'specialize OrderedCollection>>do: for OrderedCollection' value: (ocDo oilSpecializeFor: OrderedCollection) = 0.
 3 timesRepeat: [model sumOf: oc. model sumOf: sorted. model sumOf: sub].
 check value: 'specialize OrderedCollection>>do: for SortedCollection' value: (ocDo oilSpecializeFor: SortedCollection) = 0.
-check value: 'the subclass runs the baseline code' value: (trips value: ocDo value: [model sumOf: sub]) >= 1.
+check value: 'the subclass runs the baseline code' value: (model probeOf: sub) not.
 check value: 'OrderedCollection, SortedCollection, subclass: results' value: ((model sumOf: oc) = 5000050000 and: [(model sumOf: sorted) = 5000050000 and: [(model sumOf: sub) = 5000050000]]).
-check value: 'OrderedCollection and SortedCollection run Oil code' value: (trips value: ocDo value: [3 timesRepeat: [model sumOf: oc. model sumOf: sorted]]) = 0.
+check value: 'OrderedCollection and SortedCollection run Oil code' value: ((model probeOf: oc) and: [model probeOf: sorted]).
 check value: 'OrderedCollection>>do: specializations: no deopt' value: (((ocDo oilSpecializations) at: 2) oilInfo at: 1) = 0.
 
 
@@ -225,17 +228,17 @@ check value: 'tokens: faster than baseline' value: oil < base.
 Smalltalk garbageCollect.
 check value: 'full GC: results' value: ((model count: syms in: set) = 5000 and: [(model positions: text) = (model refPositions: text)
 	and: [((colls collect: [:c | model countOf: c]) = counts) and: [(model sumOf: oc) = 5000050000]]]).
-check value: 'full GC: the specializations still run' value: ((trips value: seqDo value: [(colls first: 5) do: [:c | model countOf: c]]) = 0
+check value: 'full GC: the specializations still run' value: (((colls first: 5) allSatisfy: [:c | model probeOf: c])
 	and: [(1 to: 10 by: 2) allSatisfy: [:k | ((specs at: k + 1) oilInfo at: 1) = 0]]).
 Smalltalk voidCogVMState.
 check value: 'voidCogVMState: specializations lost their Oil code' value: ((1 to: 10 by: 2) allSatisfy: [:k | (specs at: k + 1) oilInfo isNil]).
 check value: 'voidCogVMState: results' value: (((colls collect: [:c | model countOf: c]) = counts) and: [(model sumOf: sub) = 5000050000 and: [(model positions: text) = (model refPositions: text)]]).
 3 timesRepeat: [model countOf: colls first].
 check value: 'voidCogVMState: specialize do: for Array again (same copy)' value: ((seqDo oilSpecializeFor: Array) = 0 and: [(seqDo oilSpecializations at: 2) oilInfo notNil]).
-check value: 'voidCogVMState: Array runs Oil code again' value: ((trips value: seqDo value: [model countOf: colls first. model countOf: colls first]) = 0 and: [(model countOf: colls first) = 300000]).
+check value: 'voidCogVMState: Array runs Oil code again' value: ((model probeOf: colls first) and: [(model countOf: colls first) = 300000]).
 3 timesRepeat: [model countOf: colls last].
 check value: 'voidCogVMState: entries without Oil code do not count: specialize do: for the sixth class' value: ((seqDo oilSpecializeFor: classes last) = 0 and: [seqDo oilSpecializations size = 4]).
-check value: 'the sixth class runs Oil code now' value: ((trips value: seqDo value: [model countOf: colls last. model countOf: colls last]) = 0 and: [(model countOf: colls last) = 300000]).
+check value: 'the sixth class runs Oil code now' value: ((model probeOf: colls last) and: [(model countOf: colls last) = 300000]).
 copy := (seqDo oilSpecializations) at: 2.
 seqDo voidCogVMState.
 check value: 'voiding the method''s machine code drops its specializations and frees their Oil code' value: (seqDo oilSpecializations isEmpty and: [copy oilInfo isNil]).

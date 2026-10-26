@@ -36,7 +36,20 @@ mid compile: 'blockSum: x | s | s := 0. #(1 2 3) do: [:k | s := s + (super dsBas
 	cls compile: src classified: 'tests'.
 	"the same method, left to the baseline JIT"
 	cls compile: (src copyReplaceAll: ': obj n:' with: 'Base: obj n:') classified: 'tests'].
-cls class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+cls class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.

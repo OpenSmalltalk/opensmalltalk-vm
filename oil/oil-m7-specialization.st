@@ -399,6 +399,8 @@ primitiveOilSpecialize
 			 copy := objectMemory cloneInOldSpace: methodObj forPinning: false. "(with its header, not its machine code)"
 			 copy = 0 ifTrue:
 				[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilFailCodeSpace)]].
+	self oilEnsureExtraSelectorTable ifFalse:
+		[^self primitiveFailFor: PrimErrNoMemory].
 	"Pass 1 first, while the baseline inline caches (type feedback) are there (nothing allocates from here on)."
 	result := cogit oilCompile: methodObj receiverClass: classObj.
 	result ~= OilOK ifTrue:

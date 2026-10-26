@@ -1,5 +1,6 @@
 "Oil long stress run (native), for the inlined selector invalidation table: for OilStressMinutes (default 120) minutes,
- repeat rounds of: SUnit (a random half of the suites) with the trip log on; Oil-compile the hot (tripped) home methods;
+ repeat rounds of: SUnit (a random half of the suites) with autonomous compilation on (the trip counters compile the hot
+ home methods with Oil);
  SUnit again on the Oil code; then a random perturbation: Compiler recompileAll, flushing random selectors (Symbol>>flushCache,
  ProfilingCogit>>unlinkSendsOf:isMNUSelector:), recompiling the classes of random Oil methods (new CompiledMethods for the
  inlined selectors), or a full GC.  A test failure that the baseline run does not have is rerun at once (flaky or not) and
@@ -10,8 +11,20 @@ Utilities authorInitials: 'cb'.
 minutes := Smalltalk at: #OilStressMinutes ifAbsent: [120].
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-stress-long-result.txt').
 Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilStress) class compile: 'oilSetSelectors: anArray <primitive: ''primitiveOilSetSelectors''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilStress) class compile: 'oilTripLog: anArray <primitive: ''primitiveOilTripLog''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilSetParameter''> ^#failed' classified: 'oil'.
+"(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
+ the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
+(Smalltalk at: #OilStress) class compile: 'oilSetSelectors: pairs
+	| cold |
+	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
+	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
+	cold := OrderedCollection new.
+	1 to: pairs size by: 2 do: [:i | | kind value |
+		kind := pairs at: i. value := pairs at: i + 1.
+		kind = 7 ifTrue: [cold add: value].
+		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
+	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 sels := OrderedCollection new.
@@ -39,6 +52,7 @@ deadline := t0 + (minutes * 60000).
 "0. the baseline failures, twice (a failure in either is flaky or expected)"
 baselineFailures := (collectFailures value: classes), (collectFailures value: classes).
 out nextPutAll: 'classes '; print: classes size; nextPutAll: ', baseline failures '; print: baselineFailures size; nextPutAll: ' '; print: baselineFailures asSortedCollection asArray; cr; flush.
+(Smalltalk at: #OilStress) oilSetParameter: 19 to: 1.
 newFailures := Bag new. persistent := Set new.
 allMethods := IdentitySet new.
 actions := Bag new.
@@ -48,21 +62,13 @@ round := 0.
 	round := round + 1.
 	subset := classes select: [:cls | rng next < 0.5].
 	subset isEmpty ifTrue: [subset := {classes atRandom: rng}].
-	"1. SUnit with the trip log on"
-	log := Array new: 65535. log at: 1 put: 0.
-	(Smalltalk at: #OilStress) oilTripLog: log.
+	"1. SUnit with autonomous compilation on: the trips compile the hot home methods (see CoInterpreter>>oilAutoCompile:receiver:)"
 	collectFailures value: subset.
-	(Smalltalk at: #OilStress) oilTripLog: nil.
-	"2. Oil-compile the tripped home methods (not running Oil code already)"
-	methods := IdentitySet new.
-	0 to: ((log at: 1) min: 256) - 1 do: [:k | | m |
-		m := log at: k * 6 + 2 + 2.
-		(m isCompiledMethod and: [m methodClass notNil and: [m oilInfo isNil]]) ifTrue: [methods add: m]].
-	compiled := 0. failedCompiles := 0.
-	methods do: [:m | | r |
-		r := m oilCompileFor: m methodClass.
-		r = 0 ifTrue: [compiled := compiled + 1. allMethods add: m] ifFalse: [failedCompiles := failedCompiles + 1]].
-	allMethods := allMethods select: [:m | m oilInfo notNil].
+	"2. the Oil methods installed"
+	methods := (CompiledMethod allInstances select: [:m | m oilInfo notNil]) asIdentitySet.
+	compiled := (methods reject: [:m | allMethods includes: m]) size.
+	failedCompiles := 0.
+	allMethods := methods.
 	oilInstalled := allMethods size.
 	"3. SUnit on the Oil code; rerun the new failures (flaky or not)"
 	failures := (collectFailures value: subset) reject: [:f | baselineFailures includes: f].
@@ -111,7 +117,7 @@ round := 0.
 	action = 9 ifTrue: [actions add: #gc. Smalltalk garbageCollect. detail := 'full GC'].
 	action = 10 ifTrue: [actions add: #none].
 	out nextPutAll: 'round '; print: round; nextPutAll: ' at '; print: (Time millisecondClockValue - t0) // 1000; nextPutAll: ' s: suites ';
-		print: subset size; nextPutAll: ', trips '; print: (log at: 1); nextPutAll: ', compiled '; print: compiled; nextPutAll: ' (failed ';
+		print: subset size; nextPutAll: ', compiled '; print: compiled; nextPutAll: ' (failed ';
 		print: failedCompiles; nextPutAll: '), Oil methods installed '; print: oilInstalled; nextPutAll: ' -> ';
 		print: (allMethods count: [:m | m oilInfo notNil]); nextPutAll: ', new failures '; print: failures asSortedCollection asArray;
 		nextPutAll: '; '; nextPutAll: detail; cr; flush].

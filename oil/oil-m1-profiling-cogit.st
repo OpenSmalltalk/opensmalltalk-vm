@@ -1,12 +1,12 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'numCounters counterIndex oilTripCounters oilNextCounterIndex ceOilTripTrampoline oilTripLog ceOilDeoptTrampoline oilSelectors oilExtraSelectors oilSpecializations oilNumSpecializations oilNumMethodPICCases oilCompileMicroseconds oilKeepSpecializations'
+	instanceVariableNames: 'numCounters counterIndex oilTripCounters oilNextCounterIndex ceOilTripTrampoline ceOilDeoptTrampoline oilColdSelectors oilExtraSelectors oilSpecializations oilNumSpecializations oilNumMethodPICCases oilCompileMicroseconds oilKeepSpecializations oilNoAutoCompile'
 	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilNumTripCounters OilTripBackJump OilTripBlockEntry'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
 !ProfilingCogit commentStamp: 'cb 10/25/2026 01:50' prior: 0!
 A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
 
-Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful full block entries (compileFullBlockMethodFrameBuild:).  Straight-line code, conditional branches and legacy vanilla blocks carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to indicate the kind of site (OilTripBackJump or OilTripBlockEntry).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), and returns directly to machine code.  Nothing on the trip path allocates, collects garbage or changes the stack.
+Trip counters are placed only at two kinds of site: loop back jumps (genJumpBackTo:) and frameful full block entries (compileFullBlockMethodFrameBuild:).  Straight-line code, conditional branches and legacy vanilla blocks carry no profiling overhead, and methods without loops or blocks get no counters at all.  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to indicate the kind of site (OilTripBackJump or OilTripBlockEntry).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), compiles it with Oil and installs the Oil code for its next activations (see CoInterpreter>>oilAutoCompile:receiver:), and returns directly to machine code.  Nothing on the trip path collects garbage or changes the stack: the running activations keep running the baseline code.  A counter trips once (it then goes negative).
 
 Instance Variables
 	ceOilDeoptTrampoline:	<Integer>
@@ -21,8 +21,8 @@ Instance Variables
 	oilNumMethodPICCases:	<Integer>
 	oilNumSpecializations:	<Integer>
 	oilSpecializations:		<Integer oop>
-	oilSelectors:			<Integer oop>
-	oilTripLog:				<Integer oop>
+	oilColdSelectors:		<Integer oop>
+	oilNoAutoCompile:		<Boolean>
 !
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
@@ -32,24 +32,11 @@ estimateOfAbstractOpcodesPerBytecodes
 	<inline: true>
 	^oilNumMethodPICCases > 0 ifTrue: [16] ifFalse: [11]! !
 
-!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
-getOilTripLog
-	"Answer the trip log Array, nil, or 0 if no log has ever been set."
+!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 15:00'!
+oilAutoCompileEnabled
+	"Does a trip compile the hot method with Oil (the default; see primitiveOilSetParameter, parameter 19)?"
 	<api>
-	^oilTripLog! !
-
-!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
-oilTripLogAddress
-	"Answer the address of the oilTripLog variable, for registering it as a GC root."
-	<api>
-	<returnTypeC: #'sqInt *'>
-	^self addressOf: oilTripLog put: [:value| oilTripLog := value]! !
-
-!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:00'!
-setOilTripLog: anArrayOrNil
-	<api>
-	oilTripLog := anArrayOrNil! !
-
+	^oilNoAutoCompile not! !
 
 !ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/25/2026 01:50'!
 genJumpBackTo: targetBytecodePC
@@ -254,28 +241,29 @@ ceOilTrip: kind
 	   in OrderedCollection>>do:), the home method of that closure, since compiling the
 	   iterator alone is useless without knowing the block it evaluates;
 	 - otherwise the method itself.
-	 This must not allocate, collect garbage, or change the stack, since it returns directly to machine code."
+	 Compile it with Oil, for the class of its receiver, and install the Oil code for its next activations (see
+	 oilAutoCompile:receiver:); not for a clean block, whose home has no receiver.
+	 This must not collect garbage or change the stack, since it returns directly to machine code."
 	<api>
 	<essential: #ProfilingCogit>
-	| theFP numArgs trippedMethod closure homeContext homeMethod |
+	| theFP numArgs closure homeContext homeMethod receiver |
 	<var: #theFP type: #'char *'>
 	theFP := framePointer.
 	self assert: (self isMachineCodeFrame: theFP).
-	trippedMethod := self frameMethodObject: theFP.
+	cogit oilAutoCompileEnabled ifFalse: [^0].
 	numArgs := self frameNumArgs: theFP.
 	closure := (self frameIsBlockActivation: theFP)
 				ifTrue: [self frameStackedReceiver: theFP numArgs: numArgs]
 				ifFalse: [self oilClosureArgumentOf: theFP numArgs: numArgs].
-	homeContext := objectMemory nilObject.
-	homeMethod := trippedMethod.
+	homeMethod := self frameMethodObject: theFP.
+	receiver := self frameReceiver: theFP.
 	closure ~= objectMemory nilObject ifTrue:
 		[homeContext := self oilHomeContextOfClosure: closure.
-		 homeContext ~= objectMemory nilObject
-			ifTrue: [homeMethod := objectMemory followMaybeForwarded: (objectMemory fetchPointer: MethodIndex ofObject: homeContext)]
-			ifFalse:
-				[(objectMemory classIndexOf: closure) = ClassFullBlockClosureCompactIndex ifTrue: "a clean block; use the static outer code chain"
-					[homeMethod := self homeMethodOf: (objectMemory followMaybeForwarded: (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: closure))]]].
-	self oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext.
+		 homeContext = objectMemory nilObject ifTrue: "a clean block"
+			[^0].
+		 homeMethod := objectMemory followMaybeForwarded: (objectMemory fetchPointer: MethodIndex ofObject: homeContext).
+		 receiver := objectMemory followMaybeForwarded: (objectMemory fetchPointer: ReceiverIndex ofObject: homeContext)].
+	self oilAutoCompile: homeMethod receiver: receiver.
 	^0! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
@@ -317,76 +305,6 @@ oilIsClosure: oop
 	^(objectMemory isNonImmediate: oop)
 	  and: [(objectMemory classIndexOf: oop) = ClassFullBlockClosureCompactIndex
 			or: [(objectMemory classIndexOf: oop) = ClassBlockClosureCompactIndex]]! !
-
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilRecordTrip: kind method: trippedMethod home: homeMethod context: homeContext
-	"If the image has supplied a trip log (see primitiveOilTripLog) record the trip in it.
-	 The log's first slot holds the number of trips recorded so far; the remaining slots
-	 are a ring of records, each of oilTripRecordSize slots:
-		kind (0 back jump, 1 block entry), tripped method (CompiledMethod or CompiledBlock),
-		home method to optimize, home context or nil (slots 4 and 5 unused)."
-	<essential: #ProfilingCogit>
-	| log numRecords count base |
-	log := cogit getOilTripLog.
-	(log = 0
-	 or: [log = objectMemory nilObject]) ifTrue:
-		[^nil].
-	(objectMemory isForwarded: log) ifTrue:
-		[log := objectMemory followForwarded: log.
-		 cogit setOilTripLog: log].
-	(objectMemory isArrayNonImm: log) ifFalse:
-		[^nil].
-	numRecords := (objectMemory numSlotsOf: log) - 1 // self oilTripRecordSize.
-	numRecords < 1 ifTrue:
-		[^nil].
-	count := objectMemory fetchPointer: 0 ofObject: log.
-	count := (objectMemory isIntegerObject: count)
-				ifTrue: [objectMemory integerValueOf: count]
-				ifFalse: [0].
-	base := count \\ numRecords * self oilTripRecordSize + 1.
-	objectMemory
-		storePointer: base ofObject: log withValue: (objectMemory integerObjectOf: kind);
-		storePointer: base + 1 ofObject: log withValue: trippedMethod;
-		storePointer: base + 2 ofObject: log withValue: homeMethod;
-		storePointer: base + 3 ofObject: log withValue: homeContext;
-		storePointer: 0 ofObject: log withValue: (objectMemory integerObjectOf: count + 1).
-	^nil! !
-
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
-oilTripRecordSize
-	<inline: true>
-	<essential: #ProfilingCogit>
-	^6! !
-
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-profiling primitives' stamp: 'cb 10/24/2026 10:00'!
-primitiveOilTripLog
-	"With no argument answer the trip log, or nil if none.  With one argument, an Array or nil,
-	 make it the trip log, answering the previous one.  ceOilTrip: records each trip in the log;
-	 see oilRecordTrip:method:home:context: for its format.  The log variable is
-	 registered as an extra GC root the first time it is set."
-	<export: true>
-	<essential: #ProfilingCogit>
-	| previous log |
-	argumentCount > 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	previous := cogit getOilTripLog.
-	argumentCount = 0 ifTrue:
-		[^self pop: 1 thenPush: (previous = 0 ifTrue: [objectMemory nilObject] ifFalse: [previous])].
-	log := self stackTop.
-	(log = objectMemory nilObject
-	 or: [(objectMemory isNonImmediate: log)
-		and: [(objectMemory isArrayNonImm: log)
-		and: [(objectMemory numSlotsOf: log) > self oilTripRecordSize]]]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	cogit setOilTripLog: log.
-	previous = 0 ifTrue:
-		[(objectMemory addGCRoot: cogit oilTripLogAddress) ifFalse:
-			[cogit setOilTripLog: 0.
-			 ^self primitiveFailFor: PrimErrNoMemory].
-		 previous := objectMemory nilObject].
-	self pop: 2 thenPush: previous! !
-
 
 !CoInterpreter class methodsFor: '*VMMaker-JIT-Oil-translation' stamp: 'cb 10/26/2026 05:00'!
 writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator
