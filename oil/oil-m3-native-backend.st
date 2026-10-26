@@ -320,13 +320,16 @@ oilGenerateCode: aMethodObj
 		 ^OilFailInternal].
 	^self oilGenerateCogMethod! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/26/2026 05:20'!
 oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
-	 deoptimization metadata, a hidden pinned Array, through the method's counters field (tagged with 1)."
+	 deoptimization metadata, a hidden pinned Array, through the method's counters field (tagged with 1).
+	 Uses a single-pass annotation map generated into a 512-byte stack buffer to eliminate the
+	 preliminary generateMapAt: nil pass."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result metadata selector added writableMethod |
+	| codeSize headerSize mapSize totalSize startAddress result metadata selector added writableMethod mapBuffer |
 	<var: #writableMethod type: #'CogMethod *'>
+	<var: #mapBuffer declareC: 'char mapBuffer[512]'>
 	metadata := coInterpreter oilAllocateMetadata: self metadataSize.
 	metadata = 0 ifTrue:
 		[^OilFailCodeSpace].
@@ -335,7 +338,9 @@ oilGenerateCogMethod
 	self computeMaximumSizes.
 	methodLabel concretizeAt: methodZone freeStart.
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
-	mapSize := self generateMapAt: nil start: methodLabel address + cmNoCheckEntryOffset.
+	mapSize := self generateMapAt: (self cCode: '(usqInt)(mapBuffer + 511 - codeToDataDelta)'
+									inSmalltalk: [nil])
+					start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
 	totalSize > MaxMethodSize ifTrue:
 		[objectMemory freeObject: metadata.
@@ -350,7 +355,13 @@ oilGenerateCogMethod
 	result := self outputInstructionsAt: startAddress + headerSize.
 	self assert: startAddress + headerSize + codeSize = result.
 	backEnd padIfPossibleWithStopsFrom: result to: startAddress + totalSize - mapSize - 1.
-	self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset.
+	(self cCode: [mapSize <= 512] inSmalltalk: [false])
+		ifTrue:
+			[self codeMemmove: startAddress + totalSize - mapSize
+				_: (self cCode: 'mapBuffer + 512 - mapSize')
+				_: mapSize]
+		ifFalse:
+			[self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset].
 	self fillInBlockHeadersAt: startAddress.
 	selector := coInterpreter maybeSelectorOfMethod: methodObj.
 	selector isNil ifTrue: [selector := objectMemory nilObject].
