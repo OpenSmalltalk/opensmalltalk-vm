@@ -54,8 +54,12 @@ manifest := #(
 		9	('Rome-Base' 'Rome-PluginCanvas' 'Rome-Plugin')
 	squeaksource		'GStreamer'
 		9	('GStreamer-Plugins')
+	squeak		'VMMaker'
+		21	('Oopsie')
+	metacello		('github://LinqLover/SimulationStudio' 'SimulationStudio')
+		20	('default')
 	).
-"AndreasSystemProfiler and AssemblerMethod are now in trunk now in trunk"
+"AndreasSystemProfiler and AssemblerMethod are now in trunk"
 #(AndreasSystemProfiler AssemblerMethod)
 	with: #((squeak	'VMMaker' 9	('AndreasProfiler'))
 			 (squeak	'VMMaker'	3	('MethodMassage')))
@@ -66,12 +70,24 @@ manifest := #(
 load := Array streamContents: [:s |
 	manifest groupsDo: [:installerSymbol :project :order :packages |
 		| installer |
-		installer := Installer perform: installerSymbol.
+		installerSymbol = #metacello
+			ifFalse:
+				[installer := Installer perform: installerSymbol.
 		installer project: project.
-		installer packages addAll: packages.
+				installer packages addAll: packages]
+			ifTrue:
+				["Squeak does not have a 'Installer metacello' so far :( https://lists.squeakfoundation.org/archives/list/squeak-dev@lists.squeakfoundation.org/thread/7QZXW46MBTU3RJHKXGUXT4T2JX7BFXGB/"
+				| metacello |
+				metacello := Metacello new.
+				metacello repository: project first.
+				metacello baseline: project second.
+				installer := metacello -> packages].
 		s nextPut: order -> installer]].
 load := (load sorted: [:a :b | a key <= b key]) collect: [:ea | ea value].
-load do: [:installer | installer installQuietly].
+load do: [:installer |
+	(installer respondsTo: #installQuietly)
+		ifTrue: [installer installQuietly]
+		ifFalse: [installer key load: installer value]].
 
 self currentWorld findATranscript: nil.
 
