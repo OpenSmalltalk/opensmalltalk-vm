@@ -32,6 +32,8 @@ Object subclass: #OilFloatModel instanceVariableNames: 'total' classVariableName
   'less: a than: b ^a < b ifTrue: [1] ifFalse: [2]'
   'notEqual: a to: b ^a ~= b'
   'twice: x ^2 * x'
+  'unaryFloat: x y: y ^(x squared + y squared) sqrt abs negated'
+  'sqrtOf: x ^x sqrt + 1.0'
   'norm: aPoint | dx dy | dx := aPoint x * 1.0. dy := aPoint y * 1.0. ^dx * dx + (dy * dy)'
   'sumSquares: anArray | s | s := 0.0. 1 to: anArray size do: [:i | s := s + ((anArray at: i) * (anArray at: i))]. ^s'
   'lvnLoop: anArray | s | s := 0. 1 to: anArray size do: [:i | s := s + (anArray at: i) + (anArray at: i)]. ^s + total + total'
@@ -112,6 +114,15 @@ check value: 'sumSquares: compiles' value: (res value: #sumSquares: value: [mode
 check value: 'sumSquares: result' value: (model sumSquares: ((1 to: 1000) collect: [:k | k * 0.5])) = ((1 to: 1000) inject: 0.0 into: [:a :k | a + (k * 0.5 * (k * 0.5))]).
 check value: 'norm: compiles' value: (res value: #norm: value: [model norm: 3.0 @ 4.0]) = 0.
 check value: 'norm: result' value: (model norm: 3.0 @ 4.0) = 25.0.
+check value: 'unaryFloat:y: compiles' value: (res value: #unaryFloat:y: value: [model unaryFloat: 3.0 y: 4.0]) = 0.
+check value: 'unaryFloat:y: unboxes 5 intermediate float results' value: (stats at: 11) = 5.
+check value: 'unaryFloat:y: results' value: ((model unaryFloat: 3.0 y: 4.0) = -5.0 and: [(model unaryFloat: -3.0 y: 4.0) = -5.0 and: [(model unaryFloat: 0.0 y: 0.0) = -0.0 and: [(model unaryFloat: 0.0 y: 0.0) signBit = 1]]]).
+check value: 'unaryFloat:y: no deopt' value: (((Smalltalk at: #OilFloatModel) >> #unaryFloat:y:) oilInfo at: 1) = 0.
+check value: 'sqrtOf: compiles' value: (res value: #sqrtOf: value: [model sqrtOf: 4.0]) = 0.
+check value: 'sqrtOf: unboxes x sqrt' value: (stats at: 11) = 1.
+check value: 'sqrtOf: results' value: ((model sqrtOf: 9.0) = 4.0 and: [(model sqrtOf: 0.0) = 1.0 and: [(model sqrtOf: -0.0) = 1.0]]).
+check value: 'sqrtOf: negative receiver (deopt, DomainError)' value: ([model sqrtOf: -1.0] on: DomainError do: [:e | #domainError]) = #domainError.
+check value: 'sqrtOf: NaN receiver (deopt, NaN)' value: (model sqrtOf: Float nan) isNaN.
 
 "--- 3. Float deoptimization ---"
 check value: 'ratio:by: compiles' value: (res value: #ratio:by: value: [model ratio: 3.0 by: 2.0]) = 0.

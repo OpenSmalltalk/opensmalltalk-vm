@@ -97,17 +97,17 @@ isBranch: opcode
 	<inline: true>
 	^self opcode: opcode has: OilOpBranch! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 23:45'!
 isFloatOpcode: opcode
 	"A float instruction: an arithmetic (see isFloatArith:) or OilCmpFloat."
 	<inline: true>
-	^opcode between: OilAddFloat and: OilCmpFloat! !
+	^(opcode between: OilAddFloat and: OilCmpFloat) or: [opcode between: OilSqrtFloat and: OilNegatedFloat]! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 23:45'!
 isFloatArith: opcode
-	"OilAddFloat, OilSubFloat, OilMulFloat or OilDivFloat."
+	"OilAddFloat..OilDivFloat or OilSqrtFloat..OilNegatedFloat."
 	<inline: true>
-	^opcode between: OilAddFloat and: OilDivFloat! !
+	^(opcode between: OilAddFloat and: OilDivFloat) or: [opcode between: OilSqrtFloat and: OilNegatedFloat]! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/26/2026 20:30'!
 flag: irOffset has: mask
@@ -465,6 +465,9 @@ genInstructionAt: irOffset
 		[OilSubFloat]		-> [self genFloatArith: opcode at: irOffset site: siteIndex].
 		[OilMulFloat]		-> [self genFloatArith: opcode at: irOffset site: siteIndex].
 		[OilDivFloat]		-> [self genFloatArith: opcode at: irOffset site: siteIndex].
+		[OilSqrtFloat]		-> [self genFloatArith: opcode at: irOffset site: siteIndex].
+		[OilAbsFloat]		-> [self genFloatArith: opcode at: irOffset site: siteIndex].
+		[OilNegatedFloat]	-> [self genFloatArith: opcode at: irOffset site: siteIndex].
 		[OilBranchTrue]		-> [self genBranchOnBoolean: regA ifTrue: true to: (self imm16At: irOffset) site: siteIndex].
 		[OilBranchFalse]	-> [self genBranchOnBoolean: regA ifTrue: false to: (self imm16At: irOffset) site: siteIndex].
 		[OilJump]			-> [(self imm16At: irOffset) ~= nextOffset ifTrue: "(not to the next instruction)"
@@ -1488,7 +1491,8 @@ analyzeFloatLoop: loopHead end: backJump
 			[((self mayClobberXmms: opcode) or: [opcode = OilReturn]) ifTrue: [^self].
 			 (self isFloatOpcode: opcode) ifTrue:
 				[numCandidates := self addCandidate: (self fieldBAt: irOffset) to: candidates count: numCandidates.
-				 numCandidates := self addCandidate: (self fieldCAt: irOffset) to: candidates count: numCandidates.
+				 (self opcode: opcode has: OilOpReadsC) ifTrue:
+					[numCandidates := self addCandidate: (self fieldCAt: irOffset) to: candidates count: numCandidates].
 				 opcode ~= OilCmpFloat ifTrue:
 					[numCandidates := self addCandidate: (self fieldAAt: irOffset) to: candidates count: numCandidates].
 				 numCandidates < 0 ifTrue: [^self]]].
@@ -2232,28 +2236,51 @@ genBoxDouble: dpReg into: destReg site: siteIndex
 	jumpDone jmpTarget: cogit Label.
 	self setDst: destReg from: ClassReg! !
 
-!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/26/2026 20:30'!
+!OilInliningCompiler methodsFor: 'float code generation' stamp: 'cb 10/26/2026 23:45'!
 genFloatArith: opcode at: irOffset site: siteIndex
-	"[OilAddFloat..OilDivFloat | Dest | Rcvr | Arg]: compute in an XMM register (a zero divisor deoptimizes, like the
-	 primitive fails), then box the result into Dest (the XMM register caches it), or, in a float chain, leave it there
-	 if it is OilFloatUnboxed."
-	| destReg rcvrXmm argXmm resultXmm resultReg argReg |
+	"[OilAddFloat..OilDivFloat | Dest | Rcvr | Arg] and [OilSqrtFloat..OilNegatedFloat | Dest | Rcvr | 0]: compute in an
+	 XMM register (a zero divisor or a negative/NaN sqrt receiver deoptimizes, like the primitive fails), then box the
+	 result into Dest (the XMM register caches it), or, in a float chain, leave it there if it is OilFloatUnboxed."
+	| destReg rcvrXmm argXmm resultXmm resultReg argReg jumpOK |
+	<var: #jumpOK type: #'AbstractInstruction *'>
 	destReg := self fieldAAt: irOffset.
 	rcvrXmm := self xmmFor: (self fieldBAt: irOffset) ints: 0 except: -1 site: siteIndex.
-	argXmm := self xmmFor: (self fieldCAt: irOffset) ints: 1 except: rcvrXmm site: siteIndex.
-	argReg := oilXmmRegs at: argXmm.
-	opcode = OilDivFloat ifTrue: "+0.0 or -0.0: all bits but the sign are 0"
-		[cogit MoveRd: argReg R: TempReg.
-		 cogit LogicalShiftLeftCq: 1 R: TempReg.
-		 cogit CmpCq: 0 R: TempReg.
-		 self deopt: (cogit JumpZero: 0) site: siteIndex].
+	argXmm := -1.
+	opcode <= OilDivFloat ifTrue:
+		[argXmm := self xmmFor: (self fieldCAt: irOffset) ints: 1 except: rcvrXmm site: siteIndex.
+		 argReg := oilXmmRegs at: argXmm.
+		 opcode = OilDivFloat ifTrue: "+0.0 or -0.0: all bits but the sign are 0"
+			[cogit MoveRd: argReg R: TempReg.
+			 cogit LogicalShiftLeftCq: 1 R: TempReg.
+			 cogit CmpCq: 0 R: TempReg.
+			 self deopt: (cogit JumpZero: 0) site: siteIndex]].
 	resultXmm := self allocXmmExcept: rcvrXmm and: argXmm.
 	resultReg := oilXmmRegs at: resultXmm.
-	cogit MoveRd: (oilXmmRegs at: rcvrXmm) Rd: resultReg.
-	opcode = OilAddFloat ifTrue: [cogit AddRd: argReg Rd: resultReg].
-	opcode = OilSubFloat ifTrue: [cogit SubRd: argReg Rd: resultReg].
-	opcode = OilMulFloat ifTrue: [cogit MulRd: argReg Rd: resultReg].
-	opcode = OilDivFloat ifTrue: [cogit DivRd: argReg Rd: resultReg].
+	opcode <= OilDivFloat ifTrue:
+		[cogit MoveRd: (oilXmmRegs at: rcvrXmm) Rd: resultReg.
+		 opcode = OilAddFloat ifTrue: [cogit AddRd: argReg Rd: resultReg].
+		 opcode = OilSubFloat ifTrue: [cogit SubRd: argReg Rd: resultReg].
+		 opcode = OilMulFloat ifTrue: [cogit MulRd: argReg Rd: resultReg].
+		 opcode = OilDivFloat ifTrue: [cogit DivRd: argReg Rd: resultReg]].
+	opcode = OilSqrtFloat ifTrue:
+		[cogit XorRd: resultReg Rd: resultReg.
+		 cogit CmpRd: resultReg Rd: (oilXmmRegs at: rcvrXmm).
+		 jumpOK := cogit JumpFPGreaterOrEqual: 0.
+		 self deopt: (cogit Jump: 0) site: siteIndex.
+		 jumpOK jmpTarget: cogit Label.
+		 cogit MoveRd: (oilXmmRegs at: rcvrXmm) Rd: resultReg.
+		 cogit SqrtRd: resultReg].
+	opcode = OilAbsFloat ifTrue:
+		[cogit MoveRd: (oilXmmRegs at: rcvrXmm) R: TempReg.
+		 cogit LogicalShiftLeftCq: 1 R: TempReg.
+		 cogit LogicalShiftRightCq: 1 R: TempReg.
+		 cogit MoveR: TempReg Rd: resultReg].
+	opcode = OilNegatedFloat ifTrue:
+		[cogit MoveRd: (oilXmmRegs at: rcvrXmm) R: TempReg.
+		 cogit MoveCq: 1 R: ClassReg.
+		 cogit LogicalShiftLeftCq: 63 R: ClassReg.
+		 cogit XorR: ClassReg R: TempReg.
+		 cogit MoveR: TempReg Rd: resultReg].
 	(oilFloatLoopCurrent >= 0 and: [(oilXmmPinned at: destReg) >= 0]) ifTrue:
 		["A float variable of the loop: no boxing, but its values must fit a SmallFloat64 (else deoptimize, the old value
 		  still in its register), so that it can be boxed without allocating at the exits and deopts."

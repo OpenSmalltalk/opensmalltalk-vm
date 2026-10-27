@@ -23,6 +23,8 @@ Object subclass: #OilM6Model instanceVariableNames: 'total' classVariableNames: 
   'reuse: x | t | t := x * 2.0. ^t * t + t'
   'twice: x ^2 * x'
   'ratio: a by: b ^a / b + 1.0'
+  'unaryFloat: x y: y ^(x squared + y squared) sqrt abs negated'
+  'sqrtOf: x ^x sqrt + 1.0'
   'less: a than: b ^a < b ifTrue: [1] ifFalse: [2]'
   'lvnLoop: anArray | s | s := 0. 1 to: anArray size do: [:i | s := s + (anArray at: i) + (anArray at: i)]. ^s + total + total'
   'lvnBranch: anArray at: i | a | a := anArray at: i. ^a > 0 ifTrue: [(anArray at: i) + total] ifFalse: [(anArray at: i) - total]'
@@ -47,6 +49,8 @@ probes := {
 	{#reuse:. {{1.5}}. {{1.5}. {-0.25}}. [:st | true]}.
 	{#twice:. {{1.5}}. {{1.5}. {-3.0}}. [:st | true]}.
 	{#ratio:by:. {{3.0. 2.0}}. {{3.0. 2.0}. {3.0. 0.0}. {1. 2.0}}. [:st | (st at: 3) = 1]}.
+	{#unaryFloat:y:. {{3.0. 4.0}}. {{3.0. 4.0}. {-3.0. 4.0}. {0.0. 0.0}. {3. 4.0}}. [:st | (st at: 3) = 5]}.
+	{#sqrtOf:. {{4.0}}. {{4.0}. {0.0}. {-0.0}. {-1.0}. {Float nan}}. [:st | (st at: 3) = 1]}.
 	{#less:than:. {{1.0. 2.0}}. {{1.0. 2.0}. {2.0. 1.0}. {Float nan. 1.0}. {2.5. 3}}. [:st | true]}.
 	{#lvnLoop:. {{#(1 2 3)}}. {{#(1 2 3)}. {#()}. {(1 to: 100) asArray}. {#(1 nil)}}. [:st | (st at: 1) >= 1]}.
 	{#lvnBranch:at:. {{#(5 -5). 1}. {#(5 -5). 2}}. {{#(5 -5). 1}. {#(5 -5). 2}. {#(5 -5). 3}}. [:st | (st at: 2) >= 2]}.

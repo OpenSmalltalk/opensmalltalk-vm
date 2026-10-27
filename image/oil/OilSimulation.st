@@ -103,6 +103,9 @@ printInstructionAt: instIndex on: aStream
 		[OilMulFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' * ', (self reg: regC), '   (Float)'].
 		[OilDivFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' / ', (self reg: regC), '   (Float)'].
 		[OilCmpFloat]		-> [aStream nextPutAll: (self reg: regB), ' ', (self condName: regA), ' ', (self reg: regC), '   (Float)'].
+		[OilSqrtFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' sqrt   (Float)'].
+		[OilAbsFloat]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' abs   (Float)'].
+		[OilNegatedFloat]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' negated   (Float)'].
 		[OilNewObject]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self printHandle: (self word64At: instIndex + 1)), ' new from ', (self reg: regB), '..', (self reg: regB + regC - 1), '   (materialized, not nil filled)'].
 		[OilCmpClass]		-> [aStream nextPutAll: 'class(', (self reg: regB), ') ', (self condName: regA), ' ', (self printHandle: (self word64At: instIndex + 1))].
 		[OilGuardClass2]	-> [aStream nextPutAll: 'class(', (self reg: regA), ') == ', (self printHandle: (self word64At: instIndex + 1)), ' or ', (self printHandle: (self word64At: instIndex + 3))].
@@ -307,6 +310,15 @@ step: instIndex
 			 ^nextIndex].
 		 (opcode = OilDivFloat and: [val2 isZero]) ifTrue: [^#deopt -> instIndex].
 		 resVal := val1 perform: (#(+ - * /) at: opcode - OilAddFloat + 1) with: val2.
+		 ((comp irFlagAt: instIndex) bitAnd: OilFloatUnboxed) ~= 0
+			ifTrue: [xmms at: destReg put: resVal]
+			ifFalse: [self r: destReg put: resVal].
+		 ^nextIndex].
+	(opcode between: OilSqrtFloat and: OilNegatedFloat) ifTrue:
+		[val1 := xmms at: srcReg1 ifAbsent: [self r: srcReg1].
+		 val1 isFloat ifFalse: [^#deopt -> instIndex].
+		 (opcode = OilSqrtFloat and: [(val1 >= 0.0) not]) ifTrue: [^#deopt -> instIndex].
+		 resVal := val1 perform: (#(sqrt abs negated) at: opcode - OilSqrtFloat + 1).
 		 ((comp irFlagAt: instIndex) bitAnd: OilFloatUnboxed) ~= 0
 			ifTrue: [xmms at: destReg put: resVal]
 			ifFalse: [self r: destReg put: resVal].

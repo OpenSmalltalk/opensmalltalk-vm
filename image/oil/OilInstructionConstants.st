@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilSqrtFloat OilAbsFloat OilNegatedFloat OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -91,7 +91,11 @@ initialize
 	 (the lookup starts in its superclass) and the packed argument registers (like OilCallN): OilCallSuper binds to the
 	 method class of the root method, the directed super send trampolines take the class"
 	OilCallDirectedSuper := 55.
-	OilLastOpcode := 55.
+	"Unary Float arithmetic [Op|Dest|Rcvr|0] on doubles: #sqrt (deoptimizes on a negative or NaN receiver), #abs and #negated"
+	OilSqrtFloat := 56.
+	OilAbsFloat := 57.
+	OilNegatedFloat := 58.
+	OilLastOpcode := 58.
 	"The properties of the opcodes (see opInfoSpec and OilInliningCompiler>>opcode:has:): the length in words of an
 	 instruction (plus, if OilOpPackedArgs, one word per 4 argument registers packed after its fixed words, C of them), and
 	 property bits"
@@ -168,7 +172,10 @@ opInfoSpec
 		(CmpClass			3 ReadsB)
 		(GuardClass2		5 ReadsA ClobbersXmms)
 		(StringHash		3 Dest ReadsB ReadsC Call ClobbersXmms)
-		(CallDirectedSuper	5 PackedArgs Dest ReadsB Send Call ClobbersXmms))! !
+		(CallDirectedSuper	5 PackedArgs Dest ReadsB Send Call ClobbersXmms)
+		(SqrtFloat			1 Dest ReadsB)
+		(AbsFloat			1 Dest ReadsB)
+		(NegatedFloat		1 Dest ReadsB))! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
 opInfoTable

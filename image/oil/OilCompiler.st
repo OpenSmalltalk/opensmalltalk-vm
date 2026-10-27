@@ -1967,7 +1967,7 @@ isNumberSlot: slotIndex
 	^(slotKind at: slotIndex) = OilDescConst
 	  and: [(self isSmallIntegerHandle: (slotValue at: slotIndex)) or: [self isFloatHandle: (slotValue at: slotIndex)]]! !
 
-!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/26/2026 23:45'!
 isFloatSlot: slotIndex
 	"Is slotIndex a Float constant, or a register of a known Float class or last assigned by Float arithmetic?"
 	| reg defOffset |
@@ -1976,7 +1976,31 @@ isFloatSlot: slotIndex
 	reg := slotValue at: slotIndex.
 	(self isFloatClass: (knownClass at: reg)) ifTrue: [^true].
 	defOffset := lastDefIR at: reg.
-	^defOffset >= 0 and: [defOffset < irIndex and: [(self opcodeAt: defOffset) between: OilAddFloat and: OilDivFloat]]! !
+	^defOffset >= 0 and: [defOffset < irIndex and: [self isFloatArith: (self opcodeAt: defOffset)]]! !
+
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/26/2026 23:45'!
+unaryFloatOpcodeOf: selector
+	"OilSqrtFloat, OilAbsFloat, OilNegatedFloat or OilMulFloat (#squared) if selector is one of them, else 0."
+	(self cCode: [self oilSelector: selector isNamed: 'sqrt'] inSmalltalk: [(self objectFor: selector) == #sqrt])
+		ifTrue: [^OilSqrtFloat].
+	(self cCode: [self oilSelector: selector isNamed: 'abs'] inSmalltalk: [(self objectFor: selector) == #abs])
+		ifTrue: [^OilAbsFloat].
+	(self cCode: [self oilSelector: selector isNamed: 'negated'] inSmalltalk: [(self objectFor: selector) == #negated])
+		ifTrue: [^OilNegatedFloat].
+	(self cCode: [self oilSelector: selector isNamed: 'squared'] inSmalltalk: [(self objectFor: selector) == #squared])
+		ifTrue: [^OilMulFloat].
+	^0! !
+
+!OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/26/2026 23:45'!
+genUnaryFloatSend: selector receiver: rcvrSlot
+	"#sqrt, #abs, #negated and #squared on a Float receiver."
+	| opcode rcvrReg |
+	opcode := self unaryFloatOpcodeOf: selector.
+	opcode = 0 ifTrue: [^false].
+	rcvrReg := self regForSlot: rcvrSlot.
+	simStackTop := rcvrSlot - 1.
+	self pushResultOf: opcode b: rcvrReg c: (opcode = OilMulFloat ifTrue: [rcvrReg] ifFalse: [0]) site: OilSiteArith.
+	^true! !
 
 !OilInliningCompiler methodsFor: 'float arithmetic' stamp: 'cb 10/25/2026 02:00'!
 isFloatClass: classOop
@@ -2027,6 +2051,8 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			 rcvrClass = 0 ifTrue:
 				[rcvrClass := self profiledClassAt: currentPC.
 				 guard := rcvrClass ~= 0]].
+	(isSuper not and: [numArgs = 0 and: [(self isFloatSlot: rcvrSlot) or: [self isFloatClass: rcvrClass]]]) ifTrue:
+		[(self genUnaryFloatSend: selector receiver: rcvrSlot) ifTrue: [^self]].
 	(rcvrClass = 0 and: [isSuper not and: [descKind = OilDescReg]]) ifTrue:
 		[(self genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot) ifTrue: [^self]].
 	(rcvrClass = 0 or: [self isContextClass: rcvrClass]) ifTrue:
