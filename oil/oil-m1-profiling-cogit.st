@@ -96,6 +96,19 @@ oilAllocateTripCounter
 		cCode: [(self addressOf: (oilTripCounters at: oilNextCounterIndex)) asUnsignedInteger]
 		inSmalltalk: [oilNextCounterIndex * OilCounterBytes]! !
 
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/27/2026 13:20'!
+oilDecayTripCounters
+	"Age the loop trip counters on each scavenge so that cold loops do not slowly accumulate trips."
+	<api>
+	| val |
+	0 to: OilNumTripCounters - 1 do:
+		[:i|
+		val := oilTripCounters at: i.
+		val > 0 ifTrue:
+			[val := val + 512.
+			 val > OilInitialCounterValue ifTrue: [val := OilInitialCounterValue].
+			 oilTripCounters at: i put: val]]! !
+
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
 fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
@@ -157,9 +170,9 @@ additionalHeadersDo: aBinaryBlock
 		value: 'cogmethod.h'
 		value: SistaCogMethod cogMethodHeader! !
 
-!ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 10:00'!
+!ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/27/2026 13:20'!
 declareCVarsIn: aCodeGen
-	aCodeGen var: #oilTripCounters declareC: 'static unsigned int oilTripCounters[OilNumTripCounters]'.
+	aCodeGen var: #oilTripCounters declareC: 'static int oilTripCounters[OilNumTripCounters]'.
 	aCodeGen var: #oilNextCounterIndex declareC: 'static usqInt oilNextCounterIndex = 0'! !
 
 
@@ -239,6 +252,24 @@ oilIsClosure: oop
 	^(objectMemory isNonImmediate: oop)
 	  and: [(objectMemory classIndexOf: oop) = ClassFullBlockClosureCompactIndex
 			or: [(objectMemory classIndexOf: oop) = ClassBlockClosureCompactIndex]]! !
+
+!SpurMemoryManager methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/27/2026 13:08'!
+doScavenge: tenuringCriterion
+	"SpurMemoryManager's main entry point for scavenging:
+	 - account for the space allocated since the last collection
+	 - run the scavenger and age the Oil loop trip counters
+	 - reset freeStart and accounting."
+	self doAllocationAccountingForScavenge.
+	gcPhaseInProgress := ScavengeInProgress.
+	pastSpaceStart := scavenger scavenge: tenuringCriterion.
+	self assert: (self
+					oop: pastSpaceStart
+					isGreaterThanOrEqualTo: scavenger pastSpace start
+					andLessThanOrEqualTo: scavenger pastSpace limit).
+	self cCode: [self oilDecayTripCounters] inSmalltalk: [coInterpreter cogit oilDecayTripCounters].
+	freeStart := scavenger eden start.
+	gcPhaseInProgress := 0.
+	self resetAllocationAccountingAfterGC! !
 
 !CoInterpreter class methodsFor: '*VMMaker-JIT-Oil-translation' stamp: 'cb 10/26/2026 20:20'!
 writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator

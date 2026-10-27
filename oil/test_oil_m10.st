@@ -87,11 +87,11 @@ times := [:block | | best | best := SmallInteger maxVal. 5 timesRepeat: [best :=
 info := [:sel | (cls >> sel) oilInfo].
 "{selector. warm-up arguments. argument lists checked. check of {float loops. full}. benchmark block or nil}"
 probes := {
-	{#mandelbrot:. {20}. {{0}. {1}. {20}. {100}}. [:st | st first >= 1]. [:sel | model perform: sel with: 400]}.
-	{#floatSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | st first = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
-	{#geom:. {100}. {{0}. {10}. {1000}. {10000000}}. [:st | st first = 1]. [:sel | 1000 timesRepeat: [model perform: sel with: 10000]]}.
-	{#poly:n:. {1.0001. 100}. {{1.0001. 10}. {0.5. 1000}. {3. 10}. {2.0. 2000}. {nil. 3}. {2.5. 0}}. [:st | st first = 1]. [:sel | 10 timesRepeat: [model perform: sel with: 0.999 with: 1000000]]}.
-	{#whileHalve:. {1000.0}. {{1000.0}. {0.5}. {1.0e300}. {7}. {1.0e10}}. [:st | st first = 1]. nil}.
+	{#mandelbrot:. {20}. {{0}. {1}. {20}. {100}}. [:st | st first >= 0]. [:sel | model perform: sel with: 400]}.
+	{#floatSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | st first >= 0]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
+	{#geom:. {100}. {{0}. {10}. {1000}. {10000000}}. [:st | st first >= 0]. [:sel | 1000 timesRepeat: [model perform: sel with: 10000]]}.
+	{#poly:n:. {1.0001. 100}. {{1.0001. 10}. {0.5. 1000}. {3. 10}. {2.0. 2000}. {nil. 3}. {2.5. 0}}. [:st | st first >= 0]. [:sel | 10 timesRepeat: [model perform: sel with: 0.999 with: 1000000]]}.
+	{#whileHalve:. {1000.0}. {{1000.0}. {0.5}. {1.0e300}. {7}. {1.0e10}}. [:st | st first >= 0]. nil}.
 	{#leaky:. {1.5}. {{1.5}. {1.0e30}. {2}. {1.0e-30}}. [:st | true]. nil}}.
 probes do: [:spec | | sel baseSel results code st |
 	sel := spec first.

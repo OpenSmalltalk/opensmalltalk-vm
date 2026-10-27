@@ -357,13 +357,13 @@ structTypeName
 
 
 VMStructType subclass: #OilCond
-	instanceVariableNames: 'cond regA regB imm useImm identity frame pc site testClass selKind selValue'
+	instanceVariableNames: 'cond regA regB imm useImm identity frame pc site testClass'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants'
 	category: 'VMMaker-JIT-Oil'!
 
-!OilCond commentStamp: 'cb 10/26/2026 23:00' prior: 0!
-I am a lazy condition (OilInliningCompiler>>condAt:): a comparison or class test whose boolean result is not materialized until needed, so that a following conditional jump can fuse with it (see pushLazyCond:class:ra:rb:imm:useImm:identity:site:kind: and emitCondCompare:).  In the VM the conditions are a static C array of OilCond structs (oilConds); in the image an Array of instances of me.
+!OilCond commentStamp: 'cb 10/27/2026 12:55' prior: 0!
+I am a lazy condition (OilInliningCompiler>>condAt:): a comparison or class test whose boolean result is not materialized until needed, so that a following conditional jump can fuse with it (see pushLazyCond:class:ra:rb:imm:useImm:identity:site: and emitCondCompare:).  In the VM the conditions are a static C array of OilCond structs (oilConds); in the image an Array of instances of me.
 
 cond	the condition code (OilCond*)
 regA	the virtual register of the first operand
@@ -374,9 +374,7 @@ identity	whether the comparison is an identity comparison
 frame	the frame of the comparison
 pc	the pc of the comparison
 site	its deoptimization site, or -1
-testClass	the class of a class test (0 for a comparison)
-selKind	the descriptor kind of the value a select answers when the test fails
-selValue	the descriptor value of the value a select answers when the test fails!
+testClass	the class of a class test (0 for a comparison)!
 
 !OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 cond
@@ -457,22 +455,6 @@ testClass
 !OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 testClass: anInteger
 	^testClass := anInteger! !
-
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
-selKind
-	^selKind! !
-
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
-selKind: anInteger
-	^selKind := anInteger! !
-
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
-selValue
-	^selValue! !
-
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
-selValue: anInteger
-	^selValue := anInteger! !
 
 !OilCond methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
 initialize
@@ -1445,9 +1427,6 @@ regForKind: descKind value: descValue scratch: scratchReg
 		 ^scratchReg].
 	descKind = OilDescObject ifTrue:
 		[^self materializeVObj: descValue scratch: scratchReg].
-	descKind = OilDescSelect ifTrue:
-		[self emitSelect: descValue into: scratchReg.
-		 ^scratchReg].
 	self requireEagerClosures.
 	^scratchReg! !
 
@@ -2528,11 +2507,6 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 		 simStackTop := slotA - 1.
 		 self push: OilDescConst value: (resultBool ifTrue: [trueHandle] ifFalse: [falseHandle]).
 		 ^nextPC].
-	(isIdentity
-	 and: [(kindA = OilDescSelect and: [kindB = OilDescConst and: [valB = nilHandle]])
-		or: [kindB = OilDescSelect and: [kindA = OilDescConst and: [valA = nilHandle]]]]) ifTrue:
-		["x == nil where x answers nil for the instances of one class and a non-nil value for the other: the class test"
-		 ^self genSelectIsNil: (kindA = OilDescSelect ifTrue: [valA] ifFalse: [valB]) cond: condCode slot: slotA frame: frameIndex next: nextPC].
 	(isIdentity and: [(kindA = OilDescBlock or: [kindA = OilDescTempVector]) or: [kindB = OilDescBlock or: [kindB = OilDescTempVector]]]) ifTrue:
 		[self requireEagerClosures.
 		 ^nextPC].
@@ -2575,14 +2549,13 @@ genCompare: cond identity: isIdentity frame: frameIndex next: nextPC
 			 failed ifTrue: [^nextPC].
 			 siteIR at: siteIndex put: -1].
 	self pushLazyCond: condCode class: 0 ra: regA rb: (useImm ifTrue: [0] ifFalse: [regB]) imm: (useImm ifTrue: [immVal] ifFalse: [0])
-		useImm: useImm identity: isIdentity site: siteIndex kind: OilDescCond.
+		useImm: useImm identity: isIdentity site: siteIndex.
 	^nextPC! !
 
-!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/26/2026 20:45'!
-pushLazyCond: condCode class: classOop ra: regA rb: regB imm: immVal useImm: useImm identity: isIdentity site: siteIndex kind: descKind
-	"Push the lazy comparison result (descKind OilDescCond) or class dependent value (OilDescSelect) numConds, a comparison
-	 (see emitCondCompare:) or, if classOop is not 0, a class test, and make it the pending one (materializing the previous
-	 one first).  Answer its index.  (The caller checked that numConds < OilMaxConds.)"
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/27/2026 12:55'!
+pushLazyCond: condCode class: classOop ra: regA rb: regB imm: immVal useImm: useImm identity: isIdentity site: siteIndex
+	"Push the lazy comparison result (OilDescCond) numConds, a comparison (see emitCondCompare:) or, if classOop is not 0,
+	 a class test, and make it the pending one (materializing the previous one first).  Answer its index."
 	| condIndex |
 	self materializePendingCondIfAny.
 	condIndex := numConds.
@@ -2596,7 +2569,7 @@ pushLazyCond: condCode class: classOop ra: regA rb: regB imm: immVal useImm: use
 	(self condAt: condIndex) frame: currentFrame.
 	(self condAt: condIndex) pc: currentPC.
 	(self condAt: condIndex) site: siteIndex.
-	pendingCondSlot := self push: descKind value: condIndex.
+	pendingCondSlot := self push: OilDescCond value: condIndex.
 	pendingCondIndex := condIndex.
 	numConds := condIndex + 1.
 	^condIndex! !
@@ -2658,11 +2631,11 @@ emitCond: condIndex booleanInto: destReg
 	self emitCondCompare: condIndex.
 	self emitDiamondInto: destReg trueKind: OilDescConst value: trueHandle falseKind: OilDescConst value: falseHandle! !
 
-!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/26/2026 20:50'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/27/2026 12:55'!
 isLazyKind: descKind
-	"Is descKind that of a lazy comparison result (OilDescCond) or class dependent value (OilDescSelect)?"
+	"Is descKind that of a lazy comparison result (OilDescCond)?"
 	<inline: true>
-	^descKind = OilDescCond or: [descKind = OilDescSelect]! !
+	^descKind = OilDescCond! !
 
 !OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/26/2026 20:50'!
 materializePendingCondIfAny
@@ -2670,7 +2643,7 @@ materializePendingCondIfAny
 	<inline: true>
 	pendingCondSlot >= 0 ifTrue: [self materializePendingCond]! !
 
-!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/27/2026 12:55'!
 materializePendingCond
 	<inline: false>
 	| slotIndex |
@@ -2678,9 +2651,6 @@ materializePendingCond
 	pendingCondSlot := -1.
 	(slotIndex <= simStackTop and: [(slotKind at: slotIndex) = OilDescCond and: [(slotValue at: slotIndex) = pendingCondIndex]]) ifTrue:
 		[self emitCond: pendingCondIndex booleanInto: slotIndex.
-		 self setOwn: slotIndex].
-	(slotIndex <= simStackTop and: [(slotKind at: slotIndex) = OilDescSelect and: [(slotValue at: slotIndex) = pendingCondIndex]]) ifTrue:
-		[self emitSelect: pendingCondIndex into: slotIndex.
 		 self setOwn: slotIndex]! !
 
 !OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
@@ -3740,7 +3710,7 @@ genBimorphicPath: aMethod prim: prim selector: selector numArgs: numArgs receive
 	self materializeSlot: rcvrSlot.
 	self flushFrame: currentFrame! !
 
-!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/27/2026 12:55'!
 genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
 	"A predicate (e.g. isSymbol) answering true for the instances of trueClass and false for those of falseClass, the two
 	 classes its send saw: guard that the receiver is an instance of one of them (OilGuardClass2), then answer the class
@@ -3750,7 +3720,7 @@ genBimorphicPredicate: trueClass other: falseClass receiver: rcvrSlot
 	numConds >= OilMaxConds ifTrue: [^false].
 	rcvrReg := self emitGuard2On: rcvrSlot class: trueClass or: falseClass.
 	failed ifTrue: [^true].
-	self pushLazyCond: OilCondIdentical class: trueClass ra: rcvrReg rb: 0 imm: 0 useImm: false identity: true site: -1 kind: OilDescCond.
+	self pushLazyCond: OilCondIdentical class: trueClass ra: rcvrReg rb: 0 imm: 0 useImm: false identity: true site: -1.
 	oilNumPredicates := oilNumPredicates + 1.
 	^true! !
 
@@ -3835,55 +3805,22 @@ isNonNilQuickPrimitive: prim class: classObj
 	prim = 256 ifTrue: [^classObj ~= (self classOopOf: nilHandle)].
 	^prim = 257 or: [prim = 258 or: [prim between: 260 and: 263]]! !
 
-!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/27/2026 12:55'!
 genBimorphicSelect: nilClass other: otherClass prim: prim receiver: rcvrSlot
 	"A send whose two receiver classes answer nil (nilClass) and a known non-nil value (otherClass, quick method prim): guard
-	 that the receiver is an instance of one of them (OilGuardClass2) and answer a lazy class dependent value (OilDescSelect):
-	 compared with nil (ifNil:, == nil) it is the class test itself (see genSelectIsNil:cond:slot:frame:next:), e.g.
-		(class == C1 ifTrue: [nil] ifFalse: [self]) ifNil: [A] ifNotNil: [B]  ==>  class == C1 ifTrue: [A] ifFalse: [B]
-	 and anywhere else it is materialized (emitSelect:into:)."
-	| rcvrReg condIndex |
-	numConds >= OilMaxConds ifTrue: [^false].
+	 that the receiver is an instance of one of them (OilGuardClass2) and select nil or the other value via OilCmpClass and a
+	 diamond, which Pass 2 folds into the class test itself when compared with nil (see OilLoopOptimizer>>foldSelectDiamonds)."
+	| rcvrReg destReg |
 	rcvrReg := self emitGuard2On: rcvrSlot class: nilClass or: otherClass.
 	failed ifTrue: [^true].
-	condIndex := self pushLazyCond: OilCondIdentical class: nilClass ra: rcvrReg rb: 0 imm: 0 useImm: false identity: true site: -1 kind: OilDescSelect.
-	prim = 256
-		ifTrue:
-			[(self condAt: condIndex) selKind: OilDescReg.
-			 (self condAt: condIndex) selValue: rcvrReg]
-		ifFalse:
-			[(self condAt: condIndex) selKind: OilDescConst.
-			 (self condAt: condIndex) selValue: (self quickPrimitiveConstant: prim)].
+	destReg := self pushOwnSlot.
+	self emitOp: OilCmpClass a: OilCondIdentical b: rcvrReg c: 0.
+	self emit64: nilClass.
+	self emitDiamondInto: destReg trueKind: OilDescConst value: nilHandle
+		falseKind: (prim = 256 ifTrue: [OilDescReg] ifFalse: [OilDescConst])
+		value: (prim = 256 ifTrue: [rcvrReg] ifFalse: [self quickPrimitiveConstant: prim]).
 	oilNumSelects := oilNumSelects + 1.
 	^true! !
-
-!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
-genSelectIsNil: condIndex cond: condCode slot: slotA frame: frameIndex next: nextPC
-	"x == nil (condCode OilCondIdentical) or x ~~ nil, x the lazy class dependent value condIndex (nil for the instances of
-	 testClass, non-nil otherwise): the class test, fused with the following conditional jump, or a lazy comparison."
-	| testCond |
-	pendingCondIndex = condIndex ifTrue: [pendingCondSlot := -1].
-	testCond := condCode = OilCondIdentical ifTrue: [OilCondIdentical] ifFalse: [OilCondNotIdentical].
-	simStackTop := slotA - 1.
-	(nextPC >= 0 and: [self canFuseBranchAt: nextPC frame: frameIndex]) ifTrue:
-		[self flushFrame: frameIndex.
-		 self emitOp: OilCmpClass a: testCond b: (self condAt: condIndex) regA c: 0.
-		 self emit64: (self condAt: condIndex) testClass.
-		 ^self emitFusedBranch: frameIndex].
-	numConds >= OilMaxConds ifTrue:
-		[self abortCompilation: OilFailTooManyVirtualObjects.
-		 ^nextPC].
-	self pushLazyCond: testCond class: (self condAt: condIndex) testClass ra: (self condAt: condIndex) regA rb: 0 imm: 0 useImm: false identity: true site: -1 kind: OilDescCond.
-	^nextPC! !
-
-!OilInliningCompiler methodsFor: 'bimorphic inlining' stamp: 'cb 10/25/2026 09:30'!
-emitSelect: condIndex into: destReg
-	"Materialize the lazy class dependent value condIndex into destReg: nil if the class test holds, else its other value."
-	<inline: false>
-	pendingCondIndex = condIndex ifTrue: [pendingCondSlot := -1].
-	self emitOp: OilCmpClass a: OilCondIdentical b: (self condAt: condIndex) regA c: 0.
-	self emit64: (self condAt: condIndex) testClass.
-	self emitDiamondInto: destReg trueKind: OilDescConst value: nilHandle falseKind: (self condAt: condIndex) selKind value: (self condAt: condIndex) selValue! !
 
 !OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/25/2026 09:30'!
 hasVirtualObjectFrom: firstSlot to: lastSlot

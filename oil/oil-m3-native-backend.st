@@ -360,7 +360,10 @@ oilGenerateCogMethod
 			[self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset].
 	self fillInBlockHeadersAt: startAddress.
 	selector := coInterpreter maybeSelectorOfMethod: methodObj.
+	selector isNil ifTrue: [selector := coInterpreter maybeSelectorOfMethod: oilHomeMethod].
 	selector isNil ifTrue: [selector := objectMemory nilObject].
+	(objectMemory isYoung: selector) ifTrue:
+		[self setHasYoungReferent: true].
 	"Oil frames hold the spill slots of the virtual registers below the temps, and marrying or divorcing a frame copies
 	 all its slots into its context: give the method large contexts (prepareNativeCode keeps the frame within
 	 LargeContextSlots), and note whether the bit must be cleared from the method's header when it is freed."

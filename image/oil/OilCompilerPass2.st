@@ -92,6 +92,7 @@ optimizeIR
 			 oilIRTarget at: branchTarget put: ((oilIRTarget at: branchTarget) + 1 min: 255)].
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	self computeIRSites.
+	self foldSelectDiamonds.
 	optimize ifTrue:
 		[self analyzeTaggedRegisters.
 		 irOffset := 0.
@@ -102,6 +103,71 @@ optimizeIR
 		 self valueNumber.
 		 self unrollToByDoLoops].
 	^self emitOptimizedIR! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/27/2026 12:55'!
+foldSelectDiamonds
+	"Fold a bimorphic nil-or-non-nil select diamond (OilCmpClass rcvr == C; BranchFalse Lother; Const64 dest := nil;
+	 Jump Lmerge; Lother: dest := nonNil; Lmerge:) followed by a comparison of dest with nil (Const64 nilReg := nil;
+	 CmpTagged ==/~~ dest, nilReg) into the class test OilCmpClass itself."
+	| irOffset |
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[(self opcodeAt: irOffset) = OilCmpClass ifTrue:
+			[self tryFoldSelectDiamondAt: irOffset].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)]! !
+
+!OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/27/2026 12:55'!
+tryFoldSelectDiamondAt: cmpOffset
+	| bfOffset lFalse destReg lMerge falseOp nilReg cmpTagOffset cond irOffset |
+	bfOffset := cmpOffset + 3.
+	(bfOffset + 5 <= irIndex
+	 and: [(self fieldAAt: cmpOffset) = OilCondIdentical
+	 and: [(oilIRTarget at: bfOffset) = 0
+	 and: [(self opcodeAt: bfOffset) = OilBranchFalse
+	 and: [(self fieldAAt: bfOffset) = OilFlagsReg]]]]) ifFalse: [^self].
+	lFalse := self imm16At: bfOffset.
+	(lFalse = (cmpOffset + 8)
+	 and: [(oilIRTarget at: cmpOffset + 4) = 0
+	 and: [(self opcodeAt: cmpOffset + 4) = OilConst64
+	 and: [(self word64At: cmpOffset + 5) = nilHandle
+	 and: [(oilIRTarget at: cmpOffset + 7) = 0
+	 and: [(self opcodeAt: cmpOffset + 7) = OilJump]]]]]) ifFalse: [^self].
+	destReg := self fieldAAt: cmpOffset + 4.
+	lMerge := self imm16At: cmpOffset + 7.
+	lMerge = lFalse
+		ifTrue:
+			[(destReg = (self fieldBAt: cmpOffset) and: [(oilIRTarget at: lMerge) = 2]) ifFalse: [^self]]
+		ifFalse:
+			[(lMerge > lFalse
+			  and: [lMerge < irIndex
+			  and: [(oilIRTarget at: lFalse) = 1
+			  and: [(oilIRTarget at: lMerge) = 1
+			  and: [lMerge = (lFalse + (self instructionLengthAt: lFalse))
+			  and: [(self fieldAAt: lFalse) = destReg]]]]]) ifFalse: [^self].
+			 falseOp := self opcodeAt: lFalse.
+			 (falseOp = OilMove or: [falseOp = OilConstTagged
+			  or: [falseOp = OilConst64 and: [(self word64At: lFalse + 1) ~= nilHandle]]]) ifFalse: [^self]].
+	cmpTagOffset := lMerge + 3.
+	(cmpTagOffset < irIndex
+	 and: [(self opcodeAt: lMerge) = OilConst64
+	 and: [(self word64At: lMerge + 1) = nilHandle
+	 and: [(oilIRTarget at: cmpTagOffset) = 0
+	 and: [(self opcodeAt: cmpTagOffset) = OilCmpTagged]]]]) ifFalse: [^self].
+	nilReg := self fieldAAt: lMerge.
+	cond := self fieldAAt: cmpTagOffset.
+	(nilReg = (destReg + 1)
+	 and: [(cond = OilCondIdentical or: [cond = OilCondNotIdentical])
+	 and: [((self fieldBAt: cmpTagOffset) = destReg and: [(self fieldCAt: cmpTagOffset) = nilReg])
+			or: [(self fieldBAt: cmpTagOffset) = nilReg and: [(self fieldCAt: cmpTagOffset) = destReg]]]]) ifFalse: [^self].
+	oilIRBuffer1 at: cmpOffset put: ((oilIRBuffer1 at: cmpOffset) bitAnd: 16rFF00FFFF) + (cond bitShift: 16).
+	irOffset := bfOffset.
+	[irOffset <= cmpTagOffset] whileTrue:
+		[self mark: irOffset with: OilP2Delete.
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	oilIRTarget at: lFalse put: 0.
+	oilIRTarget at: lMerge put: 0.
+	oilVRegDefs at: destReg put: (oilVRegDefs at: destReg) - (lMerge = lFalse ifTrue: [1] ifFalse: [2]).
+	oilVRegDefs at: nilReg put: (oilVRegDefs at: nilReg) - 1! !
 
 !OilLoopOptimizer methodsFor: 'pass 2 optimization' stamp: 'cb 10/25/2026 02:00'!
 valueNumber
