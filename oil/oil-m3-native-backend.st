@@ -326,7 +326,7 @@ oilGenerateCogMethod
 	<var: #mapBuffer declareC: 'char mapBuffer[512]'>
 	self planMetadata ifFalse:
 		[^OilFailCodeSpace].
-	metadata := coInterpreter oilAllocateMetadata: self mdNumLiterals numBytes: self mdNumBytes.
+	metadata := coInterpreter oilAllocateMetadata: self mdNumLiterals numBytes: self mdNumBytes of: methodObj.
 	metadata = 0 ifTrue:
 		[^OilFailCodeSpace].
 	headerSize := self sizeof: CogMethod.
@@ -711,7 +711,7 @@ estimateOpcodes
 		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
 	^estimatedCount + (4 * oilNumAllocRegs) + (3 * OilMaxUndos)! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 15:00'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:30'!
 estimateOpcodesOfInstructionAt: irOffset
 	"An upper bound of the number of abstract instructions generated for the IR instruction at irOffset."
 	| opcode |
@@ -720,11 +720,11 @@ estimateOpcodesOfInstructionAt: irOffset
 	(opcode = OilStoreField or: [opcode = OilStoreElement]) ifTrue: [^48].
 	(opcode = OilNewArray or: [opcode = OilMakeClosure or: [opcode = OilNewObject]]) ifTrue:
 		[^40 + (2 * (self fieldCAt: irOffset)) + (2 * OilMaxReg // 16)].
-	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]]) ifTrue: [^140].
-	opcode = OilStringHash ifTrue: [^100].
+	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]]) ifTrue: [^180].
+	opcode = OilStringHash ifTrue: [^160].
 	opcode = OilIdentityHash ifTrue: [^60].
-	(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators or: [opcode = OilFindFirstInString]]) ifTrue: [^160 + (4 * oilNumAllocRegs)].
-	opcode = OilFindSubstring ifTrue: [^240 + (4 * oilNumAllocRegs)].
+	(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators or: [opcode = OilFindFirstInString]]) ifTrue: [^200 + (4 * oilNumAllocRegs)].
+	opcode = OilFindSubstring ifTrue: [^300 + (4 * oilNumAllocRegs)].
 	^20! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/26/2026 10:00'!
@@ -1183,13 +1183,15 @@ oilApiFetchClassOf: oop
 	<essential: #ProfilingCogit>
 	^objectMemory fetchClassOf: oop! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 10:00'!
-oilAllocateMetadata: numLiterals numBytes: numBytes
-	"Answer a hidden (class index pun), old space object of CompiledMethod format for the deoptimization metadata
-	 of an Oil method: a method header (the number of literals), numLiterals literals (nil), then numBytes bytes (0); or 0.
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/27/2026 20:55'!
+oilAllocateMetadata: numLiterals numBytes: numBytes of: aMethodObj
+	"Answer a read-only old space CompiledMethod object for the deoptimization metadata of an Oil method: a method header
+	 (the number of literals), numLiterals literals (nil), then numBytes bytes (0); or 0.
 	 It is referenced from the method (see ProfilingCogit>>maybeMarkCountersIn:): the garbage collectors trace its literal
 	 frame only, like a method's, and never look at its bytes.  It is not pinned: a full GC may move it, and then updates
-	 the method's reference (see ProfilingCogit>>mapObjectReferencesInMachineCodeForFullGC)."
+	 the method's reference (see ProfilingCogit>>mapObjectReferencesInMachineCodeForFullGC).  Because it is marked
+	 immutable (isImmutable bit in the Spur header), primitiveOilMetadata can return it directly to the image without
+	 cloning: any at:put:/literalAt:put:/instVarAt:put: from the image fails with PrimErrNoModification."
 	<api>
 	<essential: #ProfilingCogit>
 	| numTrailingBytes numSlots obj |
@@ -1199,13 +1201,14 @@ oilAllocateMetadata: numLiterals numBytes: numBytes
 			allocateSlotsInOldSpace: numSlots
 			bytes: (objectMemory objectBytesForSlots: numSlots)
 			format: objectMemory firstCompiledMethodFormat + numTrailingBytes
-			classIndex: objectMemory arrayClassIndexPun.
+			classIndex: (objectMemory classIndexOf: aMethodObj).
 	obj isNil ifTrue: [^0].
 	objectMemory storePointerUnchecked: 0 ofObject: obj withValue: (objectMemory integerObjectOf: numLiterals).
 	1 to: numLiterals do:
 		[:slotIndex| objectMemory storePointerUnchecked: slotIndex ofObject: obj withValue: objectMemory nilObject].
 	numLiterals + 1 to: numSlots - 1 do:
 		[:slotIndex| objectMemory storeLong64: slotIndex ofObject: obj withValue: 0].
+	objectMemory setIsImmutableOf: obj to: true.
 	^obj! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/26/2026 10:00'!
@@ -2551,54 +2554,35 @@ primitiveOilContexts
 					withValue: (objectMemory integerObjectOf: (self oilContextPCOf: chainIndex chain: chain numFrames: numFrames site: site metadata: metadata))].
 	self pop: argumentCount + 1 thenPush: result! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-debugging' stamp: 'cb 10/26/2026 22:15'!
-oilMetadataCopyOf: metadata class: classObj methodClass: methodClassObj
-	"Answer { classObj. copy }, copy a clone of the deoptimization metadata object metadata that is an instance of
-	 methodClassObj (CompiledMethod, the class of the method the metadata belongs to): its header, a SmallInteger, is the number of its literals (a method header without any other flag),
-	 its literal frame and bytes are those of metadata.  Answer nil if out of memory.
-	 Why a clone, and why re-classed: the metadata object itself must never be handed to the image.  The deoptimizer reads
-	 it (ceOilDeoptimize:, oilContextsOfFrame:context:site:), so an at:put: or instVarAt:put: from the image would corrupt
-	 the deoptimization state and could crash the VM.  And it is hidden: its class index is the arrayClassIndexPun (it is
-	 not an instance of any class the image knows, see oilAllocateMetadata:numBytes:), with the format of a CompiledMethod,
-	 so the image could not use it as it is.  The clone is an ordinary CompiledMethod (never run), whose literals and bytes
-	 the image reads with literalAt: and at: (see OilDeoptMetadataReader)."
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-debugging' stamp: 'cb 10/27/2026 20:55'!
+oilMetadataOf: metadata class: classObj
+	"Answer { classObj. metadata }, where metadata is the read-only CompiledMethod deoptimization metadata object
+	 (see oilAllocateMetadata:numBytes:of:), or nil if out of memory."
 	<essential: #ProfilingCogit>
-	| numLiterals numBytes copy pair literal |
-	numLiterals := objectMemory literalCountOf: metadata.
-	numBytes := objectMemory numBytesOf: metadata.
-	copy := objectMemory instantiateCompiledMethodClass: methodClassObj indexableSize: numBytes.
+	| pair |
 	pair := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 2.
-	(copy isNil or: [pair isNil]) ifTrue: [^nil]. "(Spur does not move objects when allocating)"
-	objectMemory storePointerUnchecked: 0 ofObject: copy withValue: (objectMemory fetchPointer: 0 ofObject: metadata).
-	1 to: numLiterals do:
-		[:i|
-		literal := objectMemory fetchPointer: i ofObject: metadata.
-		((objectMemory isNonImmediate: literal) and: [objectMemory isForwarded: literal]) ifTrue:
-			[literal := objectMemory followForwarded: literal].
-		objectMemory storePointer: i ofObject: copy withValue: literal].
-	numLiterals + 1 * objectMemory wordSize to: numBytes - 1 do:
-		[:i| objectMemory storeByte: i ofObject: copy withValue: (objectMemory fetchByte: i ofObject: metadata)].
+	pair isNil ifTrue: [^nil].
 	objectMemory
 		storePointer: 0 ofObject: pair withValue: classObj;
-		storePointer: 1 ofObject: pair withValue: copy.
+		storePointer: 1 ofObject: pair withValue: metadata.
 	^pair! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-debugging' stamp: 'cb 10/26/2026 21:00'!
-oilMetadataCopyOfMachineCodeOf: methodObj class: classObj
-	"(see oilMetadataCopyOf:class:methodClass:)"
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-debugging' stamp: 'cb 10/27/2026 20:55'!
+oilMetadataOfMachineCodeOf: methodObj class: classObj
+	"(see oilMetadataOf:class:)"
 	<essential: #ProfilingCogit>
 	^self
-		oilMetadataCopyOf: (cogit oilMetadataOf: (self cogMethodOf: methodObj))
-		class: classObj
-		methodClass: (objectMemory fetchClassOfNonImm: methodObj)! !
+		oilMetadataOf: (cogit oilMetadataOf: (self cogMethodOf: methodObj))
+		class: classObj! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 21:00'!
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 20:55'!
 primitiveOilMetadata
 	"CompiledMethod>>oilMetadata (no argument), CompiledMethod>>oilMetadataFor: aClass, or any receiver and a CompiledMethod
-	 argument.  Answer copies of the deoptimization metadata of the method's Oil code (see oilMetadataCopyOf:class:methodClass:), never
-	 the metadata object itself: nil if it has none, else an Array of pairs { class or nil. metadata (a CompiledMethod) }:
-	 one, with nil, for Oil code of its own (primitiveOilCompile), else one per specialization (primitiveOilSpecialize).
-	 With a class argument answer the pair for that class (or the one of the method's own Oil code), or nil."
+	 argument.  Answer the deoptimization metadata of the method's Oil code (read-only CompiledMethod objects, see
+	 oilAllocateMetadata:numBytes:of: and oilMetadataOf:class:): nil if it has none, else an Array of pairs
+	 { class or nil. metadata }: one, with nil, for Oil code of its own (primitiveOilCompile), else one per specialization
+	 (primitiveOilSpecialize).  With a class argument answer the pair for that class (or the one of the method's own Oil code),
+	 or nil."
 	<export: true>
 	<essential: #ProfilingCogit>
 	| methodObj classObj direct count result entry entryIndex copy |
@@ -2617,7 +2601,7 @@ primitiveOilMetadata
 	direct := (self methodHasCogMethod: methodObj) and: [cogit isOilMethod: (self cogMethodOf: methodObj)].
 	classObj ~= objectMemory nilObject ifTrue:
 		[direct
-			ifTrue: [entry := self oilMetadataCopyOfMachineCodeOf: methodObj class: objectMemory nilObject]
+			ifTrue: [entry := self oilMetadataOfMachineCodeOf: methodObj class: objectMemory nilObject]
 			ifFalse:
 				[entry := objectMemory nilObject.
 				 entryIndex := (objectMemory isNonImmediate: classObj)
@@ -2625,7 +2609,7 @@ primitiveOilMetadata
 									ifFalse: [-1].
 				 (entryIndex >= 0 and: [cogit oilIsLiveSpecialization: entryIndex of: methodObj]) ifTrue:
 					[copy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
-					 entry := self oilMetadataCopyOfMachineCodeOf: copy class: classObj]].
+					 entry := self oilMetadataOfMachineCodeOf: copy class: classObj]].
 		 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 		 ^self pop: argumentCount + 1 thenPush: entry].
 	count := direct ifTrue: [1] ifFalse: [cogit oilNumSpecializationsOf: methodObj].
@@ -2635,7 +2619,7 @@ primitiveOilMetadata
 	result isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 	direct
 		ifTrue:
-			[entry := self oilMetadataCopyOfMachineCodeOf: methodObj class: objectMemory nilObject.
+			[entry := self oilMetadataOfMachineCodeOf: methodObj class: objectMemory nilObject.
 			 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 			 objectMemory storePointer: 0 ofObject: result withValue: entry]
 		ifFalse:
@@ -2644,7 +2628,7 @@ primitiveOilMetadata
 				[:index|
 				(cogit oilIsLiveSpecialization: index of: methodObj) ifTrue:
 					[copy := cogit oilSpecializationAt: index field: OilSpecCopy.
-					 entry := self oilMetadataCopyOfMachineCodeOf: copy class: (cogit oilSpecializationAt: index field: OilSpecClass).
+					 entry := self oilMetadataOfMachineCodeOf: copy class: (cogit oilSpecializationAt: index field: OilSpecClass).
 					 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 					 objectMemory storePointer: count ofObject: result withValue: entry.
 					 count := count + 1]]].
@@ -2659,6 +2643,16 @@ oilApiMethodClassOf: aMethod
 	lit := self oilApiMethodClassAssociationOf: aMethod.
 	lit = 0 ifTrue: [^0].
 	^objectMemory followMaybeForwarded: (objectMemory fetchPointer: ValueIndex ofObject: lit)! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/27/2026 21:30'!
+oilApiAssociationValueOf: anOop
+	"If anOop is a pointer object of at least 2 slots (an Association), answer its value (slot 1), else 0."
+	<api>
+	<essential: #ProfilingCogit>
+	((objectMemory isNonImmediate: anOop)
+	 and: [(objectMemory isPointersNonImm: anOop)
+	 and: [(objectMemory numSlotsOf: anOop) >= 2]]) ifFalse: [^0].
+	^objectMemory followMaybeForwarded: (objectMemory fetchPointer: ValueIndex ofObject: anOop)! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 15:00'!
 oilApiClass: aClass isNamed: aCString

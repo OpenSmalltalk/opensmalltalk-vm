@@ -421,7 +421,7 @@ genInstructionAt: irOffset
 		[OilLoadChar]		-> [self genLoadByte: regA array: regB index: regC tag: objectMemory characterTag].
 		[OilStoreByte]		-> [self genStoreByte: regA array: regB index: regC character: false site: siteIndex].
 		[OilStoreChar]		-> [self genStoreByte: regA array: regB index: regC character: true site: siteIndex].
-		[OilCompareBytes]	-> [self genCompareBytes: regA with: regB with: regC site: siteIndex].
+		[OilCompareBytes]	-> [self genCompareBytesAt: irOffset site: siteIndex].
 		[OilTrap]			-> [self deopt: (cogit Jump: 0) site: siteIndex].
 		[OilStreamNext]		-> [self genStreamNextAt: irOffset].
 		[OilStreamNextPut]	-> [self genStreamNextPutAt: irOffset].
@@ -878,6 +878,26 @@ genByteObjectCheck: objReg jumps: jumps count: numJumps
 	jumps at: count put: (cogit JumpGreaterOrEqual: 0).
 	^count + 1! !
 
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genBroadcastByte: byteReg into: wordReg
+	"Replicate the low byte of byteReg across all 8 bytes of wordReg (byteReg * 16r0101010101010101; ClassReg is scratch)."
+	| shift |
+	byteReg ~= wordReg ifTrue: [cogit MoveR: byteReg R: wordReg].
+	shift := 8.
+	[shift <= 32] whileTrue:
+		[cogit MoveR: wordReg R: ClassReg.
+		 cogit LogicalShiftLeftCq: shift R: ClassReg.
+		 cogit OrR: ClassReg R: wordReg.
+		 shift := shift * 2]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genTagByteAddressInExtra2
+	"Convert the byte address in SendNumArgsReg within the byte object in Extra2Reg into a 1-based tagged SmallInteger index."
+	cogit SubR: Extra2Reg R: SendNumArgsReg.
+	cogit SubCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
+	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
+	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg! !
+
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 14:05'!
 genSwarZeroByteTest
 	"Test whether the 8-byte word at 0(SendNumArgsReg), xored with Extra1Reg, contains a zero byte:
@@ -891,18 +911,14 @@ genSwarZeroByteTest
 	cogit AndR: TempReg R: ClassReg.
 	cogit TstCq: 16r8080808080808080 R: ClassReg! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 14:05'!
-genIndexOfByteAt: i
-	"a := b indexOfAscii: c inString: d startingAt: e (3 args, b ignored) or a := d indexOfAscii: c startingAt: e (2 args),
-	 primitive 153: if c is a SmallInteger 0..255, d a byte object and e a SmallInteger >= 1, answer the index of the first
-	 byte of d equal to c at e or after, else 0, scanning 8 bytes per iteration (SWAR): a word w of d contains c iff
-	 w' := w bitXor: c * 16r0101010101010101 has a zero byte, i.e. iff (w' - 16r0101010101010101) bitAnd: (w' bitInvert bitAnd:
-	 16r8080808080808080) is not 0; when fewer than 8 bytes remain at an 8-byte aligned address, the padded tail word of the
-	 Spur object is tested in one SWAR step too before checking bytes up to the end.  Otherwise send the message.
-	 Registers: Extra2Reg d, Extra3Reg c, SendNumArgsReg the address of the current byte, Extra0Reg the end address,
-	 Extra1Reg c in every byte, TempReg and ClassReg scratch."
-	| numArgs jumps numJumps wordLoop byteLoop jumpTail jumpEmptyTail jumpHit jumpUnaligned jumpNoTailHit jumpEnd jumpFound jumpDone found shift |
-	<var: #jumps declareC: 'AbstractInstruction *jumps[10]'>
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genSwarScanForByte
+	"Scan [SendNumArgsReg, Extra0Reg) for the first byte equal to Extra3Reg (with Extra1Reg holding Extra3Reg in every
+	 byte, see genBroadcastByte:into:), 8 bytes per iteration (SWAR), plus one SWAR step on an 8-byte aligned tail word,
+	 then bytewise.  Fall through with SendNumArgsReg pointing to the matching byte, or jump via the answered jump if
+	 none is found (TempReg and ClassReg are scratch)."
+	<returnTypeC: #'AbstractInstruction *'>
+	| wordLoop byteLoop jumpTail jumpEmptyTail jumpHit jumpUnaligned jumpNoTailHit jumpEnd jumpFound miss |
 	<var: #wordLoop type: #'AbstractInstruction *'>
 	<var: #byteLoop type: #'AbstractInstruction *'>
 	<var: #jumpTail type: #'AbstractInstruction *'>
@@ -912,8 +928,130 @@ genIndexOfByteAt: i
 	<var: #jumpNoTailHit type: #'AbstractInstruction *'>
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	<var: #jumpFound type: #'AbstractInstruction *'>
+	<var: #miss type: #'AbstractInstruction *'>
+	wordLoop := cogit LoadEffectiveAddressMw: 8 r: SendNumArgsReg R: ClassReg.
+	cogit CmpR: Extra0Reg R: ClassReg.
+	jumpTail := cogit JumpAbove: 0.
+	self genSwarZeroByteTest.
+	jumpHit := cogit JumpNonZero: 0.
+	cogit AddCq: 8 R: SendNumArgsReg.
+	cogit Jump: wordLoop.
+	jumpTail jmpTarget: (cogit CmpR: Extra0Reg R: SendNumArgsReg).
+	jumpEmptyTail := cogit JumpAboveOrEqual: 0.
+	cogit TstCq: 7 R: SendNumArgsReg.
+	jumpUnaligned := cogit JumpNonZero: 0.
+	self genSwarZeroByteTest.
+	jumpNoTailHit := cogit JumpZero: 0.
+	byteLoop := cogit CmpR: Extra0Reg R: SendNumArgsReg.
+	jumpUnaligned jmpTarget: byteLoop.
+	jumpHit jmpTarget: byteLoop.
+	jumpEnd := cogit JumpAboveOrEqual: 0.
+	cogit MoveCq: 0 R: TempReg.
+	cogit MoveMb: 0 r: SendNumArgsReg R: TempReg.
+	cogit CmpR: Extra3Reg R: TempReg.
+	jumpFound := cogit JumpZero: 0.
+	cogit AddCq: 1 R: SendNumArgsReg.
+	cogit Jump: byteLoop.
+	jumpEmptyTail jmpTarget: (jumpNoTailHit jmpTarget: (jumpEnd jmpTarget: cogit Label)).
+	miss := cogit Jump: 0.
+	jumpFound jmpTarget: cogit Label.
+	^miss! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 21:40'!
+constantOopOfReg: vreg before: limitOffset
+	"If virtual register vreg holds a known constant oop (an OilConst64) at limitOffset, answer its oop, else 0."
+	| irOffset opcode localConst entryConst allConst hasDefBefore inEntry cand |
+	vreg >= OilFlagsReg ifTrue: [^0].
+	localConst := 0.
+	entryConst := 0.
+	allConst := 0.
+	hasDefBefore := false.
+	inEntry := vreg > (self numArgsOf: oilHomeMethod).
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (oilIRTarget at: irOffset) ~= 0 ifTrue:
+			[irOffset < limitOffset ifTrue: [localConst := 0].
+			 inEntry := false].
+		 ((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]) ifTrue:
+			[cand := opcode = OilConst64 ifTrue: [self word64At: irOffset + 1] ifFalse: [-1].
+			 allConst := allConst = 0 ifTrue: [cand] ifFalse: [allConst = cand ifTrue: [allConst] ifFalse: [-1]].
+			 irOffset < limitOffset ifTrue:
+				[hasDefBefore := true.
+				 localConst := cand > 0 ifTrue: [cand] ifFalse: [0].
+				 inEntry ifTrue: [entryConst := localConst]]].
+		 (self isBranch: opcode) ifTrue: [inEntry := false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	localConst > 0 ifTrue: [^localConst].
+	(hasDefBefore and: [allConst > 0 and: [vreg > (self numTempsOf: oilHomeMethod) or: [entryConst > 0]]]) ifTrue:
+		[^allConst].
+	^0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 21:40'!
+constantByteOopOfReg: vreg before: limitOffset
+	"If virtual register vreg holds a known constant byte object (an OilConst64) at limitOffset, answer its oop, else 0."
+	| constOop |
+	constOop := self constantOopOfReg: vreg before: limitOffset.
+	^(constOop ~= 0 and: [self isByteConstant: constOop]) ifTrue: [constOop] ifFalse: [0]! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 21:40'!
+bijectiveMatchTableOfReg: vreg before: limitOffset
+	"If vreg is loaded before limitOffset from a literal Association (or constant) whose value is a 256-byte bijective
+	 table (all 256 byte values distinct, e.g. CaseSensitiveOrder), answer that table oop, else 0."
+	| irOffset opcode localTable entryTable allTable hasDefBefore inEntry cand assoc |
+	vreg >= OilFlagsReg ifTrue: [^0].
+	localTable := 0.
+	entryTable := 0.
+	allTable := 0.
+	hasDefBefore := false.
+	inEntry := vreg > (self numArgsOf: oilHomeMethod).
+	irOffset := 0.
+	[irOffset < irIndex] whileTrue:
+		[opcode := self opcodeAt: irOffset.
+		 (oilIRTarget at: irOffset) ~= 0 ifTrue:
+			[irOffset < limitOffset ifTrue: [localTable := 0].
+			 inEntry := false].
+		 ((self opcodeHasDest: opcode) and: [(self fieldAAt: irOffset) = vreg]) ifTrue:
+			[cand := 0.
+			 opcode = OilConst64 ifTrue: [cand := self word64At: irOffset + 1].
+			 (opcode = OilLoadField and: [(self fieldCAt: irOffset) = 1]) ifTrue:
+				[assoc := self constantOopOfReg: (self fieldBAt: irOffset) before: irOffset.
+				 assoc ~= 0 ifTrue: [cand := self associationValueOf: assoc]].
+			 cand := (cand ~= 0 and: [self isBijectiveByteTable: cand]) ifTrue: [cand] ifFalse: [-1].
+			 allTable := allTable = 0 ifTrue: [cand] ifFalse: [allTable = cand ifTrue: [allTable] ifFalse: [-1]].
+			 irOffset < limitOffset ifTrue:
+				[hasDefBefore := true.
+				 localTable := cand > 0 ifTrue: [cand] ifFalse: [0].
+				 inEntry ifTrue: [entryTable := localTable]]].
+		 (self isBranch: opcode) ifTrue: [inEntry := false].
+		 irOffset := irOffset + (self instructionLengthAt: irOffset)].
+	localTable > 0 ifTrue: [^localTable].
+	(hasDefBefore and: [allTable > 0 and: [vreg > (self numTempsOf: oilHomeMethod) or: [entryTable > 0]]]) ifTrue:
+		[^allTable].
+	^0! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genCmpConstantBytes: constOop at: baseByte count: count base: baseReg offset: byteOffset
+	"Compare the count bytes (1..8) at byteOffset(baseReg) with the count bytes at 0-based offset baseByte of the
+	 constant byte object constOop, setting the zero flag if all count bytes match (TempReg is scratch)."
+	cogit MoveMw: byteOffset r: baseReg R: TempReg.
+	count < 8 ifTrue:
+		[cogit LogicalShiftLeftCq: 8 - count * 8 R: TempReg.
+		 cogit LogicalShiftRightCq: 8 - count * 8 R: TempReg].
+	cogit CmpCq: (self word64AtByte: baseByte count: count ofConstant: constOop) R: TempReg! !
+
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genIndexOfByteAt: i
+	"a := b indexOfAscii: c inString: d startingAt: e (3 args, b ignored) or a := d indexOfAscii: c startingAt: e (2 args),
+	 primitive 153: if c is a SmallInteger 0..255, d a byte object and e a SmallInteger >= 1, answer the index of the first
+	 byte of d equal to c at e or after, else 0, scanning 8 bytes per iteration (SWAR, see genSwarScanForByte).  Otherwise
+	 send the message.
+	 Registers: Extra2Reg d, Extra3Reg c, SendNumArgsReg the address of the current byte, Extra0Reg the end address,
+	 Extra1Reg c in every byte, TempReg and ClassReg scratch."
+	| numArgs jumps numJumps jumpMiss jumpDone |
+	<var: #jumps declareC: 'AbstractInstruction *jumps[10]'>
+	<var: #jumpMiss type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	<var: #found type: #'AbstractInstruction *'>
 	numArgs := self fieldCAt: i.
 	numJumps := 0.
 	self spillAll.
@@ -941,74 +1079,50 @@ genIndexOfByteAt: i
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
 	cogit AddR: Extra2Reg R: Extra0Reg.
 	cogit AddCq: objectMemory baseHeaderSize R: Extra0Reg.
-	cogit MoveR: Extra3Reg R: Extra1Reg.
-	shift := 8.
-	[shift <= 32] whileTrue:
-		[cogit MoveR: Extra1Reg R: ClassReg.
-		 cogit LogicalShiftLeftCq: shift R: ClassReg.
-		 cogit OrR: ClassReg R: Extra1Reg.
-		 shift := shift * 2].
-	"8 bytes at a time while 8 remain"
-	wordLoop := cogit LoadEffectiveAddressMw: 8 r: SendNumArgsReg R: ClassReg.
-	cogit CmpR: Extra0Reg R: ClassReg.
-	jumpTail := cogit JumpAbove: 0.
-	self genSwarZeroByteTest.
-	jumpHit := cogit JumpNonZero: 0.
-	cogit AddCq: 8 R: SendNumArgsReg.
-	cogit Jump: wordLoop.
-	"1..7 remaining bytes: if 8-byte aligned (always when startingAt: 1), check the padded Spur tail word in one SWAR step"
-	jumpTail jmpTarget: (cogit CmpR: Extra0Reg R: SendNumArgsReg).
-	jumpEmptyTail := cogit JumpAboveOrEqual: 0.
-	cogit TstCq: 7 R: SendNumArgsReg.
-	jumpUnaligned := cogit JumpNonZero: 0.
-	self genSwarZeroByteTest.
-	jumpNoTailHit := cogit JumpZero: 0.
-	"then bytewise"
-	byteLoop := cogit CmpR: Extra0Reg R: SendNumArgsReg.
-	jumpUnaligned jmpTarget: byteLoop.
-	jumpHit jmpTarget: byteLoop.
-	jumpEnd := cogit JumpAboveOrEqual: 0.
-	cogit MoveCq: 0 R: TempReg.
-	cogit MoveMb: 0 r: SendNumArgsReg R: TempReg.
-	cogit CmpR: Extra3Reg R: TempReg.
-	jumpFound := cogit JumpZero: 0.
-	cogit AddCq: 1 R: SendNumArgsReg.
-	cogit Jump: byteLoop.
-	found := cogit SubR: Extra2Reg R: SendNumArgsReg.
-	jumpFound jmpTarget: found.
-	cogit SubCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
-	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
-	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	self genBroadcastByte: Extra3Reg into: Extra1Reg.
+	jumpMiss := self genSwarScanForByte.
+	self genTagByteAddressInExtra2.
 	jumpDone := cogit Jump: 0.
-	found := cogit MoveCq: (objectMemory integerObjectOf: 0) R: SendNumArgsReg.
-	jumpEmptyTail jmpTarget: found.
-	jumpEnd jmpTarget: found.
-	jumpNoTailHit jmpTarget: found.
+	jumpMiss jmpTarget: (cogit MoveCq: (objectMemory integerObjectOf: 0) R: SendNumArgsReg).
 	jumpDone jmpTarget: cogit Label.
 	self genByteScanEpilogueAt: i jumps: jumps count: numJumps numArgs: numArgs! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 14:05'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
 genFindSubstringAt: i
 	"Primitive 154 (findSubstring: key in: body startingAt: start matchTable: mt, 4 args; without mt, 3 args; or
 	 body findSubstringViaPrimitive: key startingAt: start, 2 args): if key and body are byte objects, start is a SmallInteger,
 	 and (when 4 args) mt is nil or a byte object of at least 256 bytes, answer the 1-based starting index of key in body at
-	 (start max: 1) or after, else 0.  Otherwise send the message.
-	 Registers: Extra1Reg key, Extra2Reg body, Extra3Reg matchTable (0 if none), Extra0Reg keySize, ClassReg stopIndex,
-	 SendNumArgsReg current 0-based index in body, Arg0Reg inner index, Arg1Reg/ReceiverResultReg/TempReg scratch."
-	| numArgs jumps numJumps jumpTableDone jumpEmpty jumpStartOK jumpNotFound outerLoop jumpEnd innerLoop jumpNoTable jumpNext jumpDone zeroResult |
+	 (start max: 1) or after, else 0.  When mt is nil (or 2/3 args), the outer loop scans body 8 bytes per iteration for key's
+	 first byte (SWAR, see genSwarScanForByte) and the inner check unrolls 1..2 64-bit word comparisons when key is a constant
+	 of at most 24 bytes, or compares 8 bytes per iteration otherwise.  Otherwise send the message."
+	| numArgs constKey constLen constTable jumps numJumps jumpTableDone jumpBijective jumpEmpty jumpStartOK jumpNotFound jumpWithTable outerSwar jumpSwarMiss jumpSwarNext0 jumpSwarNext1 jumpSwarNext innerWordLoop jumpInnerBytes innerByteLoop jumpSwarFound jumpSwarDone outerLoop jumpEnd innerLoop jumpNext jumpDone zeroResult |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[14]'>
 	<var: #jumpTableDone type: #'AbstractInstruction *'>
+	<var: #jumpBijective type: #'AbstractInstruction *'>
 	<var: #jumpEmpty type: #'AbstractInstruction *'>
 	<var: #jumpStartOK type: #'AbstractInstruction *'>
 	<var: #jumpNotFound type: #'AbstractInstruction *'>
+	<var: #jumpWithTable type: #'AbstractInstruction *'>
+	<var: #outerSwar type: #'AbstractInstruction *'>
+	<var: #jumpSwarMiss type: #'AbstractInstruction *'>
+	<var: #jumpSwarNext0 type: #'AbstractInstruction *'>
+	<var: #jumpSwarNext1 type: #'AbstractInstruction *'>
+	<var: #jumpSwarNext type: #'AbstractInstruction *'>
+	<var: #innerWordLoop type: #'AbstractInstruction *'>
+	<var: #jumpInnerBytes type: #'AbstractInstruction *'>
+	<var: #innerByteLoop type: #'AbstractInstruction *'>
+	<var: #jumpSwarFound type: #'AbstractInstruction *'>
+	<var: #jumpSwarDone type: #'AbstractInstruction *'>
 	<var: #outerLoop type: #'AbstractInstruction *'>
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	<var: #innerLoop type: #'AbstractInstruction *'>
-	<var: #jumpNoTable type: #'AbstractInstruction *'>
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
 	<var: #zeroResult type: #'AbstractInstruction *'>
 	numArgs := self fieldCAt: i.
+	constKey := self constantByteOopOfReg: (self callArg: 0 at: i) before: i.
+	constLen := constKey ~= 0 ifTrue: [self numBytesOfConstant: constKey] ifFalse: [25].
+	constTable := numArgs = 4 ifTrue: [self bijectiveMatchTableOfReg: (self callArg: 3 at: i) before: i] ifFalse: [0].
 	numJumps := 0.
 	self spillAll.
 	cogit MoveMw: (oilVRegSpillTemp at: (self callArg: 0 at: i)) r: FPReg R: Extra1Reg.
@@ -1024,17 +1138,23 @@ genFindSubstringAt: i
 		[cogit MoveMw: (oilVRegSpillTemp at: (self callArg: 3 at: i)) r: FPReg R: Extra3Reg.
 		 cogit CmpCq: objectMemory nilObject R: Extra3Reg.
 		 jumpTableDone := cogit JumpZero: 0.
+		 constTable ~= 0 ifTrue:
+			[cogit genMoveConstant: constTable R: ClassReg.
+			 cogit CmpR: ClassReg R: Extra3Reg.
+			 jumpBijective := cogit JumpZero: 0].
 		 numJumps := self genByteObjectCheck: Extra3Reg jumps: jumps count: numJumps.
 		 cogit oilGenGetNumBytesOf: Extra3Reg into: ClassReg.
 		 cogit CmpCq: 256 R: ClassReg.
 		 jumps at: numJumps put: (cogit JumpLess: 0). numJumps := numJumps + 1.
 		 jumpEmpty := cogit Jump: 0.
+		 constTable ~= 0 ifTrue: [jumpBijective jmpTarget: cogit Label].
 		 jumpTableDone jmpTarget: (cogit MoveCq: 0 R: Extra3Reg).
 		 jumpEmpty jmpTarget: cogit Label].
 	cogit TstCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	jumps at: numJumps put: (cogit JumpZero: 0). numJumps := numJumps + 1.
 	numJumps := self genByteObjectCheck: Extra2Reg jumps: jumps count: numJumps.
-	numJumps := self genByteObjectCheck: Extra1Reg jumps: jumps count: numJumps.
+	constKey = 0 ifTrue:
+		[numJumps := self genByteObjectCheck: Extra1Reg jumps: jumps count: numJumps].
 	cogit oilGenGetNumBytesOf: Extra1Reg into: Extra0Reg.
 	cogit CmpCq: 0 R: Extra0Reg.
 	jumpEmpty := cogit JumpZero: 0.
@@ -1046,6 +1166,75 @@ genFindSubstringAt: i
 	jumpStartOK jmpTarget: (cogit SubR: Extra0Reg R: ClassReg).
 	cogit CmpR: SendNumArgsReg R: ClassReg.
 	jumpNotFound := cogit JumpLess: 0.
+	cogit CmpCq: 0 R: Extra3Reg.
+	jumpWithTable := cogit JumpNonZero: 0.
+	"No matchTable: SWAR scan for key's first byte, then 64-bit word verification"
+	cogit MoveR: Extra1Reg R: Arg0Reg.
+	cogit MoveR: Extra0Reg R: Arg1Reg.
+	cogit MoveR: ClassReg R: Extra0Reg.
+	cogit AddR: Extra2Reg R: Extra0Reg.
+	cogit AddCq: objectMemory baseHeaderSize + 1 R: Extra0Reg.
+	cogit AddR: Extra2Reg R: SendNumArgsReg.
+	cogit AddCq: objectMemory baseHeaderSize R: SendNumArgsReg.
+	cogit MoveCq: 0 R: Extra3Reg.
+	cogit MoveMb: objectMemory baseHeaderSize r: Arg0Reg R: Extra3Reg.
+	self genBroadcastByte: Extra3Reg into: Extra1Reg.
+	outerSwar := cogit Label.
+	jumpSwarMiss := self genSwarScanForByte.
+	constLen <= 24
+		ifTrue:
+			[constLen > 1 ifTrue:
+				[self genCmpConstantBytes: constKey at: 0 count: (constLen min: 8) base: SendNumArgsReg offset: 0.
+				 jumpSwarNext0 := cogit JumpNonZero: 0].
+			 constLen > 8 ifTrue:
+				[self genCmpConstantBytes: constKey at: 8 count: (constLen - 8 min: 8) base: SendNumArgsReg offset: 8.
+				 jumpSwarNext1 := cogit JumpNonZero: 0].
+			 constLen > 16 ifTrue:
+				[self genCmpConstantBytes: constKey at: 16 count: constLen - 16 base: SendNumArgsReg offset: 16.
+				 jumpSwarNext := cogit JumpNonZero: 0].
+			 self genTagByteAddressInExtra2.
+			 jumpSwarDone := cogit Jump: 0.
+			 constLen > 1 ifTrue:
+				[jumpSwarNext0 jmpTarget: cogit Label.
+				 constLen > 8 ifTrue: [jumpSwarNext1 jmpTarget: cogit Label].
+				 constLen > 16 ifTrue: [jumpSwarNext jmpTarget: cogit Label].
+				 cogit AddCq: 1 R: SendNumArgsReg.
+				 cogit Jump: outerSwar]]
+		ifFalse:
+			[cogit MoveCq: 1 R: ReceiverResultReg.
+			 innerWordLoop := cogit LoadEffectiveAddressMw: 8 r: ReceiverResultReg R: ClassReg.
+			 cogit CmpR: Arg1Reg R: ClassReg.
+			 jumpInnerBytes := cogit JumpGreater: 0.
+			 cogit MoveR: SendNumArgsReg R: TempReg.
+			 cogit AddR: ReceiverResultReg R: TempReg.
+			 cogit MoveMw: 0 r: TempReg R: TempReg.
+			 cogit MoveR: Arg0Reg R: ClassReg.
+			 cogit AddR: ReceiverResultReg R: ClassReg.
+			 cogit MoveMw: objectMemory baseHeaderSize r: ClassReg R: ClassReg.
+			 cogit CmpR: ClassReg R: TempReg.
+			 jumpSwarNext0 := cogit JumpNonZero: 0.
+			 cogit AddCq: 8 R: ReceiverResultReg.
+			 cogit Jump: innerWordLoop.
+			 innerByteLoop := cogit CmpR: Arg1Reg R: ReceiverResultReg.
+			 jumpInnerBytes jmpTarget: innerByteLoop.
+			 jumpSwarFound := cogit JumpGreaterOrEqual: 0.
+			 cogit MoveR: ReceiverResultReg R: ClassReg.
+			 cogit AddCq: objectMemory baseHeaderSize R: ClassReg.
+			 cogit MoveCq: 0 R: TempReg.
+			 cogit MoveXbr: ClassReg R: Arg0Reg R: TempReg.
+			 cogit MoveCq: 0 R: ClassReg.
+			 cogit MoveXbr: ReceiverResultReg R: SendNumArgsReg R: ClassReg.
+			 cogit CmpR: TempReg R: ClassReg.
+			 jumpSwarNext := cogit JumpNonZero: 0.
+			 cogit AddCq: 1 R: ReceiverResultReg.
+			 cogit Jump: innerByteLoop.
+			 jumpSwarFound jmpTarget: cogit Label.
+			 self genTagByteAddressInExtra2.
+			 jumpSwarDone := cogit Jump: 0.
+			 jumpSwarNext0 jmpTarget: (jumpSwarNext jmpTarget: (cogit AddCq: 1 R: SendNumArgsReg)).
+			 cogit Jump: outerSwar].
+	"With matchTable: byte scan through Extra3Reg"
+	jumpWithTable jmpTarget: cogit Label.
 	outerLoop := cogit CmpR: ClassReg R: SendNumArgsReg.
 	jumpEnd := cogit JumpGreater: 0.
 	cogit MoveCq: 0 R: Arg0Reg.
@@ -1058,13 +1247,11 @@ genFindSubstringAt: i
 	cogit AddCq: objectMemory baseHeaderSize R: TempReg.
 	cogit MoveCq: 0 R: ReceiverResultReg.
 	cogit MoveXbr: TempReg R: Extra1Reg R: ReceiverResultReg.
-	cogit CmpCq: 0 R: Extra3Reg.
-	jumpNoTable := cogit JumpZero: 0.
 	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
 	cogit MoveXbr: Arg1Reg R: Extra3Reg R: Arg1Reg.
 	cogit AddCq: objectMemory baseHeaderSize R: ReceiverResultReg.
 	cogit MoveXbr: ReceiverResultReg R: Extra3Reg R: ReceiverResultReg.
-	jumpNoTable jmpTarget: (cogit CmpR: ReceiverResultReg R: Arg1Reg).
+	cogit CmpR: ReceiverResultReg R: Arg1Reg.
 	jumpNext := cogit JumpNonZero: 0.
 	cogit AddCq: 1 R: Arg0Reg.
 	cogit CmpR: Extra0Reg R: Arg0Reg.
@@ -1078,25 +1265,37 @@ genFindSubstringAt: i
 	zeroResult := cogit MoveCq: (objectMemory integerObjectOf: 0) R: SendNumArgsReg.
 	jumpEmpty jmpTarget: zeroResult.
 	jumpNotFound jmpTarget: zeroResult.
+	jumpSwarMiss jmpTarget: zeroResult.
 	jumpEnd jmpTarget: zeroResult.
-	jumpDone jmpTarget: cogit Label.
+	jumpSwarDone jmpTarget: (jumpDone jmpTarget: cogit Label).
 	self genByteScanEpilogueAt: i jumps: jumps count: numJumps numArgs: numArgs! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 14:05'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
 genFindFirstInStringAt: i
 	"Primitive 155 (findFirstInString: aString inSet: inclusionMap startingAt: start, 3 args; or
 	 aString findFirstInByteString: inclusionMap startingAt: start, 2 args): if aString and inclusionMap are byte objects and
 	 start is a SmallInteger >= 1, answer 0 if inclusionMap's size is not 256, else the 1-based index of the first byte of
-	 aString from start whose entry in inclusionMap is non-zero, or 0 if none.  Otherwise send the message.
+	 aString from start whose entry in inclusionMap is non-zero, or 0 if none, scanning 8 bytes per iteration (64-bit word
+	 loads and repeated-word skip).  Otherwise send the message.
 	 Registers: Extra2Reg aString, Extra1Reg inclusionMap, SendNumArgsReg address of current byte, Extra0Reg end address,
+	 Extra3Reg last verified all-zero 8-byte word, Arg0Reg/ReceiverResultReg current 8-byte word, Arg1Reg byte offset in word,
 	 TempReg and ClassReg scratch."
-	| numArgs jumps numJumps jumpNot256 byteLoop jumpEnd jumpFound jumpDone zeroResult |
+	| numArgs jumps numJumps jumpNot256 jumpShort wordLoop jumpToBytes jumpSkipWord inWordLoop jumpHitInWord jumpFromWord byteLoop jumpEnd jumpFound jumpByteHit jumpDone found zeroResult |
 	<var: #jumps declareC: 'AbstractInstruction *jumps[10]'>
 	<var: #jumpNot256 type: #'AbstractInstruction *'>
+	<var: #jumpShort type: #'AbstractInstruction *'>
+	<var: #wordLoop type: #'AbstractInstruction *'>
+	<var: #jumpToBytes type: #'AbstractInstruction *'>
+	<var: #jumpSkipWord type: #'AbstractInstruction *'>
+	<var: #inWordLoop type: #'AbstractInstruction *'>
+	<var: #jumpHitInWord type: #'AbstractInstruction *'>
+	<var: #jumpFromWord type: #'AbstractInstruction *'>
 	<var: #byteLoop type: #'AbstractInstruction *'>
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	<var: #jumpFound type: #'AbstractInstruction *'>
+	<var: #jumpByteHit type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
+	<var: #found type: #'AbstractInstruction *'>
 	<var: #zeroResult type: #'AbstractInstruction *'>
 	numArgs := self fieldCAt: i.
 	numJumps := 0.
@@ -1125,7 +1324,48 @@ genFindFirstInStringAt: i
 	cogit AddCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
 	cogit AddR: Extra2Reg R: Extra0Reg.
 	cogit AddCq: objectMemory baseHeaderSize R: Extra0Reg.
+	"Seed Extra3Reg from the first byte when at least 8 bytes remain"
+	cogit LoadEffectiveAddressMw: 8 r: SendNumArgsReg R: ClassReg.
+	cogit CmpR: Extra0Reg R: ClassReg.
+	jumpShort := cogit JumpAbove: 0.
+	cogit MoveCq: 0 R: TempReg.
+	cogit MoveMb: 0 r: SendNumArgsReg R: TempReg.
+	cogit MoveR: TempReg R: Extra3Reg.
+	cogit AddCq: objectMemory baseHeaderSize R: TempReg.
+	cogit MoveCq: 0 R: ClassReg.
+	cogit MoveXbr: TempReg R: Extra1Reg R: ClassReg.
+	cogit CmpCq: 0 R: ClassReg.
+	jumpFound := cogit JumpNonZero: 0.
+	self genBroadcastByte: Extra3Reg into: Extra3Reg.
+	"8 bytes per iteration: skip repeated verified 8-byte words in one compare, else test the 8 bytes in register"
+	wordLoop := cogit LoadEffectiveAddressMw: 8 r: SendNumArgsReg R: ClassReg.
+	cogit CmpR: Extra0Reg R: ClassReg.
+	jumpToBytes := cogit JumpAbove: 0.
+	cogit MoveMw: 0 r: SendNumArgsReg R: Arg0Reg.
+	cogit CmpR: Extra3Reg R: Arg0Reg.
+	jumpSkipWord := cogit JumpZero: 0.
+	cogit MoveR: Arg0Reg R: ReceiverResultReg.
+	cogit MoveCq: 0 R: Arg1Reg.
+	inWordLoop := cogit MoveR: Arg0Reg R: TempReg.
+	cogit AndCq: 255 R: TempReg.
+	cogit AddCq: objectMemory baseHeaderSize R: TempReg.
+	cogit MoveCq: 0 R: ClassReg.
+	cogit MoveXbr: TempReg R: Extra1Reg R: ClassReg.
+	cogit CmpCq: 0 R: ClassReg.
+	jumpHitInWord := cogit JumpNonZero: 0.
+	cogit LogicalShiftRightCq: 8 R: Arg0Reg.
+	cogit AddCq: 1 R: Arg1Reg.
+	cogit CmpCq: 8 R: Arg1Reg.
+	cogit JumpLess: inWordLoop.
+	cogit MoveR: ReceiverResultReg R: Extra3Reg.
+	jumpSkipWord jmpTarget: (cogit AddCq: 8 R: SendNumArgsReg).
+	cogit Jump: wordLoop.
+	jumpHitInWord jmpTarget: (cogit AddR: Arg1Reg R: SendNumArgsReg).
+	jumpFromWord := cogit Jump: 0.
+	"0..7 remaining bytes"
 	byteLoop := cogit CmpR: Extra0Reg R: SendNumArgsReg.
+	jumpShort jmpTarget: byteLoop.
+	jumpToBytes jmpTarget: byteLoop.
 	jumpEnd := cogit JumpAboveOrEqual: 0.
 	cogit MoveCq: 0 R: TempReg.
 	cogit MoveMb: 0 r: SendNumArgsReg R: TempReg.
@@ -1133,13 +1373,14 @@ genFindFirstInStringAt: i
 	cogit MoveCq: 0 R: ClassReg.
 	cogit MoveXbr: TempReg R: Extra1Reg R: ClassReg.
 	cogit CmpCq: 0 R: ClassReg.
-	jumpFound := cogit JumpNonZero: 0.
+	jumpByteHit := cogit JumpNonZero: 0.
 	cogit AddCq: 1 R: SendNumArgsReg.
 	cogit Jump: byteLoop.
-	jumpFound jmpTarget: (cogit SubR: Extra2Reg R: SendNumArgsReg).
-	cogit SubCq: objectMemory baseHeaderSize - 1 R: SendNumArgsReg.
-	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
-	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	found := cogit Label.
+	jumpFound jmpTarget: found.
+	jumpFromWord jmpTarget: found.
+	jumpByteHit jmpTarget: found.
+	self genTagByteAddressInExtra2.
 	jumpDone := cogit Jump: 0.
 	zeroResult := cogit MoveCq: (objectMemory integerObjectOf: 0) R: SendNumArgsReg.
 	jumpNot256 jmpTarget: zeroResult.
@@ -1314,13 +1555,19 @@ genStoreByte: valReg array: arrayReg index: indexReg character: isChar site: sit
 	self deopt: (cogit JumpAbove: 0) site: siteIndex.
 	cogit MoveR: ClassReg Xbr: SendNumArgsReg R: arrayMach! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
-genCompareBytes: destReg with: firstReg with: secondReg site: siteIndex
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
+genCompareBytesAt: irOffset site: siteIndex
 	"Primitive 158 (compareWith:) inlined: firstReg, a byte object (its class was guarded), and secondReg, which must be a byte
-	 object too (else deoptimize): answer the difference of the first differing bytes, else of the sizes.  All the
-	 registers are spilled and used as scratch: Arg0Reg s1, Arg1Reg s2, Extra0Reg size difference, SendNumArgsReg
-	 the common size, ReceiverResultReg the byte index; 8 bytes are compared at a time while they are equal."
-	| secondMach jumpMin wordLoop jumpToBytes jumpWordDiffers byteLoop jumpEnd jumpByteDiffers jumpDone |
+	 object too (else deoptimize): answer the difference of the first differing bytes, else of the sizes.
+	 When one operand is a compile-time constant byte object of at most 24 bytes (3 64-bit words), emit straight-line
+	 length + 1..3 word immediate comparisons; when only equality is tested, a mismatch answers 1 directly without the loop.
+	 Otherwise spill only Extra0Reg..Extra2Reg (3 registers instead of 8) and compare 8 bytes at a time."
+	| destReg firstReg secondReg firstConst secondConst constOop constLen otherReg otherMach eqOnly firstMach secondMach jumpSizeDiff jumpWord0Diff jumpWord1Diff jumpWord2Diff jumpConstDone jumpMin wordLoop jumpToBytes jumpWordDiffers byteLoop jumpEnd jumpByteDiffers jumpDone |
+	<var: #jumpSizeDiff type: #'AbstractInstruction *'>
+	<var: #jumpWord0Diff type: #'AbstractInstruction *'>
+	<var: #jumpWord1Diff type: #'AbstractInstruction *'>
+	<var: #jumpWord2Diff type: #'AbstractInstruction *'>
+	<var: #jumpConstDone type: #'AbstractInstruction *'>
 	<var: #jumpMin type: #'AbstractInstruction *'>
 	<var: #wordLoop type: #'AbstractInstruction *'>
 	<var: #jumpToBytes type: #'AbstractInstruction *'>
@@ -1329,64 +1576,108 @@ genCompareBytes: destReg with: firstReg with: secondReg site: siteIndex
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	<var: #jumpByteDiffers type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
-	"Check the argument first, while the registers still hold the virtual registers (a deopt spills them)."
+	destReg := self fieldAAt: irOffset.
+	firstReg := self fieldBAt: irOffset.
+	secondReg := self fieldCAt: irOffset.
+	secondConst := self constantByteOopOfReg: secondReg before: irOffset.
+	secondConst = 0 ifTrue:
+		["Check the argument first, while the registers still hold the virtual registers (a deopt spills them)."
+		 secondMach := self src: secondReg scratch: ClassReg.
+		 cogit TstCq: objectMemory tagMask R: secondMach.
+		 self deopt: (cogit JumpNonZero: 0) site: siteIndex.
+		 cogit MoveM32: 0 r: secondMach R: TempReg.
+		 cogit LogicalShiftRightCq: objectMemory formatShift R: TempReg.
+		 cogit AndCq: objectMemory formatMask R: TempReg.
+		 cogit CmpCq: objectMemory firstByteFormat R: TempReg.
+		 self deopt: (cogit JumpLess: 0) site: siteIndex].
+	firstConst := self constantByteOopOfReg: firstReg before: irOffset.
+	constOop := secondConst ~= 0 ifTrue: [secondConst] ifFalse: [firstConst].
+	constLen := constOop ~= 0 ifTrue: [self numBytesOfConstant: constOop] ifFalse: [25].
+	eqOnly := irOffset + 1 < irIndex
+				and: [(oilIRTarget at: irOffset + 1) = 0
+				and: [(self opcodeAt: irOffset + 1) = OilCmpImmTagged
+				and: [((self fieldAAt: irOffset + 1) = OilCondEq or: [(self fieldAAt: irOffset + 1) = OilCondNe])
+				and: [(self fieldBAt: irOffset + 1) = destReg
+				and: [(self signed8: (self fieldCAt: irOffset + 1)) = 0]]]]].
+	constLen <= 24 ifTrue:
+		[otherReg := secondConst ~= 0 ifTrue: [firstReg] ifFalse: [secondReg].
+		 otherMach := self src: otherReg scratch: ClassReg.
+		 cogit oilGenGetNumBytesOf: otherMach into: TempReg.
+		 cogit CmpCq: constLen R: TempReg.
+		 jumpSizeDiff := cogit JumpNonZero: 0.
+		 constLen > 0 ifTrue:
+			[self genCmpConstantBytes: constOop at: 0 count: (constLen min: 8) base: otherMach offset: objectMemory baseHeaderSize.
+			 jumpWord0Diff := cogit JumpNonZero: 0].
+		 constLen > 8 ifTrue:
+			[self genCmpConstantBytes: constOop at: 8 count: (constLen - 8 min: 8) base: otherMach offset: objectMemory baseHeaderSize + 8.
+			 jumpWord1Diff := cogit JumpNonZero: 0].
+		 constLen > 16 ifTrue:
+			[self genCmpConstantBytes: constOop at: 16 count: constLen - 16 base: otherMach offset: objectMemory baseHeaderSize + 16.
+			 jumpWord2Diff := cogit JumpNonZero: 0].
+		 cogit MoveCq: (objectMemory integerObjectOf: 0) R: SendNumArgsReg.
+		 jumpConstDone := cogit Jump: 0.
+		 jumpSizeDiff jmpTarget: cogit Label.
+		 constLen > 0 ifTrue: [jumpWord0Diff jmpTarget: cogit Label].
+		 constLen > 8 ifTrue: [jumpWord1Diff jmpTarget: cogit Label].
+		 constLen > 16 ifTrue: [jumpWord2Diff jmpTarget: cogit Label].
+		 eqOnly ifTrue:
+			[cogit MoveCq: (objectMemory integerObjectOf: 1) R: SendNumArgsReg.
+			 jumpConstDone jmpTarget: cogit Label.
+			 ^self setDst: destReg from: SendNumArgsReg]].
+	self spillExtraRegs.
+	self spillMachineReg: Extra2Reg.
+	firstMach := self src: firstReg scratch: TempReg.
 	secondMach := self src: secondReg scratch: ClassReg.
-	cogit TstCq: objectMemory tagMask R: secondMach.
-	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
-	cogit MoveM32: 0 r: secondMach R: TempReg.
-	cogit LogicalShiftRightCq: objectMemory formatShift R: TempReg.
-	cogit AndCq: objectMemory formatMask R: TempReg.
-	cogit CmpCq: objectMemory firstByteFormat R: TempReg.
-	self deopt: (cogit JumpLess: 0) site: siteIndex.
-	self spillAll.
-	cogit MoveMw: (oilVRegSpillTemp at: firstReg) r: FPReg R: Arg0Reg.
-	cogit MoveMw: (oilVRegSpillTemp at: secondReg) r: FPReg R: Arg1Reg.
-	cogit oilGenGetNumBytesOf: Arg0Reg into: Extra0Reg.
-	cogit oilGenGetNumBytesOf: Arg1Reg into: Extra1Reg.
-	cogit MoveR: Extra0Reg R: SendNumArgsReg.
-	cogit CmpR: Extra1Reg R: SendNumArgsReg.
+	secondMach = Extra0Reg ifTrue:
+		[cogit MoveR: secondMach R: ClassReg.
+		 secondMach := ClassReg].
+	firstMach ~= Extra0Reg ifTrue: [cogit MoveR: firstMach R: Extra0Reg].
+	secondMach ~= Extra1Reg ifTrue: [cogit MoveR: secondMach R: Extra1Reg].
+	cogit oilGenGetNumBytesOf: Extra0Reg into: Extra2Reg.
+	cogit oilGenGetNumBytesOf: Extra1Reg into: ClassReg.
+	cogit MoveR: Extra2Reg R: SendNumArgsReg.
+	cogit CmpR: ClassReg R: SendNumArgsReg.
 	jumpMin := cogit JumpLessOrEqual: 0.
-	cogit MoveR: Extra1Reg R: SendNumArgsReg.
-	jumpMin jmpTarget: cogit Label.
-	cogit SubR: Extra1Reg R: Extra0Reg.
-	cogit MoveCq: 0 R: ReceiverResultReg.
+	cogit MoveR: ClassReg R: SendNumArgsReg.
+	jumpMin jmpTarget: (cogit SubR: ClassReg R: Extra2Reg).
+	cogit AddR: Extra0Reg R: SendNumArgsReg.
+	cogit AddCq: objectMemory baseHeaderSize R: SendNumArgsReg.
+	cogit AddCq: objectMemory baseHeaderSize R: Extra0Reg.
+	cogit AddCq: objectMemory baseHeaderSize R: Extra1Reg.
 	"8 bytes at a time while they are equal"
-	wordLoop := cogit MoveR: ReceiverResultReg R: TempReg.
-	cogit AddCq: objectMemory wordSize R: TempReg.
+	wordLoop := cogit LoadEffectiveAddressMw: 8 r: Extra0Reg R: TempReg.
 	cogit CmpR: SendNumArgsReg R: TempReg.
-	jumpToBytes := cogit JumpGreater: 0.
-	cogit MoveR: ReceiverResultReg R: ClassReg.
-	cogit LogicalShiftRightCq: objectMemory shiftForWord R: ClassReg.
-	cogit AddCq: 1 R: ClassReg.
-	cogit MoveXwr: ClassReg R: Arg0Reg R: TempReg.
-	cogit MoveXwr: ClassReg R: Arg1Reg R: ClassReg.
+	jumpToBytes := cogit JumpAbove: 0.
+	cogit MoveMw: 0 r: Extra0Reg R: TempReg.
+	cogit MoveMw: 0 r: Extra1Reg R: ClassReg.
 	cogit CmpR: ClassReg R: TempReg.
 	jumpWordDiffers := cogit JumpNonZero: 0.
-	cogit AddCq: objectMemory wordSize R: ReceiverResultReg.
+	cogit AddCq: 8 R: Extra0Reg.
+	cogit AddCq: 8 R: Extra1Reg.
 	cogit Jump: wordLoop.
 	"then a byte at a time"
-	byteLoop := cogit CmpR: SendNumArgsReg R: ReceiverResultReg.
+	byteLoop := cogit CmpR: SendNumArgsReg R: Extra0Reg.
 	jumpToBytes jmpTarget: byteLoop.
 	jumpWordDiffers jmpTarget: byteLoop.
-	jumpEnd := cogit JumpGreaterOrEqual: 0.
-	cogit MoveR: ReceiverResultReg R: ClassReg.
-	cogit AddCq: objectMemory baseHeaderSize R: ClassReg.
+	jumpEnd := cogit JumpAboveOrEqual: 0.
 	cogit MoveCq: 0 R: TempReg.
-	cogit MoveXbr: ClassReg R: Arg0Reg R: TempReg.
-	cogit MoveCq: 0 R: Extra1Reg.
-	cogit MoveXbr: ClassReg R: Arg1Reg R: Extra1Reg.
-	cogit CmpR: Extra1Reg R: TempReg.
+	cogit MoveMb: 0 r: Extra0Reg R: TempReg.
+	cogit MoveCq: 0 R: ClassReg.
+	cogit MoveMb: 0 r: Extra1Reg R: ClassReg.
+	cogit CmpR: ClassReg R: TempReg.
 	jumpByteDiffers := cogit JumpNonZero: 0.
-	cogit AddCq: 1 R: ReceiverResultReg.
+	cogit AddCq: 1 R: Extra0Reg.
+	cogit AddCq: 1 R: Extra1Reg.
 	cogit Jump: byteLoop.
-	jumpByteDiffers jmpTarget: (cogit SubR: Extra1Reg R: TempReg).
+	jumpByteDiffers jmpTarget: (cogit SubR: ClassReg R: TempReg).
 	cogit MoveR: TempReg R: SendNumArgsReg.
 	jumpDone := cogit Jump: 0.
-	jumpEnd jmpTarget: (cogit MoveR: Extra0Reg R: SendNumArgsReg).
-	jumpDone jmpTarget: cogit Label.
-	self reloadAll.
-	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
+	jumpEnd jmpTarget: (cogit MoveR: Extra2Reg R: SendNumArgsReg).
+	jumpDone jmpTarget: (cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg).
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
+	self reloadExtraRegs.
+	self reloadMachineReg: Extra2Reg.
+	constLen <= 24 ifTrue: [jumpConstDone jmpTarget: cogit Label].
 	self setDst: destReg from: SendNumArgsReg! !
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:45'!
@@ -2218,17 +2509,20 @@ genGuard2At: irOffset site: siteIndex
 	self deopt: (cogit JumpNonZero: 0) site: siteIndex.
 	jumpOK jmpTarget: cogit Label! !
 
-!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 12:25'!
+!OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/27/2026 20:25'!
 genStringHashAt: i site: siteIndex
 	"[OilStringHash|Dest|Rcvr|InitialHash] selector: primitive 152 / primitiveStringHash (String>>hashWithInitialHash:,
 	 selector > 1, or ByteArray class>>hashBytes:startingWith:, selector 0 or 1) of Rcvr: if InitialHash is a SmallInteger h,
 	 h := (h + byte) * 16r19660D for each byte, answer h bitAnd: 16r0FFFFFFF (the low 28 bits only depend on the low bits, so
-	 64-bit arithmetic gives the 32-bit result of the primitive).  Otherwise send the message (1 arg) or deoptimize (2 args).
-	 Registers: Extra0Reg the address of the current byte, Extra1Reg the end address (their virtual registers are spilled
-	 around), SendNumArgsReg h, ClassReg the multiplier, TempReg the byte."
-	| selector rcvrMach initMach jumpNotInt loop jumpDone jumpEnd |
+	 64-bit arithmetic gives the 32-bit result of the primitive), loading 8 bytes per iteration in Extra2Reg.  Otherwise send
+	 the message (1 arg) or deoptimize (2 args).
+	 Registers: Extra0Reg the address of the current byte, Extra1Reg the end address, Extra2Reg the current 8-byte word
+	 (their virtual registers are spilled around), SendNumArgsReg h, ClassReg the multiplier, TempReg scratch."
+	| selector rcvrMach initMach jumpNotInt wordLoop jumpToBytes byteLoop jumpDone jumpEnd |
 	<var: #jumpNotInt type: #'AbstractInstruction *'>
-	<var: #loop type: #'AbstractInstruction *'>
+	<var: #wordLoop type: #'AbstractInstruction *'>
+	<var: #jumpToBytes type: #'AbstractInstruction *'>
+	<var: #byteLoop type: #'AbstractInstruction *'>
 	<var: #jumpDone type: #'AbstractInstruction *'>
 	<var: #jumpEnd type: #'AbstractInstruction *'>
 	selector := self word64At: i + 1.
@@ -2251,24 +2545,40 @@ genStringHashAt: i site: siteIndex
 	cogit MoveR: initMach R: SendNumArgsReg.
 	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: SendNumArgsReg.
 	self spillExtraRegs.
+	self spillMachineReg: Extra2Reg.
 	rcvrMach ~= Extra0Reg ifTrue: [cogit MoveR: rcvrMach R: Extra0Reg].
 	cogit oilGenGetNumBytesOf: Extra0Reg into: Extra1Reg.
 	cogit AddR: Extra0Reg R: Extra1Reg.
 	cogit AddCq: objectMemory baseHeaderSize R: Extra1Reg.
 	cogit AddCq: objectMemory baseHeaderSize R: Extra0Reg.
 	cogit MoveCq: 16r19660D R: ClassReg.
-	loop := cogit CmpR: Extra1Reg R: Extra0Reg.
+	wordLoop := cogit LoadEffectiveAddressMw: 8 r: Extra0Reg R: TempReg.
+	cogit CmpR: Extra1Reg R: TempReg.
+	jumpToBytes := cogit JumpAbove: 0.
+	cogit MoveMw: 0 r: Extra0Reg R: Extra2Reg.
+	0 to: 7 do:
+		[:byteIndex|
+		cogit MoveR: Extra2Reg R: TempReg.
+		byteIndex < 7 ifTrue: [cogit AndCq: 255 R: TempReg].
+		cogit AddR: TempReg R: SendNumArgsReg.
+		cogit backEnd genMulR: ClassReg R: SendNumArgsReg.
+		byteIndex < 7 ifTrue: [cogit LogicalShiftRightCq: 8 R: Extra2Reg]].
+	cogit AddCq: 8 R: Extra0Reg.
+	cogit Jump: wordLoop.
+	byteLoop := cogit CmpR: Extra1Reg R: Extra0Reg.
+	jumpToBytes jmpTarget: byteLoop.
 	jumpEnd := cogit JumpAboveOrEqual: 0.
 	cogit MoveCq: 0 R: TempReg.
 	cogit MoveMb: 0 r: Extra0Reg R: TempReg.
 	cogit AddR: TempReg R: SendNumArgsReg.
 	cogit backEnd genMulR: ClassReg R: SendNumArgsReg.
 	cogit AddCq: 1 R: Extra0Reg.
-	cogit Jump: loop.
+	cogit Jump: byteLoop.
 	jumpEnd jmpTarget: (cogit AndCq: 16r0FFFFFFF R: SendNumArgsReg).
 	cogit LogicalShiftLeftCq: objectMemory numTagBits R: SendNumArgsReg.
 	cogit OrCq: objectMemory smallIntegerTag R: SendNumArgsReg.
 	self reloadExtraRegs.
+	self reloadMachineReg: Extra2Reg.
 	self setDst: (self fieldAAt: i) from: SendNumArgsReg.
 	selector > 1 ifTrue:
 		[jumpDone := cogit Jump: 0.

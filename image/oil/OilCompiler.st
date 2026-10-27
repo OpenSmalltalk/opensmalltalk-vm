@@ -2301,10 +2301,10 @@ genUncommonTrapForSendAt: rcvrSlot numArgs: numArgs
 	simStackTop := rcvrSlot - 1.
 	self pushResultOf: OilConstTagged b: 0 c: 1 site: 0! !
 
-!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/24/2026 18:00'!
+!OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/27/2026 20:25'!
 hasOilCode: aMethod
 	^self
-		cCode: [cogit oilMethodHasOilCode: aMethod]
+		cCode: [(cogit oilMethodHasOilCode: aMethod) or: [(cogit oilFirstSpecializedCogMethodOf: aMethod) ~= nil]]
 		inSmalltalk: [false]! !
 
 !OilInliningCompiler methodsFor: 'inlining' stamp: 'cb 10/26/2026 16:30'!
@@ -3781,6 +3781,54 @@ stringHashOf: aHandle initialHash: initialHash
 	^self
 		cCode: [coInterpreter oilApiStringHashOf: aHandle initialHash: initialHash]
 		inSmalltalk: [ByteArray hashBytes: (self objectFor: aHandle) startingWith: initialHash]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 20:25'!
+isByteConstant: aHandle
+	"Is the constant handle aHandle a byte object (format 16..23, e.g. a ByteString, Symbol or ByteArray)?"
+	(aHandle = 0 or: [(aHandle bitAnd: 7) ~= 0]) ifTrue: [^false].
+	^((self oilInstSpecOfClass: (self classOopOf: aHandle)) between: 16 and: 23)! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 20:25'!
+numBytesOfConstant: aHandle
+	^self cCode: [objectMemory numBytesOf: aHandle] inSmalltalk: [(self objectFor: aHandle) basicSize]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 20:25'!
+byteAt: byteIndex ofConstant: aHandle
+	^self cCode: [objectMemory fetchByte: byteIndex ofObject: aHandle] inSmalltalk: [(self objectFor: aHandle) basicAt: byteIndex + 1]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 20:25'!
+word64AtByte: baseByte count: count ofConstant: aHandle
+	"Pack count bytes (1..8) from 0-based byte offset baseByte of the byte constant aHandle into a little-endian 64-bit word."
+	| word |
+	<var: #word type: #usqInt>
+	word := 0.
+	count - 1 to: 0 by: -1 do:
+		[:offset|
+		word := (word bitShift: 8) + (self byteAt: baseByte + offset ofConstant: aHandle)].
+	^self cCode: [word] inSmalltalk: [word >= (1 bitShift: 63) ifTrue: [word - (1 bitShift: 64)] ifFalse: [word]]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 21:30'!
+associationValueOf: aHandle
+	^self cCode: [coInterpreter oilApiAssociationValueOf: aHandle]
+		inSmalltalk:
+			[| obj |
+			obj := self objectFor: aHandle.
+			(obj isVariableBinding and: [obj value ~~ nil]) ifTrue: [self handleFor: obj value] ifFalse: [0]]! !
+
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 21:30'!
+isBijectiveByteTable: aHandle
+	"Is aHandle a 256-byte constant whose 256 bytes are a permutation of 0..255 (e.g., CaseSensitiveOrder or AsciiOrder)?"
+	| seen b |
+	<var: #seen declareC: 'unsigned char seen[256]'>
+	(aHandle ~= 0 and: [(self isByteConstant: aHandle) and: [(self numBytesOfConstant: aHandle) >= 256]]) ifFalse: [^false].
+	self cCode: [] inSmalltalk: [seen := ByteArray new: 256].
+	0 to: 255 do: [:idx| self cCode: [seen at: idx put: 0] inSmalltalk: [seen at: idx + 1 put: 0]].
+	0 to: 255 do:
+		[:idx|
+		b := self byteAt: idx ofConstant: aHandle.
+		(self cCode: [seen at: b] inSmalltalk: [seen at: b + 1]) ~= 0 ifTrue: [^false].
+		self cCode: [seen at: b put: 1] inSmalltalk: [seen at: b + 1 put: 1]].
+	^true! !
 
 !OilInliningCompiler methodsFor: 'returns' stamp: 'cb 10/25/2026 09:30'!
 isFrame: frameIndex deadFrom: pc
