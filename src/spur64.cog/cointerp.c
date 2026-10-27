@@ -20347,7 +20347,7 @@ readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squea
 						: defaultEdenBytes()));
 
 	/* begin edenBytes: */
-	GIV(edenBytes) = bytes;
+	GIV(edenBytes) = ((bytes < 1433600) ? 1433600 : bytes);
 	desiredEdenBytes = hdrEdenBytes;
 
 	/* begin getShortFromFile:swap: */
