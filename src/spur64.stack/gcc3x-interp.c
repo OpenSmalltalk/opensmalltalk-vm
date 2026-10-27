@@ -452,6 +452,8 @@ extern sqInt primitiveFailFor(sqInt reasonCode);
 extern sqInt primitiveFailForwithSecondary(sqInt reasonCode, sqLong extraErrorCode);
 extern sqInt primitiveFailureCode(void);
 static void primitiveFetchNextMourner(void);
+static void primitiveFindFirstInString(void);
+static void primitiveFindSubstring(void);
 static void primitiveFloatAdd(void);
 static void primitiveFloatArrayAt(void);
 static void primitiveFloatArrayAtPut(void);
@@ -497,6 +499,7 @@ static void primitiveIdentityHash(void);
 EXPORT(sqInt) primitiveImageFormatVersion(void);
 static void primitiveImageName(void);
 static void primitiveImmediateAsInteger(void);
+static void primitiveIndexOfAsciiInString(void);
 static void primitiveInputSemaphore(void);
 static void primitiveInputWord(void);
 static void primitiveIntegerAt(void);
@@ -605,6 +608,7 @@ static void primitiveSquareRoot(void);
 static void primitiveStoreImageSegment(void);
 static void primitiveStringAt(void);
 static void primitiveStringAtPut(void);
+static void primitiveStringHash(void);
 static void primitiveStringReplace(void);
 static void primitiveSubtract(void);
 EXPORT(void) primitiveSubtractLargeIntegers(void);
@@ -686,7 +690,7 @@ static NoDbgRegParms sqInt isMaybeOldScavengeSurvivor(sqInt oop);
 static NoDbgRegParms sqInt isScavengeSurvivor(sqInt oop);
 static NoDbgRegParms sqInt isYetToBeScavenged(sqInt oop);
 static usqInt newSpaceCapacity(void);
-static NoDbgRegParms sqInt nextCorpseOrNil(sqInt corpse);
+static NoDbgRegParms usqInt nextCorpseOrNil(sqInt corpse);
 extern void openScavengeLog(void);
 extern void printEphemeronList(void);
 extern void printRememberedSet(void);
@@ -1963,10 +1967,10 @@ static void (*primitiveTable[MaxPrimitiveIndex + 2 /* 585 */])(void) = {
 	/* 149 */ primitiveGetAttribute,
 	/* 150 */ primitiveCosine,
 	/* 151 */ (void (*)(void))0,
-	/* 152 */ (void (*)(void))0,
-	/* 153 */ (void (*)(void))0,
-	/* 154 */ (void (*)(void))0,
-	/* 155 */ (void (*)(void))0,
+	/* 152 */ primitiveStringHash,
+	/* 153 */ primitiveIndexOfAsciiInString,
+	/* 154 */ primitiveFindSubstring,
+	/* 155 */ primitiveFindFirstInString,
 	/* 156 */ (void (*)(void))0,
 	/* 157 */ (void (*)(void))0,
 	/* 158 */ primitiveCompareWith,
@@ -2405,7 +2409,7 @@ static signed char primitiveAccessorDepthTable[MaxPrimitiveIndex + 2 /* 585 */] 
 /*80*/	-1,-1,-1, 0, 0, 0, 1, 0, 2,-1,-1, 0, 0, 0, 1,-1, 0,-1, 0, 0,
 /*100*/	 1, 2, 2, 2,-1, 2,-1,-1,-1,-1, 0, 1, 0, 0,-1, 1, 0, 0, 1, 0,
 /*120*/	 2, 1,-1,-1, 0, 0, 0, 0, 0,-1,-1, 0, 0, 0, 0,-1, 0,-1,-1, 0,
-/*140*/	-1, 1,-1, 1, 1, 1,-1,-1, 0, 0, 0,-1,-1,-1,-1,-1,-1,-1, 1, 1,
+/*140*/	-1, 1,-1, 1, 1, 1,-1,-1, 0, 0, 0,-1, 1, 1, 1, 1,-1,-1, 1, 1,
 /*160*/	 0, 0,-1, 0, 0, 1, 1,-1, 1, 0, 0, 0,-1, 1, 1, 0,-1, 0,-1,-1,
 /*180*/	 0, 0, 0, 0, 1, 1, 1, 1, 2, 1,-1,-1,-1,-1,-1, 1, 2, 0,-1,-1,
 /*200*/	 0, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 0,-1, 0,-1,-1, 3,-1,
@@ -15316,6 +15320,204 @@ primitiveFetchNextMourner(void)
 	}
 }
 
+
+/*	ByteString (class) >> findFirstInString: aString inSet: inclusionMap
+	startingAt: start
+	 or <aString> findFirstInByteString: inclusionMap
+	startingAt: start
+ */
+
+	/* InterpreterPrimitives>>#primitiveFindFirstInString */
+static void
+primitiveFindFirstInString(void)
+{   DECL_MAYBE_SQ_GLOBAL_STRUCT
+    sqInt aStringOop;
+    sqInt fmt;
+    sqInt i;
+    sqInt inclusionMapOop;
+    sqInt integer;
+    usqInt numSlots;
+    sqInt startOop;
+    sqInt stringSize;
+
+	if (!((GIV(argumentCount) == 3)
+		 || (GIV(argumentCount) == 2))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadNumArgs;
+		return;
+	}
+	aStringOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+	inclusionMapOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+	startOop = longAt(GIV(stackPointer));
+	if (!((/* isBytes: */
+			((!(aStringOop & (tagMask()))))
+		 && (((byteAt((void *)(aStringOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))
+		 && ((/* isBytes: */
+			((!(inclusionMapOop & (tagMask()))))
+		 && (((byteAt((void *)(inclusionMapOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))
+		 && ((((startOop) & 7) == 1))))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadArgument;
+		return;
+	}
+	i = ((startOop >> 3)) - 1;
+	if (i < 0) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadIndex;
+		return;
+	}
+	if ((numBytesOfBytes(inclusionMapOop)) != 0x100) {
+		/* begin methodReturnInteger: */
+		assert(!((failed())));
+		longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)0 << 3) | 1));
+		return;
+	}
+
+	/* begin numBytesOfBytes: */
+	fmt = (byteAt((void *)(aStringOop + (formatFieldByteOffset())))) & (formatMask());
+	assert(fmt >= (firstByteFormat()));
+	stringSize = ((((/* begin numSlotsOf: */
+	assert((classIndexOf(aStringOop)) > (isForwardedObjectClassIndexPun())),
+(((numSlots = byteAt((void *)(aStringOop + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
+			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(aStringOop - BaseHeaderSize)))) << 8)))))) >> 8
+			: numSlots))) << (shiftForWord()))) - (fmt & 7);
+	while ((i < stringSize)
+	 && ((byteAt((void *)((inclusionMapOop + BaseHeaderSize) + (byteAt((void *)((aStringOop + BaseHeaderSize) + i)))))) == 0)) {
+		i += 1;
+	}
+	integer = (i >= stringSize
+				? 0
+				: i + 1);
+
+	/* begin methodReturnInteger: */
+	assert(!((failed())));
+	longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)integer << 3) | 1));
+}
+
+
+/*	ByteString (class) >> findSubstring: key in: body startingAt: start
+	[matchTable: matchTable]
+	 or <body> findSubstring: key startingAt: start
+ */
+
+	/* InterpreterPrimitives>>#primitiveFindSubstring */
+static void
+primitiveFindSubstring(void)
+{   DECL_MAYBE_SQ_GLOBAL_STRUCT
+    sqInt bodyOop;
+    sqInt bodySize;
+    sqInt fmt;
+    sqInt index;
+    sqInt keyOop;
+    sqInt keySize;
+    sqInt matchTableOop;
+    usqInt numSlots;
+    sqInt start;
+    sqInt startIndex;
+    sqInt startOop;
+
+	bodyOop = 0;
+	keyOop = 0;
+	matchTableOop = 0;
+	startOop = 0;
+	if (GIV(argumentCount) == 4) {
+		keyOop = longAt(GIV(stackPointer) + (3 * BytesPerWord));
+		bodyOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+		startOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+		matchTableOop = longAt(GIV(stackPointer));
+	}
+	else {
+		if (GIV(argumentCount) == 3) {
+			keyOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+			bodyOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+			startOop = longAt(GIV(stackPointer));
+			matchTableOop = GIV(nilObj);
+		}
+		else {
+			if (GIV(argumentCount) == 2) {
+				bodyOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+				keyOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+				startOop = longAt(GIV(stackPointer));
+				matchTableOop = GIV(nilObj);
+			}
+			else {
+				/* primitiveFailFor: */
+				GIV(primFailCode) = PrimErrBadNumArgs;
+				return;
+			}
+		}
+	}
+	if (!((/* isBytes: */
+			((!(keyOop & (tagMask()))))
+		 && (((byteAt((void *)(keyOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))
+		 && ((/* isBytes: */
+			((!(bodyOop & (tagMask()))))
+		 && (((byteAt((void *)(bodyOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))
+		 && ((((startOop) & 7) == 1))))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadArgument;
+		return;
+	}
+	if (matchTableOop != GIV(nilObj)) {
+		if (!((/* isBytes: */
+				((!(matchTableOop & (tagMask()))))
+			 && (((byteAt((void *)(matchTableOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))
+			 && ((numBytesOfBytes(matchTableOop)) >= 0x100))) {
+			/* primitiveFailFor: */
+			GIV(primFailCode) = PrimErrBadArgument;
+			return;
+		}
+	}
+	if (((keySize = numBytesOfBytes(keyOop))) > 0) {
+		/* adjust for zero relative indexes */
+		keySize -= 1;
+
+		/* adjust for zero relative indexes */
+		start = (((((startOop >> 3)) - 1) < 0) ? 0 : (((startOop >> 3)) - 1));
+
+		/* begin numBytesOfBytes: */
+		fmt = (byteAt((void *)(bodyOop + (formatFieldByteOffset())))) & (formatMask());
+		assert(fmt >= (firstByteFormat()));
+		bodySize = ((((/* begin numSlotsOf: */
+	assert((classIndexOf(bodyOop)) > (isForwardedObjectClassIndexPun())),
+(((numSlots = byteAt((void *)(bodyOop + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
+			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(bodyOop - BaseHeaderSize)))) << 8)))))) >> 8
+			: numSlots))) << (shiftForWord()))) - (fmt & 7);
+		if (matchTableOop == GIV(nilObj)) {
+			for (startIndex = start; startIndex <= ((bodySize - 1) - keySize); startIndex += 1) {
+				index = 0;
+				while ((byteAt((void *)((bodyOop + BaseHeaderSize) + (startIndex + index)))) == (byteAt((void *)((keyOop + BaseHeaderSize) + index)))) {
+					if (index == keySize) {
+						/* begin methodReturnInteger: */
+						assert(!((failed())));
+						longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)(startIndex + 1) << 3) | 1));
+						return;
+					}
+					index += 1;
+				}
+			}
+		}
+		else {
+			for (startIndex = start; startIndex <= ((bodySize - 1) - keySize); startIndex += 1) {
+				index = 0;
+				while ((byteAt((void *)((matchTableOop + BaseHeaderSize) + (byteAt((void *)((bodyOop + BaseHeaderSize) + (startIndex + index))))))) == (byteAt((void *)((matchTableOop + BaseHeaderSize) + (byteAt((void *)((keyOop + BaseHeaderSize) + index))))))) {
+					if (index == keySize) {
+						/* begin methodReturnInteger: */
+						assert(!((failed())));
+						longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)(startIndex + 1) << 3) | 1));
+						return;
+					}
+					index += 1;
+				}
+			}
+		}
+	}
+
+	/* begin methodReturnInteger: */
+	assert(!((failed())));
+	longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)0 << 3) | 1));
+}
+
 	/* InterpreterPrimitives>>#primitiveFloatAdd */
 static void
 primitiveFloatAdd(void)
@@ -17698,6 +17900,91 @@ l1:
 
 	/* begin pop:thenPushInteger: */
 	longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),((value << 3) | 1));
+}
+
+
+/*	ByteString (class) >> indexOfAscii: anInteger inString: aString
+	startingAt: start
+	 or <aString> indexOfAscii: anInteger startingAt: start
+ */
+
+	/* InterpreterPrimitives>>#primitiveIndexOfAsciiInString */
+static void
+primitiveIndexOfAsciiInString(void)
+{   DECL_MAYBE_SQ_GLOBAL_STRUCT
+    sqInt anInteger;
+    sqInt fmt;
+    sqInt integerOop;
+    usqInt numSlots;
+    sqInt pos;
+    sqInt start;
+    sqInt startOop;
+    sqInt stringOop;
+    sqInt stringSize;
+
+	integerOop = 0;
+	startOop = 0;
+	stringOop = 0;
+	if (GIV(argumentCount) == 3) {
+		integerOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+		stringOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+		startOop = longAt(GIV(stackPointer));
+	}
+	else {
+		if (GIV(argumentCount) == 2) {
+			stringOop = longAt(GIV(stackPointer) + (2 * BytesPerWord));
+			integerOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+			startOop = longAt(GIV(stackPointer));
+		}
+		else {
+			/* primitiveFailFor: */
+			GIV(primFailCode) = PrimErrBadNumArgs;
+			return;
+		}
+	}
+	if (!(((((integerOop) & 7) == 1))
+		 && (((((startOop) & 7) == 1))
+		 && (/* isBytes: */
+			((!(stringOop & (tagMask()))))
+		 && (((byteAt((void *)(stringOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat())))))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadArgument;
+		return;
+	}
+	if (!(((start = (startOop >> 3))) >= 1)) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadIndex;
+		return;
+	}
+	anInteger = (integerOop >> 3);
+	if (!((anInteger >= 0)
+		 && (anInteger <= 0xFF))) {
+		/* begin methodReturnInteger: */
+		assert(!((failed())));
+		longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)0 << 3) | 1));
+		return;
+	}
+
+	/* begin numBytesOfBytes: */
+	fmt = (byteAt((void *)(stringOop + (formatFieldByteOffset())))) & (formatMask());
+	assert(fmt >= (firstByteFormat()));
+	stringSize = ((((/* begin numSlotsOf: */
+	assert((classIndexOf(stringOop)) > (isForwardedObjectClassIndexPun())),
+(((numSlots = byteAt((void *)(stringOop + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
+			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(stringOop - BaseHeaderSize)))) << 8)))))) >> 8
+			: numSlots))) << (shiftForWord()))) - (fmt & 7);
+	for (pos = (start - 1); pos < stringSize; pos += 1) {
+		if ((byteAt((void *)((stringOop + BaseHeaderSize) + pos))) == anInteger) {
+			/* begin methodReturnInteger: */
+			assert(!((failed())));
+			longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)(pos + 1) << 3) | 1));
+			return;
+		}
+	}
+
+	/* begin methodReturnInteger: */
+	assert(!((failed())));
+	longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((usqInt)0 << 3) | 1));
 }
 
 
@@ -24085,6 +24372,59 @@ l11:;
 }
 
 
+/*	ByteArray (class) >> hashBytes: aByteArray startingWith: speciesHash
+	 or
+	<aByteArray> hashBytesStartingWith: speciesHash
+ */
+
+	/* InterpreterPrimitives>>#primitiveStringHash */
+static void
+primitiveStringHash(void)
+{   DECL_MAYBE_SQ_GLOBAL_STRUCT
+    sqInt byteArrayOop;
+    sqInt byteArraySize;
+    sqInt fmt;
+    unsigned int hash;
+    usqInt numSlots;
+    sqInt pos;
+    sqInt speciesHashOop;
+
+	if (!((GIV(argumentCount) == 2)
+		 || (GIV(argumentCount) == 1))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadNumArgs;
+		return;
+	}
+	speciesHashOop = longAt(GIV(stackPointer));
+	byteArrayOop = longAt(GIV(stackPointer) + (1 * BytesPerWord));
+	if (!(((((speciesHashOop) & 7) == 1))
+		 && (/* isBytes: */
+			((!(byteArrayOop & (tagMask()))))
+		 && (((byteAt((void *)(byteArrayOop + (formatFieldByteOffset())))) & (formatMask())) >= (firstByteFormat()))))) {
+		/* primitiveFailFor: */
+		GIV(primFailCode) = PrimErrBadArgument;
+		return;
+	}
+
+	/* begin numBytesOfBytes: */
+	fmt = (byteAt((void *)(byteArrayOop + (formatFieldByteOffset())))) & (formatMask());
+	assert(fmt >= (firstByteFormat()));
+	byteArraySize = ((((/* begin numSlotsOf: */
+	assert((classIndexOf(byteArrayOop)) > (isForwardedObjectClassIndexPun())),
+(((numSlots = byteAt((void *)(byteArrayOop + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
+			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(byteArrayOop - BaseHeaderSize)))) << 8)))))) >> 8
+			: numSlots))) << (shiftForWord()))) - (fmt & 7);
+	hash = (speciesHashOop >> 3);
+	for (pos = 0; pos < byteArraySize; pos += 1) {
+		hash = (hash + (byteAt((void *)((byteArrayOop + BaseHeaderSize) + pos)))) * 1664525;
+	}
+
+	/* begin methodReturnInteger: */
+	assert(!((failed())));
+	longAtput((GIV(stackPointer) += ((GIV(argumentCount) + 1) - 1) * BytesPerWord),(((hash & 0xFFFFFFF) << 3) | 1));
+}
+
+
 /*	<array> primReplaceFrom: start to: stop with: replacement startingAt:
 	repStart 
 	<primitive: 105> */
@@ -27399,9 +27739,9 @@ allWeakSurvivorsOnWeakList(void)
 				/* begin nextCorpseOrNil: */
 				assert(isYoung(corpse));
 				listOffset = ((((usqInt)(((long32At((void *)(corpse + 4))) & (identityHashHalfWordMask()))) << 8))) + (byteAt((void *)(corpse + (formatFieldByteOffset()))));
-				corpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+				corpse = (listOffset
+							? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+							: 0);
 			}
 			return 0;
 			return 0;
@@ -28063,7 +28403,7 @@ newSpaceCapacity(void)
 	Answer the next object on the list, or nil if none. */
 
 	/* SpurGenerationScavenger>>#nextCorpseOrNil: */
-static NoDbgRegParms sqInt
+static NoDbgRegParms usqInt
 nextCorpseOrNil(sqInt corpse)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     usqInt listOffset;
@@ -28239,9 +28579,9 @@ l1:
 		/* begin nextCorpseOrNil: */
 		assert(isYoung(ephemeronCorpse));
 		listOffset = ((((usqInt)(((long32At((void *)(ephemeronCorpse + 4))) & (identityHashHalfWordMask()))) << 8))) + (byteAt((void *)(ephemeronCorpse + (formatFieldByteOffset()))));
-		ephemeronCorpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+		ephemeronCorpse = (listOffset
+					? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+					: 0);
 	}
 	firedOEL = 1;
 	/* end fireEphemeronsOnEphemeronList */
@@ -28424,9 +28764,9 @@ processWeaklings(void)
 			/* begin nextCorpseOrNil: */
 			assert(isYoung(weakCorpse));
 			listOffset = ((((usqInt)(((long32At((void *)(weakCorpse + 4))) & (identityHashHalfWordMask()))) << 8))) + (byteAt((void *)(weakCorpse + (formatFieldByteOffset()))));
-			weakCorpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+			weakCorpse = (listOffset
+						? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+						: 0);
 		}
 		GIV(weakList) = null;
 	}
@@ -29467,9 +29807,9 @@ wholeEphemeronListIsFirable(void)
 		/* begin nextCorpseOrNil: */
 		assert(isYoung(ephemeronCorpse));
 		listOffset = ((((usqInt)(((long32At((void *)(ephemeronCorpse + 4))) & (identityHashHalfWordMask()))) << 8))) + (byteAt((void *)(ephemeronCorpse + (formatFieldByteOffset()))));
-		ephemeronCorpse = ((sqInt) ((listOffset
-		? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
-		: 0)));
+		ephemeronCorpse = (listOffset
+					? ((((usqInt)((listOffset - 1)) << 3 /* shiftForAllocationUnit */))) + GIV(newSpaceStart)
+					: 0);
 	}
 	return 1;
 }
@@ -34959,7 +35299,7 @@ expungeFromClassTable(sqInt aBehavior)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     int classIndex;
     sqInt classTablePage;
-    int majorIndex;
+    sqInt majorIndex;
     int minorIndex;
 
 	assert(isInClassTable(aBehavior));
@@ -39261,7 +39601,7 @@ mapOopsFromtooutPointersoutHashes(sqInt segStart, sqInt segAddr, sqInt outPointe
     usqInt numSlotsUsqInt;
     sqInt objIndex;
     sqInt objOop;
-    usqInt oop;
+    sqInt oop;
     sqInt outIndex;
     usqInt p;
     sqInt segIndex;
@@ -54625,13 +54965,14 @@ static sqInt
 getErrorObjectFromPrimFailCode(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt classIndex;
-    sqInt clone;
-    sqInt errObj;
+    usqInt clone;
+    usqInt errObj;
     sqInt i;
     usqInt newObj;
     usqInt numBytes;
     usqInt numSlots;
     usqInt numSlotsUsqInt;
+    sqInt objOop;
     sqInt table;
     sqInt valuePointer;
 
@@ -54643,12 +54984,13 @@ getErrorObjectFromPrimFailCode(void)
 					? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(table - BaseHeaderSize)))) << 8)))))) >> 8
 					: numSlots)))) {
 			/* begin followField:ofObject: */
-			errObj = longAt((void *)((table + BaseHeaderSize) + ((((usqInt)((GIV(primFailCode) - 1)) << (shiftForWord()))))));
+			objOop = longAt((void *)((table + BaseHeaderSize) + ((((usqInt)((GIV(primFailCode) - 1)) << (shiftForWord()))))));
 			if (/* isOopForwarded: */
-				((!(errObj & (tagMask()))))
-			 && ((!((longAt((void *)(errObj))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-				errObj = fixFollowedFieldofObjectwithInitialValue(GIV(primFailCode) - 1, table, errObj);
+				((!(objOop & (tagMask()))))
+			 && ((!((longAt((void *)(objOop))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+				objOop = fixFollowedFieldofObjectwithInitialValue(GIV(primFailCode) - 1, table, objOop);
 			}
+			errObj = objOop;
 
 			/* If there's a clonable object in the table at that index,
 			   answer a clone of the error object with the second slot set to the value of secondaryErrorCode. */
@@ -69787,7 +70129,7 @@ primitiveInvokeObjectAsMethod(void)
     usqInt numTemps;
     sqInt object;
     sqInt rcvr;
-    sqInt runArgs;
+    usqInt runArgs;
     sqInt runReceiver;
     sqInt tagBits;
     sqInt top;
@@ -69801,7 +70143,7 @@ primitiveInvokeObjectAsMethod(void)
 	/* begin allocateNewSpaceSlots:format:classIndex: */
 	if (GIV(argumentCount) >= (numSlotsMask())) {
 		if (GIV(argumentCount) > 0xFFFFFFFFU) {
-			runArgs = ((usqInt) null);
+			runArgs = null;
 			goto l1;
 		}
 		newObj = GIV(freeStart) + BaseHeaderSize;

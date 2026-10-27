@@ -729,6 +729,7 @@ static AbstractInstruction * lastOpcode(void);
 extern CogMethod * linkedSendTargetOrNilAt(sqInt retpc);
 extern void linkSendAtintooffsetreceiver(sqInt callSiteReturnAddress, CogMethod *sendingMethod, CogMethod *targetMethod, sqInt theEntryOffset, sqInt receiver);
 static NoDbgRegParms BytecodeDescriptor * loadBytesAndGetDescriptor(sqInt pc);
+static NoDbgRegParms AbstractInstruction * gMoveCqR(sqInt quickConstant, sqInt reg);
 static NoDbgRegParms AbstractInstruction * gMoveMwrR(sqInt offset, sqInt baseReg, sqInt destReg);
 static NoDbgRegParms AbstractInstruction * gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static NoDbgRegParms sqInt mapEndFor(CogMethod *cogMethod);
@@ -789,6 +790,7 @@ static NoDbgRegParms sqInt relocateIfCallOrMethodReferencemcpcdelta(sqInt annota
 static NoDbgRegParms sqInt remapIfObjectRefpchasYoung(sqInt annotation, char *mcpc, void *hasYoungPtr);
 static NoDbgRegParms sqInt remapMaybeObjRefInClosedPICAt(sqInt mcpc);
 static NoDbgRegParms void rewriteCPICCaseAttagobjReftarget(sqInt followingAddress, sqInt newTag, sqInt newObjRef, sqInt newTarget);
+static NoDbgRegParms AbstractInstruction * gSubCqR(sqInt quickConstant, sqInt reg);
 static NoDbgRegParms AbstractInstruction * gSubRRR(sqInt subReg, sqInt fromReg, sqInt destReg);
 static sqInt scanForCleanBlocks(void);
 extern void setSelectorOfto(CogMethod *cogMethod, sqInt aSelectorOop);
@@ -993,14 +995,18 @@ static NoDbgRegParms sqInt genNoPopCreateClosureAtnumArgsnumCopiedcontextNumArgs
 static sqInt genPrimitiveAsCharacter(void);
 static sqInt genPrimitiveAsFloat(void);
 static sqInt genPrimitiveAt(void);
+static sqInt genPrimitiveFindFirstInSet(void);
+static sqInt genPrimitiveFindSubstring(void);
 static sqInt genPrimitiveFloatSquareRoot(void);
 static NoDbgRegParms sqInt genPrimitiveIdenticalOrNotIf(sqInt orNot);
+static sqInt genPrimitiveIndexOfAscii(void);
 static sqInt genPrimitiveIntegerAt(void);
 static sqInt genPrimitiveIntegerAtPut(void);
 static sqInt genPrimitiveMakePoint(void);
 static sqInt genPrimitiveObjectAt(void);
 static sqInt genPrimitiveSize(void);
 static sqInt genPrimitiveStringCompareWith(void);
+static sqInt genPrimitiveStringHash(void);
 static sqInt genPrimitiveStringReplace(void);
 static NoDbgRegParms sqInt genSetSmallIntegerTagsIn(sqInt scratchReg);
 static usqInt genStoreCheckContextReceiverTrampoline(void);
@@ -2093,10 +2099,10 @@ static PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1] 
 	{ 0, -1 },
 	{ 0, -1 },
 	{ 0, -1 },
-	{ 0, -1 },
-	{ 0, -1 },
-	{ 0, -1 },
-	{ 0, -1 },
+	{ genPrimitiveStringHash, -1 },
+	{ genPrimitiveIndexOfAscii, -1 },
+	{ genPrimitiveFindSubstring, -1 },
+	{ genPrimitiveFindFirstInSet, -1 },
 	{ 0, -1 },
 	{ 0, -1 },
 	{ genPrimitiveStringCompareWith, 1 },
@@ -13800,6 +13806,20 @@ loadBytesAndGetDescriptor(sqInt pc)
 	return descriptor;
 }
 
+	/* Cogit>>#MoveCq:R: */
+static NoDbgRegParms AbstractInstruction *
+gMoveCqR(sqInt quickConstant, sqInt reg)
+{
+    AbstractInstruction *anInstruction;
+
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(MoveCqR, quickConstant, reg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	return anInstruction;
+}
+
 	/* Cogit>>#MoveMw:r:R: */
 static NoDbgRegParms AbstractInstruction *
 gMoveMwrR(sqInt offset, sqInt baseReg, sqInt destReg)
@@ -15638,7 +15658,7 @@ static NoDbgRegParms void
 relocateCallsInClosedPIC(CogMethod *cPIC)
 {
     sqLong callDelta;
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     sqLong refDelta;
@@ -15893,6 +15913,20 @@ rewriteCPICCaseAttagobjReftarget(sqInt followingAddress, sqInt newTag, sqInt new
 
 	/* write the jump address for the new target address */
 	rewriteConditionalJumpLongAttarget(backEnd, followingAddress, newTarget);
+}
+
+	/* Cogit>>#SubCq:R: */
+static NoDbgRegParms AbstractInstruction *
+gSubCqR(sqInt quickConstant, sqInt reg)
+{
+    AbstractInstruction *anInstruction;
+
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(SubCqR, quickConstant, reg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	return anInstruction;
 }
 
 
@@ -25827,6 +25861,490 @@ genPrimitiveAt(void)
 	return genPrimitiveAtSigned(0);
 }
 
+
+/*	Generate machine code for primitiveFindFirstInString (primitive
+	155):
+		ByteString class>>findFirstInString: aString inSet: inclusionMap
+	startingAt: start (3 args)
+		ByteString>>findFirstInByteString:
+	inclusionMap startingAt: start (2 args)
+	 Uses strictly byte-by-byte
+	loads. 
+ */
+
+	/* CogObjectRepresentationForSpur>>#genPrimitiveFindFirstInSet */
+static sqInt
+genPrimitiveFindFirstInSet(void)
+{
+    AbstractInstruction *anInstruction;
+    AbstractInstruction *jumpBadIndex;
+    AbstractInstruction *jumpFound;
+    AbstractInstruction *jumpMapBadSize;
+    AbstractInstruction *jumpMapCompiledMethod;
+    AbstractInstruction *jumpMapImm;
+    AbstractInstruction *jumpMapNotBytes;
+    AbstractInstruction *jumpNotFound;
+    AbstractInstruction *jumpStartNotSmi;
+    AbstractInstruction *jumpStringCompiledMethod;
+    AbstractInstruction *jumpStringImm;
+    AbstractInstruction *jumpStringNotBytes;
+    AbstractInstruction *loop;
+    sqInt mapReg;
+    sqInt offset;
+    sqInt quickConstant;
+    sqInt reg;
+    sqInt sizeReg;
+    sqInt startReg;
+    sqInt stringReg;
+
+	mapReg = 0;
+	startReg = 0;
+	stringReg = 0;
+	if (methodOrBlockNumArgs == 3) {
+		reg = (stringReg = Arg0Reg);
+
+		/* begin genStackArgAt:into: */
+		offset = (2) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+		reg = (mapReg = Arg1Reg);
+
+		/* begin genStackArgAt:into: */
+		offset = (1) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+		reg = (startReg = ClassReg);
+
+		/* begin genStackArgAt:into: */
+		offset = (0) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+	}
+	else {
+		if (methodOrBlockNumArgs == 2) {
+			stringReg = ReceiverResultReg;
+			mapReg = Arg0Reg;
+
+			/* begin genLoadArgAtDepth:into: */
+			assert(1 < (numRegArgs()));
+			startReg = Arg1Reg;
+
+			/* begin genLoadArgAtDepth:into: */
+			assert(0 < (numRegArgs()));
+		}
+		else {
+			return UnimplementedPrimitive;
+		}
+	}
+	jumpStartNotSmi = genJumpNotSmallInteger(startReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, (((usqInt)1 << 1) | 1), startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral((((usqInt)1 << 1) | 1)));
+	}
+	jumpBadIndex = genConditionalBranchoperand(JumpLess, ((sqInt)0));
+	jumpStringImm = genJumpImmediate(stringReg);
+	genGetFormatOfinto(stringReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpStringNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpStringCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	jumpMapImm = genJumpImmediate(mapReg);
+	genGetFormatOfinto(mapReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpMapNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpMapCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	sizeReg = SendNumArgsReg;
+	genGetNumBytesOfinto(mapReg, sizeReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, 0x100, sizeReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(0x100));
+	}
+	jumpMapBadSize = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
+	genConvertSmallIntegerToIntegerInReg(startReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize - 1, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize - 1));
+	}
+	genGetNumBytesOfinto(stringReg, sizeReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize, sizeReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, startReg);
+	jumpNotFound = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	loop = genoperandoperandoperand(MoveXbrRR, startReg, stringReg, TempReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* MoveXbr:R:R: */
+	genoperandoperandoperand(MoveXbrRR, TempReg, mapReg, TempReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, 0, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(0));
+	}
+	jumpFound = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, 1, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, startReg);
+
+	/* JumpBelow: */
+	genConditionalBranchoperand(JumpBelow, ((sqInt)loop));
+	jmpTarget(jumpMapBadSize, jmpTarget(jumpNotFound, gMoveCqR((((usqInt)0 << 1) | 1), ReceiverResultReg)));
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpFound, gSubCqR(BaseHeaderSize - 1, startReg));
+	genConvertIntegerInRegtoSmallIntegerInReg(startReg, ReceiverResultReg);
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpStartNotSmi, jmpTarget(jumpBadIndex, jmpTarget(jumpStringImm, jmpTarget(jumpStringNotBytes, jmpTarget(jumpStringCompiledMethod, jmpTarget(jumpMapImm, jmpTarget(jumpMapNotBytes, jmpTarget(jumpMapCompiledMethod, genoperandoperand(Label, (labelCounter += 1), bytecodePC)))))))));
+	return CompletePrimitive;
+}
+
+
+/*	Generate machine code for the table-less 3-arg form of
+	primitiveFindSubstring (primitive 154):
+		ByteString class>>findSubstring:
+	key in: body startingAt: start
+	 If a matchTable is passed (4 args),
+	answer UnimplementedPrimitive to fall back to the interpreter.
+	 Uses
+	strictly byte-by-byte loads.
+ */
+
+	/* CogObjectRepresentationForSpur>>#genPrimitiveFindSubstring */
+static sqInt
+genPrimitiveFindSubstring(void)
+{
+    AbstractInstruction *anInstruction;
+    sqInt bodyLimitReg;
+    sqInt bodyPtrReg;
+    sqInt bodyReg;
+    sqInt idxReg;
+    AbstractInstruction *innerLoop;
+    AbstractInstruction *jumpBodyCompiledMethod;
+    AbstractInstruction *jumpBodyImm;
+    AbstractInstruction *jumpBodyNotBytes;
+    AbstractInstruction *jumpEmptyKey;
+    AbstractInstruction *jumpFirstMismatch;
+    AbstractInstruction *jumpFound;
+    AbstractInstruction *jumpKeyCompiledMethod;
+    AbstractInstruction *jumpKeyImm;
+    AbstractInstruction *jumpKeyNotBytes;
+    AbstractInstruction *jumpNextMismatch;
+    AbstractInstruction *jumpNotFound;
+    AbstractInstruction *jumpStartNonNeg;
+    AbstractInstruction *jumpStartNotSmi;
+    sqInt keyReg;
+    sqInt offset;
+    AbstractInstruction *outerLoop;
+    sqInt quickConstant;
+    sqInt startReg;
+
+	if (!(methodOrBlockNumArgs == 3)) {
+		return UnimplementedPrimitive;
+	}
+	keyReg = Arg0Reg;
+	bodyReg = Arg1Reg;
+	startReg = ClassReg;
+
+	/* begin genStackArgAt:into: */
+	offset = (2) * BytesPerWord;
+	anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, keyReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(offset));
+	}
+
+	/* begin genStackArgAt:into: */
+	offset = (1) * BytesPerWord;
+	anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, bodyReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(offset));
+	}
+
+	/* begin genStackArgAt:into: */
+	offset = (0) * BytesPerWord;
+	anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(offset));
+	}
+	jumpStartNotSmi = genJumpNotSmallInteger(startReg);
+	jumpKeyImm = genJumpImmediate(keyReg);
+	genGetFormatOfinto(keyReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpKeyNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpKeyCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	jumpBodyImm = genJumpImmediate(bodyReg);
+	genGetFormatOfinto(bodyReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpBodyNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpBodyCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	genGetNumBytesOfinto(keyReg, ReceiverResultReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, 0, ReceiverResultReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(0));
+	}
+	jumpEmptyKey = genConditionalBranchoperand(JumpZero, ((sqInt)0));
+	genConvertSmallIntegerToIntegerInReg(startReg);
+
+	/* begin SubCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(SubCqR, 1, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+	jumpStartNonNeg = genConditionalBranchoperand(JumpGreaterOrEqual, ((sqInt)0));
+
+	/* begin MoveCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(MoveCqR, 0, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(0));
+	}
+	jmpTarget(jumpStartNonNeg, genoperandoperand(Label, (labelCounter += 1), bytecodePC));
+	genGetNumBytesOfinto(bodyReg, SendNumArgsReg);
+
+	/* SubR:R: */
+	genoperandoperand(SubRR, ReceiverResultReg, SendNumArgsReg);
+
+	/* begin CmpR:R: */
+	assert(!(0 /* (SendNumArgsReg = SPReg) */));
+	genoperandoperand(CmpRR, SendNumArgsReg, startReg);
+	jumpNotFound = genConditionalBranchoperand(JumpGreater, ((sqInt)0));
+	bodyPtrReg = SendNumArgsReg;
+	bodyLimitReg = Arg1Reg;
+	idxReg = ClassReg;
+
+	/* AddR:R: */
+	genoperandoperand(AddRR, bodyReg, startReg);
+
+	/* AddR:R: */
+	genoperandoperand(AddRR, SendNumArgsReg, bodyReg);
+
+	/* MoveR:R: */
+	genoperandoperand(MoveRR, startReg, bodyPtrReg);
+
+	/* begin MoveMb:r:R: */
+	/* begin gen:quickConstant:operand:operand: */
+	outerLoop = genoperandoperandoperand(MoveMbrR, BaseHeaderSize, keyReg, TempReg);
+	if (usesOutOfLineLiteral(outerLoop)) {
+		(outerLoop->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* begin MoveMb:r:R: */
+	/* begin gen:quickConstant:operand:operand: */
+	anInstruction = genoperandoperandoperand(MoveMbrR, BaseHeaderSize, bodyPtrReg, ReceiverResultReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* begin CmpR:R: */
+	assert(!(0 /* (TempReg = SPReg) */));
+	genoperandoperand(CmpRR, TempReg, ReceiverResultReg);
+	jumpFirstMismatch = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
+	genGetNumBytesOfinto(keyReg, idxReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize - 1, idxReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize - 1));
+	}
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	innerLoop = genoperandoperand(CmpCqR, BaseHeaderSize, idxReg);
+	if (usesOutOfLineLiteral(innerLoop)) {
+		(innerLoop->dependent = locateLiteral(BaseHeaderSize));
+	}
+	jumpFound = genConditionalBranchoperand(JumpLessOrEqual, ((sqInt)0));
+
+	/* MoveXbr:R:R: */
+	genoperandoperandoperand(MoveXbrRR, idxReg, keyReg, TempReg);
+
+	/* MoveXbr:R:R: */
+	genoperandoperandoperand(MoveXbrRR, idxReg, bodyPtrReg, ReceiverResultReg);
+
+	/* begin CmpR:R: */
+	assert(!(0 /* (TempReg = SPReg) */));
+	genoperandoperand(CmpRR, TempReg, ReceiverResultReg);
+	jumpNextMismatch = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
+
+	/* begin SubCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(SubCqR, 1, idxReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+
+	/* Jump: */
+	genoperand(Jump, ((sqInt)innerLoop));
+	jmpTarget(jumpFirstMismatch, jmpTarget(jumpNextMismatch, gAddCqR(1, bodyPtrReg)));
+
+	/* begin CmpR:R: */
+	assert(!((bodyLimitReg == SPReg)));
+	genoperandoperand(CmpRR, bodyLimitReg, bodyPtrReg);
+
+	/* JumpBelowOrEqual: */
+	genConditionalBranchoperand(JumpBelowOrEqual, ((sqInt)outerLoop));
+	jmpTarget(jumpEmptyKey, jmpTarget(jumpNotFound, gMoveCqR((((usqInt)0 << 1) | 1), ReceiverResultReg)));
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpFound, genoperandoperand(Label, (labelCounter += 1), bytecodePC));
+
+	/* begin genStackArgAt:into: */
+	offset = (1) * BytesPerWord;
+	anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(offset));
+	}
+
+	/* SubR:R: */
+	genoperandoperand(SubRR, TempReg, bodyPtrReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, 1, bodyPtrReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+	genConvertIntegerInRegtoSmallIntegerInReg(bodyPtrReg, ReceiverResultReg);
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpStartNotSmi, jmpTarget(jumpKeyImm, jmpTarget(jumpKeyNotBytes, jmpTarget(jumpKeyCompiledMethod, jmpTarget(jumpBodyImm, jmpTarget(jumpBodyNotBytes, jmpTarget(jumpBodyCompiledMethod, genoperandoperand(Label, (labelCounter += 1), bytecodePC))))))));
+	return CompletePrimitive;
+}
+
 	/* CogObjectRepresentationForSpur>>#genPrimitiveFloatSquareRoot */
 static sqInt
 genPrimitiveFloatSquareRoot(void)
@@ -25912,6 +26430,192 @@ genPrimitiveIdenticalOrNotIf(sqInt orNot)
 		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 	}
 	return UnfailingPrimitive;
+}
+
+
+/*	Generate machine code for primitiveIndexOfAsciiInString (primitive
+	153):
+		ByteString class>>indexOfAscii: anInteger inString: aString
+	startingAt: start (3 args)
+		ByteString>>indexOfAscii: anInteger
+	startingAt: start (2 args)
+	 Uses strictly byte-by-byte loads.
+ */
+
+	/* CogObjectRepresentationForSpur>>#genPrimitiveIndexOfAscii */
+static sqInt
+genPrimitiveIndexOfAscii(void)
+{
+    AbstractInstruction *anInstruction;
+    sqInt asciiReg;
+    AbstractInstruction *jumpAsciiNotSmi;
+    AbstractInstruction *jumpBadIndex;
+    AbstractInstruction *jumpCompiledMethod;
+    AbstractInstruction *jumpFound;
+    AbstractInstruction *jumpNotBytes;
+    AbstractInstruction *jumpNotFound;
+    AbstractInstruction *jumpOutOfRange;
+    AbstractInstruction *jumpStartNotSmi;
+    AbstractInstruction *jumpStringImm;
+    AbstractInstruction *loop;
+    sqInt offset;
+    sqInt quickConstant;
+    sqInt reg;
+    sqInt sizeReg;
+    sqInt startReg;
+    sqInt stringReg;
+
+	asciiReg = 0;
+	startReg = 0;
+	stringReg = 0;
+	if (methodOrBlockNumArgs == 3) {
+		reg = (asciiReg = Arg0Reg);
+
+		/* begin genStackArgAt:into: */
+		offset = (2) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+		reg = (stringReg = Arg1Reg);
+
+		/* begin genStackArgAt:into: */
+		offset = (1) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+		reg = (startReg = ClassReg);
+
+		/* begin genStackArgAt:into: */
+		offset = (0) * BytesPerWord;
+		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, reg);
+		if (usesOutOfLineLiteral(anInstruction)) {
+			(anInstruction->dependent = locateLiteral(offset));
+		}
+	}
+	else {
+		if (methodOrBlockNumArgs == 2) {
+			stringReg = ReceiverResultReg;
+			asciiReg = Arg0Reg;
+
+			/* begin genLoadArgAtDepth:into: */
+			assert(1 < (numRegArgs()));
+			startReg = Arg1Reg;
+
+			/* begin genLoadArgAtDepth:into: */
+			assert(0 < (numRegArgs()));
+		}
+		else {
+			return UnimplementedPrimitive;
+		}
+	}
+	jumpAsciiNotSmi = genJumpNotSmallInteger(asciiReg);
+	jumpStartNotSmi = genJumpNotSmallInteger(startReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, (((usqInt)1 << 1) | 1), startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral((((usqInt)1 << 1) | 1)));
+	}
+	jumpBadIndex = genConditionalBranchoperand(JumpLess, ((sqInt)0));
+	jumpStringImm = genJumpImmediate(stringReg);
+	genGetFormatOfinto(stringReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	genConvertSmallIntegerToIntegerInReg(asciiReg);
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, 0xFF, asciiReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(0xFF));
+	}
+	jumpOutOfRange = genConditionalBranchoperand(JumpAbove, ((sqInt)0));
+	genConvertSmallIntegerToIntegerInReg(startReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize - 1, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize - 1));
+	}
+	sizeReg = SendNumArgsReg;
+	genGetNumBytesOfinto(stringReg, sizeReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize, sizeReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, startReg);
+	jumpNotFound = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	loop = genoperandoperandoperand(MoveXbrRR, startReg, stringReg, TempReg);
+
+	/* begin CmpR:R: */
+	assert(!((asciiReg == SPReg)));
+	genoperandoperand(CmpRR, asciiReg, TempReg);
+	jumpFound = genConditionalBranchoperand(JumpZero, ((sqInt)0));
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, 1, startReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, startReg);
+
+	/* JumpBelow: */
+	genConditionalBranchoperand(JumpBelow, ((sqInt)loop));
+	jmpTarget(jumpOutOfRange, jmpTarget(jumpNotFound, gMoveCqR((((usqInt)0 << 1) | 1), ReceiverResultReg)));
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpFound, gSubCqR(BaseHeaderSize - 1, startReg));
+	genConvertIntegerInRegtoSmallIntegerInReg(startReg, ReceiverResultReg);
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpAsciiNotSmi, jmpTarget(jumpStartNotSmi, jmpTarget(jumpBadIndex, jmpTarget(jumpStringImm, jmpTarget(jumpNotBytes, jmpTarget(jumpCompiledMethod, genoperandoperand(Label, (labelCounter += 1), bytecodePC)))))));
+	return CompletePrimitive;
 }
 
 
@@ -26468,6 +27172,145 @@ genPrimitiveStringCompareWith(void)
 		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 	}
 	jmpTarget(jumpIncorrectFormat4, jmpTarget(jumpIncorrectFormat3, jmpTarget(jumpIncorrectFormat2, jmpTarget(jumpIncorrectFormat1, genoperandoperand(Label, (labelCounter += 1), bytecodePC)))));
+	return CompletePrimitive;
+}
+
+
+/*	Generate machine code for primitiveStringHash (primitive 152):
+		ByteArray
+	class>>hashBytes: aByteArray startingWith: speciesHash (2
+	args)
+		ByteArray>>hashBytesStartingWith: speciesHash (1 arg)
+	 Uses
+	strictly byte-by-byte loads.
+ */
+
+	/* CogObjectRepresentationForSpur>>#genPrimitiveStringHash */
+static sqInt
+genPrimitiveStringHash(void)
+{
+    AbstractInstruction *anInstruction;
+    sqInt byteArrayReg;
+    sqInt idxReg;
+    AbstractInstruction *jumpCompiledMethod;
+    AbstractInstruction *jumpImm;
+    AbstractInstruction *jumpNotBytes;
+    AbstractInstruction *jumpNotSmi;
+    AbstractInstruction *loop;
+    AbstractInstruction *loopDone;
+    sqInt quickConstant;
+    sqInt sizeReg;
+    sqInt speciesHashReg;
+
+	byteArrayReg = 0;
+	speciesHashReg = 0;
+	if (methodOrBlockNumArgs == 2) {
+		byteArrayReg = Arg0Reg;
+
+		/* begin genLoadArgAtDepth:into: */
+		assert(1 < (numRegArgs()));
+		speciesHashReg = Arg1Reg;
+
+		/* begin genLoadArgAtDepth:into: */
+		assert(0 < (numRegArgs()));
+	}
+	else {
+		if (methodOrBlockNumArgs == 1) {
+			byteArrayReg = ReceiverResultReg;
+			speciesHashReg = Arg0Reg;
+
+			/* begin genLoadArgAtDepth:into: */
+			assert(0 < (numRegArgs()));
+		}
+		else {
+			return UnimplementedPrimitive;
+		}
+	}
+	jumpNotSmi = genJumpNotSmallInteger(speciesHashReg);
+	jumpImm = genJumpImmediate(byteArrayReg);
+	genGetFormatOfinto(byteArrayReg, TempReg);
+	quickConstant = firstByteFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpNotBytes = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
+	quickConstant = firstCompiledMethodFormat();
+
+	/* begin CmpCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(quickConstant));
+	}
+	jumpCompiledMethod = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	sizeReg = ClassReg;
+	idxReg = SendNumArgsReg;
+	genGetNumBytesOfinto(byteArrayReg, sizeReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, BaseHeaderSize, sizeReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+	genConvertSmallIntegerToIntegerInReg(speciesHashReg);
+
+	/* begin MoveCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(MoveCqR, BaseHeaderSize, idxReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(BaseHeaderSize));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, idxReg);
+	loopDone = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
+	loop = genoperandoperandoperand(MoveXbrRR, idxReg, byteArrayReg, TempReg);
+
+	/* AddR:R: */
+	genoperandoperand(AddRR, TempReg, speciesHashReg);
+
+	/* begin MoveCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(MoveCqR, HashMultiplyConstant, TempReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(HashMultiplyConstant));
+	}
+
+	/* MulR:R: */
+	genMulRR(backEnd, TempReg, speciesHashReg);
+
+	/* begin AddCq:R: */
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(AddCqR, 1, idxReg);
+	if (usesOutOfLineLiteral(anInstruction)) {
+		(anInstruction->dependent = locateLiteral(1));
+	}
+
+	/* begin CmpR:R: */
+	assert(!((sizeReg == SPReg)));
+	genoperandoperand(CmpRR, sizeReg, idxReg);
+
+	/* JumpBelow: */
+	genConditionalBranchoperand(JumpBelow, ((sqInt)loop));
+	jmpTarget(loopDone, gAndCqR(HashMultiplyMask, speciesHashReg));
+	genConvertIntegerInRegtoSmallIntegerInReg(speciesHashReg, ReceiverResultReg);
+
+	/* genPrimReturn */
+	if (methodOrBlockNumArgs <= (numRegArgs())) {
+		/* RetN: */
+		genoperand(RetN, 0);
+	}
+	else {
+		/* RetN: */
+		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
+	}
+	jmpTarget(jumpNotSmi, jmpTarget(jumpImm, jmpTarget(jumpNotBytes, jmpTarget(jumpCompiledMethod, genoperandoperand(Label, (labelCounter += 1), bytecodePC)))));
 	return CompletePrimitive;
 }
 
