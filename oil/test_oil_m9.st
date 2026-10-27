@@ -125,7 +125,7 @@ items := (1 to: 1000) collect: [:k | (Smalltalk at: #OilM9Item) new score: k; yo
 "--- Probes: {selector. arguments for warming up. argument lists checked (results and deopts). check of the statistics {full. partial. young. rotated}. benchmark block (or nil)} ---"
 probes := {
 	{#sum3:. {#(1 2 3)}. {{#(1 2 3)}. {#(4 5 6 7)}. {#(1 2)}. {{1. 2. nil}}. {{1. SmallInteger maxVal. 1}}}. [:st | st first = 1]. [:sel | 3000000 timesRepeat: [model perform: sel with: #(1 2 3)]]}.
-	{#times4:. {5}. {{5}. {-3}. {SmallInteger maxVal}. {2.5}}. [:st | st first = 1]. [:sel | 3000000 timesRepeat: [model perform: sel with: 7]]}.
+	{#times4:. {5}. {{5}. {-3}. {SmallInteger maxVal}. {2.5}}. [:st | st first = 0]. [:sel | 3000000 timesRepeat: [model perform: sel with: 7]]}.
 	{#find3:. {#(1 0 3)}. {{#(1 0 3)}. {#(1 2 3)}. {#(0)}}. [:st | st first = 1]. nil}.
 	{#scores3:. {items}. {{items}. {items reverse}. {{items first. 3. items last}}}. [:st | st first = 1]. [:sel | 3000000 timesRepeat: [model perform: sel with: items]]}.
 	{#sumArr:. {arr1k}. {{arr}. {#()}. {#(1)}. {#(1 2)}. {#(1 2 3)}. {#(1 2 3 4 5)}. {#(1 2 nil 4 5 6 7 8 9)}. {{1. 2. 3. 4. 5. 6. SmallInteger maxVal. 8}}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: arr]]}.

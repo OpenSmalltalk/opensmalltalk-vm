@@ -781,7 +781,8 @@ estimateOpcodesOfInstructionAt: irOffset
 	(opcode = OilStreamNext or: [opcode = OilStreamNextPut or: [opcode = OilCompareBytes]]) ifTrue: [^140].
 	opcode = OilStringHash ifTrue: [^100].
 	opcode = OilIdentityHash ifTrue: [^60].
-	(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators]) ifTrue: [^160 + (4 * oilNumAllocRegs)].
+	(opcode = OilIndexOfByte or: [opcode = OilSkipSeparators or: [opcode = OilFindFirstInString]]) ifTrue: [^160 + (4 * oilNumAllocRegs)].
+	opcode = OilFindSubstring ifTrue: [^240 + (4 * oilNumAllocRegs)].
 	^20! !
 
 !OilInliningCompiler methodsFor: 'deoptimization metadata' stamp: 'cb 10/26/2026 10:00'!

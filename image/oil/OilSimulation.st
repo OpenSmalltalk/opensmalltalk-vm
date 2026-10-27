@@ -109,7 +109,9 @@ printInstructionAt: instIndex on: aStream
 		[OilNewObject]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self printHandle: (self word64At: instIndex + 1)), ' new from ', (self reg: regB), '..', (self reg: regB + regC - 1), '   (materialized, not nil filled)'].
 		[OilCmpClass]		-> [aStream nextPutAll: 'class(', (self reg: regB), ') ', (self condName: regA), ' ', (self printHandle: (self word64At: instIndex + 1))].
 		[OilGuardClass2]	-> [aStream nextPutAll: 'class(', (self reg: regA), ') == ', (self printHandle: (self word64At: instIndex + 1)), ' or ', (self printHandle: (self word64At: instIndex + 3))].
-		[OilStringHash]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' hashWithInitialHash: ', (self reg: regC), '   (inlined, else sent)'] }
+		[OilStringHash]		-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' hashWithInitialHash: ', (self reg: regC), '   (inlined, else sent)'].
+		[OilFindSubstring]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' ', (self printHandle: (self word64At: instIndex + 1)), ' (', (self packedArgsAt: instIndex + 3 count: regC), ')   (inlined, else sent)'].
+		[OilFindFirstInString]	-> [aStream nextPutAll: (self reg: regA), ' := ', (self reg: regB), ' ', (self printHandle: (self word64At: instIndex + 1)), ' (', (self packedArgsAt: instIndex + 3 count: regC), ')   (inlined, else sent)'] }
 		otherwise: [].
 	siteIndex := (0 to: numSites - 1) detect: [:s| (siteIR at: s) = instIndex] ifNone: [nil].
 	siteIndex ifNotNil:
@@ -392,12 +394,16 @@ step: instIndex
 		[| obj | obj := (comp objectFor: (comp word64At: instIndex + 1)) basicNew.
 		 0 to: srcReg2 - 1 do: [:slotIndex| obj instVarAt: slotIndex + 1 put: (self r: srcReg1 + slotIndex)].
 		 self r: destReg put: obj. ^nextIndex].
-	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [(opcode between: OilIdentityHash and: OilSkipSeparators) or: [opcode = OilStringHash]]]]) ifTrue:
+	opcode = OilStringHash ifTrue:
+		[val1 := self r: srcReg1. val2 := self r: srcReg2.
+		 ((comp word64At: instIndex + 1) <= 1
+		  and: [(val1 class isBytes and: [val1 class isVariable]) not or: [(self smallInt: val2) not]]) ifTrue:
+			[^#deopt -> instIndex].
+		 self r: destReg put: (ByteArray hashBytes: val1 startingWith: val2). ^nextIndex].
+	(opcode = OilCall0 or: [opcode = OilCall1 or: [opcode = OilCallN or: [(opcode between: OilIdentityHash and: OilSkipSeparators) or: [opcode = OilFindSubstring or: [opcode = OilFindFirstInString]]]]]) ifTrue:
 		[| selector args |
 		 selector := comp objectFor: (comp word64At: instIndex + 1).
-		 args := opcode = OilStringHash
-					ifTrue: [{self r: srcReg2}]
-					ifFalse: [(1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex]].
+		 args := (1 to: selector numArgs) collect: [:argIndex| self r: srcReg1 + argIndex].
 		 self r: destReg put: ((self r: srcReg1) perform: selector withArguments: args). ^nextIndex].
 	opcode = OilCallDirectedSuper ifTrue: "the lookup starts in the superclass of the method class"
 		[| selector args |

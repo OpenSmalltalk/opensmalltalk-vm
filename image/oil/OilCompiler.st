@@ -491,7 +491,7 @@ structTypeName
 
 
 OilBytecodeScanner subclass: #OilInliningCompiler
-	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass lastDefIR simStackTop highRegTop oilFrames oilVObjs oilConds numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh emittingCond oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilLiveMark oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes oilDefaultColdSelectorNames oilPollPending oilNumPolls oilPollJump oilPollResume oilPollSite oilOpInfo fusedBranchTag fusedBranchTarget fusedBranchNext'
+	instanceVariableNames: 'oilIRBuffer irIndex irInstCount lastInstIR lastLabelIR irBudget slotKind slotValue slotFlags knownClass lastDefIR simStackTop highRegTop oilFrames oilVObjs oilConds numFrames currentFrame currentPC pcTarget pcLabelIR pcChain pcDepth pcMapTop numVObjs capturedKind capturedValue capturedTop siteIR siteFrame sitePC siteKind numSites oilDeadCode failed failureCode needsRestart eagerClosures nilHandle trueHandle falseHandle smallIntegerClassHandle bitXorSelector valueSelectors coldSelectors numColdSelectors numConds pendingCondSlot pendingCondIndex typeFeedback simHandles simHandleIndex oilHomeMethod receiverClass snapFrame snapPC snapTop snapHighTop snapKind snapValue sitePoolKind sitePoolValue sitePoolTop siteSnapBase siteSnapTop siteSnapHigh emittingCond oilUseWeight oilVRegReg oilVRegSpillTemp oilNumSpillTemps oilIRTarget oilIRLabel oilIRSite oilNumFixups oilFixupJump oilFixupTarget oilNumStubJumps oilStubJump oilStubSite oilSiteResume oilSiteStub oilSiteUsed oilAllocRegs oilNumAllocRegs oilLoopDepth oilFailIndex oilTagged oilIRBuffer1 oilIRBuffer2 oilIRMap oilIRFlag oilIRAux oilVRegDefs oilVRegUses oilPass1Words oilNumRotated oilNumBoundsRemoved oilNumSizesShared oilNumNoCheck oilUndoJump oilUndoSite oilUndoReg oilUndoSrc oilNumUndos oilUseProbe oilUseProbeHit pcLoop oilNumGuardsRemoved oilDisqualified oilNumDisqualified oilDisqualifyLimitValue oilNoInline oilNumNoInline oilRestartNoInline oilXmmRegs oilXmmVReg oilXmmKind oilXmmChain oilIndexOfAsciiMethod oilSkipSeparatorsMethod oilByteStreamClass oilFlowEpoch oilEagerSiteMethod oilEagerSitePC oilNumEagerSites oilRestartEager oilClassBindingClass oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilLiveMark oilNumSelects oilEagerPC oilEagerDepth oilRefusePC oilRefuseDepth oilSnapStale oilBlockingVObj oilInlinedSelectors oilNumInlinedSelectors oilMDLiterals oilMDLitHash oilNumMDLiterals oilMDNumBytes oilDefaultColdSelectorNames oilPollPending oilNumPolls oilPollJump oilPollResume oilPollSite oilOpInfo fusedBranchTag fusedBranchTarget fusedBranchNext'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants CogAbstractRegisters VMStackFrameOffsets VMObjectIndices VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
@@ -571,22 +571,10 @@ setUpSimulationTables
 	oilLoopDepth := self newTable: OilBufferWords.
 	oilIRTarget := self newTable: OilBufferWords.
 	oilIRSite := self newTable: OilBufferWords.
-	oilXmmRegs := self newTable: OilNumXmms + OilMaxPinnedXmms.
-	oilXmmPinned := self newTable: OilNumRegs.
-	oilFloatLoopHead := self newTable: OilMaxFloatLoops.
-	oilFloatLoopEnd := self newTable: OilMaxFloatLoops.
-	oilFloatLoopSite := self newTable: OilMaxFloatLoops.
-	oilFloatLoopNum := self newTable: OilMaxFloatLoops.
-	oilFloatLoopVReg := self newTable: OilMaxFloatLoops * OilMaxPinnedXmms.
-	oilFloatLoopKind := self newTable: OilMaxFloatLoops * OilMaxPinnedXmms.
-	oilSiteFloatLoop := self newTable: OilMaxSites.
-	oilFloatExitJump := self newTable: OilMaxFloatExits.
+	oilXmmRegs := self newTable: OilNumXmms.
 	oilPollJump := self newTable: OilMaxPolls.
 	oilPollResume := self newTable: OilMaxPolls.
 	oilPollSite := self newTable: OilMaxPolls.
-	oilFloatExitTarget := self newTable: OilMaxFloatExits.
-	oilNumFloatLoops := oilNumFloatExits := 0.
-	oilFloatLoopCurrent := -1.
 	oilXmmVReg := self newTable: OilNumXmms.
 	oilXmmKind := self newTable: OilNumXmms.
 	simHandles := OrderedCollection new.
@@ -2074,8 +2062,10 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 		 ^self push: OilDescConst value: (self handleForSmallInteger: (self classIndexOfClass: (slotValue at: rcvrSlot)))].
 	(isSuper not and: [(prim = 70 and: [numArgs = 0]) or: [prim = 18 and: [numArgs = 1]]]) ifTrue:
 		[(self genNewObject: prim receiver: rcvrSlot class: rcvrClass guard: guard) ifTrue: [^self]].
-	(isSuper not and: [prim = 117 and: [numArgs = 1 and: [self isStringHashMethod: method class: rcvrClass]]]) ifTrue:
-		[^self genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard].
+	(isSuper not
+	 and: [(numArgs = 1 or: [numArgs = 2])
+	 and: [prim = 152 or: [prim = 117 and: [self isStringHashMethod: method]]]]) ifTrue:
+		[(self genStringHash: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard) ifTrue: [^self]].
 	prim ~= 0 ifTrue:
 		[((isSuper not or: [(prim = 65 or: [prim = 66 or: [prim = 75]]) not])
 		  and: [self canInlineIntrinsic: prim class: rcvrClass numArgs: numArgs]) ifTrue:
@@ -2091,15 +2081,37 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 			[^self]].
 	self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper! !
 
-!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/27/2026 11:50'!
 isIndexOfAsciiMethod: method
-	"ByteString class>>indexOfAscii:inString:startingAt: (registered, or in the VM, by its selector and class)."
+	"ByteString class>>indexOfAscii:inString:startingAt: (registered, or by its primitive/selector and class)."
 	oilIndexOfAsciiMethod ~= 0 ifTrue: [^method = oilIndexOfAsciiMethod].
 	^self cCode:
 			[method ~= 0
 			 and: [(self oilSelector: (coInterpreter maybeSelectorOfMethod: method) isNamed: 'indexOfAscii:inString:startingAt:')
 			 and: [(coInterpreter oilApiMethodClassOf: method) = coInterpreter oilApiByteStringMetaclass]]]
-		inSmalltalk: [false]! !
+		inSmalltalk:
+			[(method literalAt: 1) isArray
+			 and: [((method literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveIndexOfAsciiInString']]! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/27/2026 11:50'!
+isFindSubstringMethod: method
+	"ByteString>>findSubstring:in:startingAt:matchTable: (primitive 117 when not yet numbered 154)."
+	^self cCode:
+			[method ~= 0
+			 and: [self oilSelector: (coInterpreter maybeSelectorOfMethod: method) isNamed: 'findSubstring:in:startingAt:matchTable:']]
+		inSmalltalk:
+			[(method literalAt: 1) isArray
+			 and: [((method literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveFindSubstring']]! !
+
+!OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/27/2026 11:50'!
+isFindFirstInStringMethod: method
+	"String class>>findFirstInString:inSet:startingAt: (primitive 117 when not yet numbered 155)."
+	^self cCode:
+			[method ~= 0
+			 and: [self oilSelector: (coInterpreter maybeSelectorOfMethod: method) isNamed: 'findFirstInString:inSet:startingAt:']]
+		inSmalltalk:
+			[(method literalAt: 1) isArray
+			 and: [((method literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveFindFirstInString']]! !
 
 !OilInliningCompiler methodsFor: 'selectors by name' stamp: 'cb 10/26/2026 15:00'!
 isSkipSeparatorsMethod: method
@@ -2461,27 +2473,38 @@ genIntrinsic: prim selector: selector receiver: rcvrSlot numArgs: numArgs bytes:
 		ifTrue: [self emitMove: self pushOwnSlot from: valReg]
 		ifFalse: [self push: descKind value: slotVal]! !
 
-!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 03:00'!
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/27/2026 11:50'!
 genScanIntrinsic: method selector: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard
-	"Byte scans the back end compiles to word-at-a-time (8 bytes per iteration) loops, falling back to the send itself on
-	 unexpected operands (so they have no deopt site): ByteString class>>indexOfAscii:inString:startingAt: (the search of
-	 ReadStream>>upTo: and String>>indexOf: on byte strings; OilIndexOfByte, laid out like OilCallN), and
-	 PositionableStream>>skipSeparators of a ReadStream (OilSkipSeparators, laid out like OilCall0).  The image registers the
-	 two methods and the stream class (kinds 9 to 11, see registerSelector:kind:).  Answer whether the send was compiled so."
-	| opcode instIndex |
-	opcode := ((self isIndexOfAsciiMethod: method) and: [numArgs = 3])
-				ifTrue: [OilIndexOfByte]
-				ifFalse:
-					[((self isSkipSeparatorsMethod: method) and: [numArgs = 0 and: [self isByteStreamClass: rcvrClass]])
-						ifTrue: [OilSkipSeparators]
-						ifFalse: [^false]].
-	(method = 0 or: [(self isEncodableCall: selector super: false) not]) ifTrue: [^false].
+	"Byte scans the back end compiles to word-at-a-time (8 bytes per iteration) or byte loops, falling back to the send
+	 itself on unexpected operands (so they have no deopt site):
+	 - primitive 153 / ByteString class>>indexOfAscii:inString:startingAt: (OilIndexOfByte, 2 or 3 args);
+	 - primitive 154 / ByteString>>findSubstring:in:startingAt:matchTable: (OilFindSubstring, 2, 3 or 4 args);
+	 - primitive 155 / String class>>findFirstInString:inSet:startingAt: (OilFindFirstInString, 2 or 3 args);
+	 - PositionableStream>>skipSeparators of a ReadStream (OilSkipSeparators, 0 args).
+	 Answer whether the send was compiled so."
+	| prim isBytes opcode instIndex |
+	method = 0 ifTrue: [^false].
+	prim := self oilPrimitiveIndexOf: method.
+	isBytes := (self oilInstSpecOfClass: rcvrClass) between: 16 and: 23.
+	opcode := 0.
+	((prim = 153 and: [numArgs = 3 or: [numArgs = 2 and: [isBytes]]])
+	 or: [(self isIndexOfAsciiMethod: method) and: [numArgs = 3]]) ifTrue:
+		[opcode := OilIndexOfByte].
+	((prim = 154 and: [numArgs = 3 or: [numArgs = 4 or: [numArgs = 2 and: [isBytes]]]])
+	 or: [prim = 117 and: [numArgs = 4 and: [self isFindSubstringMethod: method]]]) ifTrue:
+		[opcode := OilFindSubstring].
+	((prim = 155 and: [numArgs = 3 or: [numArgs = 2 and: [isBytes]]])
+	 or: [prim = 117 and: [numArgs = 3 and: [self isFindFirstInStringMethod: method]]]) ifTrue:
+		[opcode := OilFindFirstInString].
+	((self isSkipSeparatorsMethod: method) and: [numArgs = 0 and: [self isByteStreamClass: rcvrClass]]) ifTrue:
+		[opcode := OilSkipSeparators].
+	(opcode = 0 or: [(self isEncodableCall: selector super: false) not]) ifTrue: [^false].
 	guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
 	rcvrSlot to: rcvrSlot + numArgs do: [:slotIndex| self materializeSlot: slotIndex].
 	failed ifTrue: [^true].
 	instIndex := self emitOp: opcode a: rcvrSlot b: rcvrSlot c: numArgs.
 	self emit64: selector.
-	opcode = OilIndexOfByte ifTrue: [self emitPackedArgs: rcvrSlot + 1 count: numArgs].
+	opcode ~= OilSkipSeparators ifTrue: [self emitPackedArgs: rcvrSlot + 1 count: numArgs].
 	simStackTop := rcvrSlot.
 	self setOwn: rcvrSlot.
 	self noteDef: rcvrSlot at: instIndex.
@@ -3111,8 +3134,9 @@ isSmallIntegerValue: anInteger
 classOopOf: aHandle
 	^self cCode: [coInterpreter oilApiFetchClassOf: aHandle] inSmalltalk: [self handleFor: (self objectFor: aHandle) class]! !
 
-!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 12:25'!
 oilInstSpecOfClass: classOop
+	classOop = 0 ifTrue: [^-1].
 	^self cCode: [coInterpreter oilApiInstSpecOfClass: classOop] inSmalltalk: [(self objectFor: classOop) instSpec]! !
 
 !OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/24/2026 10:30'!
@@ -3315,21 +3339,11 @@ declareCVarsIn: aCCodeGenerator
 	aCCodeGenerator var: #oilSiteUsed declareC: 'static unsigned char oilSiteUsed[OilMaxSites]'.
 	aCCodeGenerator var: #oilAllocRegs declareC: 'static sqInt oilAllocRegs[16]'.
 	"Float chains: the XMM registers, the register whose value each holds (or -1) and how it was loaded (-1: computed)."
-	#(oilXmmVReg oilXmmKind) do:
+	#(oilXmmRegs oilXmmVReg oilXmmKind) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumXmms]'].
-	"(then the XMM registers pinned to the float variables of loops, see prepareFloatLoops)"
-	aCCodeGenerator var: #oilXmmRegs declareC: 'static sqInt oilXmmRegs[OilNumXmms + OilMaxPinnedXmms]'.
-	aCCodeGenerator var: #oilXmmPinned declareC: 'static sqInt oilXmmPinned[OilNumRegs]'.
-	#(oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum) do:
-		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxFloatLoops]'].
-	#(oilFloatLoopVReg oilFloatLoopKind) do:
-		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxFloatLoops * OilMaxPinnedXmms]'].
-	aCCodeGenerator var: #oilSiteFloatLoop declareC: 'static unsigned char oilSiteFloatLoop[OilMaxSites]'.
-	aCCodeGenerator var: #oilFloatExitJump declareC: 'static AbstractInstruction *oilFloatExitJump[OilMaxFloatExits]'.
 	aCCodeGenerator var: #oilPollJump declareC: 'static AbstractInstruction *oilPollJump[OilMaxPolls]'.
 	aCCodeGenerator var: #oilPollResume declareC: 'static AbstractInstruction *oilPollResume[OilMaxPolls]'.
 	aCCodeGenerator var: #oilPollSite declareC: 'static sqInt oilPollSite[OilMaxPolls]'.
-	aCCodeGenerator var: #oilFloatExitTarget declareC: 'static sqInt oilFloatExitTarget[OilMaxFloatExits]'.
 	aCCodeGenerator
 		var: #oilOpInfo
 		declareC: 'static const unsigned short oilOpInfo[OilLastOpcode + 1] = {',
@@ -3754,45 +3768,49 @@ emitGuard2On: rcvrSlot class: classA or: classB
 	simStackTop := rcvrSlot - 1.
 	^rcvrReg! !
 
-!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
-isStringHashMethod: aMethod class: rcvrClass
-	"Is aMethod String>>hashWithInitialHash:'s primitive, primitiveStringHash of the MiscPrimitivePlugin, of a byte object?"
-	| spec |
-	spec := self oilInstSpecOfClass: rcvrClass.
-	(spec >= 16 and: [spec <= 23]) ifFalse: [^false].
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/27/2026 12:25'!
+isStringHashMethod: aMethod
+	"Is aMethod's primitive primitiveStringHash of the MiscPrimitivePlugin?"
 	^self
 		cCode: [coInterpreter oilApiIsStringHashMethod: aMethod]
 		inSmalltalk: [(aMethod literalAt: 1) isArray and: [((aMethod literalAt: 1) at: 2 ifAbsent: [nil]) = 'primitiveStringHash']]! !
 
-!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/25/2026 09:30'!
-genStringHash: selector receiver: rcvrSlot class: rcvrClass guard: guard
-	"String>>hashWithInitialHash: (primitiveStringHash) of a byte object: computed now if both the string and the initial
-	 hash are constants (e.g. the hash of a literal Symbol), else by OilStringHash, which falls back to the send if the
-	 initial hash is not a SmallInteger."
-	| rcvrReg argReg |
-	((slotKind at: rcvrSlot) = OilDescConst
-	 and: [(slotKind at: rcvrSlot + 1) = OilDescConst
-	 and: [(self isSmallIntegerHandle: (slotValue at: rcvrSlot + 1))
-	 and: [self isImmutableObject: (slotValue at: rcvrSlot)]]]) ifTrue: "(a Symbol literal: its hash cannot change)"
+!OilInliningCompiler methodsFor: 'sends' stamp: 'cb 10/27/2026 12:25'!
+genStringHash: selector receiver: rcvrSlot numArgs: numArgs class: rcvrClass guard: guard
+	"String>>hashWithInitialHash: (1 arg) or ByteArray class>>hashBytes:startingWith: (2 args), primitive 152 /
+	 primitiveStringHash of a byte object: computed now if both the byte object and the initial hash are constants (e.g. the
+	 hash of a literal Symbol), else by OilStringHash."
+	| byteSlot hashSlot byteClass rcvrReg argReg |
+	byteSlot := numArgs = 1 ifTrue: [rcvrSlot] ifFalse: [rcvrSlot + 1].
+	hashSlot := byteSlot + 1.
+	byteClass := numArgs = 1 ifTrue: [rcvrClass] ifFalse: [self staticClassOfSlot: byteSlot].
+	(numArgs = 1 or: [byteClass ~= 0]) ifTrue:
+		[((self oilInstSpecOfClass: byteClass) between: 16 and: 23) ifFalse: [^false]].
+	(byteClass ~= 0
+	 and: [(slotKind at: byteSlot) = OilDescConst
+	 and: [(slotKind at: hashSlot) = OilDescConst
+	 and: [(self isSmallIntegerHandle: (slotValue at: hashSlot))
+	 and: [self isImmutableObject: (slotValue at: byteSlot)]]]]) ifTrue: "(a Symbol literal: its hash cannot change)"
 		[simStackTop := rcvrSlot - 1.
-		 ^self push: OilDescConst value: (self handleForSmallInteger:
-											(self stringHashOf: (slotValue at: rcvrSlot)
-												initialHash: (self smallIntegerValueOf: (slotValue at: rcvrSlot + 1))))].
-	(self isEncodableCall: selector super: false) ifFalse:
-		[^self genCall: selector numArgs: 1 receiver: rcvrSlot super: false].
+		 self push: OilDescConst value: (self handleForSmallInteger:
+											(self stringHashOf: (slotValue at: byteSlot)
+												initialHash: (self smallIntegerValueOf: (slotValue at: hashSlot)))).
+		 ^true].
+	(numArgs = 1 and: [(self isEncodableCall: selector super: false) not]) ifTrue: [^false].
 	guard ifTrue: [self emitGuardOn: (self regForSlot: rcvrSlot) class: rcvrClass].
-	rcvrReg := self regForSlot: rcvrSlot.
-	argReg := self regForSlot: rcvrSlot + 1.
+	rcvrReg := self regForSlot: byteSlot.
+	argReg := self regForSlot: hashSlot.
 	simStackTop := rcvrSlot - 1.
-	self pushResultOf: OilStringHash b: rcvrReg c: argReg site: 0.
-	self emit64: selector! !
+	self pushResultOf: OilStringHash b: rcvrReg c: argReg site: (numArgs = 2 ifTrue: [OilSiteArith] ifFalse: [0]).
+	self emit64: (numArgs = 2 ifTrue: [byteClass ~= 0 ifTrue: [1] ifFalse: [0]] ifFalse: [selector]).
+	^true! !
 
-!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/25/2026 09:30'!
+!OilInliningCompiler methodsFor: 'object access' stamp: 'cb 10/27/2026 11:50'!
 stringHashOf: aHandle initialHash: initialHash
 	"primitiveStringHash of the byte object aHandle (a constant)."
 	^self
 		cCode: [coInterpreter oilApiStringHashOf: aHandle initialHash: initialHash]
-		inSmalltalk: [(self objectFor: aHandle) hashWithInitialHash: initialHash]! !
+		inSmalltalk: [ByteArray hashBytes: (self objectFor: aHandle) startingWith: initialHash]! !
 
 !OilInliningCompiler methodsFor: 'returns' stamp: 'cb 10/25/2026 09:30'!
 isFrame: frameIndex deadFrom: pc

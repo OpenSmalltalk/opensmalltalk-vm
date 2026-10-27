@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilSqrtFloat OilAbsFloat OilNegatedFloat OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilSqrtFloat OilAbsFloat OilNegatedFloat OilFindSubstring OilFindFirstInString OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -95,7 +95,12 @@ initialize
 	OilSqrtFloat := 56.
 	OilAbsFloat := 57.
 	OilNegatedFloat := 58.
-	OilLastOpcode := 58.
+	"primitive 154 (findSubstring:in:startingAt:matchTable:, findSubstringViaPrimitive:startingAt:) and primitive 155
+	 (findFirstInString:inSet:startingAt:, findFirstInByteString:startingAt:) [Op|Dest|Rcvr|NumArgs] then the selector and the
+	 packed argument registers (like OilIndexOfByte), falling back to the send on unexpected operands"
+	OilFindSubstring := 59.
+	OilFindFirstInString := 60.
+	OilLastOpcode := 60.
 	"The properties of the opcodes (see opInfoSpec and OilInliningCompiler>>opcode:has:): the length in words of an
 	 instruction (plus, if OilOpPackedArgs, one word per 4 argument registers packed after its fixed words, C of them), and
 	 property bits"
@@ -175,7 +180,9 @@ opInfoSpec
 		(CallDirectedSuper	5 PackedArgs Dest ReadsB Send Call ClobbersXmms)
 		(SqrtFloat			1 Dest ReadsB)
 		(AbsFloat			1 Dest ReadsB)
-		(NegatedFloat		1 Dest ReadsB))! !
+		(NegatedFloat		1 Dest ReadsB)
+		(FindSubstring		3 PackedArgs Dest ReadsB Call ClobbersXmms)
+		(FindFirstInString	3 PackedArgs Dest ReadsB Call ClobbersXmms))! !
 
 !OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
 opInfoTable

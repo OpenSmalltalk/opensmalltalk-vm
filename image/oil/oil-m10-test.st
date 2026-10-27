@@ -49,7 +49,7 @@ model := cls new.
 compile := [:sel :argLists | | fbk comp |
 	fbk := OilSimulatedTypeFeedback new.
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
-	comp := OilCompiler new.
+	comp := OilConvolutedCompiler new.
 	comp typeFeedback: fbk.
 	comp compileMethod: cls >> sel receiverClass: (comp handleFor: cls).
 	comp failed ifFalse: [comp pipe. comp failed ifFalse: [comp prepareFloatLoops]].

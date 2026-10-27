@@ -113,7 +113,7 @@ probes := {
 		[:st :h | st first = 1 and: [(h occurrencesOf: #Jump) + (h occurrencesOf: #BranchTrue) + (h occurrencesOf: #BranchFalse) = 0
 			and: [(h occurrencesOf: #GuardClass) = 2 and: [(h occurrencesOf: #LoadSize) = 1 and: [(h occurrencesOf: #CheckBounds) = 3]]]]]}.
 	{#times4:. {{5}}. {{5}. {-7}. {SmallInteger maxVal}. {nil}}.
-		[:st :h | st first = 1 and: [(h occurrencesOf: #AddTagged) = 4 and: [(h occurrencesOf: #CmpImmTagged) + (h occurrencesOf: #AddImmTagged) = 0]]]}.
+		[:st :h | st = #(0 0 0)]}.
 	{#tri5. {{}}. {{}}. [:st :h | st first = 1 and: [(h occurrencesOf: #AddTagged) = 10 and: [(h occurrencesOf: #Jump) = 0]]]}.
 	{#down4:. {{#(1 2 3 4)}}. {{#(1 2 3 4)}. {#(4 3 2 1 0)}. {#(1 2)}}. [:st :h | st first = 1 and: [(h occurrencesOf: #Jump) + (h occurrencesOf: #BranchTrue) = 0]]}.
 	{#find3:. {{#(1 0 3 4)}. {#(1 2 3 4)}}. {{#(1 0 3 4)}. {#(1 2 3 4)}. {#(0 0 0 0)}. {#(1 2 0)}. {#(1 2)}}. [:st :h | st first = 1 and: [(h occurrencesOf: #Jump) = 0]]}.
