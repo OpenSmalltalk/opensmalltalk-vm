@@ -39,6 +39,7 @@ cls class compile: 'oilSetParameter: index to: value
 cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
 cls class compile: 'oilColdSelectors <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilSpecializations <primitive: ''primitiveOilSpecializations''> ^#failed' classified: 'oil'.
 
 mCountTo := cls >> #countTo:.
 mSumScores := cls >> #sumScores:.
@@ -120,6 +121,22 @@ check value: 'oilSetColdSelectors: rejects an Array of non-Symbols' value: ((cls
 check value: 'autonomousCompilation: accepts true, false, 1 and 0' value: ({true. false. 1. 0} allSatisfy: [:flag | (cls autonomousCompilation: flag) ~~ #failed]).
 check value: 'autonomousCompilation: rejects anything else' value: ((cls autonomousCompilation: 2) == #failed and: [(cls autonomousCompilation: nil) == #failed]).
 check value: 'disqualifyLimit: accepts an integer, rejects anything else' value: ((cls disqualifyLimit: 0) ~~ #failed and: [(cls disqualifyLimit: nil) == #failed]).
+
+"--- T7: autonomous multi-specialization of an inherited method across multiple receiver subclasses ---"
+cls autonomousCompilation: true.
+cls subclass: #OilTestModelSub instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+[| sub specs |
+ sub := (Smalltalk at: #OilTestModelSub) new.
+ 1 to: 5 do: [:i | m countTo: 0. sub countTo: 0].
+ check value: 'T7 trip countTo: on OilTestModel' value: (m countTo: 10000) = 10000.
+ check value: 'T7 countTo: has 1 specialization (OilTestModel)' value: mCountTo oilSpecializations size = 2.
+ check value: 'T7 trip countTo: on OilTestModelSub' value: (sub countTo: 10000) = 10000.
+ specs := mCountTo oilSpecializations.
+ check value: 'T7 countTo: has 2 specializations (OilTestModel and OilTestModelSub)'
+	value: (specs size = 4 and: [(specs at: 1) == cls and: [(specs at: 3) == (Smalltalk at: #OilTestModelSub)]]).
+ check value: 'T7 both specializations have Oil code and run with 0 deopts'
+	value: (((m countTo: 50000) = 50000) and: [((sub countTo: 50000) = 50000)
+		and: [((specs at: 2) oilInfo at: 1) = 0 and: [((specs at: 4) oilInfo at: 1) = 0]]])] value.
 
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASSED'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 (FileStream forceNewFileNamed: resultPath) nextPutAll: out contents; close.

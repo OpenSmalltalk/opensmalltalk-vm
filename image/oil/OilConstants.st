@@ -235,7 +235,7 @@ initialize
 	OilMaxExtraSelectors := 2048.
 	"method-level specialization (see CoInterpreterPrimitives>>primitiveOilSpecialize): entries (method, class tag, copy, class) of the
 	 specialization table, and receiver classes per method (its baseline code is the generic sixth case, as in a closed PIC)"
-	OilMaxSpecializations := 64.
+	OilMaxSpecializations := 256.
 	OilSpecializationSize := 4.
 	OilSpecMethod := 0.
 	OilSpecClassTag := 1.

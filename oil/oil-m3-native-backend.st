@@ -81,7 +81,7 @@ generateRunTimeTrampolines
 	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
 								called: 'ceOilTripTrampoline'
 								arg: SendNumArgsReg
-								regsToSave: (self registerMaskFor: ReceiverResultReg).
+								regsToSave: (self registerMaskFor: ReceiverResultReg and: ClassReg).
 	ceOilDeoptTrampoline := self genTrampolineFor: #ceOilDeoptimize:
 								called: 'ceOilDeoptTrampoline'
 								arg: SendNumArgsReg
@@ -1402,15 +1402,14 @@ oilRaiseMaxLiteralCountForCompile
 	<essential: #ProfilingCogit>
 	maxLiteralCountForCompile := maxLiteralCountForCompile max: 512! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/27/2026 15:05'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/27/2026 18:00'!
 oilDisqualifyCogMethod: cogMethod
 	"The Oil method cogMethod deoptimized OilDisqualifyDeopts times (its speculations do not hold): never compile its
 	 method with Oil again, deoptimize any other activations running it, and free it, unlinking the sends to it, so that
 	 the baseline JIT compiles the method again, instead of running it in the interpreter after each deopt."
 	<essential: #ProfilingCogit>
 	<var: #cogMethod type: #'CogMethod *'>
-	"(the root method: for a specialization, methodObject is a copy of it, see primitiveOilSpecialize)"
-	cogit oilDisqualify: (objectMemory fetchPointer: OilMDRootMethod ofObject: (cogit oilMetadataOf: cogMethod)).
+	cogit oilDisqualify: cogMethod methodObject.
 	self oilDeoptimizeFramesOf: cogMethod! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/27/2026 15:05'!
@@ -2091,10 +2090,12 @@ primitiveOilMethodInfo
 	((objectMemory isNonImmediate: methodObj)
 	 and: [objectMemory isOopCompiledMethod: methodObj]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadReceiver].
-	((self methodHasCogMethod: methodObj)
-	 and: [cogit isOilMethod: (self cogMethodOf: methodObj)]) ifFalse:
+	cogMethod := ((self methodHasCogMethod: methodObj)
+				  and: [cogit isOilMethod: (self cogMethodOf: methodObj)])
+					ifTrue: [self cogMethodOf: methodObj]
+					ifFalse: [cogit oilFirstSpecializedCogMethodOf: methodObj].
+	cogMethod ifNil:
 		[^self pop: argumentCount + 1 thenPush: objectMemory nilObject].
-	cogMethod := self cogMethodOf: methodObj.
 	size := cogMethod blockSize.
 	code := objectMemory instantiateClass: (objectMemory splObj: ClassByteArray) indexableSize: size.
 	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 4.
@@ -2697,15 +2698,14 @@ oilApiByteStringMetaclass
 	<essential: #ProfilingCogit>
 	^objectMemory fetchClassOf: (objectMemory splObj: ClassByteString)! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/26/2026 15:00'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 18:00'!
 oilAutoCompile: homeMethod receiver: receiver
-	"A trip counter found that homeMethod, activated for receiver, runs a hot loop (see ceOilTrip:).  Compile it with Oil,
-	 for the class of receiver, and install the Oil code for its next activations; its running activations keep running its
-	 baseline code (see oilUnhookBaselineCodeOf:).  Only for a method with baseline code (Pass 1's type feedback) and
-	 neither Oil code nor specializations; a method Oil fails to compile is disqualified, so that its other trip counters
-	 do not try again.  Called on the trip path: nothing here collects garbage or changes the stack."
+	"A trip counter found that homeMethod, activated for receiver, runs a hot loop (see ceOilTrip:).  Compile an Oil
+	 specialization of homeMethod for the class of receiver (up to oilMaxSpecialization specializations), and install it in
+	 oilSpecializations for its next activations; its running activations keep running its baseline code (see
+	 oilUnhookBaselineCodeOf:).  Called on the trip path: nothing here collects garbage or changes the stack."
 	<essential: #ProfilingCogit>
-	| cogMethod result |
+	| cogMethod selector classObj classTag entryIndex specCopy result |
 	<var: #cogMethod type: #'CogMethod *'>
 	((objectMemory isNonImmediate: homeMethod)
 	 and: [(objectMemory isOopCompiledMethod: homeMethod)
@@ -2714,22 +2714,43 @@ oilAutoCompile: homeMethod receiver: receiver
 		[^nil].
 	cogMethod := self cogMethodOf: homeMethod.
 	((cogit isOilMethod: cogMethod)
-	 or: [cogMethod cmUnusedFlag "it dispatches to its specializations (see ProfilingCogit>>compileEntry)"
 	 or: [(cogit oilIsDisqualified: homeMethod)
-	 or: [self oilApiIsSynchronizationMethod: homeMethod]]]) ifTrue:
+	 or: [self oilApiIsSynchronizationMethod: homeMethod]]) ifTrue:
 		[^nil].
+	self oilEnsureSpecializationTable ifFalse:
+		[^nil].
+	classObj := objectMemory fetchClassOf: receiver.
+	classTag := objectMemory fetchClassTagOf: receiver.
+	entryIndex := cogit oilSpecializationOf: homeMethod tag: classTag.
+	entryIndex >= 0
+		ifTrue:
+			[specCopy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
+			 ((cogit oilMethodHasOilCode: specCopy)
+			  or: [(cogit oilIsDisqualified: specCopy)
+			  or: [(cogit oilCopy: specCopy isCopyOf: homeMethod) not]]) ifTrue:
+				[^nil]]
+		ifFalse:
+			[(cogit oilNumSpecializationsOf: homeMethod) >= cogit oilMaxSpecialization ifTrue:
+				[^nil].
+			 specCopy := objectMemory cloneInOldSpace: homeMethod forPinning: false.
+			 specCopy = 0 ifTrue:
+				[^nil]].
 	self oilEnsureExtraSelectorTable ifFalse:
 		[^nil].
-	result := cogit oilCompile: homeMethod receiverClass: (objectMemory fetchClassOf: receiver).
+	selector := cogMethod selector.
+	result := cogit oilCompile: homeMethod receiverClass: classObj.
 	result = OilOK ifTrue:
 		[(self oilUnhookBaselineCodeOf: homeMethod) ifFalse:
 			[^nil].
-		 result := cogit oilGenerate: homeMethod].
+		 result := cogit oilGenerate: specCopy.
+		 (result = OilOK and: [entryIndex < 0]) ifTrue:
+			[cogit oilAddSpecialization: homeMethod class: classObj copy: specCopy].
+		 cogit cog: homeMethod selector: selector].
 	(result ~= OilOK and: [result ~= OilFailCodeSpace]) ifTrue:
 		[cogit oilDisqualify: homeMethod].
 	^nil! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 15:05'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 18:00'!
 oilUnhookBaselineCodeOf: methodObj
 	"Give the baseline machine code of methodObj, which activations may be running, to a copy of methodObj: the sends
 	 linked to it are unlinked and methodObj gets its bytecoded header back, ready for its Oil code.  The copy, which
@@ -2752,7 +2773,7 @@ oilUnhookBaselineCodeOf: methodObj
 		 and: [(self isMarriedOrWidowedContext: obj) not]]) ifTrue:
 			[self ensureContextHasBytecodePC: obj]].
 	self flushMethodCacheForMethod: methodObj.
-	cogit unlinkSendsTo: methodObj andFreeIf: false.
+	cogit oilUnlinkSendsKeepingSpecializationsTo: methodObj.
 	self rawHeaderOf: methodObj put: cogMethod methodHeader.
 	self rawHeaderOf: copy put: cogMethod asUnsignedInteger.
 	cogit oilSetMethodObjectOf: cogMethod to: copy.

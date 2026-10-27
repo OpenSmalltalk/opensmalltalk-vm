@@ -98,9 +98,10 @@ oilIsLiveSpecialization: entryIndex of: aMethodObj
 	  and: [(objectMemory classTagForClass: class) = (objectMemory integerValueOf: (self oilSpecializationAt: entryIndex field: OilSpecClassTag))
 	  and: [self oilCopy: copy isCopyOf: aMethodObj]]]! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 05:00'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/27/2026 18:15'!
 oilCopy: copy isCopyOf: aMethodObj
 	"Has copy the header, literals and bytecodes of aMethodObj?  (Oil code sets the large context bit of its header.)"
+	<api>
 	| numLiterals |
 	((objectMemory numBytesOf: copy) = (objectMemory numBytesOf: aMethodObj)
 	 and: [(coInterpreter oilHeaderWithoutLargeContext: (objectMemory methodHeaderOf: copy))
@@ -152,6 +153,27 @@ oilFreeMachineCodeKeepingSpecializationsOf: aMethodObj
 	oilKeepSpecializations := true.
 	coInterpreter oilFreeMachineCodeOf: aMethodObj.
 	oilKeepSpecializations := false! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/27/2026 18:00'!
+oilUnlinkSendsKeepingSpecializationsTo: aMethodObj
+	"Unlink the sends to aMethodObj (see CoInterpreter>>oilUnhookBaselineCodeOf:) without dropping its specializations."
+	<api>
+	oilKeepSpecializations := true.
+	self unlinkSendsTo: aMethodObj andFreeIf: false.
+	oilKeepSpecializations := false! !
+
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/27/2026 18:00'!
+oilFirstSpecializedCogMethodOf: aMethodObj
+	"Answer the Oil code of the first live specialization of aMethodObj, or nil."
+	<api>
+	<returnTypeC: #'CogMethod *'>
+	self oilHasSpecializationTable ifFalse:
+		[^nil].
+	0 to: OilMaxSpecializations - 1 do:
+		[:entryIndex|
+		(self oilIsLiveSpecialization: entryIndex of: aMethodObj) ifTrue:
+			[^coInterpreter cogMethodOf: (self oilSpecializationAt: entryIndex field: OilSpecCopy)]].
+	^nil! !
 
 !ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/25/2026 04:30'!
 flagCogMethodForBecome: cogMethod
