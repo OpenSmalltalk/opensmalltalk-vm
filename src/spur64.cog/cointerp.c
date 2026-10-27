@@ -1281,7 +1281,6 @@ extern sqInt numBytesOf(sqInt objOop);
 static NoDbgRegParms usqInt numPointerSlotsOf(sqInt objOop);
 static NoDbgRegParms sqInt numSlotsForBytes(sqInt numBytes);
 static NoDbgRegParms usqInt numSlotsOfAny(sqInt objOop);
-static NoDbgRegParms usqInt numSlotsOfIndexablePointerObj(sqInt objOop);
 extern usqInt numSlotsOf(sqInt objOop);
 static NoDbgRegParms sqInt numStrongSlotsOfInephemeral(sqInt objOop);
 static NoDbgRegParms sqInt numStrongSlotsOfWeakling(sqInt objOop);
@@ -1866,12 +1865,12 @@ _iss sqInt markStack;
 _iss sqInt numSegments;
 _iss sqInt weaklingStack;
 _iss sqInt traceLogIndex;
+_iss sqInt futureSurvivorStart;
 _iss sqInt * freeLists;
 _iss sqInt rememberedSetSize;
 _iss sqInt numClassTablePages;
 _iss sqInt classTableFirstPage;
 _iss sqInt * rememberedSet;
-_iss sqInt futureSurvivorStart;
 _iss sqInt tempOop;
 _iss usqInt firstFreeObject;
 _iss usqInt freeListsMask;
@@ -41065,30 +41064,22 @@ bytesInBody(sqInt objOop)
 
 
 /*	Answer the default amount of memory to allocate for the eden space.
-	The actual value can be set via vmParameterAt: and/or a preference in the
-	ini file.
-	The shootout tests seem to plateau at 5 or 6Mb.
-	
-	Originally, both the 32-bit and 64-bit versions used the same 4Mb default.
-	Measuring the simulator on image start-up, the 64-bit system's eden at the
-	same point in start-up
-	(the first copyBits) is only 8% larger in bytes because it allocates 26%
-	fewer objects.
-	Some 21% of the objects in the 32-bit version's eden are large integers
-	and floats that
-	are representable as 64-bit immediates.
-	
-	But when running benchmarks such as the computer language shootout's
-	binary trees,
-	using the same amount of memory for the 64-bit system causes a significant
-	slow-down and a lot of compactions. So we now use 4Mb for 32-bits and 7Mb
-	for 64-bits. */
+	 The
+	actual value can be set via vmParameterAt: and/or a preference in the ini
+	file.
+	 With the 16-entry lookahead prefetch queue in the scavenger, the
+	cache-cliff
+	 at larger Eden sizes is eliminated (80 cycles/pointer at
+	16MB vs 139 baseline).
+	 Bumping to 16Mb provides fewer scavenges and
+	higher throughput.
+ */
 
 	/* Spur64BitMemoryManager>>#defaultEdenBytes */
 static int
 defaultEdenBytes(void)
 {
-	return 0x700000;
+	return 0x1000000;
 }
 
 
@@ -42786,16 +42777,23 @@ processEphemerons(void)
     sqInt firedIRS;
     sqInt firedOEL;
     sqInt foundNewReferent;
+    sqInt hasNewReferent;
     sqInt i;
     usqInt ifNilUsqInt;
     sqInt key;
     usqInt listOffset;
     usqInt numSlots;
+    sqInt numSlotsSqInt;
     usqInt offsetToNextCorpse;
+    sqInt prefetchHead;
+    sqInt prefetchQueue[16];
+    sqInt prefetchSlots[16];
+    sqInt prefetchTail;
     sqInt referent;
     sqInt referentSqInt;
     sqInt scavengedUnfirable;
-    sqInt toDoLimit;
+    sqInt warmReferent;
+    sqInt warmSlot;
 
 	scavengedUnfirable = 0;
 	if (scavengeInactiveEphemeronsInRememberedSet()) {
@@ -42924,51 +42922,137 @@ l2:
 		offsetToNextCorpse = ((((usqInt)(((long32At((void *)(ephemeronCorpse + 4))) & (identityHashHalfWordMask()))) << 8))) + (byteAt((void *)(ephemeronCorpse + (formatFieldByteOffset()))));
 
 		/* begin scavengeReferentsOfPointers: */
+		/* begin numSlotsOf: */
+		assert((classIndexOf(ephemeron)) > (isForwardedObjectClassIndexPun()));
+		if (((numSlots = byteAt((void *)(ephemeron + (numSlotsFieldByteOffset()))))) == (numSlotsMask())) {
+			numSlotsSqInt = ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(ephemeron - BaseHeaderSize)))) << 8)))))) >> 8;
+		}
+		else {
+			numSlotsSqInt = numSlots;
+		}
+
+		/* begin scavengeReferentsOf:numSlots: */
 		foundNewReferent = 0;
-		toDoLimit = ((/* begin numSlotsOf: */
-	assert((classIndexOf(ephemeron)) > (isForwardedObjectClassIndexPun())),
-(((numSlots = byteAt((void *)(ephemeron + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(ephemeron - BaseHeaderSize)))) << 8)))))) >> 8
-			: numSlots))) - 1;
-		for (i = 0; i <= toDoLimit; i += 1) {
+		prefetchHead = (prefetchTail = 0);
+		for (i = 0; i < numSlotsSqInt; i += 1) {
 			referent = longAt((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-			if ((!(referent & (tagMask())))) {
-				/* a forwarding pointer could be because of become: or scavenging. */
-				if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-					/* begin followForwarded: */
-					assert(isUnambiguouslyForwarder(referent));
-					referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-					while (/* isOopForwarded: */
-						((!(referentSqInt & (tagMask()))))
-					 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-						referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-					}
-					referent = referentSqInt;
+			if (((!(referent & (tagMask()))))
+			 && ((/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referent)),
+			(oopisLessThan(referent, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+				if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+					foundNewReferent = 1;
 				}
+				else {
+#          if defined(__GNUC__) || defined(__clang__)
+					__builtin_prefetch(((void *)referent), 0, 3);
+#          endif
 
-				/* begin isReallyYoungObject: */
-				assert(isNonImmediate(referent));
-				if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-					if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-						foundNewReferent = 1;
-					}
-					else {
-						referent = copyAndForward(referent);
+					prefetchQueue[prefetchHead & 15] = referent;
+					prefetchSlots[prefetchHead & 15] = i;
+					prefetchHead += 1;
+					if ((prefetchHead - prefetchTail) >= 8) {
+						warmReferent = prefetchQueue[prefetchTail & 15];
+						warmSlot = prefetchSlots[prefetchTail & 15];
+						prefetchTail += 1;
 
-						/* begin isReallyYoungObject: */
-						assert(isNonImmediate(referent));
-						if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-						 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+						/* begin scavengeDequeuedReferent:slot:of: */
+						if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+							/* begin followForwarded: */
+							assert(isUnambiguouslyForwarder(warmReferent));
+							referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+							while (/* isOopForwarded: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+								referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+							}
+							hasNewReferent = 0;
+							if (/* isReallyYoung: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt)),
+							(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+								if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+									hasNewReferent = 1;
+								}
+								else {
+									referentSqInt = copyAndForward(referentSqInt);
+
+									/* begin isReallyYoungObject: */
+									assert(isNonImmediate(referentSqInt));
+									hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+										 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+								}
+							}
+						}
+						else {
+							referentSqInt = copyAndForward(warmReferent);
+
+							/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt));
+							hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+						}
+
+						/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+						longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+						if (hasNewReferent) {
 							foundNewReferent = 1;
 						}
 					}
 				}
+			}
+		}
+		while (prefetchTail < prefetchHead) {
+			warmReferent = prefetchQueue[prefetchTail & 15];
+			warmSlot = prefetchSlots[prefetchTail & 15];
+			prefetchTail += 1;
 
-				/* if target is already in future space forwarding pointer was due to a become:. */
+			/* begin scavengeDequeuedReferent:slot:of: */
+			if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+				/* begin followForwarded: */
+				assert(isUnambiguouslyForwarder(warmReferent));
+				referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+				while (/* isOopForwarded: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+					referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+				}
+				hasNewReferent = 0;
+				if (/* isReallyYoung: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt)),
+				(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+					if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+						hasNewReferent = 1;
+					}
+					else {
+						referentSqInt = copyAndForward(referentSqInt);
 
-				/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-				longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+						/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt));
+						hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+					}
+				}
+			}
+			else {
+				referentSqInt = copyAndForward(warmReferent);
+
+				/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referentSqInt));
+				hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+			}
+
+			/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+			longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+			if (hasNewReferent) {
+				foundNewReferent = 1;
 			}
 		}
 		corpseOffset = offsetToNextCorpse;
@@ -43284,14 +43368,21 @@ scavengeInactiveEphemeronsOnEphemeronList(void)
     sqInt ephemeron;
     usqInt ephemeronCorpse;
     sqInt foundNewReferent;
+    sqInt hasNewReferent;
     sqInt i;
     sqInt key;
     usqInt nextCorpseOffset;
     usqInt numSlots;
+    sqInt numSlotsSqInt;
+    sqInt prefetchHead;
+    sqInt prefetchQueue[16];
+    sqInt prefetchSlots[16];
+    sqInt prefetchTail;
     usqInt previousCorpse;
     sqInt referent;
     sqInt referentSqInt;
-    sqInt toDoLimit;
+    sqInt warmReferent;
+    sqInt warmSlot;
 
 	if (!GIV(ephemeronList)) {
 		return 0;
@@ -43330,51 +43421,137 @@ scavengeInactiveEphemeronsOnEphemeronList(void)
 			anyScavenged = 1;
 
 			/* begin scavengeReferentsOfPointers: */
+			/* begin numSlotsOf: */
+			assert((classIndexOf(ephemeron)) > (isForwardedObjectClassIndexPun()));
+			if (((numSlots = byteAt((void *)(ephemeron + (numSlotsFieldByteOffset()))))) == (numSlotsMask())) {
+				numSlotsSqInt = ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(ephemeron - BaseHeaderSize)))) << 8)))))) >> 8;
+			}
+			else {
+				numSlotsSqInt = numSlots;
+			}
+
+			/* begin scavengeReferentsOf:numSlots: */
 			foundNewReferent = 0;
-			toDoLimit = ((/* begin numSlotsOf: */
-	assert((classIndexOf(ephemeron)) > (isForwardedObjectClassIndexPun())),
-(((numSlots = byteAt((void *)(ephemeron + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(ephemeron - BaseHeaderSize)))) << 8)))))) >> 8
-			: numSlots))) - 1;
-			for (i = 0; i <= toDoLimit; i += 1) {
+			prefetchHead = (prefetchTail = 0);
+			for (i = 0; i < numSlotsSqInt; i += 1) {
 				referent = longAt((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-				if ((!(referent & (tagMask())))) {
-					/* a forwarding pointer could be because of become: or scavenging. */
-					if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-						/* begin followForwarded: */
-						assert(isUnambiguouslyForwarder(referent));
-						referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-						while (/* isOopForwarded: */
-							((!(referentSqInt & (tagMask()))))
-						 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-							referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-						}
-						referent = referentSqInt;
+				if (((!(referent & (tagMask()))))
+				 && ((/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referent)),
+				(oopisLessThan(referent, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+					if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+						foundNewReferent = 1;
 					}
+					else {
+#            if defined(__GNUC__) || defined(__clang__)
+						__builtin_prefetch(((void *)referent), 0, 3);
+#            endif
 
-					/* begin isReallyYoungObject: */
-					assert(isNonImmediate(referent));
-					if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-					 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-						if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-							foundNewReferent = 1;
-						}
-						else {
-							referent = copyAndForward(referent);
+						prefetchQueue[prefetchHead & 15] = referent;
+						prefetchSlots[prefetchHead & 15] = i;
+						prefetchHead += 1;
+						if ((prefetchHead - prefetchTail) >= 8) {
+							warmReferent = prefetchQueue[prefetchTail & 15];
+							warmSlot = prefetchSlots[prefetchTail & 15];
+							prefetchTail += 1;
 
-							/* begin isReallyYoungObject: */
-							assert(isNonImmediate(referent));
-							if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-							 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+							/* begin scavengeDequeuedReferent:slot:of: */
+							if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+								/* begin followForwarded: */
+								assert(isUnambiguouslyForwarder(warmReferent));
+								referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+								while (/* isOopForwarded: */
+									((!(referentSqInt & (tagMask()))))
+								 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+									referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+								}
+								hasNewReferent = 0;
+								if (/* isReallyYoung: */
+									((!(referentSqInt & (tagMask()))))
+								 && ((/* begin isReallyYoungObject: */
+									assert(isNonImmediate(referentSqInt)),
+								(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+									 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+									if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+										hasNewReferent = 1;
+									}
+									else {
+										referentSqInt = copyAndForward(referentSqInt);
+
+										/* begin isReallyYoungObject: */
+										assert(isNonImmediate(referentSqInt));
+										hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+											 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+									}
+								}
+							}
+							else {
+								referentSqInt = copyAndForward(warmReferent);
+
+								/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt));
+								hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+									 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+							}
+
+							/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+							longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+							if (hasNewReferent) {
 								foundNewReferent = 1;
 							}
 						}
 					}
+				}
+			}
+			while (prefetchTail < prefetchHead) {
+				warmReferent = prefetchQueue[prefetchTail & 15];
+				warmSlot = prefetchSlots[prefetchTail & 15];
+				prefetchTail += 1;
 
-					/* if target is already in future space forwarding pointer was due to a become:. */
+				/* begin scavengeDequeuedReferent:slot:of: */
+				if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+					/* begin followForwarded: */
+					assert(isUnambiguouslyForwarder(warmReferent));
+					referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+					while (/* isOopForwarded: */
+						((!(referentSqInt & (tagMask()))))
+					 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+						referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+					}
+					hasNewReferent = 0;
+					if (/* isReallyYoung: */
+						((!(referentSqInt & (tagMask()))))
+					 && ((/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt)),
+					(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+						 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+						if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+							hasNewReferent = 1;
+						}
+						else {
+							referentSqInt = copyAndForward(referentSqInt);
 
-					/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-					longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+							/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt));
+							hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+						}
+					}
+				}
+				else {
+					referentSqInt = copyAndForward(warmReferent);
+
+					/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt));
+					hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+						 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+				}
+
+				/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+				longAtput((void *)((ephemeron + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+				if (hasNewReferent) {
+					foundNewReferent = 1;
 				}
 			}
 			if (previousCorpse) {
@@ -43521,64 +43698,159 @@ scavengeLoop(void)
 
 
 /*	Scavenge the referents of a normal pointer object.
-	Answer if it still refers to young objects. */
+	 Answer if it still
+	refers to young objects.
+ */
 
 	/* SpurGenerationScavenger>>#scavengeReferentsOfPointers: */
 static NoDbgRegParms sqInt
 scavengeReferentsOfPointers(sqInt referrer)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt foundNewReferent;
+    sqInt hasNewReferent;
     sqInt i;
     usqInt numSlots;
+    sqInt numSlotsSqInt;
+    sqInt prefetchHead;
+    sqInt prefetchQueue[16];
+    sqInt prefetchSlots[16];
+    sqInt prefetchTail;
     sqInt referent;
     sqInt referentSqInt;
-    sqInt toDoLimit;
+    sqInt warmReferent;
+    sqInt warmSlot;
 
+	/* begin numSlotsOf: */
+	assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun()));
+	if (((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())) {
+		numSlotsSqInt = ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8;
+	}
+	else {
+		numSlotsSqInt = numSlots;
+	}
+
+	/* begin scavengeReferentsOf:numSlots: */
 	foundNewReferent = 0;
-	toDoLimit = ((/* begin numSlotsOf: */
-	assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun())),
-(((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8
-			: numSlots))) - 1;
-	for (i = 0; i <= toDoLimit; i += 1) {
+	prefetchHead = (prefetchTail = 0);
+	for (i = 0; i < numSlotsSqInt; i += 1) {
 		referent = longAt((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-		if ((!(referent & (tagMask())))) {
-			/* a forwarding pointer could be because of become: or scavenging. */
-			if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-				/* begin followForwarded: */
-				assert(isUnambiguouslyForwarder(referent));
-				referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-				while (/* isOopForwarded: */
-					((!(referentSqInt & (tagMask()))))
-				 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-					referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-				}
-				referent = referentSqInt;
+		if (((!(referent & (tagMask()))))
+		 && ((/* begin isReallyYoungObject: */
+			assert(isNonImmediate(referent)),
+		(oopisLessThan(referent, GIV(oldSpaceStart)))
+			 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+			if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+				foundNewReferent = 1;
 			}
+			else {
+#        if defined(__GNUC__) || defined(__clang__)
+				__builtin_prefetch(((void *)referent), 0, 3);
+#        endif
 
-			/* begin isReallyYoungObject: */
-			assert(isNonImmediate(referent));
-			if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-			 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-				if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-					foundNewReferent = 1;
-				}
-				else {
-					referent = copyAndForward(referent);
+				prefetchQueue[prefetchHead & 15] = referent;
+				prefetchSlots[prefetchHead & 15] = i;
+				prefetchHead += 1;
+				if ((prefetchHead - prefetchTail) >= 8) {
+					warmReferent = prefetchQueue[prefetchTail & 15];
+					warmSlot = prefetchSlots[prefetchTail & 15];
+					prefetchTail += 1;
 
-					/* begin isReallyYoungObject: */
-					assert(isNonImmediate(referent));
-					if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-					 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+					/* begin scavengeDequeuedReferent:slot:of: */
+					if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+						/* begin followForwarded: */
+						assert(isUnambiguouslyForwarder(warmReferent));
+						referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+						while (/* isOopForwarded: */
+							((!(referentSqInt & (tagMask()))))
+						 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+							referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+						}
+						hasNewReferent = 0;
+						if (/* isReallyYoung: */
+							((!(referentSqInt & (tagMask()))))
+						 && ((/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt)),
+						(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+							if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+								hasNewReferent = 1;
+							}
+							else {
+								referentSqInt = copyAndForward(referentSqInt);
+
+								/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt));
+								hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+									 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+							}
+						}
+					}
+					else {
+						referentSqInt = copyAndForward(warmReferent);
+
+						/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt));
+						hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+					}
+
+					/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+					longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+					if (hasNewReferent) {
 						foundNewReferent = 1;
 					}
 				}
 			}
+		}
+	}
+	while (prefetchTail < prefetchHead) {
+		warmReferent = prefetchQueue[prefetchTail & 15];
+		warmSlot = prefetchSlots[prefetchTail & 15];
+		prefetchTail += 1;
 
-			/* if target is already in future space forwarding pointer was due to a become:. */
+		/* begin scavengeDequeuedReferent:slot:of: */
+		if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+			/* begin followForwarded: */
+			assert(isUnambiguouslyForwarder(warmReferent));
+			referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+			while (/* isOopForwarded: */
+				((!(referentSqInt & (tagMask()))))
+			 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+				referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+			}
+			hasNewReferent = 0;
+			if (/* isReallyYoung: */
+				((!(referentSqInt & (tagMask()))))
+			 && ((/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referentSqInt)),
+			(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+				if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+					hasNewReferent = 1;
+				}
+				else {
+					referentSqInt = copyAndForward(referentSqInt);
 
-			/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-			longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+					/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt));
+					hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+						 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+				}
+			}
+		}
+		else {
+			referentSqInt = copyAndForward(warmReferent);
+
+			/* begin isReallyYoungObject: */
+			assert(isNonImmediate(referentSqInt));
+			hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+		}
+
+		/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+		longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+		if (hasNewReferent) {
+			foundNewReferent = 1;
 		}
 	}
 	return foundNewReferent;
@@ -43600,11 +43872,19 @@ static NoDbgRegParms sqInt
 scavengeReferentsOf(sqInt referrer)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt foundNewReferent;
+    sqInt hasNewReferent;
     sqInt i;
     usqInt numSlots;
+    sqInt numSlotsSqInt;
+    sqInt prefetchHead;
+    sqInt prefetchQueue[16];
+    sqInt prefetchSlots[16];
+    sqInt prefetchTail;
     sqInt referent;
     sqInt referentSqInt;
     sqInt toDoLimit;
+    sqInt warmReferent;
+    sqInt warmSlot;
 
 	assert((!(isForwarded(referrer)))
 	 || (isRemembered(referrer)));
@@ -43614,98 +43894,278 @@ scavengeReferentsOf(sqInt referrer)
 	case nonIndexablePointerFormat():
 	case arrayFormat():
 		/* begin scavengeReferentsOfPointers: */
+		/* begin numSlotsOf: */
+		assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun()));
+		if (((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())) {
+			numSlotsSqInt = ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8;
+		}
+		else {
+			numSlotsSqInt = numSlots;
+		}
+
+		/* begin scavengeReferentsOf:numSlots: */
 		foundNewReferent = 0;
-		toDoLimit = ((/* begin numSlotsOf: */
-	assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun())),
-(((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8
-			: numSlots))) - 1;
-		for (i = 0; i <= toDoLimit; i += 1) {
+		prefetchHead = (prefetchTail = 0);
+		for (i = 0; i < numSlotsSqInt; i += 1) {
 			referent = longAt((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-			if ((!(referent & (tagMask())))) {
-				/* a forwarding pointer could be because of become: or scavenging. */
-				if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-					/* begin followForwarded: */
-					assert(isUnambiguouslyForwarder(referent));
-					referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-					while (/* isOopForwarded: */
-						((!(referentSqInt & (tagMask()))))
-					 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-						referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-					}
-					referent = referentSqInt;
+			if (((!(referent & (tagMask()))))
+			 && ((/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referent)),
+			(oopisLessThan(referent, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+				if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+					foundNewReferent = 1;
 				}
+				else {
+#          if defined(__GNUC__) || defined(__clang__)
+					__builtin_prefetch(((void *)referent), 0, 3);
+#          endif
 
-				/* begin isReallyYoungObject: */
-				assert(isNonImmediate(referent));
-				if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-					if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-						foundNewReferent = 1;
-					}
-					else {
-						referent = copyAndForward(referent);
+					prefetchQueue[prefetchHead & 15] = referent;
+					prefetchSlots[prefetchHead & 15] = i;
+					prefetchHead += 1;
+					if ((prefetchHead - prefetchTail) >= 8) {
+						warmReferent = prefetchQueue[prefetchTail & 15];
+						warmSlot = prefetchSlots[prefetchTail & 15];
+						prefetchTail += 1;
 
-						/* begin isReallyYoungObject: */
-						assert(isNonImmediate(referent));
-						if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-						 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+						/* begin scavengeDequeuedReferent:slot:of: */
+						if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+							/* begin followForwarded: */
+							assert(isUnambiguouslyForwarder(warmReferent));
+							referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+							while (/* isOopForwarded: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+								referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+							}
+							hasNewReferent = 0;
+							if (/* isReallyYoung: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt)),
+							(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+								if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+									hasNewReferent = 1;
+								}
+								else {
+									referentSqInt = copyAndForward(referentSqInt);
+
+									/* begin isReallyYoungObject: */
+									assert(isNonImmediate(referentSqInt));
+									hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+										 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+								}
+							}
+						}
+						else {
+							referentSqInt = copyAndForward(warmReferent);
+
+							/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt));
+							hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+						}
+
+						/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+						longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+						if (hasNewReferent) {
 							foundNewReferent = 1;
 						}
 					}
 				}
+			}
+		}
+		while (prefetchTail < prefetchHead) {
+			warmReferent = prefetchQueue[prefetchTail & 15];
+			warmSlot = prefetchSlots[prefetchTail & 15];
+			prefetchTail += 1;
 
-				/* if target is already in future space forwarding pointer was due to a become:. */
+			/* begin scavengeDequeuedReferent:slot:of: */
+			if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+				/* begin followForwarded: */
+				assert(isUnambiguouslyForwarder(warmReferent));
+				referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+				while (/* isOopForwarded: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+					referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+				}
+				hasNewReferent = 0;
+				if (/* isReallyYoung: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt)),
+				(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+					if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+						hasNewReferent = 1;
+					}
+					else {
+						referentSqInt = copyAndForward(referentSqInt);
 
-				/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-				longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+						/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt));
+						hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+					}
+				}
+			}
+			else {
+				referentSqInt = copyAndForward(warmReferent);
+
+				/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referentSqInt));
+				hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+			}
+
+			/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+			longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+			if (hasNewReferent) {
+				foundNewReferent = 1;
 			}
 		}
 		return foundNewReferent;
 
 	case indexablePointersFormat():
 		/* begin scavengeReferentsOfIndexablePointers: */
+		/* begin numSlotsOfIndexablePointerObj: */
+		assert((formatOf(referrer)) == (indexablePointersFormat()));
+		if (((longAt((void *)(referrer))) & (classIndexMask())) == ClassMethodContextCompactIndex) {
+			numSlots = ((usqInt) (CtxtTempFrameStart + (fetchStackPointerOf(referrer))));
+		}
+		else {
+			/* begin numSlotsOf: */
+			assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun()));
+			numSlots = (((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
+						? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8
+						: numSlots);
+		}
+
+		/* begin scavengeReferentsOf:numSlots: */
 		foundNewReferent = 0;
-		toDoLimit = (numSlotsOfIndexablePointerObj(referrer)) - 1;
-		for (i = 0; i <= toDoLimit; i += 1) {
+		prefetchHead = (prefetchTail = 0);
+		for (i = 0; i < numSlots; i += 1) {
 			referent = longAt((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-			if ((!(referent & (tagMask())))) {
-				/* a forwarding pointer could be because of become: or scavenging. */
-				if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-					/* begin followForwarded: */
-					assert(isUnambiguouslyForwarder(referent));
-					referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-					while (/* isOopForwarded: */
-						((!(referentSqInt & (tagMask()))))
-					 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-						referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-					}
-					referent = referentSqInt;
+			if (((!(referent & (tagMask()))))
+			 && ((/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referent)),
+			(oopisLessThan(referent, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+				if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+					foundNewReferent = 1;
 				}
+				else {
+#          if defined(__GNUC__) || defined(__clang__)
+					__builtin_prefetch(((void *)referent), 0, 3);
+#          endif
 
-				/* begin isReallyYoungObject: */
-				assert(isNonImmediate(referent));
-				if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-					if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-						foundNewReferent = 1;
-					}
-					else {
-						referent = copyAndForward(referent);
+					prefetchQueue[prefetchHead & 15] = referent;
+					prefetchSlots[prefetchHead & 15] = i;
+					prefetchHead += 1;
+					if ((prefetchHead - prefetchTail) >= 8) {
+						warmReferent = prefetchQueue[prefetchTail & 15];
+						warmSlot = prefetchSlots[prefetchTail & 15];
+						prefetchTail += 1;
 
-						/* begin isReallyYoungObject: */
-						assert(isNonImmediate(referent));
-						if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-						 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+						/* begin scavengeDequeuedReferent:slot:of: */
+						if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+							/* begin followForwarded: */
+							assert(isUnambiguouslyForwarder(warmReferent));
+							referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+							while (/* isOopForwarded: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+								referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+							}
+							hasNewReferent = 0;
+							if (/* isReallyYoung: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt)),
+							(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+								if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+									hasNewReferent = 1;
+								}
+								else {
+									referentSqInt = copyAndForward(referentSqInt);
+
+									/* begin isReallyYoungObject: */
+									assert(isNonImmediate(referentSqInt));
+									hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+										 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+								}
+							}
+						}
+						else {
+							referentSqInt = copyAndForward(warmReferent);
+
+							/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt));
+							hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+						}
+
+						/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+						longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+						if (hasNewReferent) {
 							foundNewReferent = 1;
 						}
 					}
 				}
+			}
+		}
+		while (prefetchTail < prefetchHead) {
+			warmReferent = prefetchQueue[prefetchTail & 15];
+			warmSlot = prefetchSlots[prefetchTail & 15];
+			prefetchTail += 1;
 
-				/* if target is already in future space forwarding pointer was due to a become:. */
+			/* begin scavengeDequeuedReferent:slot:of: */
+			if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+				/* begin followForwarded: */
+				assert(isUnambiguouslyForwarder(warmReferent));
+				referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+				while (/* isOopForwarded: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+					referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+				}
+				hasNewReferent = 0;
+				if (/* isReallyYoung: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt)),
+				(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+					if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+						hasNewReferent = 1;
+					}
+					else {
+						referentSqInt = copyAndForward(referentSqInt);
 
-				/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-				longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+						/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt));
+						hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+					}
+				}
+			}
+			else {
+				referentSqInt = copyAndForward(warmReferent);
+
+				/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referentSqInt));
+				hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+			}
+
+			/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+			longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+			if (hasNewReferent) {
+				foundNewReferent = 1;
 			}
 		}
 		return foundNewReferent;
@@ -43761,51 +44221,137 @@ scavengeReferentsOf(sqInt referrer)
 		}
 
 		/* begin scavengeReferentsOfPointers: */
+		/* begin numSlotsOf: */
+		assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun()));
+		if (((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())) {
+			numSlotsSqInt = ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8;
+		}
+		else {
+			numSlotsSqInt = numSlots;
+		}
+
+		/* begin scavengeReferentsOf:numSlots: */
 		foundNewReferent = 0;
-		toDoLimit = ((/* begin numSlotsOf: */
-	assert((classIndexOf(referrer)) > (isForwardedObjectClassIndexPun())),
-(((numSlots = byteAt((void *)(referrer + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(referrer - BaseHeaderSize)))) << 8)))))) >> 8
-			: numSlots))) - 1;
-		for (i = 0; i <= toDoLimit; i += 1) {
+		prefetchHead = (prefetchTail = 0);
+		for (i = 0; i < numSlotsSqInt; i += 1) {
 			referent = longAt((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))));
-			if ((!(referent & (tagMask())))) {
-				/* a forwarding pointer could be because of become: or scavenging. */
-				if ((!((longAt((void *)(referent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
-					/* begin followForwarded: */
-					assert(isUnambiguouslyForwarder(referent));
-					referentSqInt = longAt((void *)((referent + BaseHeaderSize) + (0U << (shiftForWord()))));
-					while (/* isOopForwarded: */
-						((!(referentSqInt & (tagMask()))))
-					 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-						referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
-					}
-					referent = referentSqInt;
+			if (((!(referent & (tagMask()))))
+			 && ((/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referent)),
+			(oopisLessThan(referent, GIV(oldSpaceStart)))
+				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))))) {
+				if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+					foundNewReferent = 1;
 				}
+				else {
+#          if defined(__GNUC__) || defined(__clang__)
+					__builtin_prefetch(((void *)referent), 0, 3);
+#          endif
 
-				/* begin isReallyYoungObject: */
-				assert(isNonImmediate(referent));
-				if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-				 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
-					if (oopisGreaterThanOrEqualToandLessThan(referent, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
-						foundNewReferent = 1;
-					}
-					else {
-						referent = copyAndForward(referent);
+					prefetchQueue[prefetchHead & 15] = referent;
+					prefetchSlots[prefetchHead & 15] = i;
+					prefetchHead += 1;
+					if ((prefetchHead - prefetchTail) >= 8) {
+						warmReferent = prefetchQueue[prefetchTail & 15];
+						warmSlot = prefetchSlots[prefetchTail & 15];
+						prefetchTail += 1;
 
-						/* begin isReallyYoungObject: */
-						assert(isNonImmediate(referent));
-						if ((oopisLessThan(referent, GIV(oldSpaceStart)))
-						 && (oopisGreaterThanOrEqualTo(referent, GIV(newSpaceStart)))) {
+						/* begin scavengeDequeuedReferent:slot:of: */
+						if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+							/* begin followForwarded: */
+							assert(isUnambiguouslyForwarder(warmReferent));
+							referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+							while (/* isOopForwarded: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+								referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+							}
+							hasNewReferent = 0;
+							if (/* isReallyYoung: */
+								((!(referentSqInt & (tagMask()))))
+							 && ((/* begin isReallyYoungObject: */
+								assert(isNonImmediate(referentSqInt)),
+							(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+								if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+									hasNewReferent = 1;
+								}
+								else {
+									referentSqInt = copyAndForward(referentSqInt);
+
+									/* begin isReallyYoungObject: */
+									assert(isNonImmediate(referentSqInt));
+									hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+										 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+								}
+							}
+						}
+						else {
+							referentSqInt = copyAndForward(warmReferent);
+
+							/* begin isReallyYoungObject: */
+							assert(isNonImmediate(referentSqInt));
+							hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+								 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+						}
+
+						/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+						longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+						if (hasNewReferent) {
 							foundNewReferent = 1;
 						}
 					}
 				}
+			}
+		}
+		while (prefetchTail < prefetchHead) {
+			warmReferent = prefetchQueue[prefetchTail & 15];
+			warmSlot = prefetchSlots[prefetchTail & 15];
+			prefetchTail += 1;
 
-				/* if target is already in future space forwarding pointer was due to a become:. */
+			/* begin scavengeDequeuedReferent:slot:of: */
+			if ((!((longAt((void *)(warmReferent))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun()))))) {
+				/* begin followForwarded: */
+				assert(isUnambiguouslyForwarder(warmReferent));
+				referentSqInt = longAt((void *)((warmReferent + BaseHeaderSize) + (0U << (shiftForWord()))));
+				while (/* isOopForwarded: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((!((longAt((void *)(referentSqInt))) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
+					referentSqInt = longAt((void *)((referentSqInt + BaseHeaderSize) + (0U << (shiftForWord()))));
+				}
+				hasNewReferent = 0;
+				if (/* isReallyYoung: */
+					((!(referentSqInt & (tagMask()))))
+				 && ((/* begin isReallyYoungObject: */
+					assert(isNonImmediate(referentSqInt)),
+				(oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)))))) {
+					if (oopisGreaterThanOrEqualToandLessThan(referentSqInt, ((GIV(futureSpace)).start), GIV(futureSurvivorStart))) {
+						hasNewReferent = 1;
+					}
+					else {
+						referentSqInt = copyAndForward(referentSqInt);
 
-				/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
-				longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(i) << (shiftForWord()))))),referent);
+						/* begin isReallyYoungObject: */
+						assert(isNonImmediate(referentSqInt));
+						hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+							 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+					}
+				}
+			}
+			else {
+				referentSqInt = copyAndForward(warmReferent);
+
+				/* begin isReallyYoungObject: */
+				assert(isNonImmediate(referentSqInt));
+				hasNewReferent = (oopisLessThan(referentSqInt, GIV(oldSpaceStart)))
+					 && (oopisGreaterThanOrEqualTo(referentSqInt, GIV(newSpaceStart)));
+			}
+
+			/* storePointerUnchecked:ofMaybeForwardedObject:withValue: */
+			longAtput((void *)((referrer + BaseHeaderSize) + ((((usqInt)(warmSlot) << (shiftForWord()))))),referentSqInt);
+			if (hasNewReferent) {
+				foundNewReferent = 1;
 			}
 		}
 		return foundNewReferent;
@@ -55993,30 +56539,6 @@ numSlotsOfAny(sqInt objOop)
 	return (numSlots == (numSlotsMask())
 			? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(objOop - BaseHeaderSize)))) << 8)))))) >> 8
 			: numSlots);
-}
-
-
-/*	Answer the number of strong pointer fields in the given indexable pointer
-	object. 
- */
-
-	/* SpurMemoryManager>>#numSlotsOfIndexablePointerObj: */
-static NoDbgRegParms usqInt
-numSlotsOfIndexablePointerObj(sqInt objOop)
-{
-    usqInt numSlots;
-
-	assert((formatOf(objOop)) == (indexablePointersFormat()));
-	if (((longAt((void *)(objOop))) & (classIndexMask())) == ClassMethodContextCompactIndex) {
-		return CtxtTempFrameStart + (fetchStackPointerOf(objOop));
-	}
-	else {
-		/* begin numSlotsOf: */
-		assert((classIndexOf(objOop)) > (isForwardedObjectClassIndexPun()));
-		return (((numSlots = byteAt((void *)(objOop + (numSlotsFieldByteOffset()))))) == (numSlotsMask())
-				? ((((usqInt)(((sqInt)((usqInt)((longAt((void *)(objOop - BaseHeaderSize)))) << 8)))))) >> 8
-				: numSlots);
-	}
 }
 
 
