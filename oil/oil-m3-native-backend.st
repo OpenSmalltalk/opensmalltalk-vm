@@ -598,25 +598,22 @@ oilSendSiteNeverSentAt: bcpc in: aMethodObj
 	^(coInterpreter methodHasCogMethod: aMethodObj)
 	  and: [self oilSendSiteUnlinkedAt: bcpc in: aMethodObj]! !
 
-!ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/24/2026 19:20'!
+!ProfilingCogit methodsFor: 'invalidation' stamp: 'cb 10/27/2026 14:05'!
 oilMethod: cogMethod inlinesSelector: aSelector
 	"Answer whether cogMethod depends on the methods of aSelector: it is one of them, or Oil inlined one of them (a
 	 method, quick method or intrinsic) or looked aSelector up (the inlined selectors of the metadata, see
-	 OilInliningCompiler>>noteInlinedSelector:), or a method of an inlined frame has that selector."
-	| metadata nFrames frames inlinedMethod numInlined |
+	 OilInliningCompiler>>noteInlinedSelector:), filtered first by the 64-bit bloom filter of their identity hashes."
+	| metadata numInlined bit mask |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod selector = aSelector ifTrue: [^true].
 	metadata := self oilMetadataOf: cogMethod.
+	bit := (coInterpreter oilApiHashBitsOf: aSelector) bitAnd: 63.
+	mask := coInterpreter oilMDCounter: (bit < 32 ifTrue: [OilMDSelectorMask] ifFalse: [OilMDSelectorMask + 4]) of: metadata.
+	((mask >> (bit bitAnd: 31)) bitAnd: 1) = 0 ifTrue: [^false].
 	numInlined := coInterpreter oilMD: metadata header: OilMDInlinedSelectors.
 	numInlined > 32767 ifTrue: [^true]. "-1 (s16): too many to record"
 	0 to: numInlined - 1 do:
 		[:selIndex| (objectMemory fetchPointer: OilMDFirstSelectorLiteral + selIndex ofObject: metadata) = aSelector ifTrue: [^true]].
-	nFrames := coInterpreter oilMD: metadata header: OilMDNumFrames.
-	frames := coInterpreter oilMD: metadata header: OilMDFrames.
-	0 to: nFrames - 1 do:
-		[:frameIndex|
-		inlinedMethod := coInterpreter oilMD: metadata literalAt: frames + (frameIndex * OilMDFrameSize) + OilMDFrameMethod.
-		(coInterpreter maybeSelectorOfMethod: inlinedMethod) = aSelector ifTrue: [^true]].
 	^false! !
 
 !ProfilingCogit methodsFor: 'jit - api' stamp: 'cb 10/24/2026 19:20'!
@@ -980,7 +977,7 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	 offset of the instruction to resume at, the inlined frame and bytecode pc, and the virtual state (descriptors of the
 	 register window and of the high registers)."
 	<var: #cogMethodAddress type: #usqInt>
-	| base frames vobjs captured spills siteTable index frameRecord vobjRecord poolBase parentFrame siteInstruction |
+	| base frames vobjs captured spills siteTable index frameRecord vobjRecord poolBase parentFrame siteInstruction maskLow maskHigh bit |
 	1 to: oilNumMDLiterals do:
 		[:litIndex| objectMemory storePointer: litIndex ofObject: metadata withValue: (oilMDLiterals at: litIndex)].
 	base := oilNumMDLiterals + 1 * objectMemory wordSize.
@@ -1003,6 +1000,20 @@ fillMetadata: metadata cogMethod: cogMethodAddress
 	self metadata: metadata u16At: base + OilMDNumArgs put: (self numArgsOf: oilHomeMethod).
 	self metadata: metadata u16At: base + OilMDCaptured put: captured.
 	self metadata: metadata u16At: base + OilMDInlinedSelectors put: (oilNumInlinedSelectors > OilMaxInlinedSelectors ifTrue: [-1] ifFalse: [oilNumInlinedSelectors]).
+	oilNumInlinedSelectors > OilMaxInlinedSelectors
+		ifTrue:
+			[maskLow := 16rFFFFFFFF.
+			 maskHigh := 16rFFFFFFFF]
+		ifFalse:
+			[maskLow := maskHigh := 0.
+			 0 to: oilNumInlinedSelectors - 1 do:
+				[:selIndex|
+				bit := (coInterpreter oilApiHashBitsOf: (oilInlinedSelectors at: selIndex)) bitAnd: 63.
+				bit < 32
+					ifTrue: [maskLow := maskLow bitOr: (1 << bit)]
+					ifFalse: [maskHigh := maskHigh bitOr: (1 << (bit - 32))]]].
+	self metadata: metadata u32At: base + OilMDSelectorMask put: maskLow.
+	self metadata: metadata u32At: base + OilMDSelectorMask + 4 put: maskHigh.
 	0 to: numFrames - 1 do:
 		[:frameIndex|
 		frameRecord := frames + (frameIndex * OilMDFrameSize).
@@ -2214,39 +2225,127 @@ primitiveOilCompile
 	result := cogit oilGenerate: methodObj.
 	self oilReturnToContext: activeContext pushing: (objectMemory integerObjectOf: result)! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 22:20'!
-primitiveOilSetColdSelectors
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
+primitiveOilGetOrSetColdSelectors
 	"The cold selectors Oil never inlines (error paths, slow paths).  Without argument, answer them: the Array of Symbols
 	 the image set, or nil for the default ones (see OilInliningCompiler class>>defaultColdSelectors).  With an argument,
 	 an Array of Symbols or nil (the default ones), set them and answer the previous ones (an Array or nil)."
 	<export: true>
+	<inline: false>
 	<essential: #ProfilingCogit>
-	| previous selectors symbolTag wasUnset |
+	| previous err |
 	argumentCount > 1 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
-	previous := cogit getOilColdSelectors.
-	previous = 0
-		ifTrue: [previous := objectMemory nilObject]
-		ifFalse: [previous := objectMemory followMaybeForwarded: previous].
+	previous := self oilColdSelectorsObject.
 	argumentCount = 0 ifTrue:
 		[^self pop: 1 thenPush: previous].
-	selectors := self stackTop.
+	err := self oilSetColdSelectorsObject: self stackTop.
+	err ~= 0 ifTrue:
+		[^self primitiveFailFor: err].
+	self pop: 2 thenPush: previous! !
+
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
+primitiveOilSetColdSelectors
+	<export: true>
+	<essential: #ProfilingCogit>
+	self primitiveOilGetOrSetColdSelectors! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/27/2026 14:05'!
+oilColdSelectorsObject
+	<essential: #ProfilingCogit>
+	| previous |
+	previous := cogit getOilColdSelectors.
+	^previous = 0
+		ifTrue: [objectMemory nilObject]
+		ifFalse: [objectMemory followMaybeForwarded: previous]! !
+
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/27/2026 14:05'!
+oilSetColdSelectorsObject: selectors
+	"Validate and set selectors (an Array of Symbols or nil).  Answer 0 on success, or a PrimErr* code."
+	<inline: false>
+	<essential: #ProfilingCogit>
+	| symbolTag wasUnset selector |
 	selectors ~= objectMemory nilObject ifTrue:
 		[((objectMemory isNonImmediate: selectors) and: [objectMemory isArrayNonImm: selectors]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument].
+			[^PrimErrBadArgument].
 		 symbolTag := objectMemory fetchClassTagOf: (objectMemory splObj: SelectorDoesNotUnderstand).
 		 0 to: (objectMemory numSlotsOf: selectors) - 1 do:
-			[:i| | selector |
+			[:i|
 			selector := objectMemory followMaybeForwarded: (objectMemory fetchPointer: i ofObject: selectors).
 			((objectMemory isNonImmediate: selector) and: [(objectMemory fetchClassTagOf: selector) = symbolTag]) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument]]].
+				[^PrimErrBadArgument]]].
 	wasUnset := cogit getOilColdSelectors = 0.
 	cogit setOilColdSelectors: selectors.
 	wasUnset ifTrue: "(the variable becomes a GC root when it first holds an object)"
 		[(objectMemory addGCRoot: cogit oilColdSelectorsAddress) ifFalse:
 			[cogit setOilColdSelectors: 0.
-			 ^self primitiveFailFor: PrimErrNoMemory]].
-	self pop: 2 thenPush: previous! !
+			 ^PrimErrNoMemory]].
+	^0! !
+
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
+primitiveOilGetOrSetParameter
+	"Unified tuning parameter primitive (see OilInliningCompiler>>oilParameterAt:):
+	 - 0 arguments: answer an Array of pairs {index. value. ...} for parameters 1, 2, 3, 4, 5, 7, 8, 12, 14, 19.
+	 - 1 argument (index): answer the current value of parameter index.
+	 - 2 arguments (index, value): set parameter index to value (0 or nil resets to default) and answer the previous value."
+	<export: true>
+	<inline: false>
+	<essential: #ProfilingCogit>
+	| result indices index val prev err paramIndex paramObj |
+	<var: #indices declareC: 'static const sqInt indices[10] = {1, 2, 3, 4, 5, 7, 8, 12, 14, 19}'>
+	argumentCount > 2 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+	argumentCount = 0 ifTrue:
+		[self cCode: [] inSmalltalk: [indices := CArrayAccessor on: #(1 2 3 4 5 7 8 12 14 19)].
+		 result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 20.
+		 result ifNil: [^self primitiveFailFor: PrimErrNoMemory].
+		 0 to: 9 do:
+			[:i|
+			paramIndex := indices at: i.
+			paramObj := paramIndex = 7
+				ifTrue: [self oilColdSelectorsObject]
+				ifFalse: [paramIndex = 19
+					ifTrue: [objectMemory integerObjectOf: (cogit oilAutoCompileEnabled ifTrue: [1] ifFalse: [0])]
+					ifFalse: [objectMemory integerObjectOf: (cogit oilParameterAt: paramIndex)]].
+			objectMemory storePointer: i * 2 ofObject: result withValue: (objectMemory integerObjectOf: paramIndex).
+			objectMemory storePointer: i * 2 + 1 ofObject: result withValue: paramObj].
+		 ^self pop: 1 thenPush: result].
+	(objectMemory isIntegerObject: (self stackValue: argumentCount - 1)) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: (self stackValue: argumentCount - 1).
+	argumentCount = 1 ifTrue:
+		[index = 7 ifTrue: [^self pop: 2 thenPush: self oilColdSelectorsObject].
+		 index = 19 ifTrue: [^self pop: 2 thenPush: (objectMemory integerObjectOf: (cogit oilAutoCompileEnabled ifTrue: [1] ifFalse: [0]))].
+		 prev := cogit oilParameterAt: index.
+		 prev < 0 ifTrue: [^self primitiveFailFor: PrimErrBadArgument].
+		 ^self pop: 2 thenPush: (objectMemory integerObjectOf: prev)].
+	val := self stackTop.
+	index = 7 ifTrue:
+		[prev := self oilColdSelectorsObject.
+		 err := self oilSetColdSelectorsObject: val.
+		 err ~= 0 ifTrue: [^self primitiveFailFor: err].
+		 ^self pop: 3 thenPush: prev].
+	index = 19 ifTrue:
+		[prev := cogit oilAutoCompileEnabled ifTrue: [1] ifFalse: [0].
+		 (val = objectMemory trueObject or: [val = (objectMemory integerObjectOf: 1)])
+			ifTrue: [cogit oilSetAutoCompileEnabled: true]
+			ifFalse:
+				[(val = objectMemory falseObject or: [val = (objectMemory integerObjectOf: 0)])
+					ifTrue: [cogit oilSetAutoCompileEnabled: false]
+					ifFalse: [^self primitiveFailFor: PrimErrBadArgument]].
+		 ^self pop: 3 thenPush: (objectMemory integerObjectOf: prev)].
+	(objectMemory isIntegerObject: val) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	prev := cogit oilParameterAt: index put: (objectMemory integerValueOf: val).
+	prev < 0 ifTrue:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	self pop: 3 thenPush: (objectMemory integerObjectOf: prev)! !
+
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
+primitiveOilSetParameter
+	<export: true>
+	<essential: #ProfilingCogit>
+	self primitiveOilGetOrSetParameter! !
 
 !CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 22:20'!
 primitiveOilSetAutonomousCompilation

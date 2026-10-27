@@ -109,9 +109,9 @@ pcFrom: offset
 	"A bytecode pc of the metadata (0-relative, as in the VM) as a Smalltalk pc (1-relative), nil for none (65535)."
 	^offset = 65535 ifTrue: [nil] ifFalse: [offset + 1]! !
 
-!OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
+!OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/27/2026 13:50'!
 isValid
-	^metadata size - base >= 34 and: [(self u32: base) = 16r4F494C34]! !
+	^metadata size - base >= 42 and: [(self u32: base) = 16r4F494C34]! !
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 rootMethod
@@ -154,6 +154,11 @@ inlinedSelectors
 	count := self s16: base + 32.
 	count < 0 ifTrue: [^nil].
 	^(2 to: count + 1) collect: [:index | metadata literalAt: index]! !
+
+!OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/27/2026 13:50'!
+selectorMask
+	"The 64-bit bloom filter mask of the identityHashes of the inlined selectors."
+	^(self u32: base + 34) + ((self u32: base + 38) bitShift: 32)! !
 
 !OilDeoptMetadataReader methodsFor: 'header' stamp: 'cb 10/26/2026 14:30'!
 header

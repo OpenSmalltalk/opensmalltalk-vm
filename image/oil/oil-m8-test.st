@@ -56,7 +56,7 @@ compile := [:sel :argLists | | fbk comp |
 	comp].
 run := [:comp :args | [(OilIRInterpreter new on: comp) run: model with: args] on: Error do: [:e | #error -> e description]].
 opcodes := [:comp | comp opcodeHistogram].
-stats := [:comp | #(oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates oilNumEagerSites oilNumSelects) collect: [:v | comp instVarNamed: v]].
+stats := [:comp | #(oilNumVirtualized oilNumMaterialized oilNumBimorphic oilNumPredicates 0 oilNumSelects) collect: [:v | v isSymbol ifTrue: [comp instVarNamed: v] ifFalse: [v]]].
 "{selector. sample arguments (type feedback). arguments to check. check on {virtualized. materialized. bimorphic. predicates. eager sites} and the opcode histogram}"
 probes := {
 	{#pointSum:. {{3}}. {{3}. {10}. {0}}. [:st :h | (st at: 1) = 1 and: [(st at: 2) = 0 and: [(h occurrencesOf: #NewObject) = 0 and: [(h occurrencesOf: #Call1) = 0]]]]}.

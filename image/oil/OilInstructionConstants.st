@@ -1,6 +1,6 @@
 SharedPool subclass: #OilInstructionConstants
 	instanceVariableNames: ''
-	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilSqrtFloat OilAbsFloat OilNegatedFloat OilFindSubstring OilFindFirstInString OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange'
+	classVariableNames: 'OilConstTagged OilConst64 OilMove OilAddTagged OilSubTagged OilAndTagged OilOrTagged OilXorTagged OilShiftTagged OilOddTagged OilLoadField OilStoreField OilLoadElement OilStoreElement OilCmpTagged OilBranchTrue OilBranchFalse OilJump OilReturn OilGuardClass OilCheckBounds OilCall0 OilCall1 OilCallN OilAddImmTagged OilCmpImmTagged OilLoadSize OilMakeClosure OilNewArray OilCallSuper OilAddImmTaggedNC OilModTagged OilLoadByteSize OilLoadByte OilLoadChar OilStoreByte OilStoreChar OilCompareBytes OilTrap OilCharValue OilStreamNext OilStreamNextPut OilAddFloat OilSubFloat OilMulFloat OilDivFloat OilCmpFloat OilIdentityHash OilIndexOfByte OilSkipSeparators OilNewObject OilCmpClass OilGuardClass2 OilStringHash OilCallDirectedSuper OilSqrtFloat OilAbsFloat OilNegatedFloat OilFindSubstring OilFindFirstInString OilLastOpcode OilOpLengthMask OilOpPackedArgs OilOpDest OilOpSend OilOpCall OilOpClobbersXmms OilOpTagged OilOpPure OilOpBranch OilOpReadsA OilOpReadsB OilOpReadsC OilOpReadsRange OilOpFloat'
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-Oil'!
 
@@ -118,9 +118,10 @@ initialize
 	OilOpReadsB := 4096.		"reads register B"
 	OilOpReadsC := 8192.		"reads register C"
 	OilOpReadsRange := 16384.	"reads the C registers from B (OilNewArray: unless B is OilFlagsReg; OilMakeClosure: also the
-	 register of its receiver)"! !
+	 register of its receiver)"
+	OilOpFloat := 32768.		"a float arithmetic or comparison instruction (OilAddFloat..OilCmpFloat, OilSqrtFloat..OilNegatedFloat)"! !
 
-!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/26/2026 20:30'!
+!OilInstructionConstants class methodsFor: 'accessing' stamp: 'cb 10/27/2026 13:50'!
 opInfoSpec
 	"The opcodes in order, with the length of their fixed part in words and their properties (OilOp* without the prefix)."
 	^#(	(ConstTagged		1 Dest Tagged Pure)
@@ -165,11 +166,11 @@ opInfoSpec
 		(CharValue			1 Dest ReadsB Tagged)
 		(StreamNext		3 Dest ReadsB ClobbersXmms)
 		(StreamNextPut	3 Dest ReadsB ReadsC ClobbersXmms)
-		(AddFloat			1 Dest ReadsB ReadsC)
-		(SubFloat			1 Dest ReadsB ReadsC)
-		(MulFloat			1 Dest ReadsB ReadsC)
-		(DivFloat			1 Dest ReadsB ReadsC)
-		(CmpFloat			1 ReadsB ReadsC)
+		(AddFloat			1 Dest ReadsB ReadsC Float)
+		(SubFloat			1 Dest ReadsB ReadsC Float)
+		(MulFloat			1 Dest ReadsB ReadsC Float)
+		(DivFloat			1 Dest ReadsB ReadsC Float)
+		(CmpFloat			1 ReadsB ReadsC Float)
 		(IdentityHash		3 Dest ReadsB Tagged ClobbersXmms)
 		(IndexOfByte		3 PackedArgs Dest ReadsB Call ClobbersXmms)
 		(SkipSeparators	3 Dest ReadsB Call ClobbersXmms)
@@ -178,9 +179,9 @@ opInfoSpec
 		(GuardClass2		5 ReadsA ClobbersXmms)
 		(StringHash		3 Dest ReadsB ReadsC Call ClobbersXmms)
 		(CallDirectedSuper	5 PackedArgs Dest ReadsB Send Call ClobbersXmms)
-		(SqrtFloat			1 Dest ReadsB)
-		(AbsFloat			1 Dest ReadsB)
-		(NegatedFloat		1 Dest ReadsB)
+		(SqrtFloat			1 Dest ReadsB Float)
+		(AbsFloat			1 Dest ReadsB Float)
+		(NegatedFloat		1 Dest ReadsB Float)
 		(FindSubstring		3 PackedArgs Dest ReadsB Call ClobbersXmms)
 		(FindFirstInString	3 PackedArgs Dest ReadsB Call ClobbersXmms))! !
 

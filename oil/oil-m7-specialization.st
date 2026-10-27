@@ -461,7 +461,7 @@ primitiveOilSpecialize
 			 (cogit oilMethodHasOilCode: copy) ifTrue:
 				[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilOK)]]
 		ifFalse:
-			[(cogit oilNumSpecializationsOf: methodObj) >= OilMaxPICCases ifTrue:
+			[(cogit oilNumSpecializationsOf: methodObj) >= cogit oilMaxSpecialization ifTrue:
 				[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilFailSpecialization)].
 			 copy := objectMemory cloneInOldSpace: methodObj forPinning: false. "(with its header, not its machine code)"
 			 copy = 0 ifTrue:
