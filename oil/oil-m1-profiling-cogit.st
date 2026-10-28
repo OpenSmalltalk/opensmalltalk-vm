@@ -310,3 +310,32 @@ generateSqueakSpurCogOil64VM
 		to: (self srcDirectory fullNameFor: 'spur64.oil')
 		platformDir: self sourceTree, '/platforms'
 		including:#()! !
+
+
+!Cogit methodsFor: 'garbage collection & become' stamp: 'cb 10/28/2026 05:30'!
+followForwardedLiteralsImplementationIn: cogMethod
+	"Follow the forwarded literals in cogMethod and recompute whether it refers to young
+	 objects.  N.B. a young selector must keep the method in youngReferrers whether or not
+	 it was forwarded on this pass: it may have been young since the method was compiled
+	 (or become young in an earlier become), and then only the scavenger, walking
+	 youngReferrers, remaps it.  (Fix of an upstream bug: the young test was inside the
+	 shouldRemapOop: branch, so a become dropped from youngReferrers a method whose only young
+	 reference was its unforwarded selector; its selector then went stale at the next scavenge,
+	 and the next full GC failed in unlinkAllSends with 'could not find selector in method when
+	 unlinking send site'.  oil/test_oil_stress.st hit it.)"
+	<option: #SpurObjectMemory>
+	<var: #cogMethod type: #'CogMethod *'>
+	| writableCogMethod hasYoungObj |
+	self assert: (cogMethod isCMMethodEtAl not or: [(objectMemory isForwarded: cogMethod methodObject) not]).
+	writableCogMethod := self writableMethodFor: cogMethod.
+	hasYoungObj := objectMemory isYoung: cogMethod methodObject.
+	(objectMemory shouldRemapOop: cogMethod selector) ifTrue:
+		[writableCogMethod selector: (objectMemory remapObj: cogMethod selector)].
+	(objectMemory isYoung: cogMethod selector) ifTrue:
+		[hasYoungObj := true].
+	self mapFor: cogMethod
+		performUntil: #remapIfObjectRef:pc:hasYoung:
+		arg: (self addressOf: hasYoungObj put: [:val| hasYoungObj := val]) asVoidPointer.
+	hasYoungObj
+		ifTrue: [methodZone ensureInYoungReferrers: cogMethod]
+		ifFalse: [writableCogMethod cmRefersToYoung: false]! !
