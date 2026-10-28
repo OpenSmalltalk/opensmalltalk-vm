@@ -70,7 +70,11 @@ generateClosedPICPrototype
 oilGenerateDispatcherPrototype
 	"Compile the Oil Dispatcher prototype at methodZoneBase using Cogit abstract instructions,
 	 compute oilDispatcherFirstCaseOffset, oilDispatcherCaseSize, oilDispatcherEndOfCodeOffset and oilDispatcherSize,
-	 and advance methodZoneBase."
+	 and advance methodZoneBase.
+	 Note: The Dispatcher has compileAbort and two entry points (entry at cmEntryOffset and noCheckEntry at
+	 cmNoCheckEntryOffset jumping to entry) so it conforms structurally to a CogMethod with the exact standard
+	 offsets when doing machine code zone maintenance (code compaction, call relocation, send unlinking, CPIC
+	 target inspection, and super send / frameless activation handling)."
 	<inline: false>
 	| jumpToCases firstCaseLabel endCase1Label endOfCodeLabel endAddress |
 	<var: #jumpToCases type: #'AbstractInstruction *'>
@@ -80,6 +84,7 @@ oilGenerateDispatcherPrototype
 	self allocateOpcodes: 32 bytecodes: 0.
 	methodOrBlockNumArgs := 0.
 	methodLabel address: methodZoneBase; dependent: nil.
+	"compileAbort occupies sizeof(CogMethod) to missOffset so entry aligns exactly at cmEntryOffset."
 	self compileAbort.
 	entry := objectRepresentation
 				genGetInlineCacheClassTagFrom: ReceiverResultReg
@@ -87,6 +92,7 @@ oilGenerateDispatcherPrototype
 				forEntry: true.
 	self CmpR: TempReg R: TempReg.
 	jumpToCases := self JumpZero: 0.
+	"noCheckEntry at cmNoCheckEntryOffset catches super sends and frameless activations, jumping to entry."
 	noCheckEntry := self Jump: entry.
 	firstCaseLabel := self Label.
 	jumpToCases jmpTarget: firstCaseLabel.
