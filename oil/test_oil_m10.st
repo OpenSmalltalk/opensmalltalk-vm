@@ -11,8 +11,8 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM10Model instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-cls := Smalltalk at: #OilM10Model.
+Object subclass: #OilFloatLoopTest instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls := Smalltalk at: #OilFloatLoopTest.
 #('mandelbrot: size
     | count zr zi cr ci tr i |
     count := 0.

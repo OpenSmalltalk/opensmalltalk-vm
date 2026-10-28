@@ -8,7 +8,7 @@ Slang/Smalltalk sources for Oil, the optimizing JIT for the 64-bit Spur Cog VM. 
 |---|---|
 | `VMMaker-JIT-Oil` | The compiler translated to C: scanner, Passes 1-3, the structs `OilVirtualFrame`, `OilVirtualObject` and `OilLazyCondition`, the shared pools, and `ProfilingCogit` (`oil/*.st`). |
 | `VMMaker-JIT-OilDebugging` | Simulation and debugging only, never translated: `OilDeoptMetadataReader`, `Context` debugger support, `OilSimulatedTypeFeedback`, `OilIRInterpreter`, `OilConvolutedCompiler`, the IR printer. |
-| `VMMaker-JIT-OilTest` | The classes the test scripts create (`oil/test_*.st`, `image/oil/oil-*-test.st`) and the test classes of `OilSimulation.st` (`OilTestItem`, `OilTestOther`, `OilTestModel`). |
+| `VMMaker-JIT-OilTest` | The classes the test scripts create (`oil/test_*.st`, `image/oil/oil-*-test.st`) and the test classes of `OilSimulation.st` (`OilCoreSimulationItem`, `OilCoreSimulationOther`, `OilCoreSimulationModelTest`). |
 
 ## Compiler Hierarchy
 

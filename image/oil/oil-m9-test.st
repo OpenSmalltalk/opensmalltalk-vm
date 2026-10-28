@@ -21,18 +21,18 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilM9Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM9Item instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM9Item) compile: 'score ^score' classified: 'tests'.
-(Smalltalk at: #OilM9Item) compile: 'score: n score := n' classified: 'tests'.
-Object subclass: #OilM9A instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM9B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM9A) compile: 'm9Size ^3' classified: 'tests'.
-(Smalltalk at: #OilM9B) compile: 'm9Size ^y + y + 1' classified: 'tests'.
-(Smalltalk at: #OilM9B) compile: 'y: v y := v' classified: 'tests'.
-(Smalltalk at: #OilM9A) compile: 'm9Maybe ^nil' classified: 'tests'.
-(Smalltalk at: #OilM9B) compile: 'm9Maybe ^self' classified: 'tests'.
-cls := Smalltalk at: #OilM9Model.
+Object subclass: #OilLoopUnrollingTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilLoopUnrollingItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilLoopUnrollingItem) compile: 'score ^score' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingItem) compile: 'score: n score := n' classified: 'tests'.
+Object subclass: #OilLoopUnrollingA instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilLoopUnrollingB instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilLoopUnrollingA) compile: 'm9Size ^3' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingB) compile: 'm9Size ^y + y + 1' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingB) compile: 'y: v y := v' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingA) compile: 'm9Maybe ^nil' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingB) compile: 'm9Maybe ^self' classified: 'tests'.
+cls := Smalltalk at: #OilLoopUnrollingTest.
 #(
   "full unrolling"
   'sum3: a | s | s := 0. 1 to: 3 do: [:i | s := s + (a at: i)]. ^s'
@@ -69,8 +69,8 @@ cls := Smalltalk at: #OilM9Model.
   'halve: n | k c | k := n. c := 0. [k > 1] whileTrue: [k := k // 2. c := c + 1]. ^c')
 	do: [:s | cls compile: s classified: 'tests'].
 model := cls new.
-items := (1 to: 9) collect: [:i | (Smalltalk at: #OilM9Item) new score: i; yourself].
-abs := {{(Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 5; yourself. (Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 1; yourself. (Smalltalk at: #OilM9A) new}}.
+items := (1 to: 9) collect: [:i | (Smalltalk at: #OilLoopUnrollingItem) new score: i; yourself].
+abs := {{(Smalltalk at: #OilLoopUnrollingA) new. (Smalltalk at: #OilLoopUnrollingB) new y: 5; yourself. (Smalltalk at: #OilLoopUnrollingA) new. (Smalltalk at: #OilLoopUnrollingB) new y: 1; yourself. (Smalltalk at: #OilLoopUnrollingA) new}}.
 compile := [:sel :argLists | | fbk comp |
 	fbk := OilSimulatedTypeFeedback new.
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
@@ -136,8 +136,8 @@ probes := {
 	{#fill:with:. {{Array new: 3. 7}}. {{Array new: 0. 7}. {Array new: 3. 7}. {Array new: 9. 'x'}. {#(1 2) beReadOnlyObject; yourself. 3}}. [:st :h | (st at: 2) = 0]}.
 	{#step3:. {{10}}. {{0}. {1}. {10}. {11}. {12}. {13}. {100}}. [:st :h | st = #(0 0 1)]}.
 	{#isSymCount:. {{#(#a 'b' #c 'd')}}. {{#(#a 'b' #c 'd')}. {#(#a #b)}. {#()}. {#(#a #b #c #d #e 'f' #g)}. {#(#a 3)}}. [:st :h | (st at: 2) = 0]}.
-	{#sizeSum:. {abs}. {abs. {abs first, abs first}. {abs first first: 1}. {{}}. {{(Smalltalk at: #OilM9A) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
-	{#nilCount:. {abs}. {abs. {abs first, abs first}. {{}}. {{(Smalltalk at: #OilM9B) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
+	{#sizeSum:. {abs}. {abs. {abs first, abs first}. {abs first first: 1}. {{}}. {{(Smalltalk at: #OilLoopUnrollingA) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
+	{#nilCount:. {abs}. {abs. {abs first, abs first}. {{}}. {{(Smalltalk at: #OilLoopUnrollingB) new. 3}}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #Call0) = 0]]}.
 	{#absSum2:. {{#(1 -2 3)}}. arrays. [:st :h | st = #(0 0 1)]}.
 	{#printSizes:. {{3}}. {{3}}. [:st :h | st first + (st at: 2) = 0]}.
 	{#halve:. {{100}}. {{100}. {1}}. [:st :h | st first + (st at: 2) = 0]}}.

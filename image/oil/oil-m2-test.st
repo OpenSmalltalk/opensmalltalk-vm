@@ -16,12 +16,12 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-model := OilTestModel new.
+model := OilCoreSimulationModelTest new.
 coll := OrderedCollection new.
-1 to: 12 do: [:i | coll add: (OilTestItem new score: i; yourself)].
+1 to: 12 do: [:i | coll add: (OilCoreSimulationItem new score: i; yourself)].
 coll removeFirst; removeFirst. "firstIndex > 1, like a real queue"
-arr := (1 to: 10) collect: [:i | OilTestItem new score: i * 3; yourself].
-mixed := OrderedCollection new. coll do: [:e | mixed add: e]. mixed add: OilTestOther new.
+arr := (1 to: 10) collect: [:i | OilCoreSimulationItem new score: i * 3; yourself].
+mixed := OrderedCollection new. coll do: [:e | mixed add: e]. mixed add: OilCoreSimulationOther new.
 
 "compile: a selector with sample arguments (list of arg arrays) -> compiler"
 compile := [:sel :argLists :budget |
@@ -31,7 +31,7 @@ compile := [:sel :argLists :budget |
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
 	budget ifNotNil: [comp irBudget: budget].
-	comp compileMethod: OilTestModel >> sel receiverClass: (comp handleFor: OilTestModel).
+	comp compileMethod: OilCoreSimulationModelTest >> sel receiverClass: (comp handleFor: OilCoreSimulationModelTest).
 	out cr; nextPutAll: comp irString; flush.
 	comp].
 run := [:comp :sel :args | (OilIRInterpreter new on: comp) run: model with: args].
@@ -87,12 +87,12 @@ check value: 'peepholes: SmallInteger overflow deopts (no wrong result)' value: 
 
 "--- 6. Calls: polymorphic receiver, 0/1/2/3 arguments ---"
 "(three receiver classes, so that the sends are megamorphic: Oil inlines bimorphic sends of small methods)"
-OilTestOther subclass: #OilTestThird instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-c := compile value: #callProbe:with:with: value: {{coll first. 1. 2}. {OilTestOther new. 3. 4}. {(Smalltalk at: #OilTestThird) new. 1. 2}} value: nil.
+OilCoreSimulationOther subclass: #OilCoreSimulationThird instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+c := compile value: #callProbe:with:with: value: {{coll first. 1. 2}. {OilCoreSimulationOther new. 3. 4}. {(Smalltalk at: #OilCoreSimulationThird) new. 1. 2}} value: nil.
 hist := c opcodeHistogram.
 check value: 'callProbe: OilCall0, OilCall1 and two OilCallN (packed args)' value: ((hist occurrencesOf: 'Call0') = 1 and: [(hist occurrencesOf: 'Call1') = 1 and: [(hist occurrencesOf: 'CallN') = 2]]).
-check value: 'callProbe: IR result = real result (OilTestItem)' value: (run value: c value: #callProbe:with:with: value: {coll first. 5. 6}) = (model callProbe: coll first with: 5 with: 6).
-check value: 'callProbe: IR result = real result (OilTestOther)' value: (run value: c value: #callProbe:with:with: value: {OilTestOther new. 5. 6}) = (model callProbe: OilTestOther new with: 5 with: 6).
+check value: 'callProbe: IR result = real result (OilCoreSimulationItem)' value: (run value: c value: #callProbe:with:with: value: {coll first. 5. 6}) = (model callProbe: coll first with: 5 with: 6).
+check value: 'callProbe: IR result = real result (OilCoreSimulationOther)' value: (run value: c value: #callProbe:with:with: value: {OilCoreSimulationOther new. 5. 6}) = (model callProbe: OilCoreSimulationOther new with: 5 with: 6).
 
 "--- 7. Nested iterators, blocks passed through 3 methods, non-local return from an inlined block ---"
 c := compile value: #detectProbe: value: {{coll}} value: nil.
@@ -100,7 +100,7 @@ hist := c opcodeHistogram.
 check value: 'detectProbe: detect:ifNone: -> detect:ifFound:ifNone: -> do: -> blocks all inlined (no calls, no closures)' value: ((hist occurrencesOf: 'Call1') + (hist occurrencesOf: 'Call0') + (hist occurrencesOf: 'CallN') + (hist occurrencesOf: 'MakeClosure')) = 0.
 check value: 'detectProbe: the inlined block''s comparison result is branched on directly (no true/false materialized)' value: (c irString includesSubstring: ':= true') not.
 check value: 'detectProbe: IR result = real result (found)' value: (run value: c value: #detectProbe: value: {coll}) = (model detectProbe: coll).
-check value: 'detectProbe: IR result = real result (not found)' value: (run value: c value: #detectProbe: value: {OrderedCollection with: (OilTestItem new score: 1; yourself)}) = 0.
+check value: 'detectProbe: IR result = real result (not found)' value: (run value: c value: #detectProbe: value: {OrderedCollection with: (OilCoreSimulationItem new score: 1; yourself)}) = 0.
 
 "--- 8. x \\ 2 = 0 fused into a branch ---"
 c := compile value: #countEven: value: {{arr}} value: nil.
@@ -136,11 +136,11 @@ check value: 'escapeProbe: materialized closure evaluates correctly' value: ((ru
 [| oldEncoder v3 comp |
  oldEncoder := CompiledCode preferredBytecodeSetEncoderClass.
  [CompiledCode preferredBytecodeSetEncoderClass: EncoderForV3PlusClosures.
-  v3 := OilTestModel newCompiler compile: (OilTestModel >> #sumScores:) getSource asString in: OilTestModel notifying: nil ifFail: [nil]]
+  v3 := OilCoreSimulationModelTest newCompiler compile: (OilCoreSimulationModelTest >> #sumScores:) getSource asString in: OilCoreSimulationModelTest notifying: nil ifFail: [nil]]
 	ensure: [CompiledCode preferredBytecodeSetEncoderClass: oldEncoder].
  v3 := v3 isCompiledMethod ifTrue: [v3] ifFalse: [v3 generate].
  comp := OilCompiler new.
- comp compileMethod: v3 receiverClass: (comp handleFor: OilTestModel).
+ comp compileMethod: v3 receiverClass: (comp handleFor: OilCoreSimulationModelTest).
  check value: 'SistaV1 only: a V3PlusClosures method is rejected (FailNotSistaV1)' value: (v3 signFlag not and: [comp failed and: [(OilConstants failureNames at: comp failureCode + 1) = #FailNotSistaV1]])] value.
 
 "--- 10. Robustness: compile every method of a few classes (receiver class known, no type feedback) ---"

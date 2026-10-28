@@ -15,13 +15,13 @@ check := [:name :bool |
 	bool == true ifFalse: [failures add: name]].
 
 "--- Test classes ---"
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) subclass: #OilTestItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilTestItem2) compile: 'score ^score * 2' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-cls := Smalltalk at: #OilTestModel.
+Object subclass: #OilCoreSimulationItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score ^score' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationItem) subclass: #OilCoreSimulationItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationItem2) compile: 'score ^score * 2' classified: 'accessing'.
+Object subclass: #OilCoreSimulationModelTest instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls := Smalltalk at: #OilCoreSimulationModelTest.
 cls compile: 'items: anArray items := anArray' classified: 'accessing'.
 cls compile: 'countTo: n | count | count := 0. 1 to: n do: [:i | count := count + 1]. ^count' classified: 'tests'.
 cls compile: 'sumScores: aCollection | total | total := 0. aCollection do: [:each | total := total + each score]. ^total' classified: 'tests'.
@@ -76,12 +76,12 @@ check value: 'offSum: then has Oil code' value: (hasOil value: mOffSum).
 check value: 'offSum: in the Oil code computes correctly' value: (m offSum: 100000) = 5000050000.
 
 "--- T2: a block evaluated by a collection iteration (OrderedCollection>>do:): its home method is compiled ---"
-small := OrderedCollection new. 1 to: 10 do: [:i | small add: ((Smalltalk at: #OilTestItem) new score: i)].
+small := OrderedCollection new. 1 to: 10 do: [:i | small add: ((Smalltalk at: #OilCoreSimulationItem) new score: i)].
 warm := (1 to: 5) collect: [:i | m sumScores: small].
 oc := OrderedCollection new.
 "Leading spare capacity: remove from the front so the backing array starts with nils."
-1 to: 100 do: [:i | oc add: ((Smalltalk at: #OilTestItem) new score: 0)].
-1 to: 70000 do: [:i | oc add: ((Smalltalk at: #OilTestItem) new score: 1)].
+1 to: 100 do: [:i | oc add: ((Smalltalk at: #OilCoreSimulationItem) new score: 0)].
+1 to: 70000 do: [:i | oc add: ((Smalltalk at: #OilCoreSimulationItem) new score: 1)].
 1 to: 100 do: [:i | oc removeFirst].
 check value: 'sumScores: computes correctly (tripping)' value: (m sumScores: oc) = 70000.
 check value: 'T2 the home method sumScores: got Oil code' value: (hasOil value: mSumScores).
@@ -89,8 +89,8 @@ check value: 'T2 the iterator OrderedCollection>>do: did not (its closure argume
 check value: 'sumScores: computes correctly in the Oil code' value: (m sumScores: oc) = 70000.
 
 "--- T3: back jump in an iterator whose argument is a closure: the closure's home method is compiled ---"
-items := (1 to: 70000) collect: [:i | (Smalltalk at: #OilTestItem) new score: 2].
-m items: ((1 to: 10) collect: [:i | (Smalltalk at: #OilTestItem) new score: 2]).
+items := (1 to: 70000) collect: [:i | (Smalltalk at: #OilCoreSimulationItem) new score: 2].
+m items: ((1 to: 10) collect: [:i | (Smalltalk at: #OilCoreSimulationItem) new score: 2]).
 warm := (1 to: 5) collect: [:i | m mySumScores].
 m items: items.
 check value: 'mySumScores computes correctly (tripping)' value: m mySumScores = 140000.
@@ -131,16 +131,16 @@ check value: 'disqualifyLimit: accepts an integer, rejects anything else' value:
 
 "--- T7: autonomous multi-specialization of an inherited method across multiple receiver subclasses ---"
 cls autonomousCompilation: true.
-cls subclass: #OilTestModelSub instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls subclass: #OilCoreSimulationModelSub instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 [| sub specs |
- sub := (Smalltalk at: #OilTestModelSub) new.
+ sub := (Smalltalk at: #OilCoreSimulationModelSub) new.
  1 to: 5 do: [:i | m countTo: 0. sub countTo: 0].
- check value: 'T7 trip countTo: on OilTestModel' value: (m countTo: 10000) = 10000.
- check value: 'T7 countTo: has 1 specialization (OilTestModel)' value: mCountTo oilSpecializations size = 2.
- check value: 'T7 trip countTo: on OilTestModelSub' value: (sub countTo: 10000) = 10000.
+ check value: 'T7 trip countTo: on OilCoreSimulationModelTest' value: (m countTo: 10000) = 10000.
+ check value: 'T7 countTo: has 1 specialization (OilCoreSimulationModelTest)' value: mCountTo oilSpecializations size = 2.
+ check value: 'T7 trip countTo: on OilCoreSimulationModelSub' value: (sub countTo: 10000) = 10000.
  specs := mCountTo oilSpecializations.
- check value: 'T7 countTo: has 2 specializations (OilTestModel and OilTestModelSub)'
-	value: (specs size = 4 and: [(specs at: 1) == cls and: [(specs at: 3) == (Smalltalk at: #OilTestModelSub)]]).
+ check value: 'T7 countTo: has 2 specializations (OilCoreSimulationModelTest and OilCoreSimulationModelSub)'
+	value: (specs size = 4 and: [(specs at: 1) == cls and: [(specs at: 3) == (Smalltalk at: #OilCoreSimulationModelSub)]]).
  check value: 'T7 both specializations have Oil code and run with 0 deopts'
 	value: (((m countTo: 50000) = 50000) and: [((sub countTo: 50000) = 50000)
 		and: [((specs at: 2) oilInfo at: 1) = 0 and: [((specs at: 4) oilInfo at: 1) = 0]]])] value.

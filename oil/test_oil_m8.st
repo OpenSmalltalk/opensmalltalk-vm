@@ -12,16 +12,16 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM8A) compile: 'oilM8Size ^3' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'y: v y := v' classified: 'tests'.
-(Smalltalk at: #OilM8A) compile: 'oilM8Maybe ^nil' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'oilM8Maybe ^self' classified: 'tests'.
-(Smalltalk at: #OilM8B) subclass: #OilM8C instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-cls := Smalltalk at: #OilM8Model.
+Object subclass: #OilScalarReplacementTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilScalarReplacementA instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilScalarReplacementB instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilScalarReplacementA) compile: 'oilM8Size ^3' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'y: v y := v' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementA) compile: 'oilM8Maybe ^nil' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'oilM8Maybe ^self' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) subclass: #OilScalarReplacementC instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls := Smalltalk at: #OilScalarReplacementTest.
 #('pointSum: n | s | s := 0. 1 to: n do: [:i | | p | p := i @ (i + 1). s := s + p x + p y]. ^s'
   'pointNew: n | s | s := 0. 1 to: n do: [:i | | p | p := Point x: i y: 3. s := s + (p x * p y)]. ^s'
   'assocSum: n | s | s := 0. 1 to: n do: [:i | | a | a := i -> (i * 2). s := s + a key + a value]. ^s'
@@ -102,7 +102,7 @@ dump := [| words i op |
 	out flush].
 "stats: Pass 1 and 3 statistics of the last compilation: {scalar replaced objects. materialized. bimorphic sends. bimorphic predicates. eager allocation sites. (0: allocations no longer share threshold checks)}"
 statsOf := [((CompiledMethod oilLastCompilation) at: 11) copyFrom: 12 to: 18].
-"compile: warm up (baseline JIT), Oil-compile for OilM8Model, answer the result code"
+"compile: warm up (baseline JIT), Oil-compile for OilScalarReplacementTest, answer the result code"
 res := [:sel :warm | | cm |
 	cm := cls >> sel.
 	3 timesRepeat: warm.
@@ -195,7 +195,7 @@ out nextPutAll: 'isSymCount: 100 x 10000: Oil '; print: oil; nextPutAll: ' ms, b
 check value: 'isSymCount: faster than baseline' value: oil < base.
 check value: 'isSymCount: no deopt' value: ((info value: #isSymCount:) at: 1) = 0.
 check value: 'isSymCount: a third class deoptimizes, result' value: (model isSymCount: #(#a 1 'b' #c)) = 2.
-ab := (1 to: 10000) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilM8A) new] ifFalse: [(Smalltalk at: #OilM8B) new y: k; yourself]].
+ab := (1 to: 10000) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilScalarReplacementA) new] ifFalse: [(Smalltalk at: #OilScalarReplacementB) new y: k; yourself]].
 expected := model sizeSum: ab.
 base := times value: [100 timesRepeat: [model sizeSum: ab]].
 check value: 'sizeSum: compiles' value: (res value: #sizeSum: value: [model sizeSum: ab]) = 0.
@@ -209,13 +209,13 @@ check value: 'sizeSum: no deopt' value: ((info value: #sizeSum:) at: 1) = 0.
 expected := model nilCount: ab.
 base := times value: [100 timesRepeat: [model nilCount: ab]].
 check value: 'nilCount: compiles' value: (res value: #nilCount: value: [model nilCount: ab]) = 0.
-check value: 'nilCount: oilM8Maybe (OilM8A ^nil, OilM8B ^self) ifNil:ifNotNil: is the class test: no call, no nil test'
+check value: 'nilCount: oilM8Maybe (OilScalarReplacementA ^nil, OilScalarReplacementB ^self) ifNil:ifNotNil: is the class test: no call, no nil test'
 	value: ((stats at: 7) = 1 and: [(countOps value: ir value: #(52)) = 1 and: [(countOps value: ir value: #(53)) = 1 and: [(countOps value: ir value: #(22 23 24 30)) = 0]]]).
 check value: 'nilCount: result' value: (model nilCount: ab) = expected.
 oil := times value: [100 timesRepeat: [model nilCount: ab]].
 out nextPutAll: 'nilCount: 100 x 10000: Oil '; print: oil; nextPutAll: ' ms, baseline '; print: base; nextPutAll: ' ms'; cr; flush.
 check value: 'nilCount: faster than baseline' value: oil < base.
-check value: 'nilCount: a third class deoptimizes, result' value: (model nilCount: {(Smalltalk at: #OilM8A) new. (Smalltalk at: #OilM8C) new. (Smalltalk at: #OilM8B) new}) = 21.
+check value: 'nilCount: a third class deoptimizes, result' value: (model nilCount: {(Smalltalk at: #OilScalarReplacementA) new. (Smalltalk at: #OilScalarReplacementC) new. (Smalltalk at: #OilScalarReplacementB) new}) = 21.
 
 "--- 5. Set and Dictionary probes without sends ---"
 {Set -> #scanFor:. Dictionary -> #scanFor:. Set -> #includes:. Dictionary -> #at:ifAbsent:. String -> #hash. Symbol -> #=. Object -> #enclosedSetElement. Association -> #key. Object -> #isSymbol. Symbol -> #isSymbol}

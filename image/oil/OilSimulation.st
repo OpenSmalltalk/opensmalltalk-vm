@@ -426,71 +426,71 @@ step: instIndex
 	^self error: 'unknown Oil opcode ', opcode printString! !
 
 
-Object subclass: #OilTestItem
+Object subclass: #OilCoreSimulationItem
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-OilTest'!
 
-!OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 score
 	^score! !
 
-!OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 score: anInteger
 	score := anInteger! !
 
-!OilTestItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe0
 	^score! !
 
-!OilTestItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe1: a
 	^score + a! !
 
-!OilTestItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe2: a with: b
 	^score + a + b! !
 
-!OilTestItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationItem methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe3: a with: b with: c
 	^score + a + b + c! !
 
 
-Object subclass: #OilTestOther
+Object subclass: #OilCoreSimulationOther
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-OilTest'!
 
-!OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 score
 	^score ifNil: [100]! !
 
-!OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe0
 	^1000! !
 
-!OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe1: a
 	^1000 + a! !
 
-!OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe2: a with: b
 	^1000 + a + b! !
 
-!OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 oilProbe3: a with: b with: c
 	^1000 + a + b + c! !
 
 
-Object subclass: #OilTestModel
+Object subclass: #OilCoreSimulationModelTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMMaker-JIT-OilTest'!
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumScores: anOrderedCollection
 	| total |
 	total := 0.
@@ -499,14 +499,14 @@ sumScores: anOrderedCollection
 	].
 	^total! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumArray: anArray
 	| total |
 	total := 0.
 	anArray do: [:each | total := total + each score].
 	^total! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumIndexed: anArray
 	"1-based indexing arithmetic: (i - 1) + 1 and + 0 must fold away."
 	| total |
@@ -514,7 +514,7 @@ sumIndexed: anArray
 	1 to: anArray size do: [:i | total := total + ((anArray at: (i - 1) + 1) score + 0)].
 	^total! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 peepholes: i with: j
 	"Braces of at most 8 elements compile to pushNewArray (larger ones use Array braceStream:)."
 	^{ { (i - 1) + 1. (i + 1) - 1. i + 0. 0 + i. (i + 5) - 2. (i - 3) + 1. i - 0. (i - 1) + 1 + 0 }.
@@ -522,29 +522,29 @@ peepholes: i with: j
 	   { i // 4. i // 1. i \\ 2. i \\ 8. i * 31. i * 9. i * 8. i * 1 }.
 	   { i bitShift: 3. i bitShift: -2 } }! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 callProbe: x with: a with: b
-	"x is polymorphic (OilTestItem / OilTestOther): sends stay calls (0, 1, 2 and 3 arguments)."
+	"x is polymorphic (OilCoreSimulationItem / OilCoreSimulationOther): sends stay calls (0, 1, 2 and 3 arguments)."
 	^x oilProbe0 + (x oilProbe1: a) + (x oilProbe2: a with: b) + (x oilProbe3: a with: b with: a)! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 detectProbe: anOrderedCollection
 	"Nested iterators and blocks with a non-local return from an inlined block."
 	^(anOrderedCollection detect: [:each | each score > 3] ifNone: [nil]) ifNil: [0] ifNotNil: [:found | found score]! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 countEven: anArray
 	| count |
 	count := 0.
 	anArray do: [:each | each score \\ 2 = 0 ifTrue: [count := count + 1]].
 	^count! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 hashProbe: aSet with: key
 	"The second pillar: Set>>includes: -> scanFor: linear probe loop inlined."
 	^aSet includes: key! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumInterval: n
 	"Interval>>do: has two loops (step < 0 / >= 0): the block is inlined in both."
 	| total |
@@ -552,12 +552,12 @@ sumInterval: n
 	(1 to: n) do: [:i | total := total + i].
 	^total! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 injectScores: anArray
 	"A two-argument block passed through inject:into: to do:."
 	^anArray inject: 0 into: [:acc :each | acc + each score]! !
 
-!OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
+!OilCoreSimulationModelTest methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 escapeProbe: n
 	"The closure escapes: compiled in eager mode (materialized with OilMakeClosure)."
 	^[:x | x + n]! !

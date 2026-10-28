@@ -21,8 +21,8 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilM10Model instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-cls := Smalltalk at: #OilM10Model.
+Object subclass: #OilFloatLoopTest instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls := Smalltalk at: #OilFloatLoopTest.
 #('mandelbrot: size
     | count zr zi cr ci tr i |
     count := 0.

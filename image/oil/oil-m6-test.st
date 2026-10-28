@@ -16,7 +16,7 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilM6Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilFloatFusionTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 #('mandel: cr with: ci | zr zi tr i | zr := 0.0. zi := 0.0. i := 0. [i < 50 and: [zr * zr + (zi * zi) <= 4.0]] whileTrue: [tr := zr * zr - (zi * zi) + cr. zi := 2.0 * zr * zi + ci. zr := tr. i := i + 1]. ^i'
   'axpy: a x: x y: y ^a * x + y'
   'poly: x ^(x * x * 3.0) - (x * 2.0) + 1.0'
@@ -30,14 +30,14 @@ Object subclass: #OilM6Model instanceVariableNames: 'total' classVariableNames: 
   'lvnBranch: anArray at: i | a | a := anArray at: i. ^a > 0 ifTrue: [(anArray at: i) + total] ifFalse: [(anArray at: i) - total]'
   'lvnStore: x total := x. ^total + total'
   'total: n total := n')
-	do: [:s | (Smalltalk at: #OilM6Model) compile: s classified: 'tests'].
-model := (Smalltalk at: #OilM6Model) new total: 7; yourself.
+	do: [:s | (Smalltalk at: #OilFloatFusionTest) compile: s classified: 'tests'].
+model := (Smalltalk at: #OilFloatFusionTest) new total: 7; yourself.
 compile := [:sel :argLists | | fbk comp |
 	fbk := OilSimulatedTypeFeedback new.
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
-	comp compileMethod: (Smalltalk at: #OilM6Model) >> sel receiverClass: (comp handleFor: (Smalltalk at: #OilM6Model)).
+	comp compileMethod: (Smalltalk at: #OilFloatFusionTest) >> sel receiverClass: (comp handleFor: (Smalltalk at: #OilFloatFusionTest)).
 	comp failed ifFalse: [comp pipe].
 	comp].
 run := [:comp :args | [(OilIRInterpreter new on: comp) run: model with: args] on: Error do: [:e | #error -> e description]].

@@ -12,20 +12,20 @@ check := [:name :bool |
 	bool == true ifFalse: [failures add: name]].
 
 "--- Test classes ---"
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilWrongItem) compile: 'score ^1000000' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilTestModel) compile: 'sumScores: aCollection | total | total := 0. aCollection do: [:each | total := total + each score]. ^total' classified: 'tests'.
-(Smalltalk at: #OilTestModel) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
+Object subclass: #OilCoreSimulationItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score ^score' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
+Object subclass: #OilCoreSimulationWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationWrongItem) compile: 'score ^1000000' classified: 'accessing'.
+Object subclass: #OilCoreSimulationModelTest instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationModelTest) compile: 'sumScores: aCollection | total | total := 0. aCollection do: [:each | total := total + each score]. ^total' classified: 'tests'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
-(Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: pairs
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetSelectors: pairs
 	| cold |
 	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
 	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
@@ -61,15 +61,15 @@ sels add: 8; add: 1000. "this test deoptimizes the same method many times: do no
 	do: [:s | sels add: 6; add: s].
 #(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed:)
 	do: [:s | sels add: 7; add: s].
-setSels := (Smalltalk at: #OilTestModel) oilSetSelectors: sels asArray.
+setSels := (Smalltalk at: #OilCoreSimulationModelTest) oilSetSelectors: sels asArray.
 check value: 'primitiveOilSetSelectors available (VM has Oil M3)' value: setSels ~~ #failed.
 setSels == #failed ifTrue:
 	[out close.
 	 self error: 'Oil M3 primitives missing'].
 
-model := (Smalltalk at: #OilTestModel) new.
-m := (Smalltalk at: #OilTestModel) >> #sumScores:.
-items := (1 to: 10000) asArray collect: [:i | (Smalltalk at: #OilTestItem) new score: i; yourself].
+model := (Smalltalk at: #OilCoreSimulationModelTest) new.
+m := (Smalltalk at: #OilCoreSimulationModelTest) >> #sumScores:.
+items := (1 to: 10000) asArray collect: [:i | (Smalltalk at: #OilCoreSimulationItem) new score: i; yourself].
 expected := 10000 * 10001 // 2.
 timeOf := [:count :coll | | ms | ms := Time millisecondsToRun: [count timesRepeat: [model sumScores: coll]]. ms].
 
@@ -84,7 +84,7 @@ out nextPutAll: 'baseline (Cogit) sumScores: 1000 x 10000 elements: '; print: ba
 3 timesRepeat: [model sumScores: items].
 
 "--- Compile with Oil ---"
-compileResult := m oilCompileFor: (Smalltalk at: #OilTestModel).
+compileResult := m oilCompileFor: (Smalltalk at: #OilCoreSimulationModelTest).
 out nextPutAll: 'oilCompileFor: result: '; print: compileResult; cr; flush.
 last := CompiledMethod oilLastCompilation.
 out nextPutAll: 'last compilation: failure '; print: (last at: 1); nextPutAll: ' eager '; print: (last at: 3); nextPutAll: ' failed at IR '; print: (last at: 4);
@@ -106,7 +106,7 @@ info notNil ifTrue:
 r := model sumScores: items.
 check value: 'Oil sumScores: correct (50005000)' value: r = expected.
 check value: 'Oil sumScores: on an empty Array is 0' value: (model sumScores: #()) = 0.
-check value: 'Oil sumScores: on a 1 element Array' value: (model sumScores: {(Smalltalk at: #OilTestItem) new score: 42; yourself}) = 42.
+check value: 'Oil sumScores: on a 1 element Array' value: (model sumScores: {(Smalltalk at: #OilCoreSimulationItem) new score: 42; yourself}) = 42.
 info := m oilInfo.
 check value: 'no deoptimization so far' value: (info notNil and: [(info at: 1) = 0]).
 oilMs := timeOf value: 1000 value: items.
@@ -120,27 +120,27 @@ check value: 'Oil is faster than the baseline' value: oilMs < baseMs.
 
 "--- Deoptimization: a foreign element trips the class guard in the inlined block ---"
 wrong := (items first: 10) copy.
-wrong at: 5 put: (Smalltalk at: #OilWrongItem) new.
+wrong at: 5 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 check value: 'deopt in a 10 element Array at 5' value: (model sumScores: wrong) = (55 - 5 + 1000000).
 info := m oilInfo. before := info at: 1.
 wrong := items copy.
-wrong at: 5000 put: (Smalltalk at: #OilWrongItem) new.
+wrong at: 5000 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 r := model sumScores: wrong.
-check value: 'deopt: result with an OilWrongItem at 5000 is correct' value: r = (expected - 5000 + 1000000).
+check value: 'deopt: result with an OilCoreSimulationWrongItem at 5000 is correct' value: r = (expected - 5000 + 1000000).
 info := m oilInfo.
-out nextPutAll: 'deopts after OilWrongItem: '; print: (info at: 1); cr.
+out nextPutAll: 'deopts after OilCoreSimulationWrongItem: '; print: (info at: 1); cr.
 check value: 'deopt: the class guard deoptimized to the interpreter (deopt count +1)' value: (info at: 1) = (before + 1).
 check value: 'after deopt: Oil code still runs correctly' value: (model sumScores: items) = expected.
 check value: 'after deopt: still no further deopt' value: (m oilInfo at: 1) = (before + 1).
-wrong := items copy. wrong at: 1 put: (Smalltalk at: #OilWrongItem) new.
+wrong := items copy. wrong at: 1 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 check value: 'deopt at the first element' value: (model sumScores: wrong) = (expected - 1 + 1000000).
-wrong := items copy. wrong at: 10000 put: (Smalltalk at: #OilWrongItem) new.
+wrong := items copy. wrong at: 10000 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 check value: 'deopt at the last element' value: (model sumScores: wrong) = (expected - 10000 + 1000000).
 wrong := items copy. wrong at: 7 put: 3.
 check value: 'deopt on a SmallInteger element: the interpreter sends #score, MNU' value:
 	([model sumScores: wrong. false] on: MessageNotUnderstood do: [:e | e return: e message selector == #score]).
 "Overflow of the tagged add: the interpreter continues with a LargeInteger"
-wrong := {(Smalltalk at: #OilTestItem) new score: SmallInteger maxVal; yourself. (Smalltalk at: #OilTestItem) new score: 10; yourself}.
+wrong := {(Smalltalk at: #OilCoreSimulationItem) new score: SmallInteger maxVal; yourself. (Smalltalk at: #OilCoreSimulationItem) new score: 10; yourself}.
 check value: 'deopt on SmallInteger overflow: LargePositiveInteger result' value: (model sumScores: wrong) = (SmallInteger maxVal + 10).
 "A different collection class fails the guard on the argument, at the do: send in the root frame: the dissolved
  closure and temp vector are rematerialized, the closure's outerContext is the root frame's context"
@@ -150,10 +150,10 @@ info := m oilInfo.
 out nextPutAll: 'deopts after all deopt tests: '; print: (info at: 1); cr.
 
 "--- Forwarding fast path: a forwarded element passes the guard after unforwarding, without deopt ---"
-arr3 := (1 to: 100) asArray collect: [:i | (Smalltalk at: #OilTestItem) new score: i; yourself].
+arr3 := (1 to: 100) asArray collect: [:i | (Smalltalk at: #OilCoreSimulationItem) new score: i; yourself].
 model sumScores: arr3.
 x := arr3 at: 50.
-y := (Smalltalk at: #OilTestItem) new score: 1000; yourself.
+y := (Smalltalk at: #OilCoreSimulationItem) new score: 1000; yourself.
 before := m oilInfo.
 x becomeForward: y.
 r := model sumScores: arr3.
@@ -169,7 +169,7 @@ check value: 'after full GC: correct' value: (model sumScores: items) = expected
 1 to: 20 do: [:i | Array new: 100000].
 check value: 'after scavenges: correct' value: (model sumScores: items) = expected.
 Smalltalk garbageCollect.
-wrong := items copy. wrong at: 3333 put: (Smalltalk at: #OilWrongItem) new.
+wrong := items copy. wrong at: 3333 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 check value: 'deopt after full GC' value: (model sumScores: wrong) = (expected - 3333 + 1000000).
 
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.

@@ -13,16 +13,16 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM9Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM9Item instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM9Item) compile: 'score ^score' classified: 'tests'.
-(Smalltalk at: #OilM9Item) compile: 'score: n score := n' classified: 'tests'.
-Object subclass: #OilM9A instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM9B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM9A) compile: 'm9Size ^3' classified: 'tests'.
-(Smalltalk at: #OilM9B) compile: 'm9Size ^y + y + 1' classified: 'tests'.
-(Smalltalk at: #OilM9B) compile: 'y: v y := v' classified: 'tests'.
-cls := Smalltalk at: #OilM9Model.
+Object subclass: #OilLoopUnrollingTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilLoopUnrollingItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilLoopUnrollingItem) compile: 'score ^score' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingItem) compile: 'score: n score := n' classified: 'tests'.
+Object subclass: #OilLoopUnrollingA instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilLoopUnrollingB instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilLoopUnrollingA) compile: 'm9Size ^3' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingB) compile: 'm9Size ^y + y + 1' classified: 'tests'.
+(Smalltalk at: #OilLoopUnrollingB) compile: 'y: v y := v' classified: 'tests'.
+cls := Smalltalk at: #OilLoopUnrollingTest.
 "Each probe twice: sel (compiled by Oil) and selBase (left to the baseline JIT, for the expected results: running sel on
  unusual arguments before compiling it would make its sends polymorphic)."
 #('sum3: a | s | s := 0. 1 to: 3 do: [:i | s := s + (a at: i)]. ^s'
@@ -117,7 +117,7 @@ times := [:block | | best | best := SmallInteger maxVal. 5 timesRepeat: [best :=
 info := [:sel | (cls >> sel) oilInfo].
 arr := (1 to: 1000000) asArray.
 arr1k := (1 to: 1000) collect: [:k | k odd ifTrue: [k] ifFalse: [k negated]].
-items := (1 to: 1000) collect: [:k | (Smalltalk at: #OilM9Item) new score: k; yourself].
+items := (1 to: 1000) collect: [:k | (Smalltalk at: #OilLoopUnrollingItem) new score: k; yourself].
 
 "--- Probes: {selector. arguments for warming up. argument lists checked (results and deopts). check of the statistics {full. partial. young. rotated}. benchmark block (or nil)} ---"
 probes := {
@@ -135,7 +135,7 @@ probes := {
 	{#pointSum:. {100}. {{0}. {1}. {7}. {1000}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 10 timesRepeat: [model perform: sel with: 1000000]]}.
 	{#countA:. {'banana'}. {{'banana'}. {''}. {'aaaaaaaaa'}. {(String new: 100000 withAll: $a)}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: (String new: 1000000 withAll: $a)]]}.
 	{#fill:with:. {Array new: 10. 3}. {{Array new: 0. 3}. {Array new: 7. 'x'}. {Array new: 100000. 3 @ 4}. {#(1 2 3) beReadOnlyObject; yourself. 9}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. [:sel | 20 timesRepeat: [model perform: sel with: (Array new: 1000000) with: 'x']]}.
-	{#sizeSum:. {{(Smalltalk at: #OilM9A) new. (Smalltalk at: #OilM9B) new y: 2; yourself}}. {{(1 to: 1001) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilM9A) new] ifFalse: [(Smalltalk at: #OilM9B) new y: k; yourself]]}. {{(Smalltalk at: #OilM9A) new. 3. (Smalltalk at: #OilM9A) new}}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. nil}.
+	{#sizeSum:. {{(Smalltalk at: #OilLoopUnrollingA) new. (Smalltalk at: #OilLoopUnrollingB) new y: 2; yourself}}. {{(1 to: 1001) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilLoopUnrollingA) new] ifFalse: [(Smalltalk at: #OilLoopUnrollingB) new y: k; yourself]]}. {{(Smalltalk at: #OilLoopUnrollingA) new. 3. (Smalltalk at: #OilLoopUnrollingA) new}}}. [:st | (st at: 2) = 0 and: [(st at: 4) >= 1]]. nil}.
 	{#young:. {3}. {{3}. {'x'}. {#foo}}. [:st | (st at: 3) = 0]. nil}.
 	{#youngLoop:. {10}. {{0}. {1}. {10}. {300000}}. [:st | (st at: 3) = 0]. [:sel | 10 timesRepeat: [model perform: sel with: 100000]]}}.
 probes do: [:spec | | sel baseSel results code st |

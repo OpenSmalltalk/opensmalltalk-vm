@@ -16,15 +16,15 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-model := OilTestModel new.
+model := OilCoreSimulationModelTest new.
 coll := OrderedCollection new.
-1 to: 12 do: [:i | coll add: (OilTestItem new score: i; yourself)].
+1 to: 12 do: [:i | coll add: (OilCoreSimulationItem new score: i; yourself)].
 coll removeFirst; removeFirst.
-arr := (1 to: 10) collect: [:i | OilTestItem new score: i * 3; yourself].
-mixed := OrderedCollection new. coll do: [:e | mixed add: e]. mixed add: OilTestOther new.
-arrWithOther := arr copy. arrWithOther at: 5 put: OilTestOther new.
+arr := (1 to: 10) collect: [:i | OilCoreSimulationItem new score: i * 3; yourself].
+mixed := OrderedCollection new. coll do: [:e | mixed add: e]. mixed add: OilCoreSimulationOther new.
+arrWithOther := arr copy. arrWithOther at: 5 put: OilCoreSimulationOther new.
 arrWithInt := arr copy. arrWithInt at: 7 put: 42.
-arrOverflow := arr copy. arrOverflow at: 3 put: (OilTestItem new score: SmallInteger maxVal; yourself).
+arrOverflow := arr copy. arrOverflow at: 3 put: (OilCoreSimulationItem new score: SmallInteger maxVal; yourself).
 
 "compile: Pass 1 with type feedback from sample arguments, then (if pass2) Pass 2"
 compile := [:sel :argLists :pass2 |
@@ -33,7 +33,7 @@ compile := [:sel :argLists :pass2 |
 	argLists do: [:args | fbk record: [[model perform: sel withArguments: args] on: Error do: [:e | e return: nil]]].
 	comp := OilCompiler new.
 	comp typeFeedback: fbk.
-	comp compileMethod: OilTestModel >> sel receiverClass: (comp handleFor: OilTestModel).
+	comp compileMethod: OilCoreSimulationModelTest >> sel receiverClass: (comp handleFor: OilCoreSimulationModelTest).
 	pass2 ifTrue: [comp loopOptimize].
 	comp].
 run := [:comp :sel :args | [(OilIRInterpreter new on: comp) run: model with: args] on: Error do: [:e | #error -> e description]].
@@ -58,7 +58,7 @@ check value: 'sumScores:(Array) index increment unchecked (AddImmTaggedNC)' valu
 check value: 'sumScores:(Array) element class guard and tagged add kept (deopt sites)' value: ((hist occurrencesOf: 'GuardClass') = 3 and: [(hist occurrencesOf: 'AddTagged') = 1]).
 check value: 'sumScores:(Array) statistics: 1 rotated, 1 bounds check removed, 1 size shared, 1 unchecked increment' value: ((stats value: c) in: [:st | (st at: 1) = 1 and: [(st at: 2) = 1 and: [(st at: 4) = 1 and: [(st at: 5) = 1]]]]).
 #(0 1 2 10 1000) do: [:n | | a |
-	a := (1 to: n) asArray collect: [:i | OilTestItem new score: i; yourself].
+	a := (1 to: n) asArray collect: [:i | OilCoreSimulationItem new score: i; yourself].
 	check value: 'sumScores:(Array) Pass 2 IR result = real result for ', n printString, ' elements' value: (run value: c value: #sumScores: value: {a}) = (model sumScores: a)].
 check value: 'sumScores:(Array) Pass 2 IR deopts on a foreign element' value: ((run value: c value: #sumScores: value: {arrWithOther}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]]).
 check value: 'sumScores:(Array) Pass 2 IR deopts on a SmallInteger element' value: ((run value: c value: #sumScores: value: {arrWithInt}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]]).
@@ -67,7 +67,7 @@ check value: 'sumScores:(Array) Pass 2 IR deopts on an OrderedCollection argumen
 check value: 'sumScores:(Array) Pass 2 IR fits Buffer 2' value: c irIndex < 4096.
 
 "--- 1b. A hash probe (repeat loop, \\ by the array size) called from a loop: inlined, no calls ---"
-OilTestModel compile: 'probeHash: anArray key: key
+OilCoreSimulationModelTest compile: 'probeHash: anArray key: key
 	| index length element |
 	length := anArray size.
 	index := (key hash \\ length) + 1.
@@ -75,7 +75,7 @@ OilTestModel compile: 'probeHash: anArray key: key
 	 element == nil ifTrue: [^index].
 	 element == key ifTrue: [^index].
 	 index := index \\ length + 1] repeat' classified: 'probes'.
-OilTestModel compile: 'probeLoop: anArray key: key
+OilCoreSimulationModelTest compile: 'probeLoop: anArray key: key
 	| sum |
 	sum := 0.
 	1 to: 100 do: [:i | sum := sum + (self probeHash: anArray key: key)].
@@ -96,20 +96,20 @@ OilTestModel compile: 'probeLoop: anArray key: key
  check value: 'probeLoop: Pass 2 IR deopts on an empty table (ZeroDivide)' value: ((run value: c value: #probeLoop:key: value: {#(). 5}) in: [:r | (r isKindOf: Association) and: [r key == #deopt]])] value.
 
 "--- 1c. Byte objects: ByteString at:/size, String>>= (inlined, compareWith: as an intrinsic), ByteArray at:put: ---"
-OilTestModel compile: 'countA: aString
+OilCoreSimulationModelTest compile: 'countA: aString
 	| n |
 	n := 0.
 	1 to: aString size do: [:i | (aString at: i) == $a ifTrue: [n := n + 1]].
 	^n' classified: 'probes'.
-OilTestModel compile: 'countEqual: aString in: anArray
+OilCoreSimulationModelTest compile: 'countEqual: aString in: anArray
 	| n |
 	n := 0.
 	anArray do: [:e | e = aString ifTrue: [n := n + 1]].
 	^n' classified: 'probes'.
-OilTestModel compile: 'fillBytes: aByteArray
+OilCoreSimulationModelTest compile: 'fillBytes: aByteArray
 	1 to: aByteArray size do: [:i | aByteArray at: i put: i \\ 256].
 	^aByteArray' classified: 'probes'.
-OilTestModel compile: 'upcase: aString
+OilCoreSimulationModelTest compile: 'upcase: aString
 	| s |
 	s := aString copy.
 	1 to: s size do: [:i | | c | c := s at: i. (c between: $a and: $z) ifTrue: [s at: i put: (Character value: c asInteger - 32)]].
@@ -141,8 +141,8 @@ probes := {
 	{#sumArray:. {{arr}}. {{arr}. {#()}. {arrWithOther}. {arrWithInt}. {arrOverflow}}}.
 	{#sumIndexed:. {{arr}}. {{arr}. {#()}. {arrWithOther}. {arrOverflow}}}.
 	{#peepholes:with:. {{37. 12}. {-5. 7}}. {{37. 12}. {-5. 7}. {0. 0}. {1000000. -3}. {-1. -1}. {SmallInteger maxVal. 1}}}.
-	{#callProbe:with:with:. {{coll first. 1. 2}. {OilTestOther new. 3. 4}}. {{coll first. 5. 6}. {OilTestOther new. 5. 6}}}.
-	{#detectProbe:. {{coll}}. {{coll}. {OrderedCollection with: (OilTestItem new score: 1; yourself)}}}.
+	{#callProbe:with:with:. {{coll first. 1. 2}. {OilCoreSimulationOther new. 3. 4}}. {{coll first. 5. 6}. {OilCoreSimulationOther new. 5. 6}}}.
+	{#detectProbe:. {{coll}}. {{coll}. {OrderedCollection with: (OilCoreSimulationItem new score: 1; yourself)}}}.
 	{#countEven:. {{arr}}. {{arr}. {#()}. {arrWithOther}}}.
 	{#hashProbe:with:. {{(Set withAll: (1 to: 40 by: 3)). 7}. {(Set withAll: (1 to: 40 by: 3)). 8}}. (#(7 8 1 40 37 100 -3) collect: [:k | {Set withAll: (1 to: 40 by: 3). k}])}.
 	{#sumInterval:. {{10}}. {{0}. {1}. {10}. {1000}}}.
@@ -189,7 +189,7 @@ check value: 'robustness: Pass 2 optimized some loops' value: (loopHist at: 1) >
  fbk record: [model sumScores: arr].
  comp := OilCompiler new. comp typeFeedback: fbk.
  n := 1000.
- us := Time microsecondsToRun: [n timesRepeat: [comp compileMethod: OilTestModel >> #sumScores: receiverClass: (comp handleFor: OilTestModel). comp loopOptimize]].
+ us := Time microsecondsToRun: [n timesRepeat: [comp compileMethod: OilCoreSimulationModelTest >> #sumScores: receiverClass: (comp handleFor: OilCoreSimulationModelTest). comp loopOptimize]].
  out cr; nextPutAll: 'Pass 1 + Pass 2 time for sumScores: (in image, simulated object access): '; print: (us / n) asFloat; nextPutAll: ' us per compilation'; cr] value.
 
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.

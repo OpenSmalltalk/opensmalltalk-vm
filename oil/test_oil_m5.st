@@ -8,14 +8,14 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-Object subclass: #OilWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilWrongItem) compile: 'score ^1000000' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) compile: 'extTag ^score' classified: 'accessing'.
-(Smalltalk at: #OilWrongItem) compile: 'extTag ^7' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilCoreSimulationItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score ^score' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
+Object subclass: #OilCoreSimulationWrongItem instanceVariableNames: 'weight' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilCoreSimulationWrongItem) compile: 'score ^1000000' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationItem) compile: 'extTag ^score' classified: 'accessing'.
+(Smalltalk at: #OilCoreSimulationWrongItem) compile: 'extTag ^7' classified: 'accessing'.
+Object subclass: #OilCoreSimulationModelTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 #('sumScores: aCollection | sum | sum := 0. aCollection do: [:each | sum := sum + each score]. ^sum'
   'braceOf: a and: b ^{a. b. a + b. nil}'
   'constLeft: x ^(200 + (x * 3)) + ((1000 < (x * 3)) ifTrue: [10] ifFalse: [20])'
@@ -49,14 +49,14 @@ Object subclass: #OilTestModel instanceVariableNames: 'total' classVariableNames
     array := Array new: 8191.
     1 to: 4000 do: [:i | array at: (i * 17 BS 8191) + 1 put: i * 17].
     ^ [10 to: 1000000 do: [:i | self hashProbe: array key: (4000 * 17)]] timeToRun')
-	do: [:s | (Smalltalk at: #OilTestModel) compile: (s copyReplaceAll: 'BS' with: (String with: $\ with: $\)) classified: 'tests'].
-(Smalltalk at: #OilTestModel) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
-(Smalltalk at: #OilTestModel) class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
+	do: [:s | (Smalltalk at: #OilCoreSimulationModelTest) compile: (s copyReplaceAll: 'BS' with: (String with: $\ with: $\)) classified: 'tests'].
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
-(Smalltalk at: #OilTestModel) class compile: 'oilSetSelectors: pairs
+(Smalltalk at: #OilCoreSimulationModelTest) class compile: 'oilSetSelectors: pairs
 	| cold |
 	(self oilSetParameter: 19 to: 0) == #failed ifTrue: [^#failed].
 	#(8 12 13 14 15 16 17 18) do: [:index | self oilSetParameter: index to: 0].
@@ -77,21 +77,21 @@ sels add: 5; add: #bitXor:.
 	do: [:s | sels add: 6; add: s].
 #(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed:)
 	do: [:s | sels add: 7; add: s].
-check value: 'primitiveOilSetSelectors' value: ((Smalltalk at: #OilTestModel) oilSetSelectors: sels asArray) ~~ #failed.
+check value: 'primitiveOilSetSelectors' value: ((Smalltalk at: #OilCoreSimulationModelTest) oilSetSelectors: sels asArray) ~~ #failed.
 check value: 'code zone >= 4 MB' value: (Smalltalk vmParameterAt: 46) >= (4 * 1024 * 1024).
-model := (Smalltalk at: #OilTestModel) new total: 0; yourself.
+model := (Smalltalk at: #OilCoreSimulationModelTest) new total: 0; yourself.
 "compile: warm up (baseline JIT), Oil-compile, answer the compile result"
 res := [:sel :warm | | cm |
-	cm := (Smalltalk at: #OilTestModel) >> sel.
+	cm := (Smalltalk at: #OilCoreSimulationModelTest) >> sel.
 	3 timesRepeat: warm.
-	r := cm oilCompileFor: (Smalltalk at: #OilTestModel).
+	r := cm oilCompileFor: (Smalltalk at: #OilCoreSimulationModelTest).
 	last := CompiledMethod oilLastCompilation.
 	out nextPutAll: sel; nextPutAll: ': oilCompileFor: -> '; print: r; nextPutAll: ' (Pass 2 '; print: (last at: 11); nextPutAll: ')'; cr; flush.
 	r].
 
 "--- 1. Brace arrays (OilNewArray) ---"
 check value: 'braceOf:and: compiles (OilNewArray)' value: (res value: #braceOf:and: value: [model braceOf: 3 and: 4]) = 0.
-check value: 'braceOf:and: has Oil code' value: ((Smalltalk at: #OilTestModel) >> #braceOf:and:) oilInfo notNil.
+check value: 'braceOf:and: has Oil code' value: ((Smalltalk at: #OilCoreSimulationModelTest) >> #braceOf:and:) oilInfo notNil.
 check value: 'braceOf:and: result' value: (model braceOf: 3 and: 4) = {3. 4. 7. nil}.
 check value: 'braceOf:and: with Floats (deopts on the SmallInteger add)' value: (model braceOf: 1.5 and: 2) = {1.5. 2. 3.5. nil}.
 arr := (1 to: 1000) collect: [:k | model braceOf: k and: 1].
@@ -104,13 +104,13 @@ check value: 'makeCounter compiles (closure + temp vector)' value: (res value: #
 counter := model makeCounter.
 check value: 'makeCounter: counter works' value: (counter value = 1 and: [counter value = 2 and: [counter value = 3]]).
 check value: 'makeCounter: counters are independent' value: (model makeCounter value = 1).
-check value: 'makeCounter: outerContext is the home context' value: (counter outerContext notNil and: [counter outerContext method == ((Smalltalk at: #OilTestModel) >> #makeCounter)]).
+check value: 'makeCounter: outerContext is the home context' value: (counter outerContext notNil and: [counter outerContext method == ((Smalltalk at: #OilCoreSimulationModelTest) >> #makeCounter)]).
 check value: 'adderFor: compiles' value: (res value: #adderFor: value: [model adderFor: 1]) = 0.
 model total: 100.
 check value: 'adderFor: closure (copied value + self)' value: ((model adderFor: 5) value: 7) = 112.
 check value: 'cleanBlock compiles' value: (res value: #cleanBlock value: [model cleanBlock]) = 0.
 check value: 'cleanBlock works' value: (model cleanBlock value: 3 value: 4) = 7.
-items := (1 to: 10) collect: [:k | (Smalltalk at: #OilTestItem) new score: k; yourself].
+items := (1 to: 10) collect: [:k | (Smalltalk at: #OilCoreSimulationItem) new score: k; yourself].
 check value: 'escapeAndCall: compiles' value: (res value: #escapeAndCall: value: [model escapeAndCall: items]) = 0.
 check value: 'escapeAndCall: result' value: (model escapeAndCall: items) = ((1 to: 10) collect: [:k | k * 2]).
 check value: 'detectFirstOver:in: compiles' value: (res value: #detectFirstOver:in: value: [model detectFirstOver: 5 in: items]) = 0.
@@ -121,7 +121,7 @@ check value: 'detectFirstOver:in: not found' value: (model detectFirstOver: 50 i
 check value: 'allocLoop: compiles' value: (res value: #allocLoop: value: [model allocLoop: 10]) = 0.
 check value: 'allocLoop: small' value: (model allocLoop: 10) = #(10 11 12).
 check value: 'allocLoop: 3,000,000 arrays (crosses the scavenge threshold)' value: (model allocLoop: 3000000) = #(3000000 3000001 3000002).
-info := ((Smalltalk at: #OilTestModel) >> #allocLoop:) oilInfo.
+info := ((Smalltalk at: #OilCoreSimulationModelTest) >> #allocLoop:) oilInfo.
 check value: 'allocLoop: still Oil code (allocation deoptimizations do not disqualify)' value: info notNil.
 check value: 'allocLoop: no deoptimization counted' value: (info notNil and: [(info at: 1) = 0]).
 check value: 'allocLoop: again' value: (model allocLoop: 3000000) = #(3000000 3000001 3000002).
@@ -129,12 +129,12 @@ t := Time millisecondsToRun: [model allocLoop: 3000000].
 out nextPutAll: 'allocLoop: 3,000,000 brace arrays: '; print: t; nextPutAll: ' ms'; cr.
 
 "--- 4. Disqualification after 2 deoptimizations ---"
-items := (1 to: 1000) asArray collect: [:k | (Smalltalk at: #OilTestItem) new score: k; yourself].
+items := (1 to: 1000) asArray collect: [:k | (Smalltalk at: #OilCoreSimulationItem) new score: k; yourself].
 expected := 1000 * 1001 // 2.
 check value: 'sumScores: compiles' value: (res value: #sumScores: value: [model sumScores: items]) = 0.
-m := (Smalltalk at: #OilTestModel) >> #sumScores:.
+m := (Smalltalk at: #OilCoreSimulationModelTest) >> #sumScores:.
 check value: 'sumScores: Oil code' value: m oilInfo notNil.
-wrong := items copy. wrong at: 500 put: (Smalltalk at: #OilWrongItem) new.
+wrong := items copy. wrong at: 500 put: (Smalltalk at: #OilCoreSimulationWrongItem) new.
 check value: 'sumScores: first deopt correct' value: (model sumScores: wrong) = (expected - 500 + 1000000).
 info := m oilInfo.
 check value: 'sumScores: after 1 deopt still Oil code' value: (info notNil and: [(info at: 1) = 1]).
@@ -143,7 +143,7 @@ check value: 'sumScores: after 2 deopts, the Oil code is freed' value: m oilInfo
 check value: 'sumScores: correct afterwards' value: ((1 to: 5) collect: [:k | model sumScores: wrong]) asSet asArray = {expected - 500 + 1000000}.
 check value: 'sumScores: correct on the original items' value: (model sumScores: items) = expected.
 check value: 'sumScores: back to baseline machine code, not Oil' value: m oilInfo isNil.
-check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m oilCompileFor: (Smalltalk at: #OilTestModel)) = 16.
+check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m oilCompileFor: (Smalltalk at: #OilCoreSimulationModelTest)) = 16.
 
 "--- 5. Byte objects: ByteString at:/size/=, ByteArray at:put: ---"
 [| text strs bytes base oil info2 |
@@ -159,7 +159,7 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  check value: 'countEqual:in: prefix' value: (model countEqual: '3abcdefghijklmnopqrstuvwxy' in: strs) = 0.
  check value: 'countEqual:in: last byte differs' value: (model countEqual: '3abcdefghijklmnopqrstuvwxyZ' in: strs) = 0.
  check value: 'countEqual:in: empty strings' value: (model countEqual: '' in: #('' 'a' '')) = 2.
- info2 := ((Smalltalk at: #OilTestModel) >> #countEqual:in:) oilInfo.
+ info2 := ((Smalltalk at: #OilCoreSimulationModelTest) >> #countEqual:in:) oilInfo.
  out nextPutAll: 'countEqual:in: deopts: '; print: (info2 ifNotNil: [info2 at: 1]); cr.
  bytes := ByteArray new: 1000.
  check value: 'fillBytes: compiles' value: (res value: #fillBytes: value: [model fillBytes: (ByteArray new: 10)]) = 0.
@@ -191,7 +191,7 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  r1 := text substrings size.
  check value: 'words: result' value: (model words: text) = r1.
  check value: 'words: small' value: (model words: ' hello  world foo ') = 3.
- out nextPutAll: 'words: deopts '; print: (((Smalltalk at: #OilTestModel) >> #words:) oilInfo ifNotNil: [:x | x at: 1]); cr.
+ out nextPutAll: 'words: deopts '; print: (((Smalltalk at: #OilCoreSimulationModelTest) >> #words:) oilInfo ifNotNil: [:x | x at: 1]); cr.
  oil := Time millisecondsToRun: [100 timesRepeat: [model copyChars: text]].
  out nextPutAll: 'copyChars: 100 x 20000 chars: Oil '; print: oil; nextPutAll: ' ms'; cr.
  oil := Time millisecondsToRun: [100 timesRepeat: [model words: text]].
@@ -199,7 +199,7 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
 
 "--- 5c. Sends of selectors that are not among the root's literals (the Oil selector table) ---"
 [| extArr exp frames |
- extArr := (1 to: 100) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilTestItem) new score: k; yourself] ifFalse: [(Smalltalk at: #OilWrongItem) new]].
+ extArr := (1 to: 100) collect: [:k | k odd ifTrue: [(Smalltalk at: #OilCoreSimulationItem) new score: k; yourself] ifFalse: [(Smalltalk at: #OilCoreSimulationWrongItem) new]].
  exp := (extArr inject: 0 into: [:a :e | a + e extTag + 1]).
  check value: 'extSum: compiles' value: (res value: #extSum: value: [model extSum: extArr]) = 0.
  frames := last at: 6.
@@ -207,13 +207,13 @@ check value: 'sumScores: not compiled again (FailDisqualified = 16)' value: (m o
  check value: 'extSum: inlines extA: (whose polymorphic extTag send is not among the root literals)' value: frames >= 2.
  check value: 'extSum: result' value: (model extSum: extArr) = exp.
  check value: 'extSum: result again (linked)' value: ((1 to: 3) collect: [:k | model extSum: extArr]) asSet asArray = {exp}.
- (Smalltalk at: #OilWrongItem) compile: 'extTag ^8' classified: 'accessing'.
+ (Smalltalk at: #OilCoreSimulationWrongItem) compile: 'extTag ^8' classified: 'accessing'.
  check value: 'extSum: after redefining extTag (sends unlinked through the selector table)' value: (model extSum: extArr) = (exp + 50).
  Smalltalk garbageCollect.
  check value: 'extSum: after a full GC' value: (model extSum: extArr) = (exp + 50).
- check value: 'extSum: still Oil code' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo notNil.
- (Smalltalk at: #OilTestModel) compile: 'extA: x ^x extTag + 10' classified: 'tests'.
- check value: 'extSum: Oil code discarded when inlined extA: is redefined' value: ((Smalltalk at: #OilTestModel) >> #extSum:) oilInfo isNil.
+ check value: 'extSum: still Oil code' value: ((Smalltalk at: #OilCoreSimulationModelTest) >> #extSum:) oilInfo notNil.
+ (Smalltalk at: #OilCoreSimulationModelTest) compile: 'extA: x ^x extTag + 10' classified: 'tests'.
+ check value: 'extSum: Oil code discarded when inlined extA: is redefined' value: ((Smalltalk at: #OilCoreSimulationModelTest) >> #extSum:) oilInfo isNil.
  check value: 'extSum: uses redefined extA:' value: (model extSum: extArr) = (exp + 50 + 900)] value.
 
 "--- 6. benchmarkHashProbe compiles ---"

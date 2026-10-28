@@ -17,19 +17,19 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM8A) compile: 'oilM8Size ^3' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'y: v y := v' classified: 'tests'.
-(Smalltalk at: #OilM8A) compile: 'oilM8Maybe ^nil' classified: 'tests'.
-(Smalltalk at: #OilM8B) compile: 'oilM8Maybe ^self' classified: 'tests'.
+Object subclass: #OilScalarReplacementTest instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilScalarReplacementA instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilScalarReplacementB instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilScalarReplacementA) compile: 'oilM8Size ^3' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'y: v y := v' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementA) compile: 'oilM8Maybe ^nil' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementB) compile: 'oilM8Maybe ^self' classified: 'tests'.
 "a branch-free method inlined on a scalar replaced self (canInlineOnVObj:) that inlines max:, whose labels materialize it"
-Object subclass: #OilM8Acc instanceVariableNames: 'v' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilM8Acc) compile: 'v ^v' classified: 'tests'.
-(Smalltalk at: #OilM8Acc) compile: 'v: x v := x max: 0' classified: 'tests'.
-cls := Smalltalk at: #OilM8Model.
+Object subclass: #OilScalarReplacementAcc instanceVariableNames: 'v' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilScalarReplacementAcc) compile: 'v ^v' classified: 'tests'.
+(Smalltalk at: #OilScalarReplacementAcc) compile: 'v: x v := x max: 0' classified: 'tests'.
+cls := Smalltalk at: #OilScalarReplacementTest.
 #('pointSum: n | s | s := 0. 1 to: n do: [:i | | p | p := i @ (i + 1). s := s + p x + p y]. ^s'
   'pointNew: n | s | s := 0. 1 to: n do: [:i | | p | p := Point x: i y: 3. s := s + (p x * p y)]. ^s'
   'assocSum: n | s | s := 0. 1 to: n do: [:i | | a | a := i -> (i * 2). s := s + a key + a value]. ^s'
@@ -46,7 +46,7 @@ cls := Smalltalk at: #OilM8Model.
   'constHash ^#foo hash + ByteString identityHash'
   'probe: anArray key: key | index length element | length := anArray size. index := (key hash \\ length) + 1. [element := anArray at: index. element == nil ifTrue: [^index]. element == key ifTrue: [^index]. index := index \\ length + 1] repeat'
   'count: keys in: aSet | n | n := 0. 1 to: keys size do: [:i | (aSet includes: (keys at: i)) ifTrue: [n := n + 1]]. ^n'
-  'accSelf: n | r | r := OilM8Acc new. r v: n. ^r v')
+  'accSelf: n | r | r := OilScalarReplacementAcc new. r v: n. ^r v')
 	do: [:s | cls compile: s classified: 'tests'].
 model := cls new.
 syms := #(#foo #bar #baz #qux #printOn: #size #at:put:).
@@ -74,8 +74,8 @@ probes := {
 	{#assocPointEscape:. {{3}}. {{3}. {5}}. [:st :h | (st at: 2) = 2 and: [(h occurrencesOf: #NewObject) = 2]]}.
 	{#pointEq:. {{3}}. {{3}}. [:st :h | (st at: 2) = 0 and: [(h occurrencesOf: #NewObject) = 0]]}.
 	{#isSymProbe:. {{#(#a 'b' #c 'd')}}. {{#(#a 'b' #c 'd')}. {#(#a #b)}. {#()}}. [:st :h | (st at: 4) = 1 and: [(h occurrencesOf: #CmpClass) = 1 and: [(h occurrencesOf: #GuardClass2) = 1 and: [(h occurrencesOf: #Call0) = 0]]]]}.
-	{#sizeSum:. {{{(Smalltalk at: #OilM8A) new. (Smalltalk at: #OilM8B) new y: 5; yourself}}}. {{{(Smalltalk at: #OilM8A) new. (Smalltalk at: #OilM8B) new y: 5; yourself. (Smalltalk at: #OilM8A) new}}}. [:st :h | (st at: 3) = 1 and: [(h occurrencesOf: #CmpClass) = 1 and: [(h occurrencesOf: #Call0) = 0]]]}.
-	{#nilCount:. {{{(Smalltalk at: #OilM8A) new. (Smalltalk at: #OilM8B) new}}}. {{{(Smalltalk at: #OilM8A) new. (Smalltalk at: #OilM8B) new. (Smalltalk at: #OilM8B) new}}. {{3}}}. [:st :h | (st at: 6) = 1 and: [(h occurrencesOf: #CmpClass) = 1 and: [(h occurrencesOf: #GuardClass2) = 1 and: [(h occurrencesOf: #Call0) = 0]]]]}.
+	{#sizeSum:. {{{(Smalltalk at: #OilScalarReplacementA) new. (Smalltalk at: #OilScalarReplacementB) new y: 5; yourself}}}. {{{(Smalltalk at: #OilScalarReplacementA) new. (Smalltalk at: #OilScalarReplacementB) new y: 5; yourself. (Smalltalk at: #OilScalarReplacementA) new}}}. [:st :h | (st at: 3) = 1 and: [(h occurrencesOf: #CmpClass) = 1 and: [(h occurrencesOf: #Call0) = 0]]]}.
+	{#nilCount:. {{{(Smalltalk at: #OilScalarReplacementA) new. (Smalltalk at: #OilScalarReplacementB) new}}}. {{{(Smalltalk at: #OilScalarReplacementA) new. (Smalltalk at: #OilScalarReplacementB) new. (Smalltalk at: #OilScalarReplacementB) new}}. {{3}}}. [:st :h | (st at: 6) = 1 and: [(h occurrencesOf: #CmpClass) = 1 and: [(h occurrencesOf: #GuardClass2) = 1 and: [(h occurrencesOf: #Call0) = 0]]]]}.
 	{#symHash:. {{#foo}}. {{#foo}. {#bar}. {#at:put:}}. [:st :h | (h occurrencesOf: #StringHash) = 1 and: [(h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]]}.
 	{#constHash. {{}}. {{}}. [:st :h | (h occurrencesOf: #StringHash) + (h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]}.
 	{#probe:key:. {{#(nil 4 nil 6 nil). 4}. {#(nil 4 nil 6 nil). 6}}. {{#(nil 4 nil 6 nil). 4}. {#(nil 4 nil 6 nil). 6}. {#(nil 4 nil 6 nil). 7}}. [:st :h | (h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]}.
