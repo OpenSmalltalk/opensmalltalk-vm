@@ -4,7 +4,7 @@ StackToRegisterMappingCogit subclass: #ProfilingCogit
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
 !ProfilingCogit commentStamp: 'cb 10/27/2026 22:55' prior: 0!
-A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
+A ProfilingCogit is the profiling tier of Oil, the lightweight compiler for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil compiler needs when inlining.
 
 Trip counters are placed only at loop back jumps (genJumpBackTo:).  Straight-line code, conditional branches and block entries carry no profiling overhead, and methods without loops get no counters at all (a hot block is found through the loop that evaluates it, see CoInterpreter>>ceOilTrip:).  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to the kind of site (OilTripBackJump, the only kind).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), compiles it with Oil and installs the Oil code for its next activations (see CoInterpreter>>oilAutoCompile:receiver:), and returns directly to machine code.  Nothing on the trip path collects garbage or changes the stack: the running activations keep running the baseline code.  The site then restarts its counter from the count ceOilTrip: answers: OilInitialCounterValue while the home method may still get an Oil specialization for another receiver class (the baseline code stays behind the method's Dispatcher), OilTripRetryCount after a transient failure (a full code zone), and OilTripBackOffCount (about 2^30) when Oil cannot or need not compile it (disqualified, all specializations taken, a clean block...), so that such a loop does not keep calling ceOilTrip:.
 
@@ -298,7 +298,7 @@ writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator
 
 !VMMaker class methodsFor: '*VMMaker-JIT-Oil-configurations' stamp: 'cb 10/26/2026 20:20'!
 generateSqueakSpurCogOil64VM
-	"The 64-bit Cog Spur VM with the ProfilingCogit, the profiling tier of the Oil optimizing JIT."
+	"The 64-bit Cog Spur VM with the ProfilingCogit, the profiling tier of the Oil lightweight compiler."
 	^VMMaker
 		generate: CoInterpreter
 		and: ProfilingCogit

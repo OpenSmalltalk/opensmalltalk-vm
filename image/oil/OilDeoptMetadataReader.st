@@ -279,7 +279,7 @@ oilMetadataFor: aClass
 !Context methodsFor: 'debugger access' stamp: 'cb 10/26/2026 14:30'!
 contexts
 	"Answer the method -> pc associations of the activations I stand for, innermost first.  That is one, mine, unless I am
-	 the context of the frame of a method compiled by the Oil optimizing JIT, which stands for the activations of the
+	 the context of the frame of a method compiled by the Oil lightweight compiler, which stands for the activations of the
 	 methods and blocks it inlined at the call it is suspended in, and its own.  (Belongs to Kernel; see deoptimize.)"
 	^(self oilContextChain ifNil: [^{self method -> self pc}])
 		pairsCollect: [:method :pc | method -> pc]! !
@@ -292,7 +292,7 @@ oilContextChain
 
 !Context methodsFor: 'debugger access' stamp: 'cb 10/26/2026 14:30'!
 deoptimize
-	"If I am the context of the frame of a method compiled by the Oil optimizing JIT, replace the frame by real contexts
+	"If I am the context of the frame of a method compiled by the Oil lightweight compiler, replace the frame by real contexts
 	 for the activations it stands for (see contexts), and answer the innermost: its sender chain leads to me, now the
 	 context of the Oil method's activation.  Otherwise answer me.  (Belongs to Kernel: a debugger deoptimizes the
 	 contexts it shows.)"

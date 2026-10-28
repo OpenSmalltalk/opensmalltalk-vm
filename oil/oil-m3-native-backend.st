@@ -1,4 +1,4 @@
-"The native back end of the Oil optimizing JIT, its deopt stubs and the deoptimizer.
+"The native back end of the Oil lightweight compiler, its deopt stubs and the deoptimizer.
  - ProfilingCogit drives the compilation of an Oil method (oilCompile:receiverClass: runs Pass 1, oilGenerate: runs
    Pass 3 and builds the CogMethod and its deoptimization metadata) and owns ceOilDeoptTrampoline.
  - CoInterpreter>>ceOilDeoptimize: is the deoptimizer: on a failed guard it either unforwards and resumes the machine code
@@ -27,7 +27,7 @@
 
 !Cogit methodsFor: '*VMMaker-JIT-Oil' stamp: 'cb 10/24/2026 15:00'!
 isOilMethod: cogMethod
-	"Answer whether cogMethod was compiled by the Oil optimizing JIT (see ProfilingCogit).
+	"Answer whether cogMethod was compiled by the Oil lightweight compiler (see ProfilingCogit).
 	 Oil methods' machine code does not correspond to their bytecodes, so the interpreter must not
 	 map bytecode pcs into them."
 	<api>
@@ -691,7 +691,7 @@ numTrampolines
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
-	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
+	 Oil's lightweight compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
 	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilVirtualFrame. OilVirtualObject. OilLazyCondition. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
 
 

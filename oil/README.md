@@ -1,6 +1,6 @@
 # Oil JIT: `ProfilingCogit` and Native Runtime
 
-`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the optimizing JIT for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil optimizing compiler (`OilInliningCompiler` -> `OilLoopOptimizer` -> `OilFullCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
+`ProfilingCogit` (a subclass of `StackToRegisterMappingCogit`) is the VM integration tier of Oil, the lightweight compiler for the 64-bit Spur Cog VM. It adds lightweight trip counters to baseline code, queries inline caches for type feedback, drives the Oil lightweight compiler (`OilInliningCompiler` -> `OilLoopOptimizer` -> `OilFullCompiler`), manages the Oil selector table and deoptimization metadata, and implements the bailout/deoptimization runtime in `CoInterpreter`.
 
 ## Files and Load Order
 

@@ -1,6 +1,6 @@
-# Oil Optimizing Compiler
+# Oil Lightweight Compiler
 
-Slang/Smalltalk sources for Oil, the optimizing JIT for the 64-bit Spur Cog VM. Author: cb.
+Slang/Smalltalk sources for Oil, the lightweight compiler for the 64-bit Spur Cog VM. Author: cb.
 
 ## Packages
 

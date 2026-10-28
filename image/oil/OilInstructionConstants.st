@@ -5,7 +5,7 @@ SharedPool subclass: #OilInstructionConstants
 	category: 'VMMaker-JIT-Oil'!
 
 !OilInstructionConstants commentStamp: 'cb 10/25/2026 00:10' prior: 0!
-I hold the instruction opcodes of Oil, the optimizing JIT for the 64-bit Spur Cog VM.  Each opcode identifies an instruction in Oil's compact 32-bit linear IR [Op:8 | Dest:8 | Src1:8 | Src2/Imm:8].  Initialize with OilInstructionConstants initialize.!
+I hold the instruction opcodes of Oil, the lightweight compiler for the 64-bit Spur Cog VM.  Each opcode identifies an instruction in Oil's compact 32-bit linear IR [Op:8 | Dest:8 | Src1:8 | Src2/Imm:8].  Initialize with OilInstructionConstants initialize.!
 
 !OilInstructionConstants class methodsFor: 'class initialization' stamp: 'cb 10/25/2026 00:10'!
 initialize

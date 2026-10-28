@@ -804,7 +804,7 @@ OilLoopOptimizer subclass: #OilFullCompiler
 	category: 'VMMaker-JIT-Oil'!
 
 !OilFullCompiler commentStamp: 'cb 10/25/2026 02:00' prior: 0!
-I am the full optimizing compiler of Oil (OilBytecodeScanner -> OilInliningCompiler -> OilLoopOptimizer -> OilFullCompiler), for the 64-bit Spur Cog VM.  To Pass 1 (translation and inlining into the linear IR), Pass 2 (the streaming loop optimizer) and Pass 3 (native code generation) I add:
+I am the full lightweight compiler of Oil (OilBytecodeScanner -> OilInliningCompiler -> OilLoopOptimizer -> OilFullCompiler), for the 64-bit Spur Cog VM.  To Pass 1 (translation and inlining into the linear IR), Pass 2 (the streaming loop optimizer) and Pass 3 (native code generation) I add:
 - dominator-scoped local value numbering (valueNumber, run by Pass 2 before unrolling): loads of fields and sizes already loaded, and bounds and class checks already done, on every path, are eliminated, without SSA or phis;
 - float fusion (fuseFloats, on Pass 2's IR): the intermediate results of a chain of Float arithmetic stay unboxed in XMM registers.
 All my tables are static too.!
