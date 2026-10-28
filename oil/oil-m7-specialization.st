@@ -1,12 +1,12 @@
 "Method-level multi-specialization for the Oil optimizing JIT (Milestone 7, Closed-PIC Dispatcher).
  A method may have up to OilMaxSpecialization (5) Oil versions, each specialized for one receiver class, besides its
  baseline machine code, which runs every other receiver: like a closed PIC of 6 cases whose last case is the generic code.
- - At startup, ProfilingCogit compiles two dedicated Dispatcher prototypes (oilDispatcherPrototype16 and
-   oilDispatcherPrototype22) using Cogit abstract instructions:
+ - At startup, ProfilingCogit compiles a dedicated Dispatcher prototype (oilDispatcherPrototype) using Cogit abstract
+   instructions:
    - Header: cmType = CMMethod, stackCheckOffset = 0, counters = (numCases << 2) + OilDispatcherTag.
    - Entry (cmEntryOffset, and cmNoCheckEntryOffset jumping to cmEntryOffset): extracts the receiver's class tag into
-     TempReg (a 16-bit header load padded with NOPs in oilDispatcherPrototype16, or a 22-bit masked load in
-     oilDispatcherPrototype22) and jumps to the first active specialization case.
+     TempReg (the 22-bit masked header load of the inline cache check, so that no class index aliases another) and
+     jumps to the first active specialization case.
    - Cases 1..K (up to OilMaxSpecialization = 5): straight-line CmpC32 tag / JumpLongZero to M_C_i + cmNoCheckEntryOffset.
    - Fall-through last case (at oilDispatcherEndOfCodeOffset): JumpLong to M_baseline + cmNoCheckEntryOffset.  M_baseline
      is never freed or recompiled when specializations are added.
@@ -60,16 +60,15 @@ noAssertMethodClassAssociationOf: methodPointer
 	 Dispatcher: answer nilObject so those assertions hold."
 	^objectMemory nilObject! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 05:00'!
 generateClosedPICPrototype
-	"After generating the standard closed PIC prototype, generate the dedicated 22-bit and 16-bit Oil Dispatcher prototypes."
+	"After generating the standard closed PIC prototype, generate the Oil Dispatcher prototype."
 	super generateClosedPICPrototype.
-	self oilGenerateDispatcherPrototype22.
-	self oilGenerateDispatcherPrototype16! !
+	self oilGenerateDispatcherPrototype! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
-oilGenerateDispatcherPrototype22
-	"Compile the 22-bit class-tag Oil Dispatcher prototype at methodZoneBase using Cogit abstract instructions,
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 05:00'!
+oilGenerateDispatcherPrototype
+	"Compile the Oil Dispatcher prototype at methodZoneBase using Cogit abstract instructions,
 	 compute oilDispatcherFirstCaseOffset, oilDispatcherCaseSize, oilDispatcherEndOfCodeOffset and oilDispatcherSize,
 	 and advance methodZoneBase."
 	<inline: false>
@@ -100,7 +99,7 @@ oilGenerateDispatcherPrototype22
 	self JumpLong: (self cPICMissTrampolineFor: 0).
 	endOfCodeLabel := self Label.
 	self computeMaximumSizes.
-	oilDispatcherPrototype22 := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	oilDispatcherPrototype := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	oilDispatcherSize := (self sizeof: CogMethod) + (self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod)).
 	endAddress := self outputInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	self assert: methodZoneBase + oilDispatcherSize = endAddress.
@@ -110,52 +109,6 @@ oilGenerateDispatcherPrototype22
 	oilDispatcherCaseSize := endCase1Label address - firstCaseLabel address.
 	oilDispatcherEndOfCodeOffset := endOfCodeLabel address - methodZoneBase.
 	oilDispatcherSize := backEnd roundUpToMethodAlignment: oilDispatcherSize.
-	objectMemory byteAt: methodZoneBase + oilDispatcherSize - 1 put: MapEnd.
-	methodZoneBase := self alignUptoRoutineBoundary: methodZoneBase + oilDispatcherSize! !
-
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
-oilGenerateDispatcherPrototype16
-	"Compile the 16-bit class-tag Oil Dispatcher prototype at methodZoneBase using Cogit abstract instructions
-	 (with a 16-bit header load padded with NOPs so all offsets match oilDispatcherPrototype22)."
-	<inline: false>
-	| jumpImm jumpToCases firstCaseLabel endOfCodeLabel codeSize endAddress |
-	<var: #jumpImm type: #'AbstractInstruction *'>
-	<var: #jumpToCases type: #'AbstractInstruction *'>
-	<var: #firstCaseLabel type: #'AbstractInstruction *'>
-	<var: #endOfCodeLabel type: #'AbstractInstruction *'>
-	self allocateOpcodes: 36 bytecodes: 0.
-	methodOrBlockNumArgs := 0.
-	methodLabel address: methodZoneBase; dependent: nil.
-	self compileAbort.
-	self AlignmentNops: objectMemory wordSize.
-	entry := self Label.
-	self AndCq: objectMemory tagMask R: ReceiverResultReg R: TempReg.
-	jumpImm := self JumpNonZero: 0.
-	self MoveM16: 0 r: ReceiverResultReg R: TempReg.
-	backEnd hasLinkRegister
-		ifTrue: [self Nop]
-		ifFalse: [1 to: 5 do: [:i| self Nop]].
-	jumpImm jmpTarget: self Label.
-	self CmpR: TempReg R: TempReg.
-	jumpToCases := self JumpZero: 0.
-	noCheckEntry := self Jump: entry.
-	firstCaseLabel := self Label.
-	jumpToCases jmpTarget: firstCaseLabel.
-	1 to: OilMaxSpecialization do:
-		[:h|
-		self CmpC32: 16rBABE1F15 + h R: TempReg.
-		self JumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16)].
-	self JumpLong: (self cPICMissTrampolineFor: 0).
-	endOfCodeLabel := self Label.
-	self computeMaximumSizes.
-	oilDispatcherPrototype16 := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
-	codeSize := (self sizeof: CogMethod) + (self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod)).
-	endAddress := self outputInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
-	self assert: methodZoneBase + codeSize = endAddress.
-	self assert: entry address - methodZoneBase = cmEntryOffset.
-	self assert: noCheckEntry address - methodZoneBase = cmNoCheckEntryOffset.
-	self assert: firstCaseLabel address - methodZoneBase = oilDispatcherFirstCaseOffset.
-	self assert: endOfCodeLabel address - methodZoneBase = oilDispatcherEndOfCodeOffset.
 	objectMemory byteAt: methodZoneBase + oilDispatcherSize - 1 put: MapEnd.
 	methodZoneBase := self alignUptoRoutineBoundary: methodZoneBase + oilDispatcherSize! !
 
@@ -299,7 +252,7 @@ oilTargetCogMethodOf: aMethodObj tag: classTag
 			[^self oilDispatcher: cogMethod targetAt: caseIndex]].
 	^self oilBaselineOfDispatcher: cogMethod! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 05:00'!
 oilCreateDispatcherFor: aMethodObj baseline: baselineMethod tag: classTag oilMethod: oilCogMethod
 	"Allocate and configure a dedicated Dispatcher for aMethodObj whose specialization Case 1 jumps to oilCogMethod's
 	 no-check entry on classTag and whose fall-through last case at oilDispatcherEndOfCodeOffset jumps to
@@ -308,8 +261,7 @@ oilCreateDispatcherFor: aMethodObj baseline: baselineMethod tag: classTag oilMet
 	<var: #baselineMethod type: #'CogMethod *'>
 	<var: #oilCogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogMethod *'>
-	| startAddress prototype writableDispatcher dispatcher caseEndAddress |
-	<var: #prototype type: #'CogMethod *'>
+	| startAddress writableDispatcher dispatcher caseEndAddress |
 	<var: #writableDispatcher type: #'CogMethod *'>
 	<var: #dispatcher type: #'CogMethod *'>
 	startAddress := methodZone allocate: oilDispatcherSize.
@@ -319,10 +271,7 @@ oilCreateDispatcherFor: aMethodObj baseline: baselineMethod tag: classTag oilMet
 		 ^nil].
 	dispatcher := self cCoerceSimple: startAddress to: #'CogMethod *'.
 	writableDispatcher := self writableMethodFor: startAddress.
-	prototype := classTag <= 16rFFFF
-					ifTrue: [oilDispatcherPrototype16]
-					ifFalse: [oilDispatcherPrototype22].
-	self codeMemcpy: writableDispatcher _: prototype _: oilDispatcherSize.
+	self codeMemcpy: writableDispatcher _: oilDispatcherPrototype _: oilDispatcherSize.
 	writableDispatcher
 		cmType: CMMethod;
 		objectHeader: objectMemory nullHeaderForMachineCodeMethod;
@@ -358,7 +307,7 @@ oilCreateDispatcherFor: aMethodObj baseline: baselineMethod tag: classTag oilMet
 	coInterpreter rawHeaderOf: aMethodObj put: startAddress.
 	^dispatcher! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 05:00'!
 oilExtendDispatcher: dispatcher tag: classTag oilMethod: oilCogMethod
 	"Add (classTag -> oilCogMethod + cmNoCheckEntryOffset) as the next specialization case of the Dispatcher dispatcher."
 	<inline: false>
@@ -367,12 +316,6 @@ oilExtendDispatcher: dispatcher tag: classTag oilMethod: oilCogMethod
 	| newNumCases caseEndAddress writableDispatcher |
 	<var: #writableDispatcher type: #'CogMethod *'>
 	writableDispatcher := self writableMethodFor: dispatcher.
-	classTag > 16rFFFF ifTrue:
-		["Upgrade the tag extraction at cmEntryOffset from 16-bit to 22-bit if needed."
-		 self
-			codeMemcpy: (self cCoerceSimple: writableDispatcher asInteger + cmEntryOffset to: #'void *')
-			_: (self cCoerceSimple: oilDispatcherPrototype22 asInteger + cmEntryOffset to: #'void *')
-			_: cmNoCheckEntryOffset - cmEntryOffset].
 	newNumCases := (self oilDispatcherNumCases: dispatcher) + 1.
 	caseEndAddress := self oilAddressOfEndOfCase: newNumCases inDispatcher: dispatcher.
 	self
@@ -754,7 +697,7 @@ relocateCallsAndSelfReferencesInMethod: cogMethod
 		[^self oilRelocateCallsInDispatcher: cogMethod].
 	super relocateCallsAndSelfReferencesInMethod: cogMethod! !
 
-!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 00:15'!
+!ProfilingCogit methodsFor: 'oil specialization' stamp: 'cb 10/28/2026 05:00'!
 oilRelocateCallsInDispatcher: dispatcher
 	"Relocate the abort call, the specialization case jumps (1..oilDispatcherNumCases:) and the fall-through baseline
 	 jump at oilDispatcherEndOfCodeOffset in the Dispatcher dispatcher during code compaction."
@@ -764,7 +707,7 @@ oilRelocateCallsInDispatcher: dispatcher
 	<var: #targetMethod type: #'CogMethod *'>
 	delta := dispatcher objectHeader.
 	self assert: (backEnd callTargetFromReturnAddress: dispatcher asInteger + missOffset)
-					= ((self methodAbortTrampolineFor: dispatcher cmNumArgs) + delta).
+					= (self methodAbortTrampolineFor: dispatcher cmNumArgs).
 	backEnd relocateCallBeforeReturnPC: dispatcher asInteger + missOffset by: delta negated.
 	1 to: (self oilDispatcherNumCases: dispatcher) do:
 		[:i|
@@ -897,6 +840,74 @@ activateNewCogMethod: aCogMethod inInterpreter: inInterpreter
 					(self canContextSwitchIfActivating: newMethod header: methodHeader).
 	self returnToExecutive: inInterpreter postContextSwitch: switched! !
 
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/28/2026 05:00'!
+justActivateNewMethod: mustBeInterpreterFrame
+	"As CoInterpreter>>justActivateNewMethod: (used by sendInvokeCallbackContext: and primitiveFailForFFIException:at:),
+	 except that if newMethod's header is an Oil Dispatcher, the frame activates the target specialization for the
+	 receiver's class tag (or the baseline CogMethod if a primitive just failed or no specialization matches), as in
+	 activateNewCogMethod:inInterpreter:.  A Dispatcher has no frame code: its stackCheckOffset is 0."
+	| methodHeader cogMethod numArgs numTemps rcvr initialIP |
+	<var: #initialIP type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	methodHeader := self rawHeaderOf: newMethod.
+	cogMethod := nil.
+	(self isCogMethodReference: methodHeader) ifTrue:
+		[cogMethod := self cCoerceSimple: methodHeader to: #'CogMethod *'.
+		 methodHeader := cogMethod methodHeader.
+		 mustBeInterpreterFrame ifTrue:
+			[cogMethod := nil]].
+	numTemps := self temporaryCountOfMethodHeader: methodHeader.
+	numArgs := self argumentCountOfMethodHeader: methodHeader.
+
+	rcvr := self stackValue: numArgs. "could new rcvr be set at point of send?"
+	self assert: (objectMemory addressCouldBeOop: rcvr).
+	self assert: (objectMemory isOopForwarded: rcvr) not.
+
+	(cogMethod notNil and: [cogit isOilDispatcher: cogMethod]) ifTrue:
+		[cogMethod := primFailCode = 0
+						ifTrue: [cogit oilTargetCogMethodOf: newMethod tag: (objectMemory fetchClassTagOf: rcvr)]
+						ifFalse: [cogit oilBaselineOfDispatcher: cogMethod]].
+
+	cogMethod ifNotNil:
+		[(self isMachineCodeFrame: framePointer) ifFalse:
+			[instructionPointer >= objectMemory startOfMemory ifTrue:
+				[self iframeSavedIP: framePointer put: instructionPointer].
+			 instructionPointer := cogit ceReturnToInterpreterPC].
+		 mustBeInterpreterFrame ifTrue:
+			[cogMethod := nil]].
+	self push: instructionPointer.
+	self push: framePointer asUnsignedInteger.
+	framePointer := stackPointer.
+	initialIP := self initialIPForHeader: methodHeader method: newMethod.
+	cogMethod
+		ifNotNil:
+			[self push: cogMethod asUnsignedInteger.
+			 self push: objectMemory nilObject. "FoxThisContext field"
+			 instructionPointer := cogMethod asUnsignedInteger + cogMethod stackCheckOffset]
+		ifNil:
+			[self push: newMethod.
+			 self setMethod: newMethod methodHeader: methodHeader.
+			 self push: objectMemory nilObject. "FoxThisContext field"
+			 self push: (self encodeFrameFieldHasContext: false isBlock: false numArgs: numArgs).
+			 self push: 0. "FoxIFSavedIP"
+			 instructionPointer := initialIP - 1].
+	self push: rcvr.
+
+	"clear remaining temps to nil"
+	numArgs + 1 to: numTemps do:
+		[:i | self push: objectMemory nilObject].
+
+	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
+		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
+		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
+		 cogMethod ifNil:
+			[instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader)].
+		 primFailCode ~= 0 ifTrue:
+			[self reapAndResetErrorCodeTo: stackPointer header: methodHeader]].
+
+	^methodHeader! !
+
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/28/2026 00:15'!
 ensureMethodIsCogged: methodObj maybeClosure: maybeClosure
 	"Return a cogged method for methodObj, for mapping a machine-code pc of a baseline frame or divorced context.
@@ -924,25 +935,30 @@ ensureMethodIsCogged: methodObj maybeClosure: maybeClosure
 		[self error: 'could not compile method that should have been compiled'].
 	^cogMethod! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/28/2026 00:15'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-specialization' stamp: 'cb 10/28/2026 05:00'!
 divorceMachineCodeFramesWithMethod: methodObj
 	"Divorce all machine-code frames of methodObj: if methodObj has a Dispatcher, first deoptimize any suspended frames
-	 of its Oil specializations into contexts, then divorce the frames of its baseline CogMethod."
-	| aPage theFP calleeFP theSP theIP cogMethod specTarget |
+	 of its Oil specializations into contexts, then divorce the frames of its baseline CogMethod.
+	 Deoptimizing the last frame of a specialization frees it and compacts it out of the Dispatcher (moving the cases
+	 above it down, and freeing the Dispatcher when it was the last one), so read the baseline first and visit the cases
+	 from the highest down."
+	| aPage theFP calleeFP theSP theIP cogMethod specTarget baseline |
 	<var: #aPage type: #'StackPage *'>
 	<var: #theFP type: #'char *'>
 	<var: #calleeFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #specTarget type: #'CogMethod *'>
+	<var: #baseline type: #'CogMethod *'>
 	cogMethod := self cogMethodOf: methodObj.
 	(cogit isOilDispatcher: cogMethod) ifTrue:
-		[1 to: (cogit oilDispatcherNumCases: cogMethod) do:
+		[baseline := cogit oilBaselineOfDispatcher: cogMethod.
+		 (cogit oilDispatcherNumCases: cogMethod) to: 1 by: -1 do:
 			[:i|
 			specTarget := cogit oilDispatcher: cogMethod targetAt: i.
 			specTarget cmType = CMMethod ifTrue:
 				[self oilDeoptimizeFramesOf: specTarget]].
-		 cogMethod := cogit oilBaselineOfDispatcher: cogMethod].
+		 cogMethod := baseline].
 	(cogit isOilMethod: cogMethod) ifTrue:
 		[self oilDeoptimizeFramesOf: cogMethod.
 		 ^self].

@@ -79,7 +79,8 @@ generateRunTimeTrampolines
 	ceOilTripTrampoline := self genTrampolineFor: #ceOilTrip:
 								called: 'ceOilTripTrampoline'
 								arg: SendNumArgsReg
-								regsToSave: (self registerMaskFor: ReceiverResultReg and: ClassReg).
+								regsToSave: (self registerMaskFor: ReceiverResultReg and: ClassReg)
+								result: TempReg.
 	ceOilDeoptTrampoline := self genTrampolineFor: #ceOilDeoptimize:
 								called: 'ceOilDeoptTrampoline'
 								arg: SendNumArgsReg
@@ -310,16 +311,15 @@ oilGenerateCode: aMethodObj
 		 ^OilFailInternal].
 	^self oilGenerateCogMethod! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/27/2026 22:55'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/28/2026 05:00'!
 oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
 	 deoptimization metadata, a hidden old space object of CompiledMethod format, through the method's counters field (tagged with 1).
-	 Uses a single-pass annotation map generated into a 512-byte stack buffer to eliminate the
-	 preliminary generateMapAt: nil pass."
+	 Like generateCogMethod:, size the map first (generateMapAt: nil) and write it into the method once allocated: a large Oil
+	 method can have a map of more than 512 bytes."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result metadata selector addedLargeContext existingRawHeader writableMethod mapBuffer |
+	| codeSize headerSize mapSize totalSize startAddress result metadata selector addedLargeContext existingRawHeader writableMethod |
 	<var: #writableMethod type: #'CogMethod *'>
-	<var: #mapBuffer declareC: 'char mapBuffer[512]'>
 	self planMetadata ifFalse:
 		[^OilFailCodeSpace].
 	metadata := coInterpreter oilAllocateMetadata: self mdNumLiterals numBytes: self mdNumBytes of: methodObj.
@@ -330,9 +330,7 @@ oilGenerateCogMethod
 	self computeMaximumSizes.
 	methodLabel concretizeAt: methodZone freeStart.
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
-	mapSize := self generateMapAt: (self cCode: '(usqInt)(mapBuffer + 511 - codeToDataDelta)'
-									inSmalltalk: [nil])
-					start: methodLabel address + cmNoCheckEntryOffset.
+	mapSize := self generateMapAt: nil start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
 	totalSize > MaxMethodSize ifTrue:
 		[objectMemory freeObject: metadata.
@@ -348,13 +346,7 @@ oilGenerateCogMethod
 	result := self outputInstructionsAt: startAddress + headerSize.
 	self assert: startAddress + headerSize + codeSize = result.
 	backEnd padIfPossibleWithStopsFrom: result to: startAddress + totalSize - mapSize - 1.
-	(self cCode: [mapSize <= 512] inSmalltalk: [false])
-		ifTrue:
-			[self codeMemmove: startAddress + totalSize - mapSize
-				_: (self cCode: 'mapBuffer + 512 - mapSize')
-				_: mapSize]
-		ifFalse:
-			[self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset].
+	self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset.
 	self fillInBlockHeadersAt: startAddress.
 	selector := coInterpreter maybeSelectorOfMethod: methodObj.
 	selector isNil ifTrue: [selector := coInterpreter maybeSelectorOfMethod: oilHomeMethod].
@@ -691,9 +683,11 @@ oilRemapMetadataReferences
 			[(self writableMethodFor: cogMethod) counters: (objectRepresentation remapOop: cogMethod counters - 1) + 1].
 		 cogMethod := methodZone methodAfter: cogMethod]! !
 
-!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/25/2026 01:50'!
+!ProfilingCogit class methodsFor: 'trampoline support' stamp: 'cb 10/28/2026 05:00'!
 numTrampolines
-	^super numTrampolines + 2 "ceOilTripTrampoline, ceOilDeoptTrampoline"! !
+	"The run-time routines recordGeneratedRunTime:address: enters in trampolineAddresses: ceOilTripTrampoline,
+	 ceOilDeoptTrampoline and ceOilDereferenceSelectorIndex (see oilWrapSelectorIndexDereferenceRoutine)."
+	^super numTrampolines + 3! !
 
 !ProfilingCogit class methodsFor: 'translation' stamp: 'cb 10/24/2026 19:35'!
 ancilliaryClasses
@@ -2702,39 +2696,45 @@ oilApiByteStringMetaclass
 	<essential: #ProfilingCogit>
 	^objectMemory fetchClassOf: (objectMemory splObj: ClassByteString)! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 22:55'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/28/2026 05:10'!
 oilAutoCompile: homeMethod receiver: receiver
 	"A trip counter found that homeMethod, activated for receiver, runs a hot loop (see ceOilTrip:).  Compile an Oil
 	 specialization of homeMethod for the class of receiver (up to oilMaxSpecialization specializations), and install it in
 	 homeMethod's closed-PIC Dispatcher for its next activations; its running activations keep running its baseline code
-	 untouched.  Called on the trip path: nothing here collects garbage or changes the stack."
+	 untouched.  Called on the trip path: nothing here collects garbage or changes the stack.
+	 Answer the count the tripping site restarts its counter from: the restart count while homeMethod may still get a
+	 specialization for another receiver class, the retry count after a full code zone, the back-off count when Oil cannot
+	 or need not compile homeMethod any more."
 	<essential: #ProfilingCogit>
 	| cogMethod classObj classTag result |
 	<var: #cogMethod type: #'CogMethod *'>
 	((objectMemory isNonImmediate: homeMethod)
 	 and: [(objectMemory isOopCompiledMethod: homeMethod)
-	 and: [(self isFullBlockMethod: homeMethod) not
-	 and: [self methodHasCogMethod: homeMethod]]]) ifFalse:
-		[^nil].
+	 and: [(self isFullBlockMethod: homeMethod) not]]) ifFalse:
+		[^cogit oilTripBackOffCount].
+	(self methodHasCogMethod: homeMethod) ifFalse:
+		[^cogit oilTripRestartCount].
 	cogMethod := self cogMethodOf: homeMethod.
 	((cogit isOilMethod: cogMethod)
 	 or: [(cogit oilIsDisqualified: homeMethod)
 	 or: [self oilApiIsSynchronizationMethod: homeMethod]]) ifTrue:
-		[^nil].
+		[^cogit oilTripBackOffCount].
 	classObj := objectMemory fetchClassOf: receiver.
 	classTag := objectMemory fetchClassTagOf: receiver.
 	(cogit oilSpecializedCogMethodOf: homeMethod tag: classTag) ~= nil ifTrue:
-		[^nil].
+		[^cogit oilTripRestartCount].
 	(cogit oilNumSpecializationsOf: homeMethod) >= cogit oilMaxSpecialization ifTrue:
-		[^nil].
+		[^cogit oilTripBackOffCount].
 	self oilEnsureExtraSelectorTable ifFalse:
-		[^nil].
+		[^cogit oilTripRetryCount].
 	result := cogit oilCompile: homeMethod receiverClass: classObj.
 	result = OilOK ifTrue:
 		[result := cogit oilGenerateSpecialized: homeMethod tag: classTag.
 		 result = OilOK ifTrue:
-			[self flushMethodCacheForMethod: homeMethod]].
-	(result ~= OilOK and: [result ~= OilFailCodeSpace]) ifTrue:
-		[cogit oilDisqualify: homeMethod].
-	^nil! !
+			[self flushMethodCacheForMethod: homeMethod.
+			 ^cogit oilTripRestartCount]].
+	result = OilFailCodeSpace ifTrue:
+		[^cogit oilTripRetryCount].
+	cogit oilDisqualify: homeMethod.
+	^cogit oilTripBackOffCount! !
 

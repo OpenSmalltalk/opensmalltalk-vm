@@ -1,12 +1,12 @@
 StackToRegisterMappingCogit subclass: #ProfilingCogit
-	instanceVariableNames: 'oilTripCounters oilNextCounterIndex ceOilTripTrampoline ceOilDeoptTrampoline oilColdSelectors oilExtraSelectors oilCompileMicroseconds oilNoAutoCompile oilDispatcherPrototype16 oilDispatcherPrototype22 oilDispatcherFirstCaseOffset oilDispatcherCaseSize oilDispatcherEndOfCodeOffset oilDispatcherSize'
-	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilNumTripCounters OilTripBackJump'
+	instanceVariableNames: 'oilTripCounters oilNextCounterIndex ceOilTripTrampoline ceOilDeoptTrampoline oilColdSelectors oilExtraSelectors oilCompileMicroseconds oilNoAutoCompile oilDispatcherPrototype oilDispatcherFirstCaseOffset oilDispatcherCaseSize oilDispatcherEndOfCodeOffset oilDispatcherSize'
+	classVariableNames: 'OilCounterBytes OilInitialCounterValue OilNumTripCounters OilTripBackJump OilTripBackOffCount OilTripRetryCount'
 	poolDictionaries: 'VMSqueakClassIndices'
 	category: 'VMMaker-JIT-Oil'!
 !ProfilingCogit commentStamp: 'cb 10/27/2026 22:55' prior: 0!
 A ProfilingCogit is the profiling tier of Oil, the optimizing JIT for the OpenSmalltalk VM.  It generates the same code as StackToRegisterMappingCogit plus lightweight trip counters that detect hot loops, and offers the inline cache queries the Oil optimizer needs when inlining.
 
-Trip counters are placed only at loop back jumps (genJumpBackTo:).  Straight-line code, conditional branches and block entries carry no profiling overhead, and methods without loops get no counters at all (a hot block is found through the loop that evaluates it, see CoInterpreter>>ceOilTrip:).  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to the kind of site (OilTripBackJump, the only kind).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), compiles it with Oil and installs the Oil code for its next activations (see CoInterpreter>>oilAutoCompile:receiver:), and returns directly to machine code.  Nothing on the trip path collects garbage or changes the stack: the running activations keep running the baseline code.  A counter trips once (it then goes negative).
+Trip counters are placed only at loop back jumps (genJumpBackTo:).  Straight-line code, conditional branches and block entries carry no profiling overhead, and methods without loops get no counters at all (a hot block is found through the loop that evaluates it, see CoInterpreter>>ceOilTrip:).  Each site has a 32-bit counter, initialized to OilInitialCounterValue (8191), taken from a 4 KB ring buffer in the VM's static data (oilTripCounters, see oilAllocateTripCounter; once OilNumTripCounters sites have been compiled, sites share counters, which can only make a site trip early) and embedded in the machine code: no heap object.  The counters field of the header of a baseline method (a SistaCogMethod) is 0; that of an Oil method refers to its deoptimization metadata.  At each site the counter is decremented; when it reaches zero, the site invokes ceOilTripTrampoline with SendNumArgsReg set to the kind of site (OilTripBackJump, the only kind).  The dedicated trampoline preserves ReceiverResultReg, switches to the C stack and calls CoInterpreter>>ceOilTrip:, which inspects the tripping frame to identify the method to optimize (walking a block's outer contexts up to its home context), compiles it with Oil and installs the Oil code for its next activations (see CoInterpreter>>oilAutoCompile:receiver:), and returns directly to machine code.  Nothing on the trip path collects garbage or changes the stack: the running activations keep running the baseline code.  The site then restarts its counter from the count ceOilTrip: answers: OilInitialCounterValue while the home method may still get an Oil specialization for another receiver class (the baseline code stays behind the method's Dispatcher), OilTripRetryCount after a transient failure (a full code zone), and OilTripBackOffCount (about 2^30) when Oil cannot or need not compile it (disqualified, all specializations taken, a clean block...), so that such a loop does not keep calling ceOilTrip:.
 
 Instance Variables
 	ceOilDeoptTrampoline:	<Integer>
@@ -44,14 +44,15 @@ genJumpBackTo: targetBytecodePC
 	self genOilTripCounter: OilTripBackJump.
 	^super genJumpBackTo: targetBytecodePC! !
 
-!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/28/2026 03:08'!
+!ProfilingCogit methodsFor: 'bytecode generator support' stamp: 'cb 10/28/2026 05:10'!
 genOilTripCounter: kind
 	"Generate the code for a trip counter site of the given kind:
-		counter := counter - 1. counter = 0 ifTrue: [counter := OilInitialCounterValue. ceOilTripTrampoline(kind)]
+		counter := counter - 1. counter = 0 ifTrue: [counter := ceOilTripTrampoline(kind)]
 	 The counter is decremented in TempReg and written back before the test; neither
 	 the store nor the address materialization changes the flags on x64 or ARMv8.
-	 On trip, the counter is reset to OilInitialCounterValue so that baseline code retained
-	 behind a Dispatcher can trip again for other receiver classes.
+	 ceOilTrip: answers in TempReg the count to restart from (see the class comment), so that baseline code
+	 retained behind a Dispatcher can trip again for other receiver classes, while a loop whose home method
+	 Oil cannot compile backs off.
 	 The kind is passed in SendNumArgsReg, which is dead at a back jump.
 	 The trampoline preserves ReceiverResultReg, so no register state is lost.
 	 The call is not annotated as a bytecode pc since ceOilTrip: does not need to map
@@ -63,10 +64,9 @@ genOilTripCounter: kind
 	self SubCq: 1 R: TempReg.
 	self MoveR: TempReg A32: counterAddress.
 	notTripped := self JumpNonZero: 0.
-	self MoveCq: OilInitialCounterValue R: TempReg.
-	self MoveR: TempReg A32: counterAddress.
 	self MoveCq: kind R: SendNumArgsReg.
 	self CallRT: ceOilTripTrampoline.
+	self MoveR: TempReg A32: counterAddress.
 	notTripped jmpTarget: self Label.
 	^0! !
 
@@ -85,16 +85,38 @@ oilAllocateTripCounter
 
 !ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/27/2026 13:20'!
 oilDecayTripCounters
-	"Age the loop trip counters on each scavenge so that cold loops do not slowly accumulate trips."
+	"Age the loop trip counters on each scavenge so that cold loops do not slowly accumulate trips (leaving alone the
+	 counters that back off, above OilInitialCounterValue, see ceOilTrip:)."
 	<api>
 	| val |
 	0 to: OilNumTripCounters - 1 do:
 		[:i|
 		val := oilTripCounters at: i.
-		val > 0 ifTrue:
+		(val > 0 and: [val < OilInitialCounterValue]) ifTrue:
 			[val := val + 512.
 			 val > OilInitialCounterValue ifTrue: [val := OilInitialCounterValue].
 			 oilTripCounters at: i put: val]]! !
+
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/28/2026 05:10'!
+oilTripRestartCount
+	"The count a trip counter restarts from after a trip whose home method may still get a specialization (see ceOilTrip:)."
+	<api>
+	<inline: false>
+	^OilInitialCounterValue! !
+
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/28/2026 05:10'!
+oilTripRetryCount
+	"The count a trip counter restarts from after a transient failure to compile its home method (see ceOilTrip:)."
+	<api>
+	<inline: false>
+	^OilTripRetryCount! !
+
+!ProfilingCogit methodsFor: 'compile abstract instructions' stamp: 'cb 10/28/2026 05:10'!
+oilTripBackOffCount
+	"The count a trip counter restarts from when Oil cannot or need not compile its home method (see ceOilTrip:)."
+	<api>
+	<inline: false>
+	^OilTripBackOffCount! !
 
 
 !ProfilingCogit methodsFor: 'generate machine code' stamp: 'cb 10/24/2026 10:00'!
@@ -141,6 +163,10 @@ initializeWithOptions: optionsDictionary
 	OilNumTripCounters := 1024.
 	"Trip after 2^13 - 1 executions of a site (8k)."
 	OilInitialCounterValue := (1 << 13) - 1.
+	"After a trip, a site whose home method had a transient failure (a full code zone) trips again after 2^20 - 1 executions,
+	 one whose home method Oil cannot or need not compile after 2^30 - 1 (see ceOilTrip:)."
+	OilTripRetryCount := (1 << 20) - 1.
+	OilTripBackOffCount := (1 << 30) - 1.
 	"The kind of trip site, passed to CoInterpreter>>ceOilTrip:: a loop back jump (the only kind)."
 	OilTripBackJump := 0.! !
 
@@ -158,11 +184,10 @@ additionalHeadersDo: aBinaryBlock
 declareCVarsIn: aCodeGen
 	aCodeGen var: #oilTripCounters declareC: 'static int oilTripCounters[OilNumTripCounters]'.
 	aCodeGen var: #oilNextCounterIndex declareC: 'static usqInt oilNextCounterIndex = 0'.
-	aCodeGen var: #oilDispatcherPrototype16 type: #'CogMethod *'.
-	aCodeGen var: #oilDispatcherPrototype22 type: #'CogMethod *'! !
+	aCodeGen var: #oilDispatcherPrototype type: #'CogMethod *'! !
 
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/25/2026 01:50'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/28/2026 05:10'!
 ceOilTrip: kind
 	"Called from ceOilTripTrampoline when a ProfilingCogit trip counter reaches zero, at a
 	 loop back jump (kind 0, the only kind).  framePointer is the
@@ -176,14 +201,15 @@ ceOilTrip: kind
 	 - otherwise the method itself.
 	 Compile it with Oil, for the class of its receiver, and install the Oil code for its next activations (see
 	 oilAutoCompile:receiver:); not for a clean block, whose home has no receiver.
-	 This must not collect garbage or change the stack, since it returns directly to machine code."
+	 This must not collect garbage or change the stack, since it returns directly to machine code.
+	 Answer the count the site restarts its trip counter from (see ProfilingCogit's class comment)."
 	<api>
 	<essential: #ProfilingCogit>
 	| theFP numArgs closure homeContext homeMethod receiver |
 	<var: #theFP type: #'char *'>
 	theFP := framePointer.
 	self assert: (self isMachineCodeFrame: theFP).
-	cogit oilAutoCompileEnabled ifFalse: [^0].
+	cogit oilAutoCompileEnabled ifFalse: [^cogit oilTripRestartCount].
 	numArgs := self frameNumArgs: theFP.
 	closure := (self frameIsBlockActivation: theFP)
 				ifTrue: [self frameStackedReceiver: theFP numArgs: numArgs]
@@ -193,11 +219,10 @@ ceOilTrip: kind
 	closure ~= objectMemory nilObject ifTrue:
 		[homeContext := self oilHomeContextOfClosure: closure.
 		 homeContext = objectMemory nilObject ifTrue: "a clean block"
-			[^0].
+			[^cogit oilTripBackOffCount].
 		 homeMethod := objectMemory followMaybeForwarded: (objectMemory fetchPointer: MethodIndex ofObject: homeContext).
 		 receiver := objectMemory followMaybeForwarded: (objectMemory fetchPointer: ReceiverIndex ofObject: homeContext)].
-	self oilAutoCompile: homeMethod receiver: receiver.
-	^0! !
+	^self oilAutoCompile: homeMethod receiver: receiver! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-profiling' stamp: 'cb 10/24/2026 10:00'!
 oilClosureArgumentOf: theFP numArgs: numArgs
