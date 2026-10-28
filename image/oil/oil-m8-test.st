@@ -17,9 +17,9 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilM8A) compile: 'oilM8Size ^3' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'y: v y := v' classified: 'tests'.

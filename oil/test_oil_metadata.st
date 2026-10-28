@@ -13,10 +13,10 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilMDItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilMDOther instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilMDModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-item := Smalltalk at: #OilMDItem. other := Smalltalk at: #OilMDOther. cls := Smalltalk at: #OilMDModel.
+Object subclass: #OilMetadataItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilMetadataOther instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilMetadataModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+item := Smalltalk at: #OilMetadataItem. other := Smalltalk at: #OilMetadataOther. cls := Smalltalk at: #OilMetadataModel.
 item compile: 'score ^score' classified: 'tests'.
 item compile: 'score: n score := n' classified: 'tests'.
 item compile: 'bonus: k ^score * k + #(''a literal'' 7) size' classified: 'tests'.

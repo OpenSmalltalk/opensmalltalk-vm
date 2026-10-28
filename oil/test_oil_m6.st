@@ -9,7 +9,7 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilFloatModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilFloatModel instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 #('mandelbrot: size
     "Escape time Mandelbrot: the number of points of a size x size grid in the set (50 iterations)."
     | count zr zi cr ci tr i |

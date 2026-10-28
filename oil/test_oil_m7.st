@@ -11,7 +11,7 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM7Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM7Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 cls := Smalltalk at: #OilM7Model.
 #('count: syms in: aSet | n | n := 0. 1 to: syms size do: [:i | (aSet includes: (syms at: i)) ifTrue: [n := n + 1]]. ^n'
   'sum: keys in: aDict | s | s := 0. 1 to: keys size do: [:i | s := s + (aDict at: (keys at: i) ifAbsent: [0])]. ^s'
@@ -127,7 +127,7 @@ check value: 'system-wide use of the specialized do:' value: ((Smalltalk allClas
 ocDo := OrderedCollection >> #do:.
 oc := OrderedCollection withAll: (1 to: 100000).
 sorted := SortedCollection withAll: (1 to: 100000).
-OrderedCollection subclass: #OilM7OrderedCollection instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+OrderedCollection subclass: #OilM7OrderedCollection instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 sub := (Smalltalk at: #OilM7OrderedCollection) withAll: (1 to: 100000).
 cls compile: 'probeCPIC: aCollection | oil | aCollection do: [:e | oil ifNil: [oil := thisContext sender oilContextChain notNil]]. ^oil == true' classified: 'tests'.
 3 timesRepeat: [model sumOf: oc. model sumOf: sorted. model sumOf: sub].
@@ -162,7 +162,7 @@ check value: 'hashOf: objects with no hash yet (send, no deopt)'
 	value: ((1 to: 64) allSatisfy: [:k | | o h | o := cls new. h := model hashOf: o. h = o identityHash and: [h = (model hashOf: o)]]).
 check value: 'hashOf: no deopt' value: ((cls >> #hashOf:) oilInfo at: 1) = 0.
 "a super send of identityHash is not compiled to the intrinsic (its slow path would be an ordinary send)"
-Object subclass: #OilM7Hashed instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM7Hashed instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilM7Hashed) compile: 'identityHash ^super identityHash bitXor: 4660' classified: 'tests'.
 cls compile: 'hashOfHashed: anObject ^anObject identityHash' classified: 'tests'.
 check value: 'hashOfHashed: compiles' value: (res value: #hashOfHashed: value: [model hashOfHashed: (Smalltalk at: #OilM7Hashed) new]) = 0.

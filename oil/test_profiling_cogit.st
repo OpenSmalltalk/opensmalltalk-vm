@@ -15,12 +15,12 @@ check := [:name :bool |
 	bool == true ifFalse: [failures add: name]].
 
 "--- Test classes ---"
-Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilTestItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilTestItem) compile: 'score ^score' classified: 'accessing'.
 (Smalltalk at: #OilTestItem) compile: 'score: aNumber score := aNumber' classified: 'accessing'.
-(Smalltalk at: #OilTestItem) subclass: #OilTestItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+(Smalltalk at: #OilTestItem) subclass: #OilTestItem2 instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilTestItem2) compile: 'score ^score * 2' classified: 'accessing'.
-Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilTestModel instanceVariableNames: 'items' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 cls := Smalltalk at: #OilTestModel.
 cls compile: 'items: anArray items := anArray' classified: 'accessing'.
 cls compile: 'countTo: n | count | count := 0. 1 to: n do: [:i | count := count + 1]. ^count' classified: 'tests'.
@@ -124,7 +124,7 @@ check value: 'disqualifyLimit: accepts an integer, rejects anything else' value:
 
 "--- T7: autonomous multi-specialization of an inherited method across multiple receiver subclasses ---"
 cls autonomousCompilation: true.
-cls subclass: #OilTestModelSub instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+cls subclass: #OilTestModelSub instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 [| sub specs |
  sub := (Smalltalk at: #OilTestModelSub) new.
  1 to: 5 do: [:i | m countTo: 0. sub countTo: 0].

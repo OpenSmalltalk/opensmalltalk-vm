@@ -16,11 +16,11 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilDSSimBase instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilDSSimBase) subclass: #OilDSSimMid instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilDSSimMid) subclass: #OilDSSimLeaf instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilDSSimModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-base := Smalltalk at: #OilDSSimBase. mid := Smalltalk at: #OilDSSimMid. leaf := Smalltalk at: #OilDSSimLeaf. cls := Smalltalk at: #OilDSSimModel.
+Object subclass: #OilDirectedSuperSimBase instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilDirectedSuperSimBase) subclass: #OilDirectedSuperSimMid instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilDirectedSuperSimMid) subclass: #OilDirectedSuperSimLeaf instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilDirectedSuperSimModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+base := Smalltalk at: #OilDirectedSuperSimBase. mid := Smalltalk at: #OilDirectedSuperSimMid. leaf := Smalltalk at: #OilDirectedSuperSimLeaf. cls := Smalltalk at: #OilDirectedSuperSimModel.
 base compile: 'dsBase1: x ^x + 1' classified: 'tests'.
 base compile: 'dsBase2: x with: y ^x * 100 + y' classified: 'tests'.
 "overrides that a lookup from the receiver's class or from its superclass would find"

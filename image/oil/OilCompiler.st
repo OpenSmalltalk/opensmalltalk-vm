@@ -1,11 +1,11 @@
-VMStructType subclass: #OilFrame
+VMStructType subclass: #OilVirtualFrame
 	instanceVariableNames: 'method base parent home callPC isBlockFrame selfKind selfValue selfClass tempStart stackStart maxReg pcBase startPC endPC exitChain hasLazy lazyKind lazyValue depth'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants'
 	category: 'VMMaker-JIT-Oil'!
 
-!OilFrame commentStamp: 'cb 10/26/2026 23:00' prior: 0!
-I am an inlined frame of the method Oil compiles (OilInliningCompiler>>frameAt:): the compiled method itself is frame 0, each method or block inlined into it gets the next one (see newFrameFor:base:isBlock:).  In the VM the frames are a static C array of OilFrame structs (oilFrames); in the image an Array of instances of me.
+!OilVirtualFrame commentStamp: 'cb 10/26/2026 23:00' prior: 0!
+I am an inlined frame of the method Oil compiles (OilInliningCompiler>>frameAt:): the compiled method itself is frame 0, each method or block inlined into it gets the next one (see newFrameFor:base:isBlock:).  In the VM the frames are a static C array of OilVirtualFrame structs (oilFrames); in the image an Array of instances of me.
 
 method	the CompiledMethod (or CompiledBlock) inlined in this frame
 base	the virtual register of its receiver (its arguments and temporaries follow)
@@ -28,190 +28,190 @@ lazyKind	the descriptor kind of its lazy result
 lazyValue	the descriptor value of its lazy result
 depth	its inlining depth (0 for frame 0)!
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 method
 	^method! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 method: anInteger
 	^method := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 base
 	^base! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 base: anInteger
 	^base := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 parent
 	^parent! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 parent: anInteger
 	^parent := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 home
 	^home! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 home: anInteger
 	^home := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 callPC
 	^callPC! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 callPC: anInteger
 	^callPC := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 isBlockFrame
 	^isBlockFrame! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 isBlockFrame: anInteger
 	^isBlockFrame := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfKind
 	^selfKind! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfKind: anInteger
 	^selfKind := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfValue
 	^selfValue! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfValue: anInteger
 	^selfValue := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfClass
 	^selfClass! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 selfClass: anInteger
 	^selfClass := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 tempStart
 	^tempStart! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 tempStart: anInteger
 	^tempStart := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 stackStart
 	^stackStart! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 stackStart: anInteger
 	^stackStart := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 maxReg
 	^maxReg! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 maxReg: anInteger
 	^maxReg := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 pcBase
 	^pcBase! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 pcBase: anInteger
 	^pcBase := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 startPC
 	^startPC! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 startPC: anInteger
 	^startPC := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 endPC
 	^endPC! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 endPC: anInteger
 	^endPC := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 exitChain
 	^exitChain! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 exitChain: anInteger
 	^exitChain := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 hasLazy
 	^hasLazy! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 hasLazy: anInteger
 	^hasLazy := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 lazyKind
 	^lazyKind! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 lazyKind: anInteger
 	^lazyKind := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 lazyValue
 	^lazyValue! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 lazyValue: anInteger
 	^lazyValue := anInteger! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 depth
 	^depth! !
 
-!OilFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 depth: anInteger
 	^depth := anInteger! !
 
-!OilFrame methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
 initialize
 	"All my fields start at 0, as in the static C array."
 	<doNotGenerate>
 	self class instVarNames do: [:ivn| self instVarNamed: ivn put: 0]! !
 
-!OilFrame class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 instVarNamesAndTypesForTranslationDo: aBinaryBlock
 	"All my fields are sqInts."
 	self instVarNames do: [:ivn| aBinaryBlock value: ivn value: #sqInt]! !
 
-!OilFrame class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualFrame class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 structTypeName
-	^'OilFrame'! !
+	^'OilVirtualFrame'! !
 
 
-VMStructType subclass: #OilVObj
+VMStructType subclass: #OilVirtualObject
 	instanceVariableNames: 'kind literal rcvrKind rcvrValue vobjClass copiedCount copiedBase homeFrame numSlots slotBase outer epoch allocPC materialized'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants'
 	category: 'VMMaker-JIT-Oil'!
 
-!OilVObj commentStamp: 'cb 10/26/2026 23:00' prior: 0!
-I am a virtual object (OilInliningCompiler>>vobjAt:): an object that the compiled code does not allocate unless it escapes (scalar replacement, see newVObj:), a closure (OilDescBlock) or an object whose slots live in virtual registers (OilDescObject, e.g. an Array or a new instance).  Deoptimization rematerializes the virtual objects its frames reference.  In the VM the virtual objects are a static C array of OilVObj structs (oilVObjs); in the image an Array of instances of me.
+!OilVirtualObject commentStamp: 'cb 10/26/2026 23:00' prior: 0!
+I am a virtual object (OilInliningCompiler>>vobjAt:): an object that the compiled code does not allocate unless it escapes (scalar replacement, see newVObj:), a closure (OilDescBlock) or an object whose slots live in virtual registers (OilDescObject, e.g. an Array or a new instance).  Deoptimization rematerializes the virtual objects its frames reference.  In the VM the virtual objects are a static C array of OilVirtualObject structs (oilVObjs); in the image an Array of instances of me.
 
 kind	OilDescBlock or OilDescObject
 literal	the CompiledBlock of a closure, or the method allocating an object
@@ -228,142 +228,142 @@ epoch	the flow epoch (oilFlowEpoch) of its creation
 allocPC	the pc of the bytecode that created it
 materialized	the virtual register holding its materialized object, or -1!
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 kind
 	^kind! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 kind: anInteger
 	^kind := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 literal
 	^literal! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 literal: anInteger
 	^literal := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 rcvrKind
 	^rcvrKind! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 rcvrKind: anInteger
 	^rcvrKind := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 rcvrValue
 	^rcvrValue! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 rcvrValue: anInteger
 	^rcvrValue := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 vobjClass
 	^vobjClass! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 vobjClass: anInteger
 	^vobjClass := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 copiedCount
 	^copiedCount! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 copiedCount: anInteger
 	^copiedCount := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 copiedBase
 	^copiedBase! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 copiedBase: anInteger
 	^copiedBase := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 homeFrame
 	^homeFrame! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 homeFrame: anInteger
 	^homeFrame := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 numSlots
 	^numSlots! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 numSlots: anInteger
 	^numSlots := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 slotBase
 	^slotBase! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 slotBase: anInteger
 	^slotBase := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 outer
 	^outer! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 outer: anInteger
 	^outer := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 epoch
 	^epoch! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 epoch: anInteger
 	^epoch := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 allocPC
 	^allocPC! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 allocPC: anInteger
 	^allocPC := anInteger! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 materialized
 	^materialized! !
 
-!OilVObj methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 materialized: anInteger
 	^materialized := anInteger! !
 
-!OilVObj methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
 initialize
 	"All my fields start at 0, as in the static C array."
 	<doNotGenerate>
 	self class instVarNames do: [:ivn| self instVarNamed: ivn put: 0]! !
 
-!OilVObj class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 instVarNamesAndTypesForTranslationDo: aBinaryBlock
 	"All my fields are sqInts."
 	self instVarNames do: [:ivn| aBinaryBlock value: ivn value: #sqInt]! !
 
-!OilVObj class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilVirtualObject class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 structTypeName
-	^'OilVObj'! !
+	^'OilVirtualObject'! !
 
 
-VMStructType subclass: #OilCond
+VMStructType subclass: #OilLazyCondition
 	instanceVariableNames: 'cond regA regB imm useImm identity frame pc site testClass'
 	classVariableNames: ''
 	poolDictionaries: 'OilInstructionConstants OilConstants'
 	category: 'VMMaker-JIT-Oil'!
 
-!OilCond commentStamp: 'cb 10/27/2026 12:55' prior: 0!
-I am a lazy condition (OilInliningCompiler>>condAt:): a comparison or class test whose boolean result is not materialized until needed, so that a following conditional jump can fuse with it (see pushLazyCond:class:ra:rb:imm:useImm:identity:site: and emitCondCompare:).  In the VM the conditions are a static C array of OilCond structs (oilConds); in the image an Array of instances of me.
+!OilLazyCondition commentStamp: 'cb 10/27/2026 12:55' prior: 0!
+I am a lazy condition (OilInliningCompiler>>condAt:): a comparison or class test whose boolean result is not materialized until needed, so that a following conditional jump can fuse with it (see pushLazyCond:class:ra:rb:imm:useImm:identity:site: and emitCondCompare:).  In the VM the conditions are a static C array of OilLazyCondition structs (oilConds); in the image an Array of instances of me.
 
 cond	the condition code (OilCond*)
 regA	the virtual register of the first operand
@@ -376,100 +376,100 @@ pc	the pc of the comparison
 site	its deoptimization site, or -1
 testClass	the class of a class test (0 for a comparison)!
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 cond
 	^cond! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 cond: anInteger
 	^cond := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 regA
 	^regA! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 regA: anInteger
 	^regA := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 regB
 	^regB! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 regB: anInteger
 	^regB := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 imm
 	^imm! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 imm: anInteger
 	^imm := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 useImm
 	^useImm! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 useImm: anInteger
 	^useImm := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 identity
 	^identity! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 identity: anInteger
 	^identity := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 frame
 	^frame! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 frame: anInteger
 	^frame := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 pc
 	^pc! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 pc: anInteger
 	^pc := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 site
 	^site! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 site: anInteger
 	^site := anInteger! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 testClass
 	^testClass! !
 
-!OilCond methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 testClass: anInteger
 	^testClass := anInteger! !
 
-!OilCond methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition methodsFor: 'initialization' stamp: 'cb 10/26/2026 23:00'!
 initialize
 	"All my fields start at 0, as in the static C array."
 	<doNotGenerate>
 	self class instVarNames do: [:ivn| self instVarNamed: ivn put: 0]! !
 
-!OilCond class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 instVarNamesAndTypesForTranslationDo: aBinaryBlock
 	"All my fields are sqInts."
 	self instVarNames do: [:ivn| aBinaryBlock value: ivn value: #sqInt]! !
 
-!OilCond class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
+!OilLazyCondition class methodsFor: 'translation' stamp: 'cb 10/26/2026 23:00'!
 structTypeName
-	^'OilCond'! !
+	^'OilLazyCondition'! !
 
 
 OilBytecodeScanner subclass: #OilInliningCompiler
@@ -508,7 +508,7 @@ setUpSimulationTables
 	slotFlags := self newTable: OilNumRegs.
 	knownClass := self newTable: OilNumRegs.
 	lastDefIR := self newTable: OilNumRegs.
-	oilFrames := CArrayAccessor on: ((1 to: OilMaxFrames) collect: [:i| OilFrame new]).
+	oilFrames := CArrayAccessor on: ((1 to: OilMaxFrames) collect: [:i| OilVirtualFrame new]).
 	pcTarget := self newTable: OilPCMapSize.
 	pcLabelIR := self newTable: OilPCMapSize.
 	pcChain := self newTable: OilPCMapSize.
@@ -521,7 +521,7 @@ setUpSimulationTables
 	oilMDLitHash := self newTable: OilMDLiteralHashSize.
 	oilNumNoInline := 0.
 	oilNumDisqualified := 0.
-	oilVObjs := CArrayAccessor on: ((1 to: OilMaxVObjs) collect: [:i| OilVObj new]).
+	oilVObjs := CArrayAccessor on: ((1 to: OilMaxVObjs) collect: [:i| OilVirtualObject new]).
 	capturedKind := self newTable: OilMaxCaptured.
 	capturedValue := self newTable: OilMaxCaptured.
 	siteIR := self newTable: OilMaxSites.
@@ -530,7 +530,7 @@ setUpSimulationTables
 	siteKind := self newTable: OilMaxSites.
 	valueSelectors := self newTable: 5.
 	coldSelectors := self newTable: OilMaxColdSelectors.
-	oilConds := CArrayAccessor on: ((1 to: OilMaxConds) collect: [:i| OilCond new]).
+	oilConds := CArrayAccessor on: ((1 to: OilMaxConds) collect: [:i| OilLazyCondition new]).
 	snapKind := self newTable: OilNumRegs.
 	snapValue := self newTable: OilNumRegs.
 	sitePoolKind := self newTable: OilSitePoolSize.
@@ -706,19 +706,19 @@ numFrames
 
 !OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 frameAt: index
-	<returnTypeC: #'OilFrame *'>
+	<returnTypeC: #'OilVirtualFrame *'>
 	<cmacro: '(index) (&oilFrames[index])'>
 	^oilFrames at: index! !
 
 !OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 vobjAt: index
-	<returnTypeC: #'OilVObj *'>
+	<returnTypeC: #'OilVirtualObject *'>
 	<cmacro: '(index) (&oilVObjs[index])'>
 	^oilVObjs at: index! !
 
 !OilInliningCompiler methodsFor: 'accessing' stamp: 'cb 10/26/2026 23:00'!
 condAt: index
-	<returnTypeC: #'OilCond *'>
+	<returnTypeC: #'OilLazyCondition *'>
 	<cmacro: '(index) (&oilConds[index])'>
 	^oilConds at: index! !
 
@@ -3319,7 +3319,7 @@ declareCVarsIn: aCCodeGenerator
 	#(slotKind slotValue knownClass lastDefIR) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].
 	aCCodeGenerator var: #slotFlags declareC: 'static unsigned char slotFlags[OilNumRegs]'.
-	aCCodeGenerator var: #oilFrames declareC: 'static OilFrame oilFrames[OilMaxFrames]'.
+	aCCodeGenerator var: #oilFrames declareC: 'static OilVirtualFrame oilFrames[OilMaxFrames]'.
 	"The pc map (per inlined frame bytecode labels) is the largest table: keep it compact (8192 x 6 bytes = 48 KB)."
 	aCCodeGenerator var: #pcTarget declareC: 'static unsigned char pcTarget[OilPCMapSize]'.
 	aCCodeGenerator var: #pcLabelIR declareC: 'static short pcLabelIR[OilPCMapSize]'.
@@ -3332,12 +3332,12 @@ declareCVarsIn: aCCodeGenerator
 	"Deoptimization metadata planning (see planMetadata): the literals, slot indices from 1, and their hash table."
 	aCCodeGenerator var: #oilMDLiterals declareC: 'static sqInt oilMDLiterals[OilMaxMDLiterals]'.
 	aCCodeGenerator var: #oilMDLitHash declareC: 'static unsigned short oilMDLitHash[OilMDLiteralHashSize]'.
-	aCCodeGenerator var: #oilVObjs declareC: 'static OilVObj oilVObjs[OilMaxVObjs]'.
+	aCCodeGenerator var: #oilVObjs declareC: 'static OilVirtualObject oilVObjs[OilMaxVObjs]'.
 	#(capturedKind capturedValue) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxCaptured]'].
 	#(siteIR siteFrame sitePC siteKind siteSnapBase siteSnapTop siteSnapHigh) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilMaxSites]'].
-	aCCodeGenerator var: #oilConds declareC: 'static OilCond oilConds[OilMaxConds]'.
+	aCCodeGenerator var: #oilConds declareC: 'static OilLazyCondition oilConds[OilMaxConds]'.
 	"Deoptimization metadata: the virtual state at the current bytecode and the states recorded at deopt sites."
 	#(snapKind snapValue) do:
 		[:var| aCCodeGenerator var: var declareC: 'static sqInt ', var, '[OilNumRegs]'].

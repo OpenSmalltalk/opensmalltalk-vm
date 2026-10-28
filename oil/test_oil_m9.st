@@ -13,12 +13,12 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM9Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM9Item instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM9Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM9Item instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilM9Item) compile: 'score ^score' classified: 'tests'.
 (Smalltalk at: #OilM9Item) compile: 'score: n score := n' classified: 'tests'.
-Object subclass: #OilM9A instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM9B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM9A instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM9B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilM9A) compile: 'm9Size ^3' classified: 'tests'.
 (Smalltalk at: #OilM9B) compile: 'm9Size ^y + y + 1' classified: 'tests'.
 (Smalltalk at: #OilM9B) compile: 'y: v y := v' classified: 'tests'.

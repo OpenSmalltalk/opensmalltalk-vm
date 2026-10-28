@@ -1,11 +1,11 @@
 "Oil end-to-end test (native) of directed super sends: a super send of a method inlined in an Oil method
  (OilCallDirectedSuper) is a call through the directed super send trampolines, whose lookup starts in the superclass of
  the method class of the inlined method (not of the root method, of the receiver's class or of its superclass).
- OilDSMid>>compute: is inlined into the root OilDSModel>>run:n:, and the targets of its super sends are cold selectors
+ OilDirectedSuperMid>>compute: is inlined into the root OilDirectedSuperModel>>run:n:, and the targets of its super sends are cold selectors
  (never inlined), so they are called: with 0, 1, 2 and 3 arguments (registers and stack), with selectors that are not
  literals of the root (the Oil selector table).  Checks the IR, the results against the baseline JIT, deoptimization
  (another receiver class), the redefinition of a super send target and of an override, a full GC and voidCogVMState.
- A super send in a block (OilDSMid>>blockSum:) is compiled as a directed super send bytecode (push the class binding,
+ A super send in a block (OilDirectedSuperMid>>blockSum:) is compiled as a directed super send bytecode (push the class binding,
  then send super with extB >= 64), which the scanner does not support: such a block is not inlined, and the method is
  called; only the results are checked.
  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-directed-super-result.txt next to the image."
@@ -16,11 +16,11 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilDSBase instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilDSBase) subclass: #OilDSMid instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilDSMid) subclass: #OilDSLeaf instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilDSModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-base := Smalltalk at: #OilDSBase. mid := Smalltalk at: #OilDSMid. leaf := Smalltalk at: #OilDSLeaf. cls := Smalltalk at: #OilDSModel.
+Object subclass: #OilDirectedSuperBase instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilDirectedSuperBase) subclass: #OilDirectedSuperMid instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilDirectedSuperMid) subclass: #OilDirectedSuperLeaf instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilDirectedSuperModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+base := Smalltalk at: #OilDirectedSuperBase. mid := Smalltalk at: #OilDirectedSuperMid. leaf := Smalltalk at: #OilDirectedSuperLeaf. cls := Smalltalk at: #OilDirectedSuperModel.
 #('dsBase0 | t | t := 3. ^t + 4'
   'dsBase1: x ^x + 1'
   'dsBase2: x with: y ^x * 100 + y'
@@ -110,9 +110,9 @@ check value: 'run:n: = expected (leaf, 0)' value: (model run: leaf new n: 0) = 0
 check value: 'run:n: no deopt' value: ((info value: #run:n:) ifNil: [false] ifNotNil: [:i | (i at: 1) = 0]).
 check value: 'run:n: = baseline for 100000 iterations' value: (model run: leaf new n: 100000) = (model runBase: leaf new n: 100000).
 check value: 'run:n: still no deopt' value: ((info value: #run:n:) ifNil: [false] ifNotNil: [:i | (i at: 1) = 0]).
-"another receiver class: the class guard of the inlined compute: deoptimizes; the super sends of OilDSMid>>compute: start in
- OilDSBase whatever the receiver"
-check value: 'run:n: with an OilDSMid receiver (deopt)' value: (model run: mid new n: 20) = (expected value: 20).
+"another receiver class: the class guard of the inlined compute: deoptimizes; the super sends of OilDirectedSuperMid>>compute: start in
+ OilDirectedSuperBase whatever the receiver"
+check value: 'run:n: with an OilDirectedSuperMid receiver (deopt)' value: (model run: mid new n: 20) = (expected value: 20).
 check value: 'run:n: with a leaf after the deopt' value: (model run: leaf new n: 20) = (expected value: 20).
 
 "--- a super send in a block (a directed super send bytecode, not supported by the scanner: blockSum: is called) ---"
@@ -130,13 +130,13 @@ check value: 'runBlock:n: after a full GC' value: (model runBlock: leaf new n: 1
 base compile: 'dsBase1: x ^x + 2' classified: 'tests'.
 expected := [:n | (1 to: n) inject: 0 into: [:s :i | s + ((i + 2) * 2) + (i * 100 + 3) + 7 + (10200 + i)]].
 expectedBlock := [:n | (1 to: n) inject: 0 into: [:s :i | s + (3 * i) + 12]].
-check value: 'run:n: after redefining OilDSBase>>dsBase1:' value: (model run: leaf new n: 1000) = (expected value: 1000).
-check value: 'runBlock:n: after redefining OilDSBase>>dsBase1:' value: (model runBlock: leaf new n: 1000) = (expectedBlock value: 1000).
-"recompile with the new definition, then redefine the override in OilDSMid: the super sends must not find it"
+check value: 'run:n: after redefining OilDirectedSuperBase>>dsBase1:' value: (model run: leaf new n: 1000) = (expected value: 1000).
+check value: 'runBlock:n: after redefining OilDirectedSuperBase>>dsBase1:' value: (model runBlock: leaf new n: 1000) = (expectedBlock value: 1000).
+"recompile with the new definition, then redefine the override in OilDirectedSuperMid: the super sends must not find it"
 (res value: #run:n: value: [model run: leaf new n: 50]) in: [:ops |
 	check value: 'run:n: recompiles with 4 OilCallDirectedSuper' value: (r = 0 and: [(ops occurrencesOf: 55) = 4])].
 mid compile: 'dsBase2: x with: y ^-7' classified: 'tests'.
-check value: 'run:n: after redefining the OilDSMid override' value: (model run: leaf new n: 1000) = (expected value: 1000).
+check value: 'run:n: after redefining the OilDirectedSuperMid override' value: (model run: leaf new n: 1000) = (expected value: 1000).
 Smalltalk voidCogVMState.
 check value: 'run:n: after voidCogVMState' value: (model run: leaf new n: 1000) = (expected value: 1000).
 (res value: #run:n: value: [model run: leaf new n: 50]) in: [:ops |

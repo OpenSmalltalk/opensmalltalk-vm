@@ -699,7 +699,7 @@ numTrampolines
 ancilliaryClasses
 	"Answer any extra classes to be included in the translation: the counters field of SistaCogMethod and
 	 Oil's optimizing compiler hierarchy (scanner, base compiler, loop optimizer, full compiler)."
-	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilFrame. OilVObj. OilCond. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
+	^super ancilliaryClasses, {SistaCogMethod. OilBytecodeDescriptor. OilBytecodeScanner. OilVirtualFrame. OilVirtualObject. OilLazyCondition. OilInliningCompiler. OilLoopOptimizer. OilFullCompiler}! !
 
 
 !OilInliningCompiler methodsFor: 'native code generation' stamp: 'cb 10/25/2026 00:30'!

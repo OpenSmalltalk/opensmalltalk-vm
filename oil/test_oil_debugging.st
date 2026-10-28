@@ -23,9 +23,9 @@ readerFile := (FileDirectory default fileExists: 'OilDeoptMetadataReader.st')
 	ifFalse: [dir, 'OilDeoptMetadataReader.st'].
 (FileStream readOnlyFileNamed: readerFile) fileIn.
 check value: 'OilDeoptMetadataReader filed in' value: (Smalltalk includesKey: #OilDeoptMetadataReader).
-Object subclass: #OilDbgItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'OilJIT-debugging-tests'.
-Object subclass: #OilDbgModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'OilJIT-debugging-tests'.
-item := Smalltalk at: #OilDbgItem. cls := Smalltalk at: #OilDbgModel.
+Object subclass: #OilDebuggingItem instanceVariableNames: 'score' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilDebuggingModel instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+item := Smalltalk at: #OilDebuggingItem. cls := Smalltalk at: #OilDebuggingModel.
 item compile: 'score ^score' classified: 'tests'.
 item compile: 'score: n score := n' classified: 'tests'.
 "bonus: is inlined into the loops; probe: (thisContext: not inlinable) is a call from the inlined frame"

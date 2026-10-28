@@ -430,7 +430,7 @@ Object subclass: #OilTestItem
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'VMMaker-JIT-OilDebugging'!
+	category: 'VMMaker-JIT-OilTest'!
 
 !OilTestItem methodsFor: 'accessing' stamp: 'cb 10/24/2026 10:40'!
 score
@@ -461,7 +461,7 @@ Object subclass: #OilTestOther
 	instanceVariableNames: 'score'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'VMMaker-JIT-OilDebugging'!
+	category: 'VMMaker-JIT-OilTest'!
 
 !OilTestOther methodsFor: 'probes' stamp: 'cb 10/24/2026 10:40'!
 score
@@ -488,7 +488,7 @@ Object subclass: #OilTestModel
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'VMMaker-JIT-OilDebugging'!
+	category: 'VMMaker-JIT-OilTest'!
 
 !OilTestModel methodsFor: 'benchmarks' stamp: 'cb 10/24/2026 10:40'!
 sumScores: anOrderedCollection

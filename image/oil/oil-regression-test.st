@@ -25,9 +25,9 @@ check := [:name :bool |
 	bool == true
 		ifTrue: [pass := pass + 1. out nextPutAll: 'PASS  '; nextPutAll: name; cr]
 		ifFalse: [fail := fail + 1. out nextPutAll: 'FAIL  '; nextPutAll: name; cr]. out flush].
-Object subclass: #OilRegModel instanceVariableNames: 'messages' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilRegEnc instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-cls := Smalltalk at: #OilRegModel.
+Object subclass: #OilRegressionModel instanceVariableNames: 'messages' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilRegressionEncoder instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+cls := Smalltalk at: #OilRegressionModel.
 cls compile: 'messages: m messages := m' classified: 'tests'.
 #('sizeDup: encoder ^messages size - 1 * encoder sizeDup'
   'sizeDupPop: encoder ^messages size - 1 * (encoder sizeDup + encoder sizePop)'
@@ -39,9 +39,9 @@ cls compile: 'messages: m messages := m' classified: 'tests'.
   'minusOne: n ^n - 1'
   'concat: encoder | token | token := String with: $a. 1 to: messages size do: [:i | token := token , (String with: $b)]. ^token')
 	do: [:s | cls compile: s classified: 'tests'].
-(Smalltalk at: #OilRegEnc) compile: 'sizeDup | s | s := WriteStream on: (Array new: 4). s nextPut: 1; nextPut: 2. ^s contents size + 5' classified: 'tests'.
-(Smalltalk at: #OilRegEnc) compile: 'sizePop | s | s := WriteStream on: (Array new: 4). s nextPut: 1. ^s contents size + 1' classified: 'tests'.
-enc := (Smalltalk at: #OilRegEnc) new.
+(Smalltalk at: #OilRegressionEncoder) compile: 'sizeDup | s | s := WriteStream on: (Array new: 4). s nextPut: 1; nextPut: 2. ^s contents size + 5' classified: 'tests'.
+(Smalltalk at: #OilRegressionEncoder) compile: 'sizePop | s | s := WriteStream on: (Array new: 4). s nextPut: 1. ^s contents size + 1' classified: 'tests'.
+enc := (Smalltalk at: #OilRegressionEncoder) new.
 colls := {OrderedCollection new add: 1; add: 2; add: 3; add: 4; add: 5; yourself. OrderedCollection new add: 1; yourself. OrderedCollection new}.
 model := cls new.
 {#(#sizeDup: #sizeDupPop: #sizeTimes: #sizePlus: #tempMinus:) -> colls.
@@ -64,11 +64,11 @@ model := cls new.
 			check value: sel, ' on ', coll size printString, ' elements = ', expected printString value: actual = expected]]]].
 
 "3. 0 - x abs after the exit of the inlined Number>>abs"
-Object subclass: #OilRegBall instanceVariableNames: 'x xVel' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-(Smalltalk at: #OilRegBall) compile: 'x: a xVel: b x := a. xVel := b' classified: 'tests'.
-(Smalltalk at: #OilRegBall) compile: 'step x := x + xVel. x > 500 ifTrue: [x := 500. xVel := 0 - xVel abs]. ^xVel' classified: 'tests'.
+Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilRegressionBall) compile: 'x: a xVel: b x := a. xVel := b' classified: 'tests'.
+(Smalltalk at: #OilRegressionBall) compile: 'step x := x + xVel. x > 500 ifTrue: [x := 500. xVel := 0 - xVel abs]. ^xVel' classified: 'tests'.
 [| ballCls fbk comp |
- ballCls := Smalltalk at: #OilRegBall.
+ ballCls := Smalltalk at: #OilRegressionBall.
  fbk := OilSimulatedTypeFeedback new.
  fbk record: [(ballCls new x: 490 xVel: 20) step. (ballCls new x: 490 xVel: -20) step].
  comp := OilCompiler new.

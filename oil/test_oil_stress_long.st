@@ -10,7 +10,7 @@
 Utilities authorInitials: 'cb'.
 minutes := Smalltalk at: #OilStressMinutes ifAbsent: [120].
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-stress-long-result.txt').
-Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilStress) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
 (Smalltalk at: #OilStress) class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
 (Smalltalk at: #OilStress) class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.

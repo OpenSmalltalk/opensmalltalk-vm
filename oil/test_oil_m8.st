@@ -12,15 +12,15 @@ failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
 	bool == true ifFalse: [failures add: name]].
-Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
-Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+Object subclass: #OilM8Model instanceVariableNames: 'total' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM8A instanceVariableNames: 'x' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 (Smalltalk at: #OilM8A) compile: 'oilM8Size ^3' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'oilM8Size ^y * 2 + 1' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'y: v y := v' classified: 'tests'.
 (Smalltalk at: #OilM8A) compile: 'oilM8Maybe ^nil' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'oilM8Maybe ^self' classified: 'tests'.
-(Smalltalk at: #OilM8B) subclass: #OilM8C instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+(Smalltalk at: #OilM8B) subclass: #OilM8C instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 cls := Smalltalk at: #OilM8Model.
 #('pointSum: n | s | s := 0. 1 to: n do: [:i | | p | p := i @ (i + 1). s := s + p x + p y]. ^s'
   'pointNew: n | s | s := 0. 1 to: n do: [:i | | p | p := Point x: i y: 3. s := s + (p x * p y)]. ^s'

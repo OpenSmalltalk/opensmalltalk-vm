@@ -87,7 +87,7 @@ check value: 'peepholes: SmallInteger overflow deopts (no wrong result)' value: 
 
 "--- 6. Calls: polymorphic receiver, 0/1/2/3 arguments ---"
 "(three receiver classes, so that the sends are megamorphic: Oil inlines bimorphic sends of small methods)"
-OilTestOther subclass: #OilTestThird instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilDebugging'.
+OilTestOther subclass: #OilTestThird instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 c := compile value: #callProbe:with:with: value: {{coll first. 1. 2}. {OilTestOther new. 3. 4}. {(Smalltalk at: #OilTestThird) new. 1. 2}} value: nil.
 hist := c opcodeHistogram.
 check value: 'callProbe: OilCall0, OilCall1 and two OilCallN (packed args)' value: ((hist occurrencesOf: 'Call0') = 1 and: [(hist occurrencesOf: 'Call1') = 1 and: [(hist occurrencesOf: 'CallN') = 2]]).
