@@ -87,11 +87,14 @@ Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariabl
  - tvAlias: the caller's stack slot holding the remote temp t (an alias of its temp vector slot register) was copied on
    the arm of the inlined bump:if: that assigns t only (invalidateAliasesOf:), and then believed copied on both paths.
  - retAlloc: the result of the inlined retSel:'s first return was retargeted to the frame's base register before the dead
-   scalar replaced p was materialized (flushTVSlots): the deopt state of the allocation referred to the old register."
+   scalar replaced p was materialized (flushTVSlots): the deopt state of the allocation referred to the old register.
+ - lazyAlloc: the jump on the lazy comparison answered by the inlined isEmpty materialized the live scalar replaced p: the
+   deopt state of the allocation recorded the comparison as a register that was never assigned."
 cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'tests'.
 cls compile: 'retSel: n | p | n > 0 ifTrue: [p := n @ n. ^p x + 1]. ^0' classified: 'tests'.
 #('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s'
-  'retAlloc: n | s | s := 0. 1 to: n do: [:i | s := s + (self retSel: i - 2)]. ^s')
+  'retAlloc: n | s | s := 0. 1 to: n do: [:i | s := s + (self retSel: i - 2)]. ^s'
+  'lazyAlloc: coll | p | p := 3 @ 4. coll isEmpty ifTrue: [^p]. ^p x')
 	do: [:s | cls compile: s classified: 'tests'].
 statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
 	ok := true.
@@ -110,7 +113,7 @@ statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
 					[out nextPutAll: '   deopt#'; print: site; nextPutAll: ' refers to unassigned r'; print: (poolValue at: (snapBase at: site) + k); cr.
 					 ok := false]]]].
 	ok].
-{#tvAlias: -> #(5 10). #retAlloc: -> #(5 10)} do: [:selAndArgs | | sel fbk comp |
+{#tvAlias: -> #(5 10). #retAlloc: -> #(5 10). #lazyAlloc: -> {#(1 2). #()}} do: [:selAndArgs | | sel fbk comp |
 	sel := selAndArgs key.
 	fbk := OilSimulatedTypeFeedback new.
 	fbk record: [model perform: sel with: selAndArgs value first].

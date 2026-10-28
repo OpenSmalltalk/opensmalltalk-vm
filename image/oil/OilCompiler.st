@@ -1078,6 +1078,15 @@ copySnapshotToSite: siteIndex
 	 so it is recorded as that register."
 	| base |
 	<inline: false>
+	"A lazy comparison of the snapshot that is not (or no longer) materialized in its own register, e.g. the condition
+	 genJumpIf:to:frame: consumes when its flush materializes a scalar replaced object, has no value to deoptimize to:
+	 record no state (the back end refuses the site)."
+	0 to: snapTop do:
+		[:vreg|
+		((self isLazyKind: (snapKind at: vreg))
+		 and: [vreg > simStackTop or: [(slotKind at: vreg) ~= OilDescReg or: [(slotValue at: vreg) ~= vreg]]]) ifTrue:
+			[siteSnapBase at: siteIndex put: -1.
+			 ^self]].
 	base := sitePoolTop.
 	base + snapTop + 1 + (OilMaxReg - snapHighTop) > OilSitePoolSize ifTrue:
 		[siteSnapBase at: siteIndex put: -1.
