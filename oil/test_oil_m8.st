@@ -1,9 +1,9 @@
-"Oil end-to-end test (native) of Milestone 8: scalar replacement of objects (Points and Associations dissolved into
+"Oil end-to-end test (native) of scalar replacement of objects (Points and Associations dissolved into
  registers, materialized with OilNewObject only where they escape, rematerialized when
  deoptimizing), bimorphic inlining (a class test with both methods inlined; a predicate answering true for one class and
  false for the other compiled to the class test itself, OilCmpClass), and the sends removed from Set and Dictionary probes
  (String>>hash inlined as OilStringHash, Behavior>>identityHash and the hash of a literal folded).
- Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m8-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels model cls res last ir opcodes countOps r t base oil n times stats statsOf syms set dict keys
   expected latencies compileUs probeArray mixed ab info irNames dump |
 Utilities authorInitials: 'cb'.
@@ -73,7 +73,7 @@ sels add: 5; add: #bitXor:.
 sels add: 9; add: ByteString class >> #indexOfAscii:inString:startingAt:.
 sels add: 10; add: PositionableStream >> #skipSeparators.
 sels add: 11; add: ReadStream.
-sels add: 12; add: 3. "no loop unrolling (M9, see test_oil_m9.st): these checks count the instructions of loops"
+sels add: 12; add: 3. "no loop unrolling: these checks count the instructions of loops"
 check value: 'primitiveOilSetSelectors' value: (cls oilSetSelectors: sels asArray) ~~ #failed.
 model := cls new total: 7; yourself.
 "opcodes: the opcode numbers of the last compilation's (Pass 2) IR; countOps: how many of the given opcodes"
@@ -293,4 +293,4 @@ out nextPutAll: 'compilation (Passes 1-3 + assembly) median '; print: (compileUs
 check value: 'compilation latency: median below 1 ms' value: (compileUs at: compileUs size + 1 // 2) < 1000.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M8 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil ScalarReplacement test failures: ', failures printString]

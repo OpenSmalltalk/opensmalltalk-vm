@@ -91,7 +91,7 @@ Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariabl
  - lazyAlloc: the jump on the lazy comparison answered by the inlined isEmpty materialized the live scalar replaced p: the
    deopt state of the allocation recorded the comparison as a register that was never assigned.
  - foldConsts: constant folding of \\ and // (floored), and of shifts and products whose result would not fit 64 bits,
-   in C (see oil/test_oil_m5.st: here the simulation computes them in Smalltalk anyway)."
+   in C (here the simulation computes them in Smalltalk anyway)."
 cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'tests'.
 cls compile: 'retSel: n | p | n > 0 ifTrue: [p := n @ n. ^p x + 1]. ^0' classified: 'tests'.
 #('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s'

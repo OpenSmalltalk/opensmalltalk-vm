@@ -1,4 +1,4 @@
-"Oil end-to-end test (native) of Milestone 13: the debugging primitives.
+"Oil end-to-end test (native) of the debugging primitives.
  - Context>>contexts (primitiveOilContexts): the method -> pc associations of the activations the frame of an Oil method
    stands for (the methods and blocks it inlined at the call it is suspended in, then its own), innermost first.
  - Context>>deoptimize (primitiveOilDeoptimize): replaces the frame by real contexts for those activations and answers the

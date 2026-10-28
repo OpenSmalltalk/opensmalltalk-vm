@@ -1,9 +1,9 @@
-"ProfilingCogit end-to-end test: the trip counters and autonomous compilation (Milestone 15).  A counter trips at the
+"ProfilingCogit end-to-end test: the trip counters and autonomous compilation.  A counter trips at the
  8191st execution of its site (a loop back jump), and the trip compiles the home method of the
  tripping frame with Oil (the method itself; for a block, or an iterator whose argument is a closure, the home method of
  the closure) and installs its Oil code for its next activations, while the running activations finish in the baseline
  code (see CoInterpreter>>ceOilTrip: and oilAutoCompile:receiver:).  Run with run-st.sh on a Squeak 6.x 64-bit image
- using the VM built from src/spur64.oil.  Writes oil-m1-result.txt into the image's directory and signals an error if any
+ using the VM built from src/spur64.oil.  Writes test results into the image's directory and signals an error if any
  check fails."
 | resultPath out failures check m oc small items warm hasOil cls mCountTo mSumScores mMySum mMyDo mPolySum mOffSum ocDo |
 Utilities authorInitials: 'cb'.
@@ -147,4 +147,4 @@ cls subclass: #OilCoreSimulationModelSub instanceVariableNames: '' classVariable
 
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASSED'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 (FileStream forceNewFileNamed: resultPath) nextPutAll: out contents; close.
-failures isEmpty ifFalse: [self error: 'Oil M1/M15 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'ProfilingCogit test failures: ', failures printString]

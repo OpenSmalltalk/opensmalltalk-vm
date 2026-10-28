@@ -1,7 +1,7 @@
 "Oil end-to-end test (native) of OilFullCompiler: Float arithmetic and float fusion (unboxed chains, Mandelbrot),
  float deoptimization (non-Float operands, zero divisor, boxed results, exact comparisons), and dominator-scoped value
  numbering (redundant loads and checks).  Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.
- Writes oil-m6-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels model res last stats base oil r expected expected400 info |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m6-result.txt').
@@ -153,4 +153,4 @@ check value: 'full GC' value: (model mandelbrot: 30) = ((Smalltalk at: #OilFloat
 check value: 'axpy:x:y: redefined' value: (model axpy: 2.0 x: 3.5 y: 0.25) = 6.75.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M6 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil FloatFusion test failures: ', failures printString]

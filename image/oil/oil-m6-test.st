@@ -1,4 +1,4 @@
-"Oil M6 acceptance test (in image): OilFullCompiler's dominator-scoped value numbering (OilFullCompiler>>valueNumber)
+"Oil FloatFusion acceptance test (in image): OilFullCompiler's dominator-scoped value numbering (OilFullCompiler>>valueNumber)
  and float fusion (OilFullCompiler>>fuseFloats).  Files in the Oil sources, compiles probes (Pass 1 with simulated type
  feedback, then pipe: Pass 2 with value numbering, then float fusion), checks the statistics and the IR, and validates
  the IR by executing it (OilIRInterpreter, which keeps unboxed float results aside like XMM registers) against the real

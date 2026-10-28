@@ -1,10 +1,10 @@
-"Oil end-to-end test (native) of Milestone 9: loop unrolling.  Full unrolling of leaf loops counted by a constant (at most
+"Oil end-to-end test (native) of loop unrolling.  Full unrolling of leaf loops counted by a constant (at most
  OilUnrollMaxTrips iterations, iterations * body <= OilUnrollFullBudget), rotation of the other counted leaf loops (Oil no
  longer unrolls them partially), of loops tested against an immediate or against a limit not known to be a SmallInteger (an
  argument), and stores into young objects (with their store checks: Oil no longer elides them).  Each probe is compiled
  and checked against the baseline JIT (a copy of the method left to it), including deoptimizations inside the unrolled
  copies, and timed.
- Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m9-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels setSelectors model cls res last ir opcodes countOps r t times statsOf info irNames dump
   arr arr1k items expected bench probes |
 Utilities authorInitials: 'cb'.
@@ -165,4 +165,4 @@ Smalltalk voidCogVMState.
 check value: 'voidCogVMState: results' value: ((model sumArr: arr1k) = (arr1k inject: 0 into: [:a :b | a + b]) and: [(model sum3: #(1 2 3)) = 6]).
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M9 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil LoopUnrolling test failures: ', failures printString]

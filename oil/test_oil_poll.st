@@ -1,4 +1,4 @@
-"Oil end-to-end test (native) of the interrupt checks of Oil loops (Milestone 14).  A loop of Oil code whose body sends
+"Oil end-to-end test (native) of the interrupt checks of Oil loops.  A loop of Oil code whose body sends
  nothing that builds a frame checks the stack limit once per iteration (OilInliningCompiler>>genPollBefore:), so the timer,
  process switches and interrupts are serviced.  Each probe spins on a flag that only a higher priority process, woken by
  a Delay, sets: the loop must be preempted at its interrupt check.  While the spinner is suspended there, that process

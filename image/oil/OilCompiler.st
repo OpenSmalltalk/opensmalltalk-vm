@@ -3704,8 +3704,8 @@ genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot
 	"A send whose inline cache saw exactly two receiver classes, whose methods are quick or small: inline both, behind a
 	 class test (OilCmpClass) of the receiver.  If both are quick methods answering true and false (a predicate such as
 	 isSymbol), the class test itself is the result (genBimorphicPredicate:...): no boolean object, no merge.  Otherwise:
-		CmpClass rcvr == C1; BranchFalse Lelse; <M1 inlined>; Jump Lexit;
-		Lelse: GuardClass rcvr == C2; <M2 inlined>; Lexit:
+		CmpClass rcvr == C1; BranchFalse Lelse; <method1 inlined>; Jump Lexit;
+		Lelse: GuardClass rcvr == C2; <method2 inlined>; Lexit:
 	 with the result in the receiver's register.  Answer false (nothing emitted) if the send does not qualify."
 	| classObj1 classObj2 method1 method2 prim1 prim2 rcvrReg elseSite elseJump exitJump |
 	classObj1 := self profiledClass: 0 at: currentPC.

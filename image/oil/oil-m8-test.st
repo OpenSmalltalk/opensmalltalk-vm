@@ -1,4 +1,4 @@
-"Oil M8 acceptance test (in image): scalar replacement of objects (OilDescObject: dissolved Points and Associations,
+"Oil ScalarReplacement acceptance test (in image): scalar replacement of objects (OilDescObject: dissolved Points and Associations,
  materialized only where they escape, with OilNewObject), bimorphic inlining (a class test and both methods inlined; a
  predicate answering true for one class and false for the other is the class test itself: OilCmpClass, no boolean), and the
  sends removed from hashed collection probes (Behavior>>identityHash and String>>hash of constants folded, OilStringHash).

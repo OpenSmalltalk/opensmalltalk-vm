@@ -241,7 +241,7 @@ initialize
 	"scalar replacement: the largest scalar replaced object"
 	OilMaxVObjSlots := 16.
 	"loop unrolling (OilLoopOptimizer>>unrollLoops), per method: unrolled loops; a loop of at most OilUnrollMaxTrips iterations
-	 known at compile time is fully unrolled if iterations * body size (IR instructions) <= OilUnrollFullBudget.  Tuned (M9):
+	 known at compile time is fully unrolled if iterations * body size (IR instructions) <= OilUnrollFullBudget.  Tuned:
 	 8 iterations and a budget of 48 instructions (about 80 bytecodes) are faster than 5 and 25 (8 x 2 instructions: 1.35
 	 times faster when unrolled; 5 x 6: 1.15 times)."
 	OilMaxUnrolls := 16.
@@ -249,7 +249,7 @@ initialize
 	OilUnrollFullBudget := 48.
 	"Pass 3: the alignment of loop headers (bytes, at most 16), see OilInliningCompiler>>genLoopAlignment"
 	OilLoopAlignment := 16.
-	"Pass 3 float loop registers (M10, OilInliningCompiler>>prepareFloatLoops): loops per method whose float variables live in
+	"Pass 3 float loop registers (OilInliningCompiler>>prepareFloatLoops): loops per method whose float variables live in
 	 XMM registers, the XMM registers (DPFPReg8..) they get, and the exits of a loop"
 	OilMaxFloatLoops := 4.
 	OilMaxPinnedXmms := 8.

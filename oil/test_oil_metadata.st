@@ -1,4 +1,4 @@
-"Oil end-to-end test (native) of Milestone 11: the compact deoptimization metadata.  The metadata of an Oil method is a
+"Oil end-to-end test (native) of the compact deoptimization metadata.  The metadata of an Oil method is a
  hidden pinned object of CompiledMethod format: a literal frame (the root method, the inlined selectors, the methods of
  the inlined frames, CompiledBlocks, classes, constants), which the garbage collectors trace like a method's, then bytes
  (the frame, virtual object and site records, 2-byte descriptors, the spill offsets of the spilled registers only).
@@ -97,7 +97,7 @@ check value: 'pointSum: deopt after GCs' value: (model pointSum: items) = ((1 to
 check value: 'blockSum: deopt after GCs' value: (model blockSum: items) = (5050 - 50 + 1000).
 check value: 'injectSum: deopt after GCs' value: (model injectSum: items) = ((1 to: 100) inject: 0 into: [:a :k | a + (k = 50 ifTrue: [1002] ifFalse: [(2 * k) + 2])]).
 check value: 'deopts counted in the metadata' value: (#(sumScores: sumBonus: pointSum: blockSum: injectSum:) allSatisfy: [:sel | (info value: sel) isNil or: [((info value: sel) at: 1) >= 1]]).
-"Milestone 12: the metadata is not pinned.  Allocate old objects, Oil-compile a method (its metadata lands after them),
+"Verify the metadata is not pinned.  Allocate old objects, Oil-compile a method (its metadata lands after them),
  free them and run a full GC: the compaction slides the metadata down, and the method's reference to it must follow."
 holes := (1 to: 3000) collect: [:k | Array new: 200].
 Smalltalk garbageCollect.

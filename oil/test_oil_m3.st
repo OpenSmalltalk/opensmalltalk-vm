@@ -1,6 +1,6 @@
 "Oil end-to-end test: native code generation, deoptimization.
  Run with run-st.sh on a Squeak 6.x 64-bit image, using the VM built from src/spur64.oil.
- Writes oil-m3-result.txt (and oil-m3-code.bin, the machine code of the Oil-compiled sumScores:) next to the image."
+  Writes results next to the image."
 | irDump last dir resultPath out failures check model items wrong expected r info m t0 baseMs oilMs sels setSels compileResult before arr3 x y codeFile timeOf ocItems |
 Utilities authorInitials: 'cb'.
 dir := FileDirectory default.
@@ -62,10 +62,10 @@ sels add: 8; add: 1000. "this test deoptimizes the same method many times: do no
 #(error: errorNoFreeSpace errorNotFound: errorSubscriptBounds: errorNoSuchElement errorEmptyCollection errorKeyNotFound: errorKeyNotFound errorImproperStore errorNonIntegerIndex errorNotIndexable subclassResponsibility shouldNotImplement notYetImplemented halt halt: deprecated: deprecated signal signal: doesNotUnderstand: cannotReturn: primitiveFailed primitiveFailed:)
 	do: [:s | sels add: 7; add: s].
 setSels := (Smalltalk at: #OilCoreSimulationModelTest) oilSetSelectors: sels asArray.
-check value: 'primitiveOilSetSelectors available (VM has Oil M3)' value: setSels ~~ #failed.
+check value: 'primitiveOilSetSelectors available (VM has Oil)' value: setSels ~~ #failed.
 setSels == #failed ifTrue:
 	[out close.
-	 self error: 'Oil M3 primitives missing'].
+	 self error: 'Oil primitives missing'].
 
 model := (Smalltalk at: #OilCoreSimulationModelTest) new.
 m := (Smalltalk at: #OilCoreSimulationModelTest) >> #sumScores:.
@@ -90,7 +90,7 @@ last := CompiledMethod oilLastCompilation.
 out nextPutAll: 'last compilation: failure '; print: (last at: 1); nextPutAll: ' eager '; print: (last at: 3); nextPutAll: ' failed at IR '; print: (last at: 4);
 	nextPutAll: ' sites '; print: (last at: 5); nextPutAll: ' frames '; print: (last at: 6); nextPutAll: ' spill slots '; print: (last at: 7); nextPutAll: ' allocated registers '; print: (last at: 8); cr;
 	nextPutAll: 'IR ('; print: (last at: 2) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 2)); nextPutAll: 'trace: '; print: (last at: 9); cr; flush.
-last size >= 11 ifTrue: "Oil M4: the IR above is Pass 2's; Pass 1's and Pass 2's statistics"
+last size >= 11 ifTrue: "the IR above is Pass 2's; Pass 1's and Pass 2's statistics"
 	[out nextPutAll: 'Pass 1 IR ('; print: (last at: 10) size; nextPutAll: ' words):'; cr; nextPutAll: (irDump value: (last at: 10));
 		nextPutAll: 'Pass 2 (loops rotated, bounds checks removed, dead instructions, sizes shared, unchecked increments, Pass 1 words, guards removed, undo stubs): '; print: (last at: 11); cr; flush].
 check value: 'Oil compilation succeeds (result 0)' value: compileResult = 0.
@@ -174,4 +174,4 @@ check value: 'deopt after full GC' value: (model sumScores: wrong) = (expected -
 
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M3 test failures: ', failures printString].
+failures isEmpty ifFalse: [self error: 'Oil Core test failures: ', failures printString].

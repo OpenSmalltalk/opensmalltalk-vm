@@ -1,4 +1,4 @@
-"Method-level multi-specialization for the Oil optimizing JIT (Milestone 7, Closed-PIC Dispatcher).
+"Method-level multi-specialization for the Oil lightweight JIT (Closed-PIC Dispatcher).
  A method may have up to OilMaxSpecialization (5) Oil versions, each specialized for one receiver class, besides its
  baseline machine code, which runs every other receiver: like a closed PIC of 6 cases whose last case is the generic code.
  - At startup, ProfilingCogit compiles a dedicated Dispatcher prototype (oilDispatcherPrototype) using Cogit abstract

@@ -1,8 +1,8 @@
-"Oil end-to-end test (native) of Milestone 7: method-level multi-specialization (several Oil versions of one method,
+"Oil end-to-end test (native) of method-level multi-specialization (several Oil versions of one method,
  one per receiver class, dispatched by the method's baseline code, which runs every other receiver), the identityHash
  intrinsic (IdentitySet and IdentityDictionary probes without sends), the word-at-a-time byte scans (upTo: and
  skipSeparators on ByteString streams), and their robustness (full GC, Smalltalk voidCogVMState, recompilation).
- Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m7-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels model cls res last ir opcodes countOps r info t base oil n syms set dict keys expected text
   big specs oc times trips latencies seqDo classes colls ocDo sorted sub counts compileUs copy |
 Utilities authorInitials: 'cb'.
@@ -290,4 +290,4 @@ out nextPutAll: 'compilation (Passes 1-3 + assembly) median '; print: (compileUs
 check value: 'compilation latency: median below 1 ms' value: (compileUs at: compileUs size + 1 // 2) < 1000.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M7 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil Specialization test failures: ', failures printString]

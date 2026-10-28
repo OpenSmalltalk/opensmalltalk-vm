@@ -1,11 +1,11 @@
-"Oil M10 acceptance test (in image): the analysis of the float loop registers (OilInliningCompiler>>prepareFloatLoops, run by
+"Oil FloatLoop acceptance test (in image): the analysis of the float loop registers (OilInliningCompiler>>prepareFloatLoops, run by
  Pass 3).  In an innermost loop without calls, guards or stores, the float variables (assigned only float results or moves of
  float variables, read only by float instructions) get XMM registers across iterations: kind 1 when read before assigned
  (unboxed when entering, they must hold a Float there: the code before the loop assigns them a Float literal or a float
  result), kind 2 when always assigned before read and dead after the loop (0.0 when entering); and the float invariants
  (kind 100 + how they are unboxed: 0 a Float, 1 or a SmallInteger, 2 or an exactly representable SmallInteger).  Pass 2 no
  longer unrolls loops with float arithmetic (they get registers instead).  The code generation is tested natively
- (oil/test_oil_m10.st).
+ (native test).
  Files in the Oil sources, compiles probes (Pass 1 with simulated type feedback, then pipe, then the analysis), checks the
  loops and their registers, and that the IR still runs like the real methods (OilIRInterpreter)."
 | dir |

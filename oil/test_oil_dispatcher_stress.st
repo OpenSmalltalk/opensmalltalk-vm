@@ -1,4 +1,4 @@
-"Oil stress test (native) of the multi-specialization Dispatcher (oil-m7-specialization.st): a method specialized for up to
+"Oil stress test (native) of the multi-specialization Dispatcher: a method specialized for up to
  OilMaxSpecialization receiver classes, whose Dispatcher must always route each receiver to its own specialization or to the
  baseline code, through
  - machine-code sends, perform:, and the interpreter's activation of a cogged method (withArgs:executeMethod:);

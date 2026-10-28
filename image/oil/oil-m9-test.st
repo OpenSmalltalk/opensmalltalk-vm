@@ -1,4 +1,4 @@
-"Oil M9 acceptance test (in image): loop unrolling (OilLoopOptimizer>>unrollLoops).
+"Oil LoopUnrolling acceptance test (in image): loop unrolling (OilLoopOptimizer>>unrollLoops).
  Full unrolling: a leaf loop whose iterations are counted by a constant (to:do: with constant bounds, timesRepeat: of a
  constant), at most OilUnrollMaxTrips of them and iterations * body size <= OilUnrollFullBudget, becomes straight-line copies
  of its body (no test, no branch, no step: the induction variable is assigned its values), then optimized again (value

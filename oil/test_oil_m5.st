@@ -1,6 +1,6 @@
 "Oil end-to-end test (native): deopt disqualification, escaping closures and brace arrays (OilMakeClosure,
  OilNewArray, eden bump allocation with the allocation deoptimization), byte/stream intrinsics, selector table.
- Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m5-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels model m info res last items wrong expected t counter blk arr before |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m5-result.txt').
@@ -232,4 +232,4 @@ check value: 'foldConsts: Smalltalk semantics of constant folding (floored modul
 check value: 'full GC after all tests' value: (model braceOf: 1 and: 2) = {1. 2. 3. nil}.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M5 test failures: ', failures printString].
+failures isEmpty ifFalse: [self error: 'Oil test failures: ', failures printString].

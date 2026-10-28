@@ -44,7 +44,7 @@ same := [:r1 :r2 |
 		ifFalse: [(r2 isKindOf: Association) not and: [r1 = r2]]].
 stats := [:comp | (0 to: 5) collect: [:k | comp pass2Statistics: k]].
 
-"--- 1. sumScores: on an Array (the M3/M4 benchmark shape) ---"
+"--- 1. sumScores: on an Array (the benchmark shape) ---"
 c := compile value: #sumScores: value: {{arr}} value: false.
 out cr; nextPutAll: c irString.
 c loopOptimize.
@@ -135,7 +135,7 @@ OilCoreSimulationModelTest compile: 'upcase: aString
 		real := model perform: sel withArguments: (args collect: [:e | e copy]).
 		check value: sel, ' Pass 2 = Pass 1 = real for ', (args printString contractTo: 50) value: ((same value: r1 value: r2) and: [(r1 isKindOf: Association) or: [r1 = real]])]]] value.
 
-"--- 2. Every M2 probe: Pass 2 IR = Pass 1 IR = real execution ---"
+"--- 2. Pass 2 IR = Pass 1 IR = real execution ---"
 probes := {
 	{#sumScores:. {{coll}}. {{coll}. {OrderedCollection new}. {mixed}. {coll asArray}}}.
 	{#sumArray:. {{arr}}. {{arr}. {#()}. {arrWithOther}. {arrWithInt}. {arrOverflow}}}.

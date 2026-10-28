@@ -1,9 +1,9 @@
-"Oil end-to-end test (native) of Milestone 10: float loop registers.  In an innermost loop without calls, the float
+"Oil end-to-end test (native) of float loop registers.  In an innermost loop without calls, the float
  variables live in XMM registers across iterations (unboxed once when the loop is entered, boxed as SmallFloat64s only at
  its exits and before deoptimizing; their values are checked to fit a SmallFloat64), and the float invariants are unboxed
  once.  Each probe is compiled, checked against the baseline JIT (a copy of the method left to it; deopts included: a
  variable that stops fitting a SmallFloat64, a non-Float entering the loop) and timed.
- Run with run-st.sh on a Squeak 6.x 64-bit image with the Oil VM.  Writes oil-m10-result.txt next to the image."
+  Writes results next to the image."
 | out failures check sels setSelectors model cls res last ir opcodes statsOf info times probes irNames |
 Utilities authorInitials: 'cb'.
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m10-result.txt').
@@ -112,4 +112,4 @@ Smalltalk voidCogVMState.
 check value: 'voidCogVMState' value: (model mandelbrot: 30) = (model mandelbrotBase: 30).
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M10 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil FloatLoop test failures: ', failures printString]
