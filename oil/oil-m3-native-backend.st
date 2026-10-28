@@ -6,8 +6,7 @@
    rematerializing the closures and temp vectors Oil dissolved, and continues in the interpreter.
  - CoInterpreter>>oilAutoCompile:receiver: compiles the hot methods the trip counters find (see ceOilTrip:) and installs
    their Oil code without disturbing their running activations.
- - primitiveOilCompile, primitiveOilSetColdSelectors, primitiveOilSetAutonomousCompilation, primitiveOilSetDisqualifyLimit
-   and primitiveOilMethodInfo are the image's interface; primitiveOilContexts, primitiveOilDeoptimize and primitiveOilMetadata support debuggers and VM engineers: a
+ - primitiveOilGetOrSetParameter and primitiveOilMethodInfo are the image's interface; primitiveOilContexts, primitiveOilDeoptimize and primitiveOilMetadata support debuggers and VM engineers: a
    frame suspended in a call maps, through the call's site record, to the activations it stands for.
  Author: cb."!
 
@@ -216,7 +215,7 @@ oilCompileFrameBuild
 !ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/26/2026 15:00'!
 oilRegisterSelectors
 	"Tell Pass 1 the cold selectors, never inlined: those of the Array of Symbols the image supplied (see
-	 primitiveOilSetColdSelectors), else the default ones, which it recognizes by name (numColdSelectors -1, see
+	 primitiveOilGetOrSetParameter), else the default ones, which it recognizes by name (numColdSelectors -1, see
 	 OilInliningCompiler>>isColdSelector:), like the value selectors, bitXor: and the methods of the byte scans.
 	 Re-registered before each compilation since the garbage collector moves selectors."
 	| selectors selector |
@@ -1879,65 +1878,6 @@ oilReturnToContext: activeContext pushing: resultOop
 	self oilResumeContext: activeContext.
 	self pop: argumentCount + 1 thenPush: resultOop! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 20:30'!
-primitiveOilCompile
-	"Receiver: a CompiledMethod; argument: the class of the receivers to specialize it for.
-	 Compile the method with the Oil optimizing JIT and install the result as its machine code, replacing any
-	 baseline machine code.  The inline caches of the baseline machine code (and of the methods and blocks it
-	 calls) are the type feedback, so run the method first.  Answer a SmallInteger, 0 (OilOK) on success, else an
-	 Oil failure code (see OilConstants), in which case the method is left as it was."
-	<export: true>
-	<essential: #ProfilingCogit>
-	| methodObj classObj result activeContext |
-	argumentCount ~= 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	methodObj := self stackValue: 1.
-	classObj := self stackTop.
-	((objectMemory isNonImmediate: methodObj)
-	 and: [(objectMemory isOopCompiledMethod: methodObj)
-	 and: [(self isFullBlockMethod: methodObj) not
-	 and: [objectMemory isNonImmediate: classObj]]]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	((self methodHasCogMethod: methodObj)
-	 and: [cogit isOilMethod: (self cogMethodOf: methodObj)]) ifTrue:
-		[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilOK)].
-	self oilEnsureExtraSelectorTable ifFalse:
-		[^self primitiveFailFor: PrimErrNoMemory].
-	"Pass 1 first, while the baseline inline caches (type feedback) are there."
-	result := cogit oilCompile: methodObj receiverClass: classObj.
-	result ~= OilOK ifTrue:
-		[^self pop: 2 thenPush: (objectMemory integerObjectOf: result)].
-	"Free the baseline machine code, then run Pass 3 and install."
-	activeContext := self oilMarryActiveFrame.
-	self oilFreeMachineCodeOf: methodObj.
-	result := cogit oilGenerate: methodObj.
-	self oilReturnToContext: activeContext pushing: (objectMemory integerObjectOf: result)! !
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
-primitiveOilGetOrSetColdSelectors
-	"The cold selectors Oil never inlines (error paths, slow paths).  Without argument, answer them: the Array of Symbols
-	 the image set, or nil for the default ones (see OilInliningCompiler class>>defaultColdSelectors).  With an argument,
-	 an Array of Symbols or nil (the default ones), set them and answer the previous ones (an Array or nil)."
-	<export: true>
-	<inline: false>
-	<essential: #ProfilingCogit>
-	| previous err |
-	argumentCount > 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	previous := self oilColdSelectorsObject.
-	argumentCount = 0 ifTrue:
-		[^self pop: 1 thenPush: previous].
-	err := self oilSetColdSelectorsObject: self stackTop.
-	err ~= 0 ifTrue:
-		[^self primitiveFailFor: err].
-	self pop: 2 thenPush: previous! !
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
-primitiveOilSetColdSelectors
-	<export: true>
-	<essential: #ProfilingCogit>
-	self primitiveOilGetOrSetColdSelectors! !
-
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/27/2026 14:05'!
 oilColdSelectorsObject
 	<essential: #ProfilingCogit>
@@ -2028,43 +1968,6 @@ primitiveOilGetOrSetParameter
 	prev < 0 ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	self pop: 3 thenPush: (objectMemory integerObjectOf: prev)! !
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 14:05'!
-primitiveOilSetParameter
-	<export: true>
-	<essential: #ProfilingCogit>
-	self primitiveOilGetOrSetParameter! !
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 22:20'!
-primitiveOilSetAutonomousCompilation
-	"Argument: true (the default) or 1 to compile the hot methods the trip counters find with Oil (see ceOilTrip:), false or
-	 0 not to.  Answer the receiver."
-	<export: true>
-	<essential: #ProfilingCogit>
-	| flag |
-	argumentCount ~= 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	flag := self stackTop.
-	(flag = objectMemory trueObject or: [flag = (objectMemory integerObjectOf: 1)]) ifTrue:
-		[cogit oilSetAutoCompileEnabled: true.
-		 ^self pop: 1].
-	(flag = objectMemory falseObject or: [flag = (objectMemory integerObjectOf: 0)]) ifTrue:
-		[cogit oilSetAutoCompileEnabled: false.
-		 ^self pop: 1].
-	self primitiveFailFor: PrimErrBadArgument! !
-
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/26/2026 22:20'!
-primitiveOilSetDisqualifyLimit
-	"Argument: a SmallInteger, the number of deoptimizations after which an Oil method is freed and disqualified (0 or less:
-	 the default, OilDisqualifyDeopts).  Answer the receiver."
-	<export: true>
-	<essential: #ProfilingCogit>
-	argumentCount ~= 1 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	(objectMemory isIntegerObject: self stackTop) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	cogit oilSetDisqualifyLimit: (objectMemory integerValueOf: self stackTop).
-	self pop: 1! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 15:00'!
 oilEnsureExtraSelectorTable
@@ -2582,8 +2485,7 @@ primitiveOilMetadata
 	"CompiledMethod>>oilMetadata (no argument), CompiledMethod>>oilMetadataFor: aClass, or any receiver and a CompiledMethod
 	 argument.  Answer the deoptimization metadata of the method's Oil code (read-only CompiledMethod objects, see
 	 oilAllocateMetadata:numBytes:of: and oilMetadataOf:class:): nil if it has none, else an Array of pairs
-	 { class or nil. metadata }: one, with nil, for Oil code of its own (primitiveOilCompile), else one per specialization
-	 (primitiveOilSpecialize).  With a class argument answer the pair for that class (or the one of the method's own Oil code),
+	 { class or nil. metadata }: one per specialization (primitiveOilSpecialize).  With a class argument answer the pair for that class (or the one of the method's own Oil code),
 	 or nil."
 	<export: true>
 	<essential: #ProfilingCogit>

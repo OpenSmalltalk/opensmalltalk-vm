@@ -22,11 +22,22 @@ check := [:name :bool |
 rounds := Smalltalk at: #OilStressRounds ifAbsent: [6].
 rng := Random seed: 4711.
 CompiledMethod compile: 'oilSpecializeFor: aClass <primitive: ''primitiveOilSpecialize''> ^#failed' classified: 'oil'.
-CompiledMethod compile: 'oilSpecializations <primitive: ''primitiveOilSpecializations''> ^#failed' classified: 'oil'.
+(CompiledMethod includesSelector: #oilMetadata) ifFalse:
+	[CompiledMethod compile: 'oilMetadata <primitive: ''primitiveOilMetadata''> ^nil' classified: 'oil'].
+CompiledMethod compile: 'oilSpecializations
+	| meta res |
+	meta := self oilMetadata.
+	meta ifNil: [^#()].
+	res := Array new: meta size * 2.
+	1 to: meta size do: [:i |
+		res at: i * 2 - 1 put: (meta at: i) first.
+		res at: i * 2 put: self].
+	^res' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 Object subclass: #OilDispatcherStressBase instanceVariableNames: 'items bias' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
 base := Smalltalk at: #OilDispatcherStressBase.
-base class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
+base class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+base class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
 base compile: 'items: anArray bias: n items := anArray. bias := n' classified: 'tests'.
 base compile: 'weight ^1' classified: 'tests'.
 base compile: 'sum | s | s := 0. 1 to: items size do: [:i | s := s + ((items at: i) * self weight) + bias]. ^s' classified: 'tests'.

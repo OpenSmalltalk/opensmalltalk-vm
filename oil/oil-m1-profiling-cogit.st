@@ -27,13 +27,13 @@ estimateOfAbstractOpcodesPerBytecodes
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:20'!
 oilAutoCompileEnabled
-	"Does a trip compile the hot method with Oil (the default; see primitiveOilSetAutonomousCompilation)?"
+	"Does a trip compile the hot method with Oil (the default; see primitiveOilGetOrSetParameter)?"
 	<api>
 	^oilNoAutoCompile not! !
 
 !ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/26/2026 22:20'!
 oilSetAutoCompileEnabled: aBoolean
-	"See primitiveOilSetAutonomousCompilation."
+	"See primitiveOilGetOrSetParameter."
 	<api>
 	oilNoAutoCompile := aBoolean not! !
 

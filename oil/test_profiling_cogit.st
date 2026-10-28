@@ -29,17 +29,24 @@ cls compile: 'polySum: aCollection | total | total := 0. aCollection do: [:each 
 cls compile: 'offSum: n | total | total := 0. 1 to: n do: [:i | total := total + i]. ^total' classified: 'tests'.
 cls compile: 'myDo: aBlock 1 to: items size do: [:i | aBlock value: (items at: i)]' classified: 'tests'.
 cls compile: 'mySumScores | total | total := 0. self myDo: [:each | total := total + each score]. ^total' classified: 'tests'.
-cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
-cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
-cls class compile: 'oilSetParameter: index to: value
-	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
-	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
-	index = 8 ifTrue: [^self disqualifyLimit: value].
-	^self' classified: 'oil'.
-cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'oilColdSelectors <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'oilSetParameter: index <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
+cls class compile: 'oilColdSelectors ^self oilSetParameter: 7' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
-CompiledMethod compile: 'oilSpecializations <primitive: ''primitiveOilSpecializations''> ^#failed' classified: 'oil'.
+(CompiledMethod includesSelector: #oilMetadata) ifFalse:
+	[CompiledMethod compile: 'oilMetadata <primitive: ''primitiveOilMetadata''> ^nil' classified: 'oil'].
+CompiledMethod compile: 'oilSpecializations
+	| meta res |
+	meta := self oilMetadata.
+	meta ifNil: [^#()].
+	res := Array new: meta size * 2.
+	1 to: meta size do: [:i |
+		res at: i * 2 - 1 put: (meta at: i) first.
+		res at: i * 2 put: self].
+	^res' classified: 'oil'.
 
 mCountTo := cls >> #countTo:.
 mSumScores := cls >> #sumScores:.
@@ -49,7 +56,7 @@ mMySum := cls >> #mySumScores.
 mMyDo := cls >> #myDo:.
 ocDo := OrderedCollection >> #do:.
 hasOil := [:aMethod | aMethod oilInfo notNil].
-check value: 'primitiveOilSetAutonomousCompilation available (VM has ProfilingCogit)' value: (cls autonomousCompilation: true) ~~ #failed.
+check value: 'primitiveOilGetOrSetParameter available (VM has ProfilingCogit)' value: (cls autonomousCompilation: true) ~~ #failed.
 check value: 'primitiveOilMethodInfo available' value: mCountTo oilInfo ~~ #failed.
 
 m := cls new.

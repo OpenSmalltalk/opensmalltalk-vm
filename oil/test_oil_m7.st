@@ -28,14 +28,10 @@ cls := Smalltalk at: #OilM7Model.
   'sumOf: aCollection | s | s := 0. aCollection do: [:e | s := s + e]. ^s'
   'total: n total := n')
 	do: [:s | cls compile: s classified: 'tests'].
-cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
-cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
-cls class compile: 'oilSetParameter: index to: value
-	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
-	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
-	index = 8 ifTrue: [^self disqualifyLimit: value].
-	^self' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 cls class compile: 'oilSetSelectors: pairs
@@ -50,9 +46,19 @@ cls class compile: 'oilSetSelectors: pairs
 	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
 "probeOf: aCollection: does do: run Oil code for aCollection, i.e. is the sender of its block's activation the frame of an Oil method?"
 Context compile: 'oilContextChain <primitive: ''primitiveOilContexts''> ^nil' classified: 'oil'.
-CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilCompileFor: aClass ^self oilSpecializeFor: aClass' classified: 'oil'.
 CompiledMethod compile: 'oilSpecializeFor: aClass <primitive: ''primitiveOilSpecialize''> ^#failed' classified: 'oil'.
-CompiledMethod compile: 'oilSpecializations <primitive: ''primitiveOilSpecializations''> ^#failed' classified: 'oil'.
+(CompiledMethod includesSelector: #oilMetadata) ifFalse:
+	[CompiledMethod compile: 'oilMetadata <primitive: ''primitiveOilMetadata''> ^nil' classified: 'oil'].
+CompiledMethod compile: 'oilSpecializations
+	| meta res |
+	meta := self oilMetadata.
+	meta ifNil: [^#()].
+	res := Array new: meta size * 2.
+	1 to: meta size do: [:i |
+		res at: i * 2 - 1 put: (meta at: i) first.
+		res at: i * 2 put: self].
+	^res' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 CompiledMethod class compile: 'oilLastCompilation <primitive: ''primitiveOilLastCompilation''> ^#failed' classified: 'oil'.
 sels := OrderedCollection new.
@@ -265,7 +271,7 @@ seqDo voidCogVMState.
 check value: 'voiding the method''s machine code drops its specializations and frees their Oil code' value: (seqDo oilSpecializations isEmpty and: [copy oilInfo isNil]).
 check value: 'after voiding the method: results' value: ((colls collect: [:c | model countOf: c]) = counts).
 3 timesRepeat: [model hashOf: model].
-check value: 'specializing a method that has Oil code of its own is refused' value: (((cls >> #hashOf:) oilCompileFor: cls) = 0 and: [((cls >> #hashOf:) oilSpecializeFor: cls) = 17]).
+check value: 'specializing a method that has Oil code of its own is idempotent' value: (((cls >> #hashOf:) oilCompileFor: cls) = 0 and: [((cls >> #hashOf:) oilSpecializeFor: cls) = 0]).
 cls compile: 'countOf: aCollection | n | n := 0. aCollection do: [:e | n := n + 2]. ^n' classified: 'tests'.
 check value: 'countOf: redefined' value: ((colls first: 5) allSatisfy: [:c | (model countOf: c) = 600000]).
 t := Time millisecondsToRun: [SequenceableCollection recompile: #do:. OrderedCollection recompile: #do:].

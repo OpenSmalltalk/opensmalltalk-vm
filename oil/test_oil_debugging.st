@@ -34,14 +34,10 @@ item compile: 'probe: k | ctx | ctx := thisContext sender. (Smalltalk at: #OilDb
 cls compile: 'run: a | s | s := 0. 1 to: a size do: [:i | s := s + ((a at: i) bonus: i)]. ^s' classified: 'tests'.
 cls compile: 'blockRun: a | s | s := 0. a do: [:e | s := s + (e bonus: e score)]. ^s' classified: 'tests'.
 cls compile: 'specRun: a | s | s := 0. 1 to: a size do: [:i | s := s + ((a at: i) bonus: i)]. ^s' classified: 'tests'.
-cls class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-cls class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
-cls class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
-cls class compile: 'oilSetParameter: index to: value
-	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
-	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
-	index = 8 ifTrue: [^self disqualifyLimit: value].
-	^self' classified: 'oil'.
+cls class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+cls class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+cls class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+cls class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 cls class compile: 'oilSetSelectors: pairs
@@ -54,7 +50,7 @@ cls class compile: 'oilSetSelectors: pairs
 		kind = 7 ifTrue: [cold add: value].
 		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
 	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
-CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilCompileFor: aClass ^self oilSpecializeFor: aClass' classified: 'oil'.
 CompiledMethod compile: 'oilSpecializeFor: aClass <primitive: ''primitiveOilSpecialize''> ^#failed' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 sels := OrderedCollection new.
@@ -138,7 +134,7 @@ check value: 'deoptimize of a baseline context' value: thisContext deoptimize ==
 check value: 'deoptimize: of a non-context fails (fallback answers it)' value: (OilDeoptMetadataReader deoptimize: 3) == 3.
 "6. CompiledMethod>>oilMetadata: copies, decoded by OilDeoptMetadataReader."
 meta := (cls >> #run:) oilMetadata.
-check value: 'oilMetadata: one pair, for the own Oil code' value: (meta isArray and: [meta size = 1 and: [meta first first isNil and: [meta first last isCompiledMethod]]]).
+check value: 'oilMetadata: one pair, for the own Oil code' value: (meta isArray and: [meta size = 1 and: [(meta first first isNil or: [meta first first == cls]) and: [meta first last isCompiledMethod]]]).
 reader := OilDeoptMetadataReader on: meta.
 out nextPutAll: 'run: '; print: reader; cr; nextPutAll: 'frames: '; print: (reader frames collect: [:f | (f at: #method) selector]); cr; flush.
 check value: 'reader: valid' value: reader isValid.

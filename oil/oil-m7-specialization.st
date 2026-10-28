@@ -1024,7 +1024,7 @@ primitiveOilSpecialize
 	 and: [(self isFullBlockMethod: methodObj) not
 	 and: [objectMemory isNonImmediate: classObj]]]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	"Oil code of the method itself (primitiveOilCompile) cannot be specialized."
+	"Oil code of the method itself cannot be specialized."
 	((self methodHasCogMethod: methodObj)
 	 and: [cogit isOilMethod: (self cogMethodOf: methodObj)]) ifTrue:
 		[^self pop: 2 thenPush: (objectMemory integerObjectOf: OilFailSpecialization)].
@@ -1047,30 +1047,3 @@ primitiveOilSpecialize
 		[self flushMethodCacheForMethod: methodObj].
 	self pop: 2 thenPush: (objectMemory integerObjectOf: result)! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/28/2026 00:15'!
-primitiveOilSpecializations
-	"Receiver: a CompiledMethod.  Answer an Array of pairs { class. method } for its live Oil specializations in its
-	 Dispatcher (see primitiveOilSpecialize)."
-	<export: true>
-	<essential: #ProfilingCogit>
-	| methodObj dispatcher numSpecs result count classTag |
-	<var: #dispatcher type: #'CogMethod *'>
-	methodObj := self stackTop.
-	((objectMemory isNonImmediate: methodObj)
-	 and: [objectMemory isOopCompiledMethod: methodObj]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadReceiver].
-	numSpecs := cogit oilNumSpecializationsOf: methodObj.
-	result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 2 * numSpecs.
-	result isNil ifTrue:
-		[^self primitiveFailFor: PrimErrNoMemory].
-	numSpecs > 0 ifTrue:
-		[dispatcher := self cogMethodOf: methodObj.
-		 count := 0.
-		 1 to: numSpecs do:
-			[:caseIndex|
-			classTag := cogit oilDispatcher: dispatcher tagAt: caseIndex.
-			objectMemory
-				storePointer: count ofObject: result withValue: (objectMemory classOrNilAtIndex: classTag);
-				storePointer: count + 1 ofObject: result withValue: methodObj.
-			count := count + 2]].
-	self pop: argumentCount + 1 thenPush: result! !

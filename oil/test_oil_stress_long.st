@@ -11,14 +11,10 @@ Utilities authorInitials: 'cb'.
 minutes := Smalltalk at: #OilStressMinutes ifAbsent: [120].
 out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-stress-long-result.txt').
 Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
-(Smalltalk at: #OilStress) class compile: 'oilSetColdSelectors: anArray <primitive: ''primitiveOilSetColdSelectors''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilStress) class compile: 'autonomousCompilation: aBoolean <primitive: ''primitiveOilSetAutonomousCompilation''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilStress) class compile: 'disqualifyLimit: anInteger <primitive: ''primitiveOilSetDisqualifyLimit''> ^#failed' classified: 'oil'.
-(Smalltalk at: #OilStress) class compile: 'oilSetParameter: index to: value
-	"(the former primitiveOilSetParameter: 19 autonomous compilation, 8 the disqualify limit; the others are gone)"
-	index = 19 ifTrue: [^self autonomousCompilation: value ~= 0].
-	index = 8 ifTrue: [^self disqualifyLimit: value].
-	^self' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetParameter: index to: value <primitive: ''primitiveOilGetOrSetParameter''> ^#failed' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'autonomousCompilation: aBoolean ^self oilSetParameter: 19 to: aBoolean' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'disqualifyLimit: anInteger ^self oilSetParameter: 8 to: anInteger' classified: 'oil'.
+(Smalltalk at: #OilStress) class compile: 'oilSetColdSelectors: anArray ^self oilSetParameter: 7 to: anArray' classified: 'oil'.
 "(the kind/value pairs of the former primitiveOilSetSelectors: the cold selectors, kind 7, and the parameters, kinds 8 and 12 to 18,
  the others at their default; the value selectors, bitXor: and the iterators are built in; no autonomous compilation)"
 (Smalltalk at: #OilStress) class compile: 'oilSetSelectors: pairs
@@ -31,7 +27,8 @@ Object subclass: #OilStress instanceVariableNames: '' classVariableNames: '' poo
 		kind = 7 ifTrue: [cold add: value].
 		(kind = 8 or: [kind between: 12 and: 18]) ifTrue: [self oilSetParameter: kind to: value]].
 	^self oilSetColdSelectors: cold asArray' classified: 'oil'.
-CompiledMethod compile: 'oilCompileFor: aClass <primitive: ''primitiveOilCompile''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilSpecializeFor: aClass <primitive: ''primitiveOilSpecialize''> ^#failed' classified: 'oil'.
+CompiledMethod compile: 'oilCompileFor: aClass ^self oilSpecializeFor: aClass' classified: 'oil'.
 CompiledMethod compile: 'oilInfo <primitive: ''primitiveOilMethodInfo''> ^#failed' classified: 'oil'.
 sels := OrderedCollection new.
 #(value value: value:value: value:value:value: value:value:value:value:) doWithIndex: [:s :i | sels add: i - 1; add: s].
