@@ -566,10 +566,10 @@ OilFullCompiler subclass: #OilConvolutedCompiler
 	instanceVariableNames: 'oilXmmPinned oilFloatLoopHead oilFloatLoopEnd oilFloatLoopSite oilFloatLoopNum oilFloatLoopVReg oilFloatLoopKind oilNumFloatLoops oilFloatLoopCurrent oilSiteFloatLoop oilFloatExitJump oilFloatExitTarget oilNumFloatExits'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'OilJIT-debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
-!OilConvolutedCompiler commentStamp: 'cb 10/27/2026 13:55' prior: 0!
-I hold the extracted float-loop register unboxing analysis and CFG worklist liveness helpers (formerly on OilInliningCompiler), kept in the OilJIT-debugging package out of the core VMMaker-JIT-Oil pipeline.!
+!OilConvolutedCompiler commentStamp: 'cb 10/28/2026 03:20' prior: 0!
+I hold the extracted float-loop register unboxing analysis and CFG worklist liveness helpers (formerly on OilInliningCompiler), kept in the VMMaker-JIT-OilDebugging package (with the simulation classes) out of the core VMMaker-JIT-Oil pipeline.  I am not translated to C (gen_simplify.sh does not file in OilSimulation.st); oil-m10-test.st exercises me in simulation.!
 
 !OilConvolutedCompiler class methodsFor: 'translation' stamp: 'cb 10/27/2026 12:00'!
 declareCVarsIn: aCCodeGenerator
