@@ -1208,6 +1208,15 @@ flushFrame: frameIndex
 		[:slotIndex|
 		(self isLazyKind: (slotKind at: slotIndex)) ifTrue:
 			[self materializeSlot: slotIndex]].
+	"The slots of the frames inlining frameIndex are not flushed, but one aliasing a temp vector or scalar replaced object
+	 slot register would be copied (invalidateAliasesOf:) on the paths that assign that register only: copy it now."
+	0 to: (self frameAt: frameIndex) tempStart - 1 do:
+		[:slotIndex|
+		((slotKind at: slotIndex) = OilDescReg
+		 and: [(slotValue at: slotIndex) ~= slotIndex
+		 and: [(self isImmutable: slotIndex) not
+		 and: [((slotFlags at: (slotValue at: slotIndex)) bitAnd: OilFlagTVSlot) ~= 0]]]) ifTrue:
+			[self materializeSlot: slotIndex]].
 	(self frameAt: frameIndex) tempStart to: simStackTop do:
 		[:slotIndex| ((self isImmutable: slotIndex) or: [(slotKind at: slotIndex) = OilDescTempVector]) ifFalse:
 			[((slotKind at: slotIndex) = OilDescObject

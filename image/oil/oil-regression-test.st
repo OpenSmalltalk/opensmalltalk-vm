@@ -82,5 +82,26 @@ Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariabl
 		actual := [(OilIRInterpreter new on: comp) run: (ballCls new x: pair first xVel: pair last) with: #()] on: Error do: [:e | #error -> e description].
 		check value: 'step for x ', pair first printString, ' xVel ', pair last printString, ' = ', expected printString value: actual = expected]]] value.
 
+"4. Pass 1 probes of the fixes of the Pillar 1 review (each compiled and run against the real execution):
+ - tvAlias: the caller's stack slot holding the remote temp t (an alias of its temp vector slot register) was copied on
+   the arm of the inlined bump:if: that assigns t only (invalidateAliasesOf:), and then believed copied on both paths."
+cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'tests'.
+#('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s')
+	do: [:s | cls compile: s classified: 'tests'].
+{#tvAlias: -> #(5 10)} do: [:selAndArgs | | sel fbk comp |
+	sel := selAndArgs key.
+	fbk := OilSimulatedTypeFeedback new.
+	fbk record: [model perform: sel with: selAndArgs value first].
+	comp := OilCompiler new.
+	comp typeFeedback: fbk.
+	comp compileMethod: cls >> sel receiverClass: (comp handleFor: cls).
+	check value: sel, ' compiles' value: comp failed not.
+	comp failed ifFalse:
+		[comp pipe.
+		 selAndArgs value do: [:arg | | expected actual |
+			expected := model perform: sel with: arg.
+			actual := [(OilIRInterpreter new on: comp) run: model with: {arg}] on: Error do: [:e | #error -> e description].
+			check value: sel, ' for ', arg printString, ' = ', expected printString value: actual = expected]]].
+
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!
