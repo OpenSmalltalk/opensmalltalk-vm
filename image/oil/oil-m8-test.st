@@ -25,6 +25,10 @@ Object subclass: #OilM8B instanceVariableNames: 'y' classVariableNames: '' poolD
 (Smalltalk at: #OilM8B) compile: 'y: v y := v' classified: 'tests'.
 (Smalltalk at: #OilM8A) compile: 'oilM8Maybe ^nil' classified: 'tests'.
 (Smalltalk at: #OilM8B) compile: 'oilM8Maybe ^self' classified: 'tests'.
+"a branch-free method inlined on a scalar replaced self (canInlineOnVObj:) that inlines max:, whose labels materialize it"
+Object subclass: #OilM8Acc instanceVariableNames: 'v' classVariableNames: '' poolDictionaries: '' category: 'VMMaker-JIT-OilTest'.
+(Smalltalk at: #OilM8Acc) compile: 'v ^v' classified: 'tests'.
+(Smalltalk at: #OilM8Acc) compile: 'v: x v := x max: 0' classified: 'tests'.
 cls := Smalltalk at: #OilM8Model.
 #('pointSum: n | s | s := 0. 1 to: n do: [:i | | p | p := i @ (i + 1). s := s + p x + p y]. ^s'
   'pointNew: n | s | s := 0. 1 to: n do: [:i | | p | p := Point x: i y: 3. s := s + (p x * p y)]. ^s'
@@ -41,7 +45,8 @@ cls := Smalltalk at: #OilM8Model.
   'symHash: s ^s == #hashWithInitialHash: ifTrue: [0] ifFalse: [s hash]'
   'constHash ^#foo hash + ByteString identityHash'
   'probe: anArray key: key | index length element | length := anArray size. index := (key hash \\ length) + 1. [element := anArray at: index. element == nil ifTrue: [^index]. element == key ifTrue: [^index]. index := index \\ length + 1] repeat'
-  'count: keys in: aSet | n | n := 0. 1 to: keys size do: [:i | (aSet includes: (keys at: i)) ifTrue: [n := n + 1]]. ^n')
+  'count: keys in: aSet | n | n := 0. 1 to: keys size do: [:i | (aSet includes: (keys at: i)) ifTrue: [n := n + 1]]. ^n'
+  'accSelf: n | r | r := OilM8Acc new. r v: n. ^r v')
 	do: [:s | cls compile: s classified: 'tests'].
 model := cls new.
 syms := #(#foo #bar #baz #qux #printOn: #size #at:put:).
@@ -74,7 +79,8 @@ probes := {
 	{#symHash:. {{#foo}}. {{#foo}. {#bar}. {#at:put:}}. [:st :h | (h occurrencesOf: #StringHash) = 1 and: [(h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]]}.
 	{#constHash. {{}}. {{}}. [:st :h | (h occurrencesOf: #StringHash) + (h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]}.
 	{#probe:key:. {{#(nil 4 nil 6 nil). 4}. {#(nil 4 nil 6 nil). 6}}. {{#(nil 4 nil 6 nil). 4}. {#(nil 4 nil 6 nil). 6}. {#(nil 4 nil 6 nil). 7}}. [:st :h | (h occurrencesOf: #Call0) + (h occurrencesOf: #Call1) = 0]}.
-	{#count:in:. {{syms. set}}. {{syms. set}. {#(#qux #zork). set}}. [:st :h | true]}}.
+	{#count:in:. {{syms. set}}. {{syms. set}. {#(#qux #zork). set}}. [:st :h | true]}.
+	{#accSelf:. {{3}. {-2}}. {{3}. {-2}. {7}}. [:st :h | true]}}.
 probes do: [:spec | | sel comp st h |
 	sel := spec first.
 	comp := compile value: sel value: (spec at: 2).

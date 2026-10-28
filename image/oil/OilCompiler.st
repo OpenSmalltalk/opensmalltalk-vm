@@ -3465,11 +3465,12 @@ materializeVObj: vobjIndex scratch: scratchReg
 	 without nil filling it first) into an immutable high register of its own, to which every descriptor of the object is
 	 then rewritten.  Always materializable in place: scalar replaced objects are flushed at every branch, merge or
 	 inlined return (flushTVSlots), materialized when captured by a closure (capture:frame:), and only bound as the
-	 receiver of branch-free inlined methods that do not reference self as a value (canInlineOnVObj:).  Answer the
-	 register (scratchReg on failure)."
+	 receiver of branch-free inlined methods that do not reference self as a value (canInlineOnVObj:), which must not be
+	 active (see refuseMaterializingSelfOfActiveFrame:).  Answer the register (scratchReg on failure)."
 	| baseReg numSlots objReg instIndex |
 	(self vobjAt: vobjIndex) materialized >= 0 ifTrue: [^(self vobjAt: vobjIndex) materialized].
 	failed ifTrue: [^scratchReg].
+	(self refuseMaterializingSelfOfActiveFrame: vobjIndex) ifTrue: [^scratchReg].
 	baseReg := (self vobjAt: vobjIndex) slotBase.
 	numSlots := (self vobjAt: vobjIndex) numSlots.
 	"Nested scalar replaced objects first, then every slot in its own register."
@@ -3493,6 +3494,28 @@ materializeVObj: vobjIndex scratch: scratchReg
 	oilNumMaterialized := oilNumMaterialized + 1.
 	self rewriteVObj: vobjIndex asReg: objReg.
 	^objReg! !
+
+!OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/28/2026 04:00'!
+refuseMaterializingSelfOfActiveFrame: vobjIndex
+	"Is the scalar replaced object vobjIndex the self of an active inlined frame (see canInlineOnVObj:), e.g. a label in a
+	 method that frame inlines materializes it?  That frame reads and writes its self's slot registers (which the
+	 materialization releases) and its deoptimization record describes its self as virtual.  If so, compile again without
+	 inlining that frame's method (it is then sent its receiver, materialized) and answer true."
+	| activeFrame |
+	activeFrame := currentFrame.
+	[activeFrame >= 0] whileTrue:
+		[((self frameAt: activeFrame) selfKind = OilDescObject and: [(self frameAt: activeFrame) selfValue = vobjIndex]) ifTrue:
+			[oilNumNoInline >= 16
+				ifTrue: [self abortCompilation: OilFailEagerClosuresFailed]
+				ifFalse:
+					[oilNoInline at: oilNumNoInline put: (self frameAt: activeFrame) method.
+					 oilNumNoInline := oilNumNoInline + 1.
+					 oilRestartNoInline := true.
+					 needsRestart := true.
+					 failed := true].
+			 ^true].
+		 activeFrame := (self frameAt: activeFrame) parent].
+	^false! !
 
 !OilInliningCompiler methodsFor: 'scalar replacement' stamp: 'cb 10/27/2026 14:05'!
 canInlineOnVObj: frameIndex
