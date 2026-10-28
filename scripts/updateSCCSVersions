@@ -4,7 +4,13 @@
 # info reflects that of the current check-in.
 set -e
 
-hooks_dir=$(git rev-parse --git-dir)/hooks
+# When working with worktrees, Git runs hooks from the main repository's
+# hooks directory. Running `git rev-parse --git-dir` in a worktree answers
+# the worktree's private directory instead, so the script can't recognise
+# itself as a hook: it installs itself (uselessly) under
+# .git/worktrees/<name>/hooks and then runs `git checkout` below, which
+# triggers post-checkout again, over and over, in an endless loop.
+hooks_dir=$(git rev-parse --git-path hooks) # `--git-path` is important so the shared directory between worktrees is used.
 # check if we run as hook
 if [[ "$(dirname $0)" == *"$hooks_dir" ]]; then
     if [[ "$(basename $0)" == "post-checkout" ]]; then
