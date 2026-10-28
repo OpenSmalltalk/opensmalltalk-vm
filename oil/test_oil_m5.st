@@ -3,7 +3,7 @@
   Writes results next to the image."
 | out failures check sels model m info res last items wrong expected t counter blk arr before |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m5-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-intrinsics-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.

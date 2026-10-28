@@ -122,4 +122,4 @@ Smalltalk voidCogVMState.
 check value: 'voidCogVMState' value: (model sumScores: items) = 5050.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M11 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil metadata test failures: ', failures printString]

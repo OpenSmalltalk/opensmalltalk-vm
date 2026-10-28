@@ -174,4 +174,4 @@ check value: 'copy still valid after the Oil code is freed' value: (reader isVal
 check value: 'run: after voidCogVMState' value: (runAndCapture value: #run: value: [:ctx :me | ]) = expectedSum.
 out nextPutAll: (failures isEmpty ifTrue: ['ALL PASS'] ifFalse: ['FAILURES: ', failures size printString]); cr.
 out close.
-failures isEmpty ifFalse: [self error: 'Oil M13 test failures: ', failures printString]
+failures isEmpty ifFalse: [self error: 'Oil debugging test failures: ', failures printString]

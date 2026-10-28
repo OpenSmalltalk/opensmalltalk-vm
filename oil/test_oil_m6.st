@@ -4,7 +4,7 @@
   Writes results next to the image."
 | out failures check sels model res last stats base oil r expected expected400 info |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m6-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-float-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.

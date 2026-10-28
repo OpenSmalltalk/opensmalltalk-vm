@@ -10,7 +10,7 @@ dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExi
 
 | dir out model coll arr mixed pass fail check compile run same c hist stats results probes loopHist arrWithOther arrWithInt arrOverflow |
 dir := Smalltalk at: #OilSourceDir.
-out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [dir, 'm4-test-result.txt']).
+out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [dir, 'oil-pass2-test-result.txt']).
 pass := 0. fail := 0.
 check := [:name :bool |
 	bool == true

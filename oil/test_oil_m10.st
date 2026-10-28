@@ -6,7 +6,7 @@
   Writes results next to the image."
 | out failures check sels setSelectors model cls res last ir opcodes statsOf info times probes irNames |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m10-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-float-loop-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.

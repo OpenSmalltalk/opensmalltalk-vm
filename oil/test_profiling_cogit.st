@@ -7,7 +7,7 @@
  check fails."
 | resultPath out failures check m oc small items warm hasOil cls mCountTo mSumScores mMySum mMyDo mPolySum mOffSum ocDo |
 Utilities authorInitials: 'cb'.
-resultPath := FileDirectory default fullNameFor: 'oil-m1-result.txt'.
+resultPath := FileDirectory default fullNameFor: 'oil-profiling-cogit-result.txt'.
 out := WriteStream on: String new.
 failures := OrderedCollection new.
 check := [:name :bool |

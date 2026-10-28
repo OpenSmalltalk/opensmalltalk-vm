@@ -15,7 +15,7 @@ dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExi
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | out pass fail check model compile run cls probes floatLoops |
-out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'm10-test-result.txt']).
+out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'oil-float-loop-test-result.txt']).
 pass := 0. fail := 0.
 check := [:name :bool |
 	bool == true

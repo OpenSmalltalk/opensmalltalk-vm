@@ -10,7 +10,7 @@ dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExi
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
 | out pass fail check model compile run probes |
-out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'm6-test-result.txt']).
+out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'oil-full-compiler-test-result.txt']).
 pass := 0. fail := 0.
 check := [:name :bool |
 	bool == true

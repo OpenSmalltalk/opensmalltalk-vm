@@ -4,7 +4,7 @@
 | irDump last dir resultPath out failures check model items wrong expected r info m t0 baseMs oilMs sels setSels compileResult before arr3 x y codeFile timeOf ocItems |
 Utilities authorInitials: 'cb'.
 dir := FileDirectory default.
-resultPath := dir fullNameFor: 'oil-m3-result.txt'.
+resultPath := dir fullNameFor: 'oil-compilation-result.txt'.
 out := FileStream forceNewFileNamed: resultPath.
 failures := OrderedCollection new.
 check := [:name :bool |
@@ -98,9 +98,9 @@ info := m oilInfo.
 check value: 'sumScores: now has Oil machine code' value: info notNil.
 info notNil ifTrue:
 	[out nextPutAll: 'Oil CogMethod at 16r'; nextPutAll: ((info at: 4) printStringBase: 16); nextPutAll: ', '; print: (info at: 3) size; nextPutAll: ' bytes (header + code + map)'; cr.
-	 codeFile := FileStream forceNewFileNamed: (dir fullNameFor: 'oil-m3-code.bin').
+	 codeFile := FileStream forceNewFileNamed: (dir fullNameFor: 'oil-code.bin').
 	 codeFile binary; nextPutAll: (info at: 3); close.
-	 (FileStream forceNewFileNamed: (dir fullNameFor: 'oil-m3-code.addr')) nextPutAll: ((info at: 4) printStringBase: 16); close].
+	 (FileStream forceNewFileNamed: (dir fullNameFor: 'oil-code.addr')) nextPutAll: ((info at: 4) printStringBase: 16); close].
 
 "--- Native execution ---"
 r := model sumScores: items.

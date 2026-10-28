@@ -8,7 +8,7 @@
 | out failures check sels setSelectors model cls res last ir opcodes countOps r t times statsOf info irNames dump
   arr arr1k items expected bench probes |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m9-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-loop-unrolling-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.

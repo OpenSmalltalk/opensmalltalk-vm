@@ -6,7 +6,7 @@
 | out failures check sels model cls res last ir opcodes countOps r info t base oil n syms set dict keys expected text
   big specs oc times trips latencies seqDo classes colls ocDo sorted sub counts compileUs copy |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m7-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-specialization-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
@@ -180,7 +180,7 @@ check value: 'scaledHashOf: no deopt' value: ((cls >> #scaledHashOf:) oilInfo at
 "Fresh type feedback for the hashed collection methods (their inline caches have seen all sorts of receivers so far)."
 {IdentitySet -> #scanFor:. IdentityDictionary -> #scanFor:. IdentitySet -> #includes:. IdentityDictionary -> #at:ifAbsent:. Object -> #scaledIdentityHash. Object -> #enclosedSetElement. Association -> #key}
 	do: [:a | (a key lookupSelector: a value) voidCogVMState].
-syms := (1 to: 10000) collect: [:k | ('oilM7Sym', k printString) asSymbol].
+syms := (1 to: 10000) collect: [:k | ('oilSpecializedSym', k printString) asSymbol].
 set := IdentitySet new. syms doWithIndex: [:s :k | k odd ifTrue: [set add: s]].
 dict := IdentityDictionary new. syms doWithIndex: [:s :k | k \\ 3 = 0 ifTrue: [dict at: s put: k]].
 expected := model count: syms in: set.

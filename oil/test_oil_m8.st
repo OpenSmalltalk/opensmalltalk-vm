@@ -7,7 +7,7 @@
 | out failures check sels model cls res last ir opcodes countOps r t base oil n times stats statsOf syms set dict keys
   expected latencies compileUs probeArray mixed ab info irNames dump |
 Utilities authorInitials: 'cb'.
-out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-m8-result.txt').
+out := FileStream forceNewFileNamed: (FileDirectory default fullNameFor: 'oil-scalar-replacement-result.txt').
 failures := OrderedCollection new.
 check := [:name :bool |
 	out nextPutAll: (bool == true ifTrue: ['PASS '] ifFalse: ['FAIL ']); nextPutAll: name; cr; flush.
