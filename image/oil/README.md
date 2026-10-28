@@ -7,8 +7,7 @@ Slang/Smalltalk sources for Oil, the optimizing JIT for the 64-bit Spur Cog VM. 
 | Package (class category) | Contents |
 |---|---|
 | `VMMaker-JIT-Oil` | The compiler translated to C: scanner, Passes 1-3, the structs `OilVirtualFrame`, `OilVirtualObject` and `OilLazyCondition`, the shared pools, and `ProfilingCogit` (`oil/*.st`). |
-| `VMMaker-JIT-OilDebugging` | Simulation and debugging only, never translated: `OilSimulatedTypeFeedback`, `OilIRInterpreter`, `OilConvolutedCompiler`, the IR printer. |
-| `OilJIT-debugging` | Image side, meant for Kernel: `OilDeoptMetadataReader` and the `Context` debugger support. |
+| `VMMaker-JIT-OilDebugging` | Simulation and debugging only, never translated: `OilDeoptMetadataReader`, `Context` debugger support, `OilSimulatedTypeFeedback`, `OilIRInterpreter`, `OilConvolutedCompiler`, the IR printer. |
 | `VMMaker-JIT-OilTest` | The classes the test scripts create (`oil/test_*.st`, `image/oil/oil-*-test.st`) and the test classes of `OilSimulation.st` (`OilTestItem`, `OilTestOther`, `OilTestModel`). |
 
 ## Compiler Hierarchy
@@ -29,7 +28,7 @@ OilBytecodeScanner
 | `OilCompilerPass2.st` | `OilLoopOptimizer` (Pass 2): `loopOptimize` streams Buffer 1 (`oilIRBuffer1`) into Buffer 2 (`oilIRBuffer2`). `OilFullCompiler`: `valueNumber` (run by Pass 2) and `fuseFloats` (on Pass 2's IR). |
 | `OilCompilerBackend.st` | `OilInliningCompiler` (Pass 3): register allocation, `generateNativeCode` (IR to Cogit abstract instructions), bailout stubs, tagged-register analysis. |
 | `OilSimulation.st` | Package `VMMaker-JIT-OilDebugging` (not translated to C): IR printer (`printIROn:`), `OilSimulatedTypeFeedback` (receiver classes recorded per send site by simulated execution), `OilIRInterpreter` (executes the IR on host objects), `OilConvolutedCompiler` (the float-loop register analysis and CFG liveness helpers taken out of the core pipeline, exercised by `oil-m10-test.st`), test classes. |
-| `OilDeoptMetadataReader.st` | Package `OilJIT-debugging`: `OilDeoptMetadataReader`, which decodes the copies of the deoptimization metadata `CompiledMethod>>oilMetadata` answers (`primitiveOilMetadata`), and the debugger support `Context>>contexts` (`primitiveOilContexts`) and `Context>>deoptimize` (`primitiveOilDeoptimize`), which belong in Kernel. |
+| `OilDeoptMetadataReader.st` | Package `VMMaker-JIT-OilDebugging`: `OilDeoptMetadataReader`, which decodes the copies of the deoptimization metadata `CompiledMethod>>oilMetadata` answers (`primitiveOilMetadata`), and the debugger support `Context>>contexts` (`primitiveOilContexts`) and `Context>>deoptimize` (`primitiveOilDeoptimize`), which belong in Kernel. |
 | `oil-scanner-test.st` | Checks the scanner against the image's `InstructionStream` on all SistaV1 methods and blocks. |
 | `oil-m2-test.st` | Pass 1 acceptance test: compiles probes (`sumScores:` and others), checks the IR shape, and compares `OilIRInterpreter` against real execution. |
 | `oil-m4-test.st` | Pass 2 acceptance test: checks loop rotation, bounds-check elimination, shared sizes, unchecked increments, and equivalence with Pass 1 and real execution. |

@@ -2,7 +2,7 @@ Object subclass: #OilDeoptMetadataReader
 	instanceVariableNames: 'receiverClass metadata base'
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'OilJIT-debugging'!
+	category: 'VMMaker-JIT-OilDebugging'!
 
 !OilDeoptMetadataReader commentStamp: 'cb 10/26/2026 14:30' prior: 0!
 I decode a copy of the deoptimization metadata of an Oil method, for VM engineers and benchmarkers (the debugger needs only Context>>contexts and Context>>deoptimize).  CompiledMethod>>oilMetadata (primitiveOilMetadata) answers the copies: nil, or an Array of pairs { class or nil. metadata }, one for the method's own Oil code, else one per specialization.  The metadata object itself is hidden in the VM; its copy is a CompiledMethod (never run): its literal frame, then its bytes (see the OilMD* constants of OilConstants for their layout).
@@ -263,14 +263,14 @@ printOn: aStream
 		print: self numVObjs; nextPutAll: ' virtual objects, ';
 		print: self deopts; nextPutAll: ' deopts)'! !
 
-!CompiledMethod methodsFor: '*OilJIT-debugging' stamp: 'cb 10/26/2026 14:30'!
+!CompiledMethod methodsFor: '*VMMaker-JIT-OilDebugging' stamp: 'cb 10/26/2026 14:30'!
 oilMetadata
 	"Copies of the deoptimization metadata of my Oil code: nil, or an Array of pairs { class or nil. metadata (a CompiledMethod) }
 	 (see OilDeoptMetadataReader)."
 	<primitive: 'primitiveOilMetadata'>
 	^nil! !
 
-!CompiledMethod methodsFor: '*OilJIT-debugging' stamp: 'cb 10/26/2026 14:30'!
+!CompiledMethod methodsFor: '*VMMaker-JIT-OilDebugging' stamp: 'cb 10/26/2026 14:30'!
 oilMetadataFor: aClass
 	"The pair { class or nil. metadata } of my Oil code specialized for aClass (or of my own Oil code), or nil."
 	<primitive: 'primitiveOilMetadata'>
