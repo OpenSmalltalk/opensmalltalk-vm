@@ -2819,7 +2819,8 @@ genArith: selectorIndex
 
 !OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 foldArith: selectorIndex
-	"Constant fold SmallInteger arithmetic when the result is a SmallInteger."
+	"Constant fold SmallInteger arithmetic when the result is a SmallInteger.  The same in C, where / and % truncate
+	 (\\ and // are floored here) and products and left shifts must not overflow 64 bits (they are not folded then)."
 	| rcvrSlot val1 val2 resultVal |
 	rcvrSlot := simStackTop - 1.
 	val1 := self smallIntegerValueOf: (slotValue at: rcvrSlot).
@@ -2827,10 +2828,13 @@ foldArith: selectorIndex
 	resultVal := selectorIndex caseOf: {
 		[0] -> [val1 + val2].
 		[1] -> [val1 - val2].
-		[8] -> [val1 * val2].
-		[10] -> [val2 = 0 ifTrue: [^false]. val1 \\ val2].
-		[12] -> [(val2 between: -64 and: 64) ifFalse: [^false]. val1 bitShift: val2].
-		[13] -> [val2 = 0 ifTrue: [^false]. val1 // val2].
+		[8] -> [((val1 between: -16r40000000 and: 16r40000000) and: [val2 between: -16r40000000 and: 16r40000000]) ifFalse: [^false].
+				val1 * val2].
+		[10] -> [val2 = 0 ifTrue: [^false]. self flooredModulo: val1 by: val2].
+		[12] -> [(val1 >= 0 and: [val2 between: -60 and: 60]) ifFalse: [^false].
+				(val2 > 0 and: [((val1 bitShift: val2) bitShift: 0 - val2) ~= val1]) ifTrue: [^false].
+				val1 bitShift: val2].
+		[13] -> [val2 = 0 ifTrue: [^false]. (val1 - (self flooredModulo: val1 by: val2)) // val2].
 		[14] -> [val1 bitAnd: val2].
 		[15] -> [val1 bitOr: val2].
 		[18] -> [val1 bitXor: val2] }
@@ -2839,6 +2843,15 @@ foldArith: selectorIndex
 	simStackTop := rcvrSlot - 1.
 	self push: OilDescConst value: (self handleForSmallInteger: resultVal).
 	^true! !
+
+!OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/28/2026 04:10'!
+flooredModulo: val1 by: val2
+	"val1 \\ val2 (floored: the sign of val2), val2 ~= 0, in Smalltalk and in C (whose % truncates: the sign of val1)."
+	| remainder |
+	remainder := val1 \\ val2.
+	(remainder ~= 0 and: [(remainder < 0) ~= (val2 < 0)]) ifTrue:
+		[remainder := remainder + val2].
+	^remainder! !
 
 !OilInliningCompiler methodsFor: 'arithmetic' stamp: 'cb 10/24/2026 10:30'!
 genAdd

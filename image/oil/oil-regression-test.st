@@ -89,13 +89,16 @@ Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariabl
  - retAlloc: the result of the inlined retSel:'s first return was retargeted to the frame's base register before the dead
    scalar replaced p was materialized (flushTVSlots): the deopt state of the allocation referred to the old register.
  - lazyAlloc: the jump on the lazy comparison answered by the inlined isEmpty materialized the live scalar replaced p: the
-   deopt state of the allocation recorded the comparison as a register that was never assigned."
+   deopt state of the allocation recorded the comparison as a register that was never assigned.
+ - foldConsts: constant folding of \\ and // (floored), and of shifts and products whose result would not fit 64 bits,
+   in C (see oil/test_oil_m5.st: here the simulation computes them in Smalltalk anyway)."
 cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'tests'.
 cls compile: 'retSel: n | p | n > 0 ifTrue: [p := n @ n. ^p x + 1]. ^0' classified: 'tests'.
 #('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s'
   'retAlloc: n | s | s := 0. 1 to: n do: [:i | s := s + (self retSel: i - 2)]. ^s'
-  'lazyAlloc: coll | p | p := 3 @ 4. coll isEmpty ifTrue: [^p]. ^p x')
-	do: [:s | cls compile: s classified: 'tests'].
+  'lazyAlloc: coll | p | p := 3 @ 4. coll isEmpty ifTrue: [^p]. ^p x'
+  'foldConsts: x | a b c d one two | a := -7. b := 2. c := 7. d := -2. one := 1. two := 2. ^{a BS b. a // b. c BS d. c // d. one bitShift: 64. two bitShift: 63. a bitShift: 64}')
+	do: [:s | cls compile: (s copyReplaceAll: 'BS' with: (String with: $\ with: $\)) classified: 'tests'].
 statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
 	ok := true.
 	siteIR := comp instVarNamed: 'siteIR'. snapBase := comp instVarNamed: 'siteSnapBase'.
@@ -113,7 +116,7 @@ statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
 					[out nextPutAll: '   deopt#'; print: site; nextPutAll: ' refers to unassigned r'; print: (poolValue at: (snapBase at: site) + k); cr.
 					 ok := false]]]].
 	ok].
-{#tvAlias: -> #(5 10). #retAlloc: -> #(5 10). #lazyAlloc: -> {#(1 2). #()}} do: [:selAndArgs | | sel fbk comp |
+{#tvAlias: -> #(5 10). #retAlloc: -> #(5 10). #lazyAlloc: -> {#(1 2). #()}. #foldConsts: -> #(0)} do: [:selAndArgs | | sel fbk comp |
 	sel := selAndArgs key.
 	fbk := OilSimulatedTypeFeedback new.
 	fbk record: [model perform: sel with: selAndArgs value first].
