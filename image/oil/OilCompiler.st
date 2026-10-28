@@ -1360,7 +1360,8 @@ recordSite: kind
 	"Record a deopt site for the instruction about to be emitted: its IR index, the inlined frame and the bytecode pc,
 	 plus a copy of the virtual state at the start of that bytecode (see takeSnapshotFrame:pc:).  A pending lazy
 	 comparison is materialized first so that the site's IR index is the index of its instruction.  A site recorded
-	 outside of the bytecode whose state was snapshotted has no state (siteSnapBase -1): the back end refuses it."
+	 outside of the bytecode whose state was snapshotted, or after a register that state refers to was retargeted (see
+	 retarget:to:), has no state (siteSnapBase -1): the back end refuses it."
 	| siteIndex |
 	self materializePendingCondIfAny.
 	siteIndex := numSites.
@@ -1371,7 +1372,7 @@ recordSite: kind
 	siteFrame at: siteIndex put: currentFrame.
 	sitePC at: siteIndex put: currentPC.
 	siteKind at: siteIndex put: kind.
-	(currentFrame = snapFrame and: [currentPC = snapPC])
+	(currentFrame = snapFrame and: [currentPC = snapPC and: [oilSnapStale not]])
 		ifTrue: [self copySnapshotToSite: siteIndex]
 		ifFalse: [siteSnapBase at: siteIndex put: -1].
 	numSites := siteIndex + 1.
@@ -1840,10 +1841,12 @@ genReturnKind: descKind value: descValue nonLocal: isNonLocal frame: frameIndex 
 		 (self frameAt: frameIndex) lazyKind: descKind.
 		 (self frameAt: frameIndex) lazyValue: retVal.
 		 ^self].
+	"Scalar replaced objects are materialized first: their allocations deoptimize to the state at this bytecode, whose
+	 registers (the result's, baseReg) must not have been reassigned yet."
+	self flushTVSlots.
 	descKind = OilDescReg
 		ifTrue: [descValue ~= baseReg ifTrue: [(self retarget: descValue to: baseReg) ifFalse: [self emitMove: baseReg from: descValue]]]
 		ifFalse: [self regForKind: descKind value: descValue scratch: baseReg].
-	self flushTVSlots.
 	isLast ifTrue: [^self]. "falls through into the exit label"
 	instIndex := self emitOp: OilJump a: 0 imm16: (self frameAt: targetFrame) exitChain.
 	(self frameAt: targetFrame) exitChain: instIndex! !

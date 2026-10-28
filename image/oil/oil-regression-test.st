@@ -18,7 +18,7 @@ dir := Smalltalk at: #OilSourceDir ifAbsentPut: [((FileDirectory default fileExi
 #('OilInstructionConstants.st' 'OilConstants.st' 'OilBytecodeScanner.st' 'OilCompiler.st' 'OilCompilerBackend.st' 'OilCompilerPass2.st' 'OilSimulation.st') do:
 	[:f | (FileStream readOnlyFileNamed: dir, f) fileIn]!
 
-| out pass fail check cls enc model colls |
+| out pass fail check cls enc model colls statesDefined |
 out := FileStream forceNewFileNamed: (Smalltalk at: #OilResultFile ifAbsent: [(Smalltalk at: #OilSourceDir), 'regression-test-result.txt']).
 pass := 0. fail := 0.
 check := [:name :bool |
@@ -82,13 +82,35 @@ Object subclass: #OilRegressionBall instanceVariableNames: 'x xVel' classVariabl
 		actual := [(OilIRInterpreter new on: comp) run: (ballCls new x: pair first xVel: pair last) with: #()] on: Error do: [:e | #error -> e description].
 		check value: 'step for x ', pair first printString, ' xVel ', pair last printString, ' = ', expected printString value: actual = expected]]] value.
 
-"4. Pass 1 probes of the fixes of the Pillar 1 review (each compiled and run against the real execution):
+"4. Pass 1 probes of the fixes of the Pillar 1 review (each compiled and run against the real execution; and the
+ registers the deopt states of its sites refer to must have been assigned before the sites, or be its arguments):
  - tvAlias: the caller's stack slot holding the remote temp t (an alias of its temp vector slot register) was copied on
-   the arm of the inlined bump:if: that assigns t only (invalidateAliasesOf:), and then believed copied on both paths."
+   the arm of the inlined bump:if: that assigns t only (invalidateAliasesOf:), and then believed copied on both paths.
+ - retAlloc: the result of the inlined retSel:'s first return was retargeted to the frame's base register before the dead
+   scalar replaced p was materialized (flushTVSlots): the deopt state of the allocation referred to the old register."
 cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'tests'.
-#('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s')
+cls compile: 'retSel: n | p | n > 0 ifTrue: [p := n @ n. ^p x + 1]. ^0' classified: 'tests'.
+#('tvAlias: n | t s | t := 0. s := 0. 1 to: n do: [:i | s := s + (t + (self bump: [t := t + i] if: i odd))]. ^s'
+  'retAlloc: n | s | s := 0. 1 to: n do: [:i | s := s + (self retSel: i - 2)]. ^s')
 	do: [:s | cls compile: s classified: 'tests'].
-{#tvAlias: -> #(5 10)} do: [:selAndArgs | | sel fbk comp |
+statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
+	ok := true.
+	siteIR := comp instVarNamed: 'siteIR'. snapBase := comp instVarNamed: 'siteSnapBase'.
+	poolKind := comp instVarNamed: 'sitePoolKind'. poolValue := comp instVarNamed: 'sitePoolValue'.
+	0 to: (comp instVarNamed: 'numSites') - 1 do: [:site | | defined at |
+		((siteIR at: site) >= 0 and: [(snapBase at: site) >= 0]) ifTrue:
+			[defined := Set withAll: (0 to: (comp instVarNamed: 'oilHomeMethod') numArgs).
+			 at := 0.
+			 [at < (siteIR at: site)] whileTrue:
+				[(comp opcodeHasDest: (comp opcodeAt: at)) ifTrue: [defined add: (comp fieldAAt: at)].
+				 at := at + (comp instructionLengthAt: at)].
+			 0 to: (comp siteStateSize: site) - 1 do: [:k |
+				((poolKind at: (snapBase at: site) + k) = (OilConstants classPool at: #OilDescReg)
+				 and: [(defined includes: (poolValue at: (snapBase at: site) + k)) not]) ifTrue:
+					[out nextPutAll: '   deopt#'; print: site; nextPutAll: ' refers to unassigned r'; print: (poolValue at: (snapBase at: site) + k); cr.
+					 ok := false]]]].
+	ok].
+{#tvAlias: -> #(5 10). #retAlloc: -> #(5 10)} do: [:selAndArgs | | sel fbk comp |
 	sel := selAndArgs key.
 	fbk := OilSimulatedTypeFeedback new.
 	fbk record: [model perform: sel with: selAndArgs value first].
@@ -97,7 +119,8 @@ cls compile: 'bump: aBlock if: c c ifTrue: [aBlock value]. ^0' classified: 'test
 	comp compileMethod: cls >> sel receiverClass: (comp handleFor: cls).
 	check value: sel, ' compiles' value: comp failed not.
 	comp failed ifFalse:
-		[comp pipe.
+		[check value: sel, ' deopt states refer to assigned registers' value: (statesDefined value: comp).
+		 comp pipe.
 		 selAndArgs value do: [:arg | | expected actual |
 			expected := model perform: sel with: arg.
 			actual := [(OilIRInterpreter new on: comp) run: model with: {arg}] on: Error do: [:e | #error -> e description].
