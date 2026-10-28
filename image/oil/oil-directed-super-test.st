@@ -53,5 +53,30 @@ comp failed ifFalse:
 		actual := [(OilIRInterpreter new on: comp) run: model with: {leaf new. n}] on: Error do: [:e | #error -> e description].
 		check value: 'run:n: for ', n printString, ' = ', expected printString value: actual = expected]].
 
+"An inlined super send binds its target to the superclass, but its self keeps the receiver's class: the self sends and
+ self class of the inlined super method (and the self sends after it) must not bind to the superclass."
+base compile: 'dsWho ^1' classified: 'tests'.
+mid compile: 'dsWho ^2' classified: 'tests'.
+leaf compile: 'dsWho ^3' classified: 'tests'.
+base compile: 'dsName | t | t := self dsWho. ^t * 10' classified: 'tests'.
+base compile: 'dsCls ^self class' classified: 'tests'.
+mid compile: 'dsTwice ^(super dsName) + self dsWho + ((super dsCls) == OilDirectedSuperSimLeaf ifTrue: [100] ifFalse: [0])' classified: 'tests'.
+cls compile: 'run2: obj n: n | s | s := 0. 1 to: n do: [:i | s := s + obj dsTwice]. ^s' classified: 'tests'.
+fbk := OilSimulatedTypeFeedback new.
+fbk record: [model run2: leaf new n: 3].
+comp := OilCompiler new.
+comp typeFeedback: fbk.
+comp compileMethod: cls >> #run2:n: receiverClass: (comp handleFor: cls).
+check value: 'run2:n: compiles' value: comp failed not.
+comp failed ifFalse:
+	[ops := OrderedCollection new. at := 0.
+	 [at < comp irIndex] whileTrue: [ops add: (comp opcodeAt: at). at := at + (comp instructionLengthAt: at)].
+	 check value: 'run2:n: inlines dsTwice and its super sends (no call)' value: (ops noneSatisfy: [:op | comp isSendOpcode: op]).
+	 comp pipe.
+	 #(0 1 10) do: [:n | | expected actual |
+		expected := model run2: leaf new n: n.
+		actual := [(OilIRInterpreter new on: comp) run: model with: {leaf new. n}] on: Error do: [:e | #error -> e description].
+		check value: 'run2:n: (super send self class) for ', n printString, ' = ', expected printString value: actual = expected]].
+
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!

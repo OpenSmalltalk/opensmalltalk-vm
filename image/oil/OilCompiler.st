@@ -2053,7 +2053,7 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	"A message send: inline a virtual block's evaluation, a quick method, an intrinsic primitive or the method
 	 itself when the receiver's class is known (constant, established fact, or monomorphic type feedback guarded
 	 by OilGuardClass); otherwise emit a call."
-	| rcvrSlot descKind rcvrClass guard method prim |
+	| rcvrSlot descKind rcvrClass lookupClass guard method prim |
 	rcvrSlot := simStackTop - numArgs.
 	descKind := slotKind at: rcvrSlot.
 	(descKind = OilDescBlock and: [isSuper not]) ifTrue:
@@ -2066,20 +2066,25 @@ genSend: selector numArgs: numArgs super: isSuper frame: frameIndex
 	 and: [self canInlineSmallIntegerOpOn: rcvrSlot arg: rcvrSlot + 1]]]) ifTrue:
 		[(self genBitOp: OilXorTagged) ifTrue: [^self]].
 	guard := false.
+	"A super send looks up in the superclass of its home method's class, but its receiver keeps its own (static) class:
+	 the inlined method's self sends, self class and intrinsics depend on the receiver's class (0 if unknown)."
 	isSuper
-		ifTrue: [rcvrClass := self superclassOopOfMethodClassOf: (self frameAt: (self frameAt: frameIndex) home) method]
+		ifTrue:
+			[lookupClass := self superclassOopOfMethodClassOf: (self frameAt: (self frameAt: frameIndex) home) method.
+			 rcvrClass := self staticClassOfSlot: rcvrSlot]
 		ifFalse:
 			[rcvrClass := self staticClassOfSlot: rcvrSlot.
 			 rcvrClass = 0 ifTrue:
 				[rcvrClass := self profiledClassAt: currentPC.
-				 guard := rcvrClass ~= 0]].
+				 guard := rcvrClass ~= 0].
+			 lookupClass := rcvrClass].
 	(isSuper not and: [numArgs = 0 and: [(self isFloatSlot: rcvrSlot) or: [self isFloatClass: rcvrClass]]]) ifTrue:
 		[(self genUnaryFloatSend: selector receiver: rcvrSlot) ifTrue: [^self]].
 	(rcvrClass = 0 and: [isSuper not and: [descKind = OilDescReg]]) ifTrue:
 		[(self genBimorphicSend: selector numArgs: numArgs receiver: rcvrSlot) ifTrue: [^self]].
-	(rcvrClass = 0 or: [self isContextClass: rcvrClass]) ifTrue:
+	(lookupClass = 0 or: [(self isContextClass: lookupClass) or: [self isContextClass: rcvrClass]]) ifTrue:
 		[^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
-	method := self lookup: selector inClass: rcvrClass.
+	method := self lookup: selector inClass: lookupClass.
 	method = 0 ifTrue: [^self genCall: selector numArgs: numArgs receiver: rcvrSlot super: isSuper].
 	prim := self oilPrimitiveIndexOf: method.
 	(self oilIsQuickPrimitiveIndex: prim) ifTrue:
