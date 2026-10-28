@@ -1767,7 +1767,8 @@ genPushFullClosure: literalIndex flags: closureFlags frame: frameIndex
 	failed ifTrue: [^self].
 	(self vobjAt: vobjIndex) literal: block.
 	(self vobjAt: vobjIndex) homeFrame: (self frameAt: frameIndex) home.
-	(self vobjAt: vobjIndex) outer: frameIndex. "the frame whose context is the closure's outerContext (deoptimization)"
+	"the frame whose context is the closure's outerContext (deoptimization), none (-1, nil) if it ignores it"
+	(self vobjAt: vobjIndex) outer: ((closureFlags bitAnd: 64) ~= 0 ifTrue: [-1] ifFalse: [frameIndex]).
 	rcvrOnStack
 		ifTrue:
 			[self capture: firstSlot - 1 frame: frameIndex.

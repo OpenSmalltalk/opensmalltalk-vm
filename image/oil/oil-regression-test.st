@@ -132,5 +132,25 @@ statesDefined := [:comp | | ok siteIR snapBase poolKind poolValue |
 			actual := [(OilIRInterpreter new on: comp) run: model with: {arg}] on: Error do: [:e | #error -> e description].
 			check value: sel, ' for ', arg printString, ' = ', expected printString value: actual = expected]]].
 
+"5. A virtual closure whose pushFullClosure sets ignoreOuterContext (flag 64; the Squeak compiler does not, so the
+ bytecode is patched) gets no outerContext (outer -1) when its deoptimization rematerializes it; others the context of
+ the frame creating them (outer 0 here)."
+#(false true) do: [:ignoreOuter | | sel m comp outers |
+	sel := ignoreOuter ifTrue: [#ignoreOuter:] ifFalse: [#keepOuter:].
+	cls compile: sel, ' n ^[:x | x + 1] value: n' classified: 'tests'.
+	m := cls >> sel.
+	check value: sel, ' starts with pushFullClosure' value: (m at: m initialPC) = 249.
+	ignoreOuter ifTrue: [m at: m initialPC + 2 put: ((m at: m initialPC + 2) bitOr: 64)].
+	comp := OilCompiler new.
+	comp compileMethod: m receiverClass: (comp handleFor: cls).
+	check value: sel, ' compiles' value: comp failed not.
+	outers := (0 to: (comp instVarNamed: 'numVObjs') - 1)
+				select: [:i | (comp vobjAt: i) kind = (OilConstants classPool at: #OilDescBlock)]
+				thenCollect: [:i | (comp vobjAt: i) outer].
+	check value: sel, ' virtual closure outer frame ', outers printString value: outers asArray = {ignoreOuter ifTrue: [-1] ifFalse: [0]}.
+	comp failed ifFalse:
+		[comp pipe.
+		 check value: sel, ' result' value: ([(OilIRInterpreter new on: comp) run: model with: #(41)] on: Error do: [:e | e]) = 42]].
+
 out cr; nextPutAll: 'TOTAL: '; print: pass; nextPutAll: ' passed, '; print: fail; nextPutAll: ' failed'; cr.
 out close!
