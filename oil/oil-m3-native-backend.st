@@ -56,14 +56,12 @@ defaultCogCodeSize
 	<api>
 	^4 * 1024 * 1024! !
 
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/24/2026 15:00'!
+!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/27/2026 22:55'!
 initialize
 	super initialize.
 	oilColdSelectors := 0.
 	oilNoAutoCompile := false.
 	oilExtraSelectors := 0.
-	oilSpecializations := 0.
-	oilKeepSpecializations := false.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
@@ -251,13 +249,14 @@ oilCompile: aMethodObj receiverClass: classObj
 	oilCompileMicroseconds := coInterpreter ioUTCMicrosecondsNow - start.
 	^result! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/24/2026 19:35'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/27/2026 22:55'!
 oilGenerate: aMethodObj
 	"Run the optimization pipeline (#pipe) and Pass 3 of Oil on the IR just produced by oilCompile:receiverClass:
 	 and install the resulting CogMethod as aMethodObj's machine code, which must have none.
 	 Answer OilOK or a failure code.  oilCompileMicroseconds is then the time both took.
 	 N.B. Like cog:selector: this never reclaims the method zone (it calls for a compaction if it is full)."
 	<api>
+	<inline: false>
 	<option: #ProfilingCogit>
 	| start result |
 	start := coInterpreter ioUTCMicrosecondsNow.
@@ -265,13 +264,11 @@ oilGenerate: aMethodObj
 	oilCompileMicroseconds := oilCompileMicroseconds + (coInterpreter ioUTCMicrosecondsNow - start).
 	^result! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/26/2026 20:30'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/27/2026 22:55'!
 oilGenerateCode: aMethodObj
 	"See oilGenerate:."
 	<option: #ProfilingCogit>
 	| result estimate |
-	(coInterpreter methodHasCogMethod: aMethodObj) ifTrue:
-		[^OilFailInternal].
 	methodObj := aMethodObj.
 	methodHeader := objectMemory methodHeaderOf: aMethodObj.
 	result := self pipe.
@@ -294,7 +291,6 @@ oilGenerateCode: aMethodObj
 	bytecodeSetOffset := (coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
 							ifTrue: [256]
 							ifFalse: [0].
-	oilNumMethodPICCases := 0. "(see compileEntry)"
 	blockCount := 0.
 	blockEntryLabel := nil.
 	receiverTags := -1.
@@ -314,14 +310,14 @@ oilGenerateCode: aMethodObj
 		 ^OilFailInternal].
 	^self oilGenerateCogMethod! !
 
-!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/26/2026 05:20'!
+!ProfilingCogit methodsFor: 'oil compilation' stamp: 'cb 10/27/2026 22:55'!
 oilGenerateCogMethod
 	"Assemble the abstract instructions into a CogMethod, like generateCogMethod:, then attach the
 	 deoptimization metadata, a hidden old space object of CompiledMethod format, through the method's counters field (tagged with 1).
 	 Uses a single-pass annotation map generated into a 512-byte stack buffer to eliminate the
 	 preliminary generateMapAt: nil pass."
 	<inline: true>
-	| codeSize headerSize mapSize totalSize startAddress result metadata selector added writableMethod mapBuffer |
+	| codeSize headerSize mapSize totalSize startAddress result metadata selector addedLargeContext existingRawHeader writableMethod mapBuffer |
 	<var: #writableMethod type: #'CogMethod *'>
 	<var: #mapBuffer declareC: 'char mapBuffer[512]'>
 	self planMetadata ifFalse:
@@ -346,6 +342,7 @@ oilGenerateCogMethod
 		[objectMemory freeObject: metadata.
 		 coInterpreter callForCogCompiledCodeCompaction.
 		 ^OilFailCodeSpace].
+	methodLabel address: startAddress.
 	self assert: startAddress + cmEntryOffset = entry address.
 	self assert: startAddress + cmNoCheckEntryOffset = noCheckEntry address.
 	result := self outputInstructionsAt: startAddress + headerSize.
@@ -367,15 +364,20 @@ oilGenerateCogMethod
 	"Oil frames hold the spill slots of the virtual registers below the temps, and marrying or divorcing a frame copies
 	 all its slots into its context: give the method large contexts (prepareNativeCode keeps the frame within
 	 LargeContextSlots), and note whether the bit must be cleared from the method's header when it is freed."
-	added := (coInterpreter methodNeedsLargeContext: methodObj) not.
+	addedLargeContext := (coInterpreter methodNeedsLargeContext: methodObj) not.
 	methodHeader := coInterpreter oilHeaderWithLargeContext: methodHeader.
+	existingRawHeader := coInterpreter rawHeaderOf: methodObj.
+	(coInterpreter isCogMethodReference: existingRawHeader) ifTrue:
+		[coInterpreter rawHeaderOf: methodObj put: methodHeader].
 	writableMethod := self writableMethodFor: startAddress.
 	self fillInMethodHeader: writableMethod
 		size: totalSize
 		selector: selector.
-	writableMethod cmUnusedFlag: added.
-	"Oil methods are expensive to compile and hot: start with the maximum usage count."
-	writableMethod cmUsageCount: CMMaxUsageCount.
+	(coInterpreter isCogMethodReference: existingRawHeader) ifTrue:
+		[coInterpreter rawHeaderOf: methodObj put: existingRawHeader].
+	writableMethod cmUnusedFlag: addedLargeContext.
+	"Oil methods are expensive to compile and hot: start with the highest non-active usage count."
+	writableMethod cmUsageCount: CMMaxUsageCount - 1.
 	writableMethod counters: metadata + 1.
 	self fillMetadata: metadata cogMethod: startAddress.
 	backEnd flushICacheFrom: startAddress to: startAddress + totalSize.
@@ -518,15 +520,17 @@ oilSendMcpcAt: bcpc in: cogMethod
 		performUntil: #oilFindSendAt:Annotation:Mcpc:Bcpc:Method:
 		arg: (self cCoerceSimple: bcpc to: #'void *')! !
 
-!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/26/2026 20:30'!
+!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/27/2026 22:55'!
 oilLinkedSendMcpcAt: bcpc in: aMethodObj
 	"Answer the return address (mcpc) of the ordinary send at the 0-relative bytecode pc bcpc of aMethodObj (a
-	 CompiledMethod or CompiledBlock) if its inline cache is linked, else 0 (no machine code, Oil code, no such send, or
-	 an unlinked inline cache)."
+	 CompiledMethod or CompiledBlock) if its baseline inline cache is linked, else 0 (no baseline machine code, no such
+	 send, or an unlinked inline cache)."
 	<returnTypeC: #usqInt>
-	| mcpc |
-	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse: [^0].
-	mcpc := self oilSendMcpcAt: bcpc in: (coInterpreter cogMethodOf: aMethodObj).
+	| cogMethod mcpc |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := self oilBaselineCogMethodOf: aMethodObj.
+	cogMethod isNil ifTrue: [^0].
+	mcpc := self oilSendMcpcAt: bcpc in: cogMethod.
 	(mcpc = 0 or: [(backEnd callTargetFromReturnAddress: mcpc) <= methodZoneBase]) ifTrue: [^0].
 	^mcpc! !
 
@@ -573,14 +577,14 @@ oilPolymorphicClass: caseIndex at: bcpc in: aMethodObj
 	class := objectRepresentation classForInlineCacheTag: cacheTag.
 	^class = objectMemory nilObject ifTrue: [0] ifFalse: [class]! !
 
-!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/26/2026 20:30'!
+!ProfilingCogit methodsFor: 'in-line cacheing' stamp: 'cb 10/27/2026 22:55'!
 oilSendSiteUnlinkedAt: bcpc in: aMethodObj
 	"Has the send at the 0-relative bytecode pc bcpc of aMethodObj never been sent, i.e. is its inline cache
 	 unlinked (or does the method not have machine code yet)?  The baseline JIT inlines SmallInteger arithmetic
 	 and comparisons and sends the message only for other receivers, so for those selectors an unlinked send
 	 means only SmallIntegers were seen."
 	(coInterpreter methodHasCogMethod: aMethodObj) ifFalse: [^true].
-	(self isOilMethod: (coInterpreter cogMethodOf: aMethodObj)) ifTrue: [^false].
+	(self oilBaselineCogMethodOf: aMethodObj) isNil ifTrue: [^false].
 	^(self oilLinkedSendMcpcAt: bcpc in: aMethodObj) = 0! !
 
 
@@ -739,6 +743,8 @@ planMetadata
 	self mdLiteralIndexOf: oilHomeMethod. "OilMDRootMethod"
 	0 to: self numInlinedSelectorsInMetadata - 1 do: "from OilMDFirstSelectorLiteral (distinct selectors)"
 		[:selIndex| self mdLiteralIndexOf: (oilInlinedSelectors at: selIndex)].
+	receiverClass ~= 0 ifTrue:
+		[self mdLiteralIndexOf: receiverClass].
 	0 to: numFrames - 1 do:
 		[:frameIndex|
 		self mdLiteralIndexOf: (self frameAt: frameIndex) method.
@@ -1460,7 +1466,7 @@ oilDeoptimizeFramesOf: cogMethod
 			[self oilResumeContext: activeContext.
 			 inInterpreter ifTrue: [instructionPointer := self iframeSavedIP: framePointer]]].
 	(self oilHasFramesOf: cogMethod) ifFalse:
-		[cogit unlinkSendsTo: cogMethod methodObject andFreeIf: true]! !
+		[cogit oilFreeCogMethod: cogMethod]! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-deoptimization' stamp: 'cb 10/24/2026 17:30'!
 oilHasFramesOf: cogMethod
@@ -1828,6 +1834,8 @@ attemptToSwitchToMachineCode: bcpc
 					[cogit cog: method selector: objectMemory nilObject] ].
 	(self methodHasCogMethod: method) ifTrue:
 		[cogMethod := self cogMethodOf: method.
+		 (cogit isOilDispatcher: cogMethod) ifTrue:
+			[cogMethod := cogit oilBaselineOfDispatcher: cogMethod].
 		 pc := self convertToMachineCodeFrame: cogMethod bcpc: bcpc.
 		 self assertValidMachineCodeFrame: pc.
 		 self push: pc.
@@ -2575,7 +2583,7 @@ oilMetadataOfMachineCodeOf: methodObj class: classObj
 		oilMetadataOf: (cogit oilMetadataOf: (self cogMethodOf: methodObj))
 		class: classObj! !
 
-!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 20:55'!
+!CoInterpreterPrimitives methodsFor: '*VMMaker-JIT-Oil-primitives' stamp: 'cb 10/27/2026 22:55'!
 primitiveOilMetadata
 	"CompiledMethod>>oilMetadata (no argument), CompiledMethod>>oilMetadataFor: aClass, or any receiver and a CompiledMethod
 	 argument.  Answer the deoptimization metadata of the method's Oil code (read-only CompiledMethod objects, see
@@ -2585,7 +2593,9 @@ primitiveOilMetadata
 	 or nil."
 	<export: true>
 	<essential: #ProfilingCogit>
-	| methodObj classObj direct count result entry entryIndex copy |
+	| methodObj classObj direct count result entry specCogMethod dispatcher classTag |
+	<var: #specCogMethod type: #'CogMethod *'>
+	<var: #dispatcher type: #'CogMethod *'>
 	argumentCount > 1 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 	methodObj := self stackTop.
@@ -2604,12 +2614,11 @@ primitiveOilMetadata
 			ifTrue: [entry := self oilMetadataOfMachineCodeOf: methodObj class: objectMemory nilObject]
 			ifFalse:
 				[entry := objectMemory nilObject.
-				 entryIndex := (objectMemory isNonImmediate: classObj)
-									ifTrue: [cogit oilSpecializationOf: methodObj tag: (objectMemory classTagForClass: classObj)]
-									ifFalse: [-1].
-				 (entryIndex >= 0 and: [cogit oilIsLiveSpecialization: entryIndex of: methodObj]) ifTrue:
-					[copy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
-					 entry := self oilMetadataOfMachineCodeOf: copy class: classObj]].
+				 specCogMethod := (objectMemory isNonImmediate: classObj)
+									ifTrue: [cogit oilSpecializedCogMethodOf: methodObj tag: (objectMemory classTagForClass: classObj)]
+									ifFalse: [nil].
+				 specCogMethod ~= nil ifTrue:
+					[entry := self oilMetadataOf: (cogit oilMetadataOf: specCogMethod) class: classObj]].
 		 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 		 ^self pop: argumentCount + 1 thenPush: entry].
 	count := direct ifTrue: [1] ifFalse: [cogit oilNumSpecializationsOf: methodObj].
@@ -2623,15 +2632,16 @@ primitiveOilMetadata
 			 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
 			 objectMemory storePointer: 0 ofObject: result withValue: entry]
 		ifFalse:
-			[count := 0.
-			 0 to: OilMaxSpecializations - 1 do:
-				[:index|
-				(cogit oilIsLiveSpecialization: index of: methodObj) ifTrue:
-					[copy := cogit oilSpecializationAt: index field: OilSpecCopy.
-					 entry := self oilMetadataOfMachineCodeOf: copy class: (cogit oilSpecializationAt: index field: OilSpecClass).
-					 entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
-					 objectMemory storePointer: count ofObject: result withValue: entry.
-					 count := count + 1]]].
+			[dispatcher := self cogMethodOf: methodObj.
+			 count := 0.
+			 1 to: (cogit oilDispatcherNumCases: dispatcher) do:
+				[:caseIndex|
+				classTag := cogit oilDispatcher: dispatcher tagAt: caseIndex.
+				specCogMethod := cogit oilDispatcher: dispatcher targetAt: caseIndex.
+				entry := self oilMetadataOf: (cogit oilMetadataOf: specCogMethod) class: (objectMemory classOrNilAtIndex: classTag).
+				entry isNil ifTrue: [^self primitiveFailFor: PrimErrNoMemory].
+				objectMemory storePointer: count ofObject: result withValue: entry.
+				count := count + 1]].
 	self pop: argumentCount + 1 thenPush: result! !
 
 !CoInterpreter methodsFor: '*VMMaker-JIT-Oil-support' stamp: 'cb 10/26/2026 21:00'!
@@ -2692,14 +2702,14 @@ oilApiByteStringMetaclass
 	<essential: #ProfilingCogit>
 	^objectMemory fetchClassOf: (objectMemory splObj: ClassByteString)! !
 
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 18:00'!
+!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 22:55'!
 oilAutoCompile: homeMethod receiver: receiver
 	"A trip counter found that homeMethod, activated for receiver, runs a hot loop (see ceOilTrip:).  Compile an Oil
 	 specialization of homeMethod for the class of receiver (up to oilMaxSpecialization specializations), and install it in
-	 oilSpecializations for its next activations; its running activations keep running its baseline code (see
-	 oilUnhookBaselineCodeOf:).  Called on the trip path: nothing here collects garbage or changes the stack."
+	 homeMethod's closed-PIC Dispatcher for its next activations; its running activations keep running its baseline code
+	 untouched.  Called on the trip path: nothing here collects garbage or changes the stack."
 	<essential: #ProfilingCogit>
-	| cogMethod selector classObj classTag entryIndex specCopy result |
+	| cogMethod classObj classTag result |
 	<var: #cogMethod type: #'CogMethod *'>
 	((objectMemory isNonImmediate: homeMethod)
 	 and: [(objectMemory isOopCompiledMethod: homeMethod)
@@ -2711,77 +2721,20 @@ oilAutoCompile: homeMethod receiver: receiver
 	 or: [(cogit oilIsDisqualified: homeMethod)
 	 or: [self oilApiIsSynchronizationMethod: homeMethod]]) ifTrue:
 		[^nil].
-	self oilEnsureSpecializationTable ifFalse:
-		[^nil].
 	classObj := objectMemory fetchClassOf: receiver.
 	classTag := objectMemory fetchClassTagOf: receiver.
-	entryIndex := cogit oilSpecializationOf: homeMethod tag: classTag.
-	entryIndex >= 0
-		ifTrue:
-			[specCopy := cogit oilSpecializationAt: entryIndex field: OilSpecCopy.
-			 ((cogit oilMethodHasOilCode: specCopy)
-			  or: [(cogit oilIsDisqualified: specCopy)
-			  or: [(cogit oilCopy: specCopy isCopyOf: homeMethod) not]]) ifTrue:
-				[^nil]]
-		ifFalse:
-			[(cogit oilNumSpecializationsOf: homeMethod) >= cogit oilMaxSpecialization ifTrue:
-				[^nil].
-			 specCopy := objectMemory cloneInOldSpace: homeMethod forPinning: false.
-			 specCopy = 0 ifTrue:
-				[^nil]].
+	(cogit oilSpecializedCogMethodOf: homeMethod tag: classTag) ~= nil ifTrue:
+		[^nil].
+	(cogit oilNumSpecializationsOf: homeMethod) >= cogit oilMaxSpecialization ifTrue:
+		[^nil].
 	self oilEnsureExtraSelectorTable ifFalse:
 		[^nil].
-	selector := cogMethod selector.
 	result := cogit oilCompile: homeMethod receiverClass: classObj.
 	result = OilOK ifTrue:
-		[(self oilUnhookBaselineCodeOf: homeMethod) ifFalse:
-			[^nil].
-		 result := cogit oilGenerate: specCopy.
-		 (result = OilOK and: [entryIndex < 0]) ifTrue:
-			[cogit oilAddSpecialization: homeMethod class: classObj copy: specCopy].
-		 cogit cog: homeMethod selector: selector].
+		[result := cogit oilGenerateSpecialized: homeMethod tag: classTag.
+		 result = OilOK ifTrue:
+			[self flushMethodCacheForMethod: homeMethod]].
 	(result ~= OilOK and: [result ~= OilFailCodeSpace]) ifTrue:
 		[cogit oilDisqualify: homeMethod].
 	^nil! !
-
-!CoInterpreter methodsFor: '*VMMaker-JIT-Oil-autonomous' stamp: 'cb 10/27/2026 18:00'!
-oilUnhookBaselineCodeOf: methodObj
-	"Give the baseline machine code of methodObj, which activations may be running, to a copy of methodObj: the sends
-	 linked to it are unlinked and methodObj gets its bytecoded header back, ready for its Oil code.  The copy, which
-	 nothing sends to, owns the baseline code (and the contexts of its machine code frames) until its activations have
-	 returned; it is disqualified, so that its trip counters do not compile it.  Its divorced contexts with machine code
-	 pcs get bytecode pcs first.  Answer whether it was unhooked (not if the copy cannot be allocated).  Nothing here
-	 collects garbage or changes the stack."
-	<essential: #ProfilingCogit>
-	<var: #cogMethod type: #'CogMethod *'>
-	<var: #aPage type: #'StackPage *'>
-	<var: #theFP type: #'char *'>
-	| cogMethod copy aPage theFP |
-	cogMethod := self cogMethodOf: methodObj.
-	copy := objectMemory cloneInOldSpace: methodObj forPinning: false.
-	copy = 0 ifTrue: [^false].
-	objectMemory allObjectsDo:
-		[:obj|
-		((objectMemory isContextNonImm: obj)
-		 and: [(objectMemory fetchPointer: MethodIndex ofObject: obj) = methodObj
-		 and: [(self isMarriedOrWidowedContext: obj) not]]) ifTrue:
-			[self ensureContextHasBytecodePC: obj]].
-	self flushMethodCacheForMethod: methodObj.
-	cogit oilUnlinkSendsKeepingSpecializationsTo: methodObj.
-	self rawHeaderOf: methodObj put: cogMethod methodHeader.
-	self rawHeaderOf: copy put: cogMethod asUnsignedInteger.
-	cogit oilSetMethodObjectOf: cogMethod to: copy.
-	0 to: numStackPages - 1 do:
-		[:i|
-		aPage := stackPages stackPageAt: i.
-		(stackPages isFree: aPage) ifFalse:
-			[theFP := aPage = stackPage ifTrue: [framePointer] ifFalse: [aPage headFP].
-			 [theFP ~= 0] whileTrue:
-				[((self isMachineCodeFrame: theFP)
-				  and: [(self mframeHomeMethod: theFP) = cogMethod
-				  and: [self frameHasContext: theFP]]) ifTrue:
-					[objectMemory storePointer: MethodIndex ofObject: (self frameContext: theFP) withValue: copy].
-				 theFP := self frameCallerFP: theFP]]].
-	cogit oilDisqualify: copy.
-	^true! !
 
