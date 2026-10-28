@@ -9,10 +9,10 @@
  */
 
 #if SUBVERSION
-static char SvnRawPluginsRevisionString[] = "$Rev: 202610242158-oil-m5-base $";
+static char SvnRawPluginsRevisionString[] = "$Rev$";
 # define PLUGINS_REV_START (SvnRawPluginsRevisionString + 6)
 
-static char SvnRawPluginsRepositoryURL[] = "$URL: clementbera@clementbera.c.googlers.com:.gemini/jetski/brain/7ce39ff8-2a06-42fe-96ff-a75b88c4fff2/scratch/osvm $";
+static char SvnRawPluginsRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawPluginsRepositoryURL + 6)
 
 static char *
@@ -35,10 +35,10 @@ pluginsRepositoryURL()
 # undef PLUGINS_REV_START
 # undef URL_START
 #elif GIT
-static char GitRawPluginsRevisionString[] = "$Rev: 202610242158-oil-m5-base $";
+static char GitRawPluginsRevisionString[] = "$Rev$";
 # define PLUGINS_REV_START (GitRawPluginsRevisionString + 6)
 
-static char GitRawPluginsRepositoryURL[] = "$URL: clementbera@clementbera.c.googlers.com:.gemini/jetski/brain/7ce39ff8-2a06-42fe-96ff-a75b88c4fff2/scratch/osvm $";
+static char GitRawPluginsRepositoryURL[] = "$URL$";
 # define URL_START (GitRawPluginsRepositoryURL + 6)
 
 static char *
