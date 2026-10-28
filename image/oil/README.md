@@ -33,9 +33,9 @@ OilBytecodeScanner
 | `oil-m2-test.st` | Pass 1 acceptance test: compiles probes (`sumScores:` and others), checks the IR shape, and compares `OilIRInterpreter` against real execution. |
 | `oil-m4-test.st` | Pass 2 acceptance test: checks loop rotation, bounds-check elimination, shared sizes, unchecked increments, and equivalence with Pass 1 and real execution. |
 | `oil-m6-test.st` | `OilFullCompiler` acceptance test: value numbering and float fusion statistics, and equivalence of the IR (the interpreter keeps unboxed float results aside, like XMM registers) with real execution. |
-| `oil-m8-test.st` | M8 acceptance test: scalar replacement (dissolved and materialized Points and Associations), bimorphic inlining (diamonds, predicates, nil-or-object sends), folded hashes and `OilStringHash`, and equivalence of the IR with real execution. |
-| `oil-m10-test.st` | M10 acceptance test: the analysis of the float loop registers (which loops, which float variables and invariants, of which kind), and equivalence of the IR with real execution (the code generation is tested natively, `oil/test_oil_m10.st`). |
-| `oil-m9-test.st` | M9 acceptance test: full loop unrolling, the cloned deopt sites, the rotation of loops tested against an immediate or an argument, and equivalence of the IR with real execution and with the IR compiled without unrolling. |
+| `oil-m8-test.st` | Scalar replacement acceptance test: scalar replacement (dissolved and materialized Points and Associations), bimorphic inlining (diamonds, predicates, nil-or-object sends), folded hashes and `OilStringHash`, and equivalence of the IR with real execution. |
+| `oil-m10-test.st` | Float loop registers acceptance test: the analysis of the float loop registers (which loops, which float variables and invariants, of which kind), and equivalence of the IR with real execution (the code generation is tested natively, `oil/test_oil_m10.st`). |
+| `oil-m9-test.st` | Loop unrolling acceptance test: full loop unrolling, the cloned deopt sites, the rotation of loops tested against an immediate or an argument, and equivalence of the IR with real execution and with the IR compiled without unrolling. |
 | `oil-directed-super-test.st` | `OilCallDirectedSuper`: a super send of an inlined method in the Pass 1 IR (with its method class), its printing, and `OilIRInterpreter` against real execution. |
 
 ## Running the In-Image Tests

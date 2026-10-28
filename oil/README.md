@@ -16,7 +16,9 @@ To generate the 64-bit Spur Oil VM (`src/spur64.oil`), file into `Spur64VMMaker.
 8. `oil/oil-m3-native-backend.st` — `ProfilingCogit` Oil driver (`oilCompile:receiverClass:`, `oilGenerate:`), deoptimization metadata (`fillMetadata:cogMethod:`), `CoInterpreter>>ceOilDeoptimize:`, selector table, invalidation on selector flush (`unlinkSendsOf:isMNUSelector:`), autonomous compilation on trips (`oilAutoCompile:receiver:`, `oilUnhookBaselineCodeOf:`), and primitives (`primitiveOilGetOrSetParameter`, `primitiveOilMethodInfo`, `primitiveOilLastCompilation`), and the debugging primitives (`primitiveOilContexts`, `primitiveOilDeoptimize`, `primitiveOilMetadata`; see `image/oil/OilDeoptMetadataReader.st`).
 9. `oil/oil-m7-specialization.st` — method-level multi-specialization: the specialization table, the dispatch at the no-check entry of baseline methods (`ProfilingCogit>>compileEntry`), direct linking of monomorphic sends (`linkSendAt:in:to:offset:receiver:`), the interpreter's entry (`CoInterpreter>>activateNewCogMethod:inInterpreter:`), and `primitiveOilSpecialize`.
 
-Then run `VMMaker generateSqueakSpurCogOil64VM` and build with `building/linux64x64/squeak.cog.spur/build.oil/mvm` (produces `products/sqcogspur64linuxht.oil/squeak`).
+Then run `VMMaker generateSqueakSpurCogOil64VM` and build with:
+- **64-bit Linux x64**: `building/linux64x64/squeak.cog.spur/build.oil/mvm` (produces `products/sqcogspur64linuxht.oil/squeak`; for assert builds use `build.oil.assert/mvm`).
+- **64-bit macOS ARMv8**: `building/macos64ARMv8/squeak.oil.spur/mvm` (produces `products/sqcogspur64macosht.oil/squeak`).
 
 ## Native Tests
 

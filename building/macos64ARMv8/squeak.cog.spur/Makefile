@@ -5,7 +5,7 @@
 
 BIT_IDENTICAL_FLOATING_POINT=BIT_IDENTICAL_FLOATING_POINT
 
-VMSRCDIR ?= ../../../src/spur64.oil
+VMSRCDIR:= ../../../src/spur64.cog
 SOURCEFILE:=SqueakV60.sources
 
 ifeq ($(THREADING),multi)
