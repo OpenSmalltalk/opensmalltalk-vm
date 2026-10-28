@@ -55,12 +55,15 @@ defaultCogCodeSize
 	<api>
 	^4 * 1024 * 1024! !
 
-!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/27/2026 22:55'!
+!ProfilingCogit methodsFor: 'initialization' stamp: 'cb 10/28/2026 20:30'!
 initialize
 	super initialize.
+	oilTripCounters := CArrayAccessor on: ((Array new: OilNumTripCounters) atAllPut: 0).
+	oilNextCounterIndex := 0.
 	oilColdSelectors := 0.
 	oilNoAutoCompile := false.
 	oilExtraSelectors := 0.
+	oilCompileMicroseconds := 0.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]! !
@@ -480,7 +483,9 @@ oilWrapSelectorIndexDereferenceRoutine
 	jumpNotOil := cogit JumpLess: 0.
 	cogit
 		SubCq: OilExtraSelectorBase - 1 R: ClassReg; "1-relative, skipping the header"
-		MoveAw: (self cCoerceSimple: cogit oilExtraSelectorsAddress to: #usqInt) R: Extra1Reg;
+		MoveAw: (self cCode: [self cCoerceSimple: cogit oilExtraSelectorsAddress to: #usqInt]
+					inSmalltalk: [cogit simulatedVariableAddress: #oilExtraSelectors in: cogit])
+		R: Extra1Reg;
 		MoveXwr: ClassReg R: Extra1Reg R: ClassReg;
 		RetN: 0.
 	"(not JumpFullRT:, which clobbers TempReg, an argument of the directed super send trampolines)"
@@ -2640,3 +2645,37 @@ oilAutoCompile: homeMethod receiver: receiver
 	cogit oilDisqualify: homeMethod.
 	^cogit oilTripBackOffCount! !
 
+
+
+!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/28/2026 20:20'!
+oilExtraSelectors
+	<doNotGenerate>
+	^oilExtraSelectors! !
+
+!ProfilingCogit methodsFor: 'accessing' stamp: 'cb 10/28/2026 20:20'!
+oilExtraSelectors: anOop
+	<doNotGenerate>
+	oilExtraSelectors := anOop! !
+
+!CurrentImageCoInterpreterFacade methodsFor: 'oil' stamp: 'cb 10/28/2026 20:20'!
+oilRaiseMaxLiteralCountForCompile
+	^self! !
+
+!CogMethodSurrogate methodsFor: 'accessing' stamp: 'cb 10/28/2026 20:25'!
+cmUnusedFlag
+	<bitPosition: 19 width: 1>
+	^(((objectMemory byteAt: address + 2 + baseHeaderSize) bitShift: -3) bitAnd: 16r1) ~= 0! !
+
+!CogMethodSurrogate methodsFor: 'accessing' stamp: 'cb 10/28/2026 20:25'!
+cmUnusedFlag: aValue
+	| index delta |
+	index := address + 2 + baseHeaderSize.
+	(delta := cogit getCodeToDataDelta) > 0 ifTrue:
+		[self assert: (cogit addressIsInCodeZone: address - delta).
+		 objectMemory
+			byteAt: index - delta
+			put: (((objectMemory byteAt: index - delta) bitAnd: 16rF7) + (aValue ifTrue: [8] ifFalse: [0]))].
+	objectMemory
+		byteAt: index
+		put: (((objectMemory byteAt: index) bitAnd: 16rF7) + (aValue ifTrue: [8] ifFalse: [0])).
+	^aValue! !

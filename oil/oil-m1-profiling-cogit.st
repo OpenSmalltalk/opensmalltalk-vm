@@ -339,3 +339,9 @@ followForwardedLiteralsImplementationIn: cogMethod
 	hasYoungObj
 		ifTrue: [methodZone ensureInYoungReferrers: cogMethod]
 		ifFalse: [writableCogMethod cmRefersToYoung: false]! !
+
+
+!ProfilingCogit methodsFor: 'simulation only' stamp: 'cb 10/28/2026 20:15'!
+excludeVarBaseRelativeAddress: varAddress
+	varAddress isInteger ifFalse: [^true].
+	^super excludeVarBaseRelativeAddress: varAddress! !
