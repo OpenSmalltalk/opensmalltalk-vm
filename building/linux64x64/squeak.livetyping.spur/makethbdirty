@@ -1,0 +1,15 @@
+#!/bin/sh -e
+trap 'exit 2' HUP INT PIPE TERM
+if [ "$1" = -fork ]; then
+	shift
+	for d in build.debug build.assert build; do
+		(cd ./$d
+		 echo n | ./mvm "$@") &
+	done
+	wait
+else
+	for d in build.debug build.assert build; do
+		(cd ./$d
+		 echo n | ./mvm "$@")
+	done
+fi
