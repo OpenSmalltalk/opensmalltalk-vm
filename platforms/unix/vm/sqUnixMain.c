@@ -1969,10 +1969,19 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
-#if COGMTVM
-# define VM "MTVM"
+#if Oil
+# define VMCONFIG " Oil"
+#elif COGVM
+# define VMCONFIG " Cog"
+#elif STACKVM
+# define VMCONFIG " Stack"
 #else
-# define VM "VM"
+# define VMCONFIG " "
+#endif
+#if COGMTVM
+# define VM " MTVM"
+#else
+# define VM " VM"
 #endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
@@ -1981,19 +1990,19 @@ getVersionInfo(int verbose)
 
 #if SPURVM
 # if BytesPerOop == 8
-#	define ObjectMemory " Spur 64-bit"
+#	define ObjectMemory "64-bit Spur"
 # else
-#	define ObjectMemory " Spur"
+#	define ObjectMemory "32-bit Spur"
 # endif
 #else
-# define ObjectMemory
+# define ObjectMemory " V3"
 #endif
 #if defined(NDEBUG)
-# define BuildVariant "Production" ObjectMemory
+# define BuildVariant "Production"
 #elif DEBUGVM
-# define BuildVariant "Debug" ObjectMemory
+# define BuildVariant "Debug"
 # else
-# define BuildVariant "Assert" ObjectMemory
+# define BuildVariant "Assert"
 #endif
 
 #if ITIMER_HEARTBEAT
@@ -2002,13 +2011,14 @@ getVersionInfo(int verbose)
 # define HBID
 #endif
 
+  sprintf(info+strlen(info), "[" BuildVariant HBID " %s " ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s-%s ", VM_VERSION, revisionAsString());
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s " VM "]\n", vm_date, cc_version, getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), " %s %s\n", vm_date, cc_version);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
