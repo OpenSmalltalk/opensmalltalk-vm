@@ -1,0 +1,4 @@
+; The stack size is set via the linker command line (see BASELDFLAGS in
+; common/Makefile.tools, -Wl,--stack ...). A STACKSIZE directive here would be
+; turned by dlltool into a "-stack" .drectve directive in the .exp object,
+; which ld.lld (used by the CLANGARM64 toolchain) rejects. So leave it out.
