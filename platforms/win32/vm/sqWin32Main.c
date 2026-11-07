@@ -943,32 +943,42 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
-#if COGMTVM
-# define VM "MTVM"
+#if Oil
+# define VMCONFIG " Oil"
+#elif COGVM
+# define VMCONFIG " Cog"
+#elif STACKVM
+# define VMCONFIG " Stack"
 #else
-# define VM "VM"
+# define VMCONFIG " "
+#endif
+#if COGMTVM
+# define VM " MTVM"
+#else
+# define VM " VM"
 #endif
   char *info = (char *)malloc(4096);
   info[0] = '\0';
 
 #if SPURVM
 # if BytesPerOop == 8
-#	define ObjectMemory " Spur 64-bit"
+#	define ObjectMemory "64-bit Spur"
 # else
-#	define ObjectMemory " Spur"
+#	define ObjectMemory "32-bit Spur"
 # endif
 #else
-# define ObjectMemory
+# define ObjectMemory " V3"
 #endif
 #if defined(NDEBUG)
-# define BuildVariant "Production" ObjectMemory
+# define BuildVariant "Production"
 #elif DEBUGVM
-# define BuildVariant "Debug" ObjectMemory
+# define BuildVariant "Debug"
 # else
-# define BuildVariant "Assert" ObjectMemory
+# define BuildVariant "Assert"
 #endif
 
-  sprintf(info+strlen(info), "%s [" BuildVariant " %s " VM "]\n", vmBuildString, getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), "[" BuildVariant " %s " ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), "%s\n", vmBuildString);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

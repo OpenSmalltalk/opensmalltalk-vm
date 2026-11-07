@@ -178,6 +178,8 @@ sourceVersionString(char separator)
 
 #if SistaVM
 # define NICKNAME "Sista"
+#elif Oil
+# define NICKNAME "Oil"
 #elif COGVM
 # define NICKNAME "Cog"
 #elif STACKVM
@@ -187,9 +189,19 @@ sourceVersionString(char separator)
 #endif
 
 #if SPURVM
-# define OBJMEM "Spur"
+# if BytesPerOop == 8
+#	define OBJMEM "64-bit Spur"
+# else
+#	define OBJMEM "32-bit Spur"
+# endif
 #else
 # define OBJMEM "V3"
+#endif
+
+#if COGMTVM
+# define THREAD "MT "
+#else
+# define THREAD ""
 #endif
 
 int argc = 0;
@@ -224,12 +236,10 @@ main(int _argc, char **_argv)
 
 	justPrintTags = argc == 2 && !strcmp(argv[1], "TAGS");
 
-	if (printit("VM_NICKNAME"))
-		printf("%s\n", NICKNAME " " OBJMEM " VM");
+	if (printit("VM_NICKNAME") || printit("VM_MONIKER"))
+		printf(OBJMEM " " NICKNAME " " THREAD "VM\n");
 	if (printit("VIRTUAL_MACHINE_NICKNAME"))
-		printf("%s\n", NICKNAME " " OBJMEM " Virtual Machine");
-	if (printit("VM_MONIKER"))
-		printf("%s\n", NICKNAME OBJMEM "VM");
+		printf(OBJMEM " " NICKNAME " " THREAD "Virtual Machine\n");
 	if (printit("VM_VERSION"))
 		printf("%s\n", vm_version);
 	if (printit("VM_MAJOR"))
