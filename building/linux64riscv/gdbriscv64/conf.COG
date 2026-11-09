@@ -1,0 +1,9 @@
+#!/bin/sh
+S=../../../../processors/RiscV64/gdb-18.1
+export CFLAGS="-g -fPIC -O3 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+#export CFLAGS="-g3 -fPIC -O0 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+CONFFLAGS='--target=riscv64-unknown-linux-gnu CC=clang CXX=clang++ --with-system-zlib=no'
+mkdir -p zlib libsframe bfd gdb readline gnulib libiberty opcodes sim
+for d in bfd gdb libiberty opcodes; do
+	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)
+done
