@@ -1414,11 +1414,18 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
 
     uint32_t *clut = *cmLookupTable;
     __asm__ volatile (
-            "ldr     d6, =0x10000000001                        \n\t"
+		    "movi    v6.2s, #1                                 \n\t"
+            "movi    v18.8b, #0                                \n\t"
+            "ins     v6.b[4], v18.b[0]                         \n\t"
+            "ins     v6.b[5], v6.b[0]                          \n\t" /* =0x10000000001 */
             "ld1r    {v16.4s}, [%[clut]], #4                   \n\t"
-            "ld1r    {v17.4s}, [%[clut]]                       \n\t"
-            "ldr     q18, =0x10000000200000004000000080000000  \n\t"
-            "ldr     q19, =0x01000000020000000400000008000000  \n\t"
+            "ld1r    {v17.4s}, [%[clut]]                       \n\t"	
+            "movi    v18.4s, #0x80, lsl #24                    \n\t"
+            "movi    v19.4s, #0x40, lsl #24                    \n\t"
+            "ins     v18.s[1], v19.s[0]                        \n\t"
+            "ushr    v19.4s, v18.4s, #2                        \n\t"
+            "ins     v18.d[1], v19.d[0]                        \n\t" /* =0x10000000200000004000000080000000 */
+            "ushr    v19.4s, v18.4s, #4                        \n\t" /* =0x01000000020000000400000008000000 */
     : /* Outputs */
             [clut]"+r"(clut)
     );
@@ -1580,13 +1587,22 @@ static void fastPathSourceWord_2_32(operation_t *op, uint32_t flags)
 
     uint32_t *clut = *cmLookupTable;
     __asm__ volatile (
-            "ldr     d6, =0x1000000000001                      \n\t"
+            "movi    v6.2s, #1                                 \n\t"
+            "movi    v20.8b, #0                                \n\t"
+            "ins     v6.b[4], v20.b[0]                         \n\t"
+            "ins     v6.b[6], v6.b[0]                          \n\t" /* =0x1000000000001 */
             "ld4     {v16.b-v19.b}[0], [%[clut]], #4           \n\t"
             "ld4     {v16.b-v19.b}[1], [%[clut]], #4           \n\t"
             "ld4     {v16.b-v19.b}[2], [%[clut]], #4           \n\t"
             "ld4     {v16.b-v19.b}[3], [%[clut]]               \n\t"
-            "ldr     d20, =0x00FEFCFA00FEFCFA                  \n\t"
-            "ldr     d21, =0x0303030303030303                  \n\t"
+            "movi    v20.2s, #0xFA                             \n\t"
+            "movi    v21.8b, #0xFC                             \n\t"
+            "ins     v20.b[1], v21.b[0]                        \n\t"
+            "ins     v20.b[5], v21.b[0]                        \n\t"
+            "movi    v21.8b, #0xFE                             \n\t"
+            "ins     v20.b[2], v21.b[0]                        \n\t"
+            "ins     v20.b[6], v21.b[0]                        \n\t" /* =0x00FEFCFA00FEFCFA */
+            "movi    v21.8b, #0x03                             \n\t" /* =0x0303030303030303 */
     : /* Outputs */
             [clut]"+r"(clut)
     );
@@ -1766,8 +1782,8 @@ static void fastPathSourceWord_4_32(operation_t *op, uint32_t flags)
     uint32_t *clut = *cmLookupTable;
     __asm__ volatile (
             "ld4     {v16.16b-v19.16b}, [%[clut]]              \n\t"
-            "ldr     s20, =0x10101010                          \n\t"
-            "ldr     d21, =0x00FC00FC00FC00FC                  \n\t"
+		    "movi    v20.8b, #0x10                             \n\t" /* =0x10101010 */
+            "movi    v21.4h, #0xFC                             \n\t" /* =0x00FC00FC00FC00FC */
     : /* Outputs */
             [clut]"+r"(clut)
     );
@@ -1933,10 +1949,10 @@ static void fastPathSourceWord_16_32(operation_t *op, uint32_t flags)
     uint32_t *dest = destBits + destPitch * destY + destX;
 
     __asm__ volatile (
-            "ldr     q16, =0x00F800F800F800F800F800F800F800F8  \n\t"
-            "ldr     q17, =0xF800F800F800F800F800F800F800F800  \n\t"
-            "ldr     q18, =0x80008000800080008000800080008000  \n\t"
-            "ldr     q19, =0x00010001000100010001000100010001  \n\t"
+            "movi    v16.8h, #0xF8                             \n\t" /* =0x00F800F800F800F800F800F800F800F8 */
+            "movi    v17.8h, #0xF8, lsl #8                     \n\t" /* =0xF800F800F800F800F800F800F800F800 */
+            "movi    v18.8h, #0x80, lsl #8                     \n\t" /* =0x80008000800080008000800080008000 */
+            "movi    v19.8h, #0x01                             \n\t" /* =0x00010001000100010001000100010001 */
     );
 
     do {
