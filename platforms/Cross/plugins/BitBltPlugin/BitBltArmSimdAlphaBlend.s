@@ -39,8 +39,8 @@
 
         MACRO
         AlphaBlend32_32_init
-        MOV     round_const, #&80
-        ORR     round_const, round_const, round_const, LSL #16 ; 0x00800080
+        MOV     ht_info, #&80
+        ORR     ht_info, ht_info, ht_info, LSL #16 ; 0x00800080
         MEND
 
         MACRO
@@ -63,10 +63,10 @@
         MUL     $tmp1, $tmp1, $tmp2       ; |diff_ag| * s_a (max 65025, unsigned!)
         MUL     $tmp0, $tmp0, $tmp2       ; |diff_rb| * s_a (max 65025, unsigned!)
         ; Exact round-to-nearest: floor((|diff| * s_a + 128) / 255)
-        ADD     $tmp1, $tmp1, round_const
+        ADD     $tmp1, $tmp1, ht_info
         UXTAB16 $tmp1, $tmp1, $tmp1, ROR #8
         UXTB16  $tmp1, $tmp1, ROR #8      ; delta_ag = 0x00 dA 00 dG
-        ADD     $tmp0, $tmp0, round_const
+        ADD     $tmp0, $tmp0, ht_info
         UXTAB16 $tmp0, $tmp0, $tmp0, ROR #8
         UXTB16  $tmp0, $tmp0, ROR #8      ; delta_rb = 0x00 dR 00 dB
         ; Recombine |delta| into 0xAARRGGBB and add or subtract using preserved GE flags!
