@@ -984,9 +984,9 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
                 "dup     v3.8b, v3.b[3]                        \n\t" \
                 "umull   v0.8h, v2.8b, v0.8b                   \n\t" \
                 "umlal   v0.8h, v1.8b, v3.8b                   \n\t" \
-                "add     v0.4h, v0.4h, v30.4h                  \n\t" \
-                "urshr   v1.4h, v0.4h, #8                      \n\t" \
-                "addhn   v0.8b, v0.4h, v1.4h                   \n\t" \
+                "add     v0.8h, v0.8h, v30.8h                  \n\t" \
+                "urshr   v1.8h, v0.8h, #8                      \n\t" \
+                "addhn   v0.8b, v0.8h, v1.8h                   \n\t" \
                 "1:                                            \n\t" \
                 "str     s0, [%[dest]]                         \n\t" \
                 "2:                                            \n\t" \
