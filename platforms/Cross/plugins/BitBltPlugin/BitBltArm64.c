@@ -1414,7 +1414,7 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
 
     uint32_t *clut = *cmLookupTable;
     __asm__ volatile (
-		    "movi    v6.2s, #1                                 \n\t" /* =0x01 */
+		    "movi    v6.2s, #1                                 \n\t"
             "movi    v18.8b, #0                                \n\t"
             "ins     v6.b[4], v18.b[0]                         \n\t"
             "ins     v6.b[5], v6.b[0]                          \n\t" /* =0x10000000001 */
