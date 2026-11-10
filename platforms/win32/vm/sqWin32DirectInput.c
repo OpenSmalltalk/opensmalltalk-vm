@@ -68,11 +68,15 @@ HRESULT InitDirectInput( HANDLE hInstance, HWND hWnd )
 
   /* connect to direct input */
 #if DIRECTINPUT_VERSION >= 0x0800
-  hr = DirectInput8Create( hInstance, DIRECTINPUT_VERSION,  &IID_IDirectInput8, &lpDI, NULL ); /* require dinput8.lib */
+  LPVOID diObject;
+  hr = DirectInput8Create( hInstance, DIRECTINPUT_VERSION,  &diObject, &lpDI, NULL ); /* require dinput8.lib */
 #else
   hr = DirectInputCreate( hInstance, DIRECTINPUT_VERSION, &lpDI, NULL ); /* require dinput.lib */
 #endif
   ERROR_CHECK(hr, "Error creating DirectInput object");
+#if DIRECTINPUT_VERSION >= 0x0800
+  IID_IDirectInput8 = (IDirectInputW *) diObject;
+#endif
 
   /* get the mouse */
   hr = lpDI->lpVtbl->CreateDevice(lpDI, &GUID_SysMouse, &lpDev, NULL );
