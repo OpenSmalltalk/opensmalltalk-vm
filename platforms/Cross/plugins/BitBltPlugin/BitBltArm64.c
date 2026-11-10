@@ -1417,7 +1417,7 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
 		    "movi    v6.2s, #1                                 \n\t" /* =0x01 */
             "movi    v18.8b, #0                                \n\t"
             "ins     v6.b[4], v18.b[0]                         \n\t"
-            "ins     v6.b[5], v6.b[0]                          \n\t" /* =0x10000000001 *
+            "ins     v6.b[5], v6.b[0]                          \n\t" /* =0x10000000001 */
             "ld1r    {v16.4s}, [%[clut]], #4                   \n\t"
             "ld1r    {v17.4s}, [%[clut]]                       \n\t"	
             "movi    v18.4s, #0x80, lsl #24                    \n\t"
