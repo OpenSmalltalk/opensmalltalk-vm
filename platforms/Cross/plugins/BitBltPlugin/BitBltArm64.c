@@ -966,7 +966,8 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
 
 #define AlphaBlend_32_32_INIT                                        \
                 "movi    v31.16b, #0xFF                        \n\t" \
-                "ldr     s30, =0xFF000000                      \n\t" \
+                "movi    v30.8h, #0x80                         \n\t" \
+                "movi    v29.2s, #0xFF, lsl #24                \n\t" \
 
 #define AlphaBlend_32_32_FINAL
 
@@ -977,16 +978,15 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
                 "cmp     %[tmp0], #0xFF                        \n\t" \
                 "b.eq    1f                                    \n\t" \
                 "ldr     s1, [%[dest]]                         \n\t" \
-                "orr     v2.8b, v30.8b, v0.8b                  \n\t" \
+                "orr     v2.8b, v29.8b, v0.8b                  \n\t" \
                 "mvn     v3.8b, v0.8b                          \n\t" \
                 "dup     v0.8b, v0.b[3]                        \n\t" \
                 "dup     v3.8b, v3.b[3]                        \n\t" \
                 "umull   v0.8h, v2.8b, v0.8b                   \n\t" \
                 "umlal   v0.8h, v1.8b, v3.8b                   \n\t" \
-                "cmtst   v1.4h, v0.4h, v31.4h                  \n\t" \
-                "usra    v0.4h, v0.4h, #8                      \n\t" \
-                "sub     v0.8b, v0.8b, v1.8b                   \n\t" \
-                "shrn    v0.8b, v0.8h, #8                      \n\t" \
+                "add     v0.8h, v0.8h, v30.8h                  \n\t" \
+                "urshr   v1.8h, v0.8h, #8                      \n\t" \
+                "addhn   v0.8b, v0.8h, v1.8h                   \n\t" \
                 "1:                                            \n\t" \
                 "str     s0, [%[dest]]                         \n\t" \
                 "2:                                            \n\t" \
@@ -1006,22 +1006,18 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
                 "umlal   v2.8h, v6.8b, v16.8b                  \n\t" \
                 "umull   v3.8h, v31.8b, v3.8b                  \n\t" \
                 "umlal   v3.8h, v7.8b, v16.8b                  \n\t" \
-                "cmtst   v4.8h, v0.8h, v31.8h                  \n\t" \
-                "cmtst   v5.8h, v1.8h, v31.8h                  \n\t" \
-                "cmtst   v6.8h, v2.8h, v31.8h                  \n\t" \
-                "cmtst   v7.8h, v3.8h, v31.8h                  \n\t" \
-                "usra    v0.8h, v0.8h, #8                      \n\t" \
-                "usra    v1.8h, v1.8h, #8                      \n\t" \
-                "usra    v2.8h, v2.8h, #8                      \n\t" \
-                "usra    v3.8h, v3.8h, #8                      \n\t" \
-                "sub     v0.16b, v0.16b, v4.16b                \n\t" \
-                "sub     v1.16b, v1.16b, v5.16b                \n\t" \
-                "sub     v2.16b, v2.16b, v6.16b                \n\t" \
-                "sub     v3.16b, v3.16b, v7.16b                \n\t" \
-                "shrn    v0.8b, v0.8h, #8                      \n\t" \
-                "shrn    v1.8b, v1.8h, #8                      \n\t" \
-                "shrn    v2.8b, v2.8h, #8                      \n\t" \
-                "shrn    v3.8b, v3.8h, #8                      \n\t" \
+                "add     v0.8h, v0.8h, v30.8h                  \n\t" \
+                "add     v1.8h, v1.8h, v30.8h                  \n\t" \
+                "add     v2.8h, v2.8h, v30.8h                  \n\t" \
+                "add     v3.8h, v3.8h, v30.8h                  \n\t" \
+                "urshr   v4.8h, v0.8h, #8                      \n\t" \
+                "urshr   v5.8h, v1.8h, #8                      \n\t" \
+                "urshr   v6.8h, v2.8h, #8                      \n\t" \
+                "urshr   v7.8h, v3.8h, #8                      \n\t" \
+                "addhn   v0.8b, v0.8h, v4.8h                   \n\t" \
+                "addhn   v1.8b, v1.8h, v5.8h                   \n\t" \
+                "addhn   v2.8b, v2.8h, v6.8h                   \n\t" \
+                "addhn   v3.8b, v3.8h, v7.8h                   \n\t" \
                 "1:                                            \n\t" \
 
 #define AlphaBlend_32_32_512                                         \
@@ -1050,42 +1046,30 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
                 "umlal   v26.8h, v7.8b, v16.8b                 \n\t" \
                 "umull2  v27.8h, v31.16b, v3.16b               \n\t" \
                 "umlal2  v27.8h, v7.16b, v16.16b               \n\t" \
-                "cmtst   v0.8h, v20.8h, v31.8h                 \n\t" \
-                "cmtst   v1.8h, v21.8h, v31.8h                 \n\t" \
-                "cmtst   v2.8h, v22.8h, v31.8h                 \n\t" \
-                "cmtst   v3.8h, v23.8h, v31.8h                 \n\t" \
-                "cmtst   v4.8h, v24.8h, v31.8h                 \n\t" \
-                "cmtst   v5.8h, v25.8h, v31.8h                 \n\t" \
-                "cmtst   v6.8h, v26.8h, v31.8h                 \n\t" \
-                "cmtst   v7.8h, v27.8h, v31.8h                 \n\t" \
-                "usra    v20.8h, v20.8h, #8                    \n\t" \
-                "usra    v21.8h, v21.8h, #8                    \n\t" \
-                "usra    v22.8h, v22.8h, #8                    \n\t" \
-                "usra    v23.8h, v23.8h, #8                    \n\t" \
-                "usra    v24.8h, v24.8h, #8                    \n\t" \
-                "usra    v25.8h, v25.8h, #8                    \n\t" \
-                "usra    v26.8h, v26.8h, #8                    \n\t" \
-                "usra    v27.8h, v27.8h, #8                    \n\t" \
-                "sub     v0.16b, v20.16b, v0.16b               \n\t" \
-                "sub     v1.16b, v21.16b, v1.16b               \n\t" \
-                "sub     v2.16b, v22.16b, v2.16b               \n\t" \
-                "sub     v3.16b, v23.16b, v3.16b               \n\t" \
-                "sub     v4.16b, v24.16b, v4.16b               \n\t" \
-                "sub     v5.16b, v25.16b, v5.16b               \n\t" \
-                "sub     v6.16b, v26.16b, v6.16b               \n\t" \
-                "sub     v7.16b, v27.16b, v7.16b               \n\t" \
-                "shrn    v0.8b,  v0.8h, #8                     \n\t" \
-                "shrn    v20.8b, v1.8h, #8                     \n\t" \
-                "shrn    v1.8b,  v2.8h, #8                     \n\t" \
-                "shrn    v21.8b, v3.8h, #8                     \n\t" \
-                "shrn    v2.8b,  v4.8h, #8                     \n\t" \
-                "shrn    v22.8b, v5.8h, #8                     \n\t" \
-                "shrn    v3.8b,  v6.8h, #8                     \n\t" \
-                "shrn    v23.8b, v7.8h, #8                     \n\t" \
-                "mov     v0.d[1], v20.d[0]                     \n\t" \
-                "mov     v1.d[1], v21.d[0]                     \n\t" \
-                "mov     v2.d[1], v22.d[0]                     \n\t" \
-                "mov     v3.d[1], v23.d[0]                     \n\t" \
+                "add     v20.8h, v20.8h, v30.8h                \n\t" \
+                "add     v21.8h, v21.8h, v30.8h                \n\t" \
+                "add     v22.8h, v22.8h, v30.8h                \n\t" \
+                "add     v23.8h, v23.8h, v30.8h                \n\t" \
+                "add     v24.8h, v24.8h, v30.8h                \n\t" \
+                "add     v25.8h, v25.8h, v30.8h                \n\t" \
+                "add     v26.8h, v26.8h, v30.8h                \n\t" \
+                "add     v27.8h, v27.8h, v30.8h                \n\t" \
+                "urshr   v0.8h, v20.8h, #8                     \n\t" \
+                "urshr   v1.8h, v21.8h, #8                     \n\t" \
+                "urshr   v2.8h, v22.8h, #8                     \n\t" \
+                "urshr   v3.8h, v23.8h, #8                     \n\t" \
+                "urshr   v4.8h, v24.8h, #8                     \n\t" \
+                "urshr   v5.8h, v25.8h, #8                     \n\t" \
+                "urshr   v6.8h, v26.8h, #8                     \n\t" \
+                "urshr   v7.8h, v27.8h, #8                     \n\t" \
+                "addhn   v0.8b,  v20.8h, v0.8h                 \n\t" \
+                "addhn2  v0.16b, v21.8h, v1.8h                 \n\t" \
+                "addhn   v1.8b,  v22.8h, v2.8h                 \n\t" \
+                "addhn2  v1.16b, v23.8h, v3.8h                 \n\t" \
+                "addhn   v2.8b,  v24.8h, v4.8h                 \n\t" \
+                "addhn2  v2.16b, v25.8h, v5.8h                 \n\t" \
+                "addhn   v3.8b,  v26.8h, v6.8h                 \n\t" \
+                "addhn2  v3.16b, v27.8h, v7.8h                 \n\t" \
                 "1:                                            \n\t" \
 
 DEFINE_FAST_PATH(AlphaBlend, 32_32, YES, YES)

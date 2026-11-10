@@ -39,9 +39,8 @@
 
         MACRO
         AlphaBlend32_32_init
-        MOV     ht_info, #1
-        MOV     ht, #0
-        ORR     ht_info, ht_info, ht_info, LSL #16 ; &10001
+        MOV     ht_info, #&80
+        ORR     ht_info, ht_info, ht_info, LSL #16 ; 0x00800080
         MEND
 
         MACRO
@@ -52,25 +51,29 @@
       ]
         TEQ     $tmp2, #&FF
         BEQ     %FT10 ; fully opaque - use src
-        UXTB    $tmp0, $src, ROR #8       ; s_ag
-        ORR     $tmp0, $tmp0, #&FF0000
-        UXTB16  $tmp1, $src               ; s_rb
-        MUL     $tmp0, $tmp0, $tmp2
-        MUL     $tmp1, $tmp1, $tmp2
-        RSB     $tmp2, $tmp2, #&FF
-        UXTB16  $src, $dst, ROR #8        ; d_ag
-        UXTB16  $dst, $dst                ; d_rb
-        MLA     $src, $src, $tmp2, $tmp0  ; ag
-        MLA     $dst, $dst, $tmp2, $tmp1  ; rb
-        USUB16  $tmp0, $src, ht_info
-        UXTAB16 $src, $src, $src, ROR #8
-        SEL     $tmp1, ht_info, ht
-        UXTAB16 $src, $tmp1, $src, ROR #8
-        USUB16  $tmp0, $dst, ht_info
-        UXTAB16 $dst, $dst, $dst, ROR #8
-        SEL     $tmp1, ht_info, ht
-        UXTAB16 $dst, $tmp1, $dst, ROR #8
-        ORR     $src, $dst, $src, LSL #8  ; recombine
+        ; Set src alpha byte to 0xFF so alpha blends with the exact same formula
+        ORR     $src, $src, #&FF000000    ; src = 0xFF R_s G_s B_s
+        ; Byte-wise unsigned |src - dst| and sign masks via GE flags!
+        USUB8   $tmp0, $src, $dst         ; sets GE[3:0] = 1 where src_byte >= dst_byte
+        USUB8   $tmp1, $dst, $src         ; dst - src for lanes where src < dst
+        SEL     $tmp0, $tmp0, $tmp1       ; $tmp0 = |src - dst| per byte (all >= 0!)
+        ; Unpack |diff| into 16-bit lanes and multiply by s_a (ONLY 2 MULs!)
+        UXTB16  $tmp1, $tmp0, ROR #8      ; |diff_ag| = 0x00|dA|00|dG|
+        UXTB16  $tmp0, $tmp0              ; |diff_rb| = 0x00|dR|00|dB|
+        MUL     $tmp1, $tmp1, $tmp2       ; |diff_ag| * s_a (max 65025, unsigned!)
+        MUL     $tmp0, $tmp0, $tmp2       ; |diff_rb| * s_a (max 65025, unsigned!)
+        ; Exact round-to-nearest: floor((|diff| * s_a + 128) / 255)
+        ADD     $tmp1, $tmp1, ht_info
+        UXTAB16 $tmp1, $tmp1, $tmp1, ROR #8
+        UXTB16  $tmp1, $tmp1, ROR #8      ; delta_ag = 0x00 dA 00 dG
+        ADD     $tmp0, $tmp0, ht_info
+        UXTAB16 $tmp0, $tmp0, $tmp0, ROR #8
+        UXTB16  $tmp0, $tmp0, ROR #8      ; delta_rb = 0x00 dR 00 dB
+        ; Recombine |delta| into 0xAARRGGBB and add or subtract using preserved GE flags!
+        ORR     $tmp0, $tmp0, $tmp1, LSL #8 ; $tmp0 = packed |delta| (0xAARRGGBB)
+        UADD8   $tmp1, $dst, $tmp0        ; dst + |delta| (used where src >= dst)
+        USUB8   $tmp2, $dst, $tmp0        ; dst - |delta| (used where src < dst)
+        SEL     $src, $tmp1, $tmp2        ; select per-byte based on GE flags from first USUB8!
         B       %FT10
 09      MOV     $src, $dst
 10

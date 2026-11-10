@@ -328,8 +328,8 @@ static void fastPathAlphaBlend0_32_scalar(operation_t *op, uint32_t flags)
             uint32_t d = *dest;
             uint32_t dAG = (d >> 8) & 0xFF00FF;
             uint32_t dRB = d & 0xFF00FF;
-            uint32_t blendAG = sAG + dAG * unAlpha + 0xFF00FF;
-            uint32_t blendRB = sRB + dRB * unAlpha + 0xFF00FF;
+            uint32_t blendAG = sAG + dAG * unAlpha + 0x800080;
+            uint32_t blendRB = sRB + dRB * unAlpha + 0x800080;
             blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
             blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
             d = (blendAG << 8) | blendRB;
@@ -363,8 +363,8 @@ static void fastPathAlphaBlend32_32_map1_scalar(operation_t *op, uint32_t flags)
             uint32_t d = *dest;
             uint32_t dAG = (d >> 8) & 0xFF00FF;
             uint32_t dRB = d & 0xFF00FF;
-            uint32_t blendAG = sAG[s] + dAG * unAlpha[s] + 0xFF00FF;
-            uint32_t blendRB = sRB[s] + dRB * unAlpha[s] + 0xFF00FF;
+            uint32_t blendAG = sAG[s] + dAG * unAlpha[s] + 0x800080;
+            uint32_t blendRB = sRB[s] + dRB * unAlpha[s] + 0x800080;
             blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
             blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
             d = (blendAG << 8) | blendRB;
@@ -394,8 +394,8 @@ static void fastPathAlphaBlend32_32(operation_t *op, uint32_t flags)
             uint32_t sRB = s & 0xFF00FF;
             uint32_t dAG = (d >> 8) & 0xFF00FF;
             uint32_t dRB = d & 0xFF00FF;
-            uint32_t blendAG = sAG * alpha + dAG * unAlpha + 0xFF00FF;
-            uint32_t blendRB = sRB * alpha + dRB * unAlpha + 0xFF00FF;
+            uint32_t blendAG = sAG * alpha + dAG * unAlpha + 0x800080;
+            uint32_t blendRB = sRB * alpha + dRB * unAlpha + 0x800080;
             blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
             blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
             d = (blendAG << 8) | blendRB;
