@@ -1558,7 +1558,7 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
                     [dest]"+r"(dest)
             : /* Inputs */
                       [unskew]"r"(unskew),
-                    [src_bits]"I"(src_bits)
+                    [src_bits]"Ir"(src_bits)
             : /* Clobbers */
                     "memory", "cc"
             );
@@ -1743,7 +1743,7 @@ static void fastPathSourceWord_2_32(operation_t *op, uint32_t flags)
                     [dest]"+r"(dest)
             : /* Inputs */
                       [unskew]"r"(unskew),
-                    [src_bits]"I"(src_bits)
+                    [src_bits]"Ir"(src_bits)
             : /* Clobbers */
                     "memory", "cc"
             );
