@@ -51,6 +51,7 @@ jobs:
           - linux64ARMv8
         flavor:
           - squeak.cog.spur
+          - squeak.livetyping.spur # LiveTyping VM (src/spur64.cog.livetyping)
           # - squeak.cogmt.spur
           - squeak.stack.spur
         mode:

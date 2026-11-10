@@ -65,6 +65,9 @@ sqLong ioHighResClock(void) {
 						: "=a" (value)
 						: 
 						: "rdx");
+#elif defined(__GNUC__) && (defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64))
+    // AArch64: read the virtual count register, the analog of x86 rdtsc.
+    __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r"(value));
 #elif defined(_MSC_VER)
   LARGE_INTEGER aux;
   aux.QuadPart = 0;
