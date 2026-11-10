@@ -4,7 +4,7 @@ on:
   push: # All branches, but appropriate paths only.
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/macos.yml' 
+      - '.github/workflows/macos-arm.yml'
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
@@ -20,7 +20,7 @@ on:
       - Cog
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/macos.yml' 
+      - '.github/workflows/macos-arm.yml'
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
@@ -47,6 +47,7 @@ jobs:
           - macos64ARMv8
         flavor:
           - squeak.cog.spur
+          - squeak.oil.spur
           # - squeak.sista.spur # -Werror bc. decl. missing
           - squeak.stack.spur
         mode:
@@ -63,16 +64,16 @@ jobs:
     steps:
       - name: Checkout files
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Checkout files for new release candidate
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: refs/tags/${{ github.event.inputs.tag }}
 
       - name: Restore build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .thirdparty-cache
           key: thirdparty-cache-${{ matrix.arch }}-${{ matrix.flavor }}

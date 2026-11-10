@@ -52,6 +52,7 @@ jobs:
         flavor:
           - squeak.cog.spur
           # - squeak.cogmt.spur
+          - squeak.oil.spur
           - squeak.stack.spur
         mode:
           - fast
@@ -87,8 +88,6 @@ jobs:
 
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
-        env:
-          HEARTBEAT: ${{ matrix.heartbeat }}
 
       - name: Sign VM (not implemented)
         if: false
