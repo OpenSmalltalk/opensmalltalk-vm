@@ -1519,9 +1519,7 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
             );
         }
 
-        /*uint32_t*/ enum {src_bits = srcBPP*256/destBPP};
-		     /* enum forces gcc to consider src_bits as an Immediate constant */
-		     /* so as to match the input declaration in __asm__ section below */
+        uint32_t src_bits = srcBPP*256/destBPP;
         uint32_t unskew2 = -(unskew & (src_bits - 1));
         uint32_t skew2 = src_bits + unskew2;
         __asm__ volatile (
@@ -1560,7 +1558,7 @@ static void fastPathSourceWord_1_32(operation_t *op, uint32_t flags)
                     [dest]"+r"(dest)
             : /* Inputs */
                       [unskew]"r"(unskew),
-                    [src_bits]"I"(src_bits)
+                    [src_bits]"Ir"(src_bits)
             : /* Clobbers */
                     "memory", "cc"
             );
@@ -1702,9 +1700,7 @@ static void fastPathSourceWord_2_32(operation_t *op, uint32_t flags)
             );
         }
 
-        /*uint32_t*/ enum {src_bits = srcBPP*256/destBPP};
-		     /* enum forces gcc to consider src_bits as an Immediate constant */
-		     /* so as to match the input declaration in __asm__ section below */
+        uint32_t src_bits = srcBPP*256/destBPP;
         uint32_t unskew2 = -(unskew & (src_bits - 1));
         uint32_t skew2 = src_bits + unskew2;
         __asm__ volatile (
@@ -1747,7 +1743,7 @@ static void fastPathSourceWord_2_32(operation_t *op, uint32_t flags)
                     [dest]"+r"(dest)
             : /* Inputs */
                       [unskew]"r"(unskew),
-                    [src_bits]"I"(src_bits)
+                    [src_bits]"Ir"(src_bits)
             : /* Clobbers */
                     "memory", "cc"
             );
