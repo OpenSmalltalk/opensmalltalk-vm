@@ -967,7 +967,7 @@ DEFINE_FAST_PATH(RgbSub, 32_32, NO, YES)
 #define AlphaBlend_32_32_INIT                                        \
                 "movi    v31.16b, #0xFF                        \n\t" \
                 "movi    v30.8h, #0x80                         \n\t" \
-                "ldr     s29, =0xFF000000                      \n\t" \
+                "movi    v29.2s, #0xFF, lsl #24                \n\t" \
 
 #define AlphaBlend_32_32_FINAL
 
