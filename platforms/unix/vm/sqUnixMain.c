@@ -1075,7 +1075,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			v(regs[20]), v(regs[21]), v(regs[22]), v(regs[23]),
 			v(regs[24]), v(regs[25]), v(regs[26]), v(regs[27]),
 			v(regs[28]), v(regs[29]), v(regs[30]), v(uap->uc_mcontext.sp),
-			v(uap->uc_mcontext.pc), uap->uc_mcontext.pstate,
+			v(uap->uc_mcontext.pc), (unsigned long)uap->uc_mcontext.pstate,
 			v(uap->uc_mcontext.fault_address));
 	return v(uap->uc_mcontext.pc);
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
@@ -2462,30 +2462,32 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
 
-static char * volatile p = 0;
+static volatile usqIntptr_t p = 0;
 static sqOSThread signalling_thread;
 
 static void
 sighandler(int sig)
 {
 	assert(ioOSThreadsEqual(signalling_thread,ioCurrentOSThread()));
-	p = (char *)&sig;
+	p = (usqIntptr_t)&sig;
 }
 
 static int
 getRedzoneSize()
 {
 	struct sigaction handler_action, old;
+	usqIntptr_t sp;
 	handler_action.sa_handler = sighandler;
 	handler_action.sa_flags = SA_NODEFER;
 	sigemptyset(&handler_action.sa_mask);
+	p = 0;
+	signalling_thread = ioCurrentOSThread();
 	(void)sigaction(SIGPROF, &handler_action, &old);
 
-	signalling_thread = ioCurrentOSThread();
-
 	do pthread_kill(signalling_thread,SIGPROF); while (!p);
+	sp = p;
 	(void)sigaction(SIGPROF, &old, 0);
-	return (char *)min(&old,&handler_action) - p;
+	return (int)(min((usqIntptr_t)&old,(usqIntptr_t)&handler_action) - sp);
 }
 
 sqInt reportStackHeadroom;

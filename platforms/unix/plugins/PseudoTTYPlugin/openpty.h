@@ -29,10 +29,10 @@
 
 #if defined(HAVE_OPENPTY)
 
-#if defined __OpenBSD__
-# include <utmp.h>
+#if defined(__OpenBSD__) || defined(__linux__) || defined(__GLIBC__) || defined(__CYGWIN__)
+# include <utmp.h>		/* login_tty() */
 #else
-# include <utmpx.h>		/* login_tty() */
+# include <utmpx.h>
 #endif
 
 # if defined(HAVE_PTY_H)
