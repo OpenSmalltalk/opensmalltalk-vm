@@ -313,8 +313,13 @@ allocateExecutablePage(sqIntptr_t *size)
 		pagesize = sysconf(_SC_PAGESIZE);
 # endif
 
+#if defined(__ANDROID__)
+	if (posix_memalign(&mem, pagesize, pagesize) != 0)
+		return 0;
+#else
 	if (!(mem = valloc(pagesize)))
 		return 0;
+#endif
 
 	memset(mem, 0, pagesize);
 	if (mprotect(mem, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
