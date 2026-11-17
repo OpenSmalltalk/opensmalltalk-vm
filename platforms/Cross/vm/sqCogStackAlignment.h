@@ -169,7 +169,7 @@
 #  else
 #    define STACK_ALIGN_BYTES sizeof(void *)
 #  endif
-#  define assertCStackWellAligned() 0
+#  define assertAlignedProcessorStackPtrs() 0
 #endif /* defined(STACK_ALIGN_BYTES) */
 
 #if !defined(getfp)
@@ -220,8 +220,8 @@
 # endif
 #endif
 
-#if !defined(assertCStackWellAligned)
-# define assertCStackWellAligned() \
+#if !defined(assertAlignedProcessorStackPtrs)
+# define assertAlignedProcessorStackPtrs() \
 	assertStackPointersWellAligned(getfp(),getsp(),__func__,__LINE__)
 #endif
 #if !defined(assertSavedCStackPointersWellAligned)
