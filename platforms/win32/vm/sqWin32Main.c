@@ -957,6 +957,12 @@ getVersionInfo(int verbose)
 #else
 # define VM " VM"
 #endif
+#if LiveTyping
+# define LTID "LiveTyping "
+#else
+# define LTID
+#endif
+
   char *info = (char *)malloc(4096);
   info[0] = '\0';
 
@@ -977,7 +983,7 @@ getVersionInfo(int verbose)
 # define BuildVariant "Assert"
 #endif
 
-  sprintf(info+strlen(info), "[" BuildVariant " %s " ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), "[" BuildVariant " %s " LTID ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
   sprintf(info+strlen(info), "%s\n", vmBuildString);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");

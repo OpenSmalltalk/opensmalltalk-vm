@@ -1983,6 +1983,12 @@ getVersionInfo(int verbose)
 #else
 # define VM " VM"
 #endif
+#if LiveTyping
+# define LTID "LiveTyping "
+#else
+# define LTID
+#endif
+
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
   char *info = (char *)malloc(8192);
@@ -2006,12 +2012,12 @@ getVersionInfo(int verbose)
 #endif
 
 #if ITIMER_HEARTBEAT
-# define HBID " ITHB"
+# define HBID "ITHB "
 #else
 # define HBID
 #endif
 
-  sprintf(info+strlen(info), "[" BuildVariant HBID " %s " ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), "[" BuildVariant " %s " HBID LTID ObjectMemory VMCONFIG VM "]\n", getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
   sprintf(info+strlen(info), "%s-%s ", VM_VERSION, revisionAsString());

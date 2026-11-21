@@ -289,6 +289,12 @@ char *getVersionInfo(int verbose)
 # define BuildVariant "Assert" ObjectMemory
 #endif
 
+#if LiveTyping
+# define LTID " LiveTyping"
+#else
+# define LTID
+#endif
+
 #if ITIMER_HEARTBEAT
 # define HBID " ITHB"
 #else
@@ -301,7 +307,7 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " [" BuildVariant HBID " %s VM]\n", getAttributeString(1003)); // 1003 == processor
+  sprintf(info+strlen(info), " [" BuildVariant " %s" HBID LTID " VM]\n", getAttributeString(1003)); // 1003 == processor
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
