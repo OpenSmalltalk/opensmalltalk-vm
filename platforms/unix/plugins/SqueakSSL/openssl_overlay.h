@@ -13,7 +13,7 @@
  *   friends. Also, soft-fallback for later features such as host name
  *   verification is hard.
  *
- * This overlay supports using OpenSSL from 0.9.8 to at least 1.1 at runtime.
+ * This overlay supports using OpenSSL from 0.9.8 to at least 4.0 at runtime.
  *
  *   When we statically link, we might lack behind the OS, the binaries
  *   are bigger, and the legal situation is less clear.
@@ -238,7 +238,7 @@ OPENSSL_INIT_SETTINGS;
  */
 #define SQO_DECLARATIONS                                                \
   /**/                                                                  \
-  SQO_DECL___(unsigned char *, ASN1_STRING_data, ASN1_STRING *x)        \
+  SQO_DECL_IF(unsigned char *, ASN1_STRING_data, ASN1_STRING *x)        \
   SQO_DECL___(int, ASN1_STRING_length, const ASN1_STRING *x)            \
   SQO_DECL___(void, BIO_free_all, BIO *a)                               \
   SQO_DECL___(BIO *, BIO_new, BIO_METHOD *type)                         \
@@ -876,6 +876,9 @@ bool loadLibrary(void)
 
 #endif  /* defined(SQSSL_OPENSSL_LINKED) */
 
+  if (!(sqo_ASN1_STRING_data || sqo_ASN1_STRING_get0_data)) {
+    return false;
+  }
 
   if (sqo_SSL_library_init) {
       sqo_SSL_library_init();
