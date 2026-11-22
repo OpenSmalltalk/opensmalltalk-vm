@@ -13,7 +13,7 @@
  *   friends. Also, soft-fallback for later features such as host name
  *   verification is hard.
  *
- * This overlay supports using OpenSSL from 0.9.8 to at least 1.1 at runtime.
+ * This overlay supports using OpenSSL from 0.9.8 to at least 4.1 at runtime.
  *
  *   When we statically link, we might lack behind the OS, the binaries
  *   are bigger, and the legal situation is less clear.
@@ -56,7 +56,13 @@
  *      unavailiable ones to NULL
  */
 /**********************************************************************/
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L
+#define sqo_ASN1_STRING_length NULL_FUNC
+#define sqo_ASN1_STRING_get_length ASN1_STRING_get_length
+#else
 #define sqo_ASN1_STRING_length ASN1_STRING_length
+#define sqo_ASN1_STRING_get_length NULL_FUNC
+#endif
 #define sqo_BIO_free_all BIO_free_all
 #define sqo_BIO_new BIO_new
 #define sqo_BIO_s_mem BIO_s_mem
@@ -224,6 +230,8 @@ OPENSSL_INIT_SETTINGS;
  *
  * SQO_DECL102 (Available since OpenSSL 1.0.2)
  *     (NAME will have value NULL in OpenSSL < 1.0.2)
+ * SQO_DECL41_ (Available since OpenSSL 4.1)
+ *     (NAME will have value NULL in OpenSSL < 4.1)
  *
  * SPECIAL CASE FOR OLD OPENSSL
  * For symbols with different types in 0.9.8 / 1.0.0 use:
@@ -238,8 +246,8 @@ OPENSSL_INIT_SETTINGS;
  */
 #define SQO_DECLARATIONS                                                \
   /**/                                                                  \
-  SQO_DECL___(unsigned char *, ASN1_STRING_data, ASN1_STRING *x)        \
-  SQO_DECL___(int, ASN1_STRING_length, const ASN1_STRING *x)            \
+  SQO_DECL_IF(unsigned char *, ASN1_STRING_data, ASN1_STRING *x)        \
+  SQO_DECL_IF(int, ASN1_STRING_length, const ASN1_STRING *x)            \
   SQO_DECL___(void, BIO_free_all, BIO *a)                               \
   SQO_DECL___(BIO *, BIO_new, BIO_METHOD *type)                         \
   SQO_DECL___(BIO_METHOD *, BIO_s_mem, void)                            \
@@ -280,6 +288,7 @@ OPENSSL_INIT_SETTINGS;
   SQO_DECL110(int, BIO_test_flags, const BIO *b, int flags)             \
                                                                         \
   SQO_DECL110(const unsigned char *, ASN1_STRING_get0_data, const ASN1_STRING *x) \
+  SQO_DECL41_(size_t, ASN1_STRING_get_length, const ASN1_STRING *x)     \
                                                                         \
   SQO_DECL098(STACK *, sk_new_null, void)                               \
   SQO_DECL098(int, sk_push, STACK *st, char *data)                      \
@@ -329,6 +338,7 @@ OPENSSL_INIT_SETTINGS;
 #endif
 #define SQO_DECL102 SQO_DECL_IF
 #define SQO_DECL110 SQO_DECL_IF
+#define SQO_DECL41_ SQO_DECL_IF
 
 /*
  *  WARNING: Here be dragons!
@@ -876,6 +886,10 @@ bool loadLibrary(void)
 
 #endif  /* defined(SQSSL_OPENSSL_LINKED) */
 
+  if (!((sqo_ASN1_STRING_data || sqo_ASN1_STRING_get0_data)
+        && (sqo_ASN1_STRING_length || sqo_ASN1_STRING_get_length))) {
+    return false;
+  }
 
   if (sqo_SSL_library_init) {
       sqo_SSL_library_init();

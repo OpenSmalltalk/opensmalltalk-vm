@@ -193,7 +193,9 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const s
 	char* sANData = (char *) (sqo_ASN1_STRING_get0_data
 			? sqo_ASN1_STRING_get0_data(sAN->d.ia5)
 			: sqo_ASN1_STRING_data(sAN->d.ia5));
-	size_t sANDataSize = (size_t) sqo_ASN1_STRING_length(sAN->d.ia5);
+	size_t sANDataSize = sqo_ASN1_STRING_get_length
+			? (size_t) sqo_ASN1_STRING_get_length(sAN->d.ia5)
+			: (size_t) sqo_ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
 	if (ssl->loglevel) printf("sqVerifyNameInner: checking sAN %.*s\n", matchType == GEN_DNS ? (int) sANDataSize : 5 , matchType == GEN_DNS ? sANData : "an IP");
