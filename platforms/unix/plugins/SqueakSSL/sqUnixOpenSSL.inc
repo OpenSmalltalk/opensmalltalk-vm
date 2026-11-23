@@ -512,7 +512,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	} else {
 		ssl->certFlags = SQSSL_NO_CERTIFICATE;
 	}
-	return 0;
+	return sqCopyBioSSL(ssl, ssl->bioWrite, dstBuf, dstLen);
 }
 
 /* sqAcceptSSL: Start/continue an SSL server handshake.

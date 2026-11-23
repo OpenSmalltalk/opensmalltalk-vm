@@ -550,7 +550,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     if (status == noErr) {
         sqExtractPeerName(ssl);
     }
-    return SQSSL_OK;
+    return ssl->outLen;
 }
 
 /* sqAcceptSSL: Start/continue an SSL server handshake.
@@ -613,7 +613,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     }
     /* We are connected. Verify the cert. */
     ssl->state = SQSSL_CONNECTED;
-        return SQSSL_OK;
+    return ssl->outLen;
 }
 
 /* sqEncryptSSL: Encrypt data for SSL transmission.
