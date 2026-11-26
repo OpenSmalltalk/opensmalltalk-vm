@@ -73,6 +73,8 @@ load := Array streamContents: [:s |
 load := (load sorted: [:a :b | a key <= b key]) collect: [:ea | ea value].
 load do: [:installer | installer installQuietly].
 
+MCMcmUpdater upgradeVMMakerUpdateMap.
+
 self currentWorld findATranscript: nil.
 
 Project uiManager
