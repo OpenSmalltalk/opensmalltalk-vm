@@ -211,7 +211,11 @@ ioHighResClock(void)
 		Is there a 64-bit clock on ARM?  If so, access it here :-)
 	 */
 #elif defined(__riscv64__)
-  	__asm__ __volatile__ ("rdcycle a0" : "=r"(value));
+       /* On RISC-V, the time control status register is read through the rdtime instruction */
+        /* If the performance counter needs to be used, use rdcycle instead */
+        __asm__ __volatile__("rdtime %0" : "=r"(value));
+
+	//  	__asm__ __volatile__ ("rdcycle a0" : "=r"(value));
 #else
 # error "no high res clock defined"
 #endif

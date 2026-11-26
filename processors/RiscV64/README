@@ -1,0 +1,34 @@
+To build GdbRiscV64Plugin on RV64g linux
+## Tested on StartFive VisionFive V2 w Debian Linux
+
+@@ ToDo: reduce/simplify gdb build components
+@@ sudo alt-get install ???
+
+cd gdb-18.1/zib # i.e. processors/RiscV64/gdb-18.1/zlib
+./configure
+make COG=1
+
+cd gdb-18.1/libsframe # i.e. processors/RiscV64/gdb-18.1/libsframe
+./configure --target=riscv64-unknown-linux-gnu
+make COG=1
+
+cd gdb-18.1/bfd # i.e. processors/RiscV64/gdb-18.1/bfd
+./configure --target=riscv64-unknown-linux-gnu --with-system-zlib=no
+make COG=1
+
+cd gdb-18.1/libiberty # i.e. processors/RiscV64/gdb-18.1/libiberty
+./configure --target=riscv64-unknown-linux-gnu
+make COG=1
+
+As above for subdirs
+   opcodes
+   readline
+   gnulib
+   sim
+
+That should produce processors/RiscV64/gdb-18.1/sim/riscv/libsim.a
+With that built you can configure and build VMs that will build
+the GdbRiscV64Plugin plugin.
+
+See platforms/unix/plugins/GdbRiscV64Plugin/HowToBuild
+

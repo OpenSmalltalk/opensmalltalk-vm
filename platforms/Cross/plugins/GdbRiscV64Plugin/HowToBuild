@@ -1,0 +1,7 @@
+Building the GdbRiscV64Plugin
+------------------------------
+
+In the build dirctory for the platform (building/linux64riscv/)
+locate the gdbriscv64 directory.  In that directory use the makeem script, which
+invokes conf.COG, to configure and build the gdb-derived simulator for RV64g/riscv64.  
+Then build a VM that has GdbRiscV64Plugin in its plugins.ext.
